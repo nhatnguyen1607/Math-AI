@@ -14,12 +14,14 @@ function DashboardPage({ user, onStartProblem, onSignOut }) {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.uid]);
 
   useEffect(() => {
     if (selectedTopic) {
       loadProblems();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTopic]);
 
   const loadData = async () => {

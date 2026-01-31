@@ -54,6 +54,7 @@ CHỈ trả về JSON, không thêm text khác.`;
           jsonStr = jsonStr.replace(/```json[\r\n]?/gi, '').replace(/```[\r\n]?/g, '');
         }
       // Loại bỏ ký tự điều khiển không hợp lệ (trừ \\n, \\r, \\t)
+      // eslint-disable-next-line no-control-regex
       jsonStr = jsonStr.replace(/[\u0000-\u0019]+/g, ' ');
 
       const data = JSON.parse(jsonStr);
@@ -123,6 +124,7 @@ CHỈ trả về JSON.`;
         jsonStr = jsonStr.replace(/```\\n?/g, '');
       }
       // Loại bỏ ký tự điều khiển không hợp lệ (trừ \\n, \\r, \\t)
+      // eslint-disable-next-line no-control-regex
       jsonStr = jsonStr.replace(/[\u0000-\u0019]+/g, ' ');
 
       const data = JSON.parse(jsonStr);
@@ -165,6 +167,7 @@ CHỈ trả về JSON.`;
         jsonStr = jsonStr.replace(/```\\n?/g, '');
       }
       // Loại bỏ ký tự điều khiển không hợp lệ (trừ \\n, \\r, \\t)
+      // eslint-disable-next-line no-control-regex
       jsonStr = jsonStr.replace(/[\u0000-\u0019]+/g, ' ');
 
       const data = JSON.parse(jsonStr);

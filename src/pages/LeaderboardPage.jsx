@@ -14,12 +14,14 @@ const LeaderboardPage = () => {
 
   useEffect(() => {
     loadTopics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (selectedTopic) {
       loadProblems();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTopic]);
 
   useEffect(() => {
@@ -28,6 +30,7 @@ const LeaderboardPage = () => {
     } else if (viewMode === 'topic' && selectedTopic) {
       loadTopicLeaderboard();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, selectedProblem, selectedTopic]);
 
   const loadTopics = async () => {

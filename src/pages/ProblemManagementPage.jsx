@@ -22,12 +22,14 @@ const ProblemManagementPage = () => {
 
   useEffect(() => {
     loadTopics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (selectedTopic) {
       loadProblems();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTopic]);
 
   const loadTopics = async () => {

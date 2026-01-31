@@ -2,8 +2,6 @@ import {
   collection, 
   addDoc, 
   getDocs, 
-  getDoc,
-  doc,
   query,
   where,
   orderBy,
@@ -22,6 +20,7 @@ class ResultService {
   // Lưu kết quả làm bài
   async saveResult(resultData) {
     try {
+      // Prepare the data to save
       const {
         userId,
         problemId,
@@ -32,20 +31,23 @@ class ResultService {
         isCompleted
       } = resultData;
 
-      const docRef = await addDoc(collection(db, this.collectionName), {
-        userId,
-        problemId,
-        topicId,
-        stepEvaluations, // {step1: 'good', step2: 'pass', ...}
-        totalScore,
-        completionTime,
-        isCompleted,
-        createdAt: serverTimestamp()
-      });
+      const docRef = await addDoc(
+        collection(db, this.collectionName),
+        {
+          userId,
+          problemId,
+          topicId: topicId || null,
+          stepEvaluations: stepEvaluations || {},
+          totalScore,
+          completionTime,
+          isCompleted,
+          createdAt: serverTimestamp()
+        }
+      );
 
       // Cập nhật attempt count
       await problemService.incrementAttemptCount(problemId);
-      
+
       // Nếu hoàn thành thì tăng completion count
       if (isCompleted) {
         await problemService.incrementCompletionCount(problemId);

@@ -49,6 +49,7 @@ export class GeminiService {
     };
 
     // Khởi tạo chat mới
+    const model = geminiModelManager.getModel();
     this.chat = model.startChat({
       history: [
         {

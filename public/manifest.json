@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Math AI",
+  "name": "Math AI - Trợ lý học toán",
   "icons": [
     {
       "src": "favicon.ico",

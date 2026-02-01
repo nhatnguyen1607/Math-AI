@@ -6,8 +6,7 @@ import {
   where,
   orderBy,
   limit,
-  serverTimestamp,
-  updateDoc
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import problemService from './problemService';

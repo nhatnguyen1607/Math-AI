@@ -1,12 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(API_KEY);
-
-// Khởi tạo model Gemini - sử dụng Gemini 2.5 Flash Native Audio Dialog (unlimited requests)
-const model = genAI.getGenerativeModel({ 
-  model: "models/gemini-2.5-flash-lite"
-});
+import geminiModelManager from "./geminiModelManager";
 
 // System prompt cho AI trợ lý học toán
 const SYSTEM_PROMPT = `Bạn là trợ lý học tập ảo thân thiện, hỗ trợ học sinh lớp 5 giải toán theo 4 bước Polya.
@@ -83,14 +75,19 @@ Hãy bắt đầu BƯỚC 1: HIỂU BÀI TOÁN
 Đặt 1 câu hỏi đầu tiên để giúp học sinh xác định dữ kiện hoặc yêu cầu của bài toán.
 Nhớ: Chỉ hỏi 1 câu, ngôn ngữ thân thiện.`;
 
-    const result = await this.chat.sendMessage(initialPrompt);
-    const response = result.response.text();
+    try {
+      const result = await this.chat.sendMessage(initialPrompt);
+      const response = result.response.text();
 
-    return {
-      message: response,
-      step: 1,
-      stepName: "Hiểu bài toán"
-    };
+      return {
+        message: response,
+        step: 1,
+        stepName: "Hiểu bài toán"
+      };
+    } catch (error) {
+      console.error("Error in startNewProblem:", error);
+      throw error;
+    }
   }
 
   // Xử lý phản hồi của học sinh
@@ -108,7 +105,30 @@ Nhớ: Chỉ hỏi 1 câu, ngôn ngữ thân thiện.`;
     // Tạo context cho AI dựa vào bước hiện tại
     let contextPrompt = this._buildContextPrompt(studentAnswer);
 
-    const result = await this.chat.sendMessage(contextPrompt);
+    let result;
+    try {
+      result = await this.chat.sendMessage(contextPrompt);
+    } catch (error) {
+      console.error("Error in chat.sendMessage, attempting fallback:", error);
+      
+      // Nếu chat session lỗi, thử tạo chat mới với model fallback
+      const newModel = geminiModelManager.getNextAvailableModel();
+      if (!newModel) {
+        throw new Error("Không có model nào khả dụng");
+      }
+      
+      this.chat = newModel.startChat({
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
+      });
+      
+      result = await this.chat.sendMessage(contextPrompt);
+    }
+    
     let response = result.response.text();
 
     // Phân tích xem AI có muốn chuyển bước không
@@ -259,8 +279,29 @@ CHỈ HỎI 1-2 CÂU.`;
 Hãy đưa ra 1 gợi ý NHẸ NHÀNG (KHÔNG giải hộ, KHÔNG đưa đáp án).
 Chỉ gợi ý hướng suy nghĩ hoặc 1 câu hỏi dẫn dắt ngắn gọn.`;
 
-    const result = await this.chat.sendMessage(hintPrompt);
-    return result.response.text();
+    try {
+      const result = await this.chat.sendMessage(hintPrompt);
+      return result.response.text();
+    } catch (error) {
+      console.error("Error getting hint, attempting fallback:", error);
+      
+      const newModel = geminiModelManager.getNextAvailableModel();
+      if (!newModel) {
+        throw new Error("Không có model nào khả dụng");
+      }
+      
+      this.chat = newModel.startChat({
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
+      });
+      
+      const result = await this.chat.sendMessage(hintPrompt);
+      return result.response.text();
+    }
   }
 
   // Chuyển sang bước tiếp theo

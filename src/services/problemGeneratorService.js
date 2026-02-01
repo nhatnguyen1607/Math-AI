@@ -1,12 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(API_KEY);
-
-// Sử dụng model với unlimited requests
-const model = genAI.getGenerativeModel({ 
-  model: "models/gemini-2.5-flash-lite" 
-});
+import geminiModelManager from "./geminiModelManager";
 
 class ProblemGeneratorService {
   // Tạo bài toán dựa trên chủ đề và yêu cầu
@@ -44,7 +36,7 @@ Trả về JSON format sau (nếu tạo nhiều bài thì dùng array):
 
 CHỈ trả về JSON, không thêm text khác.`;
 
-      const result = await model.generateContent(prompt);
+      const result = await geminiModelManager.generateContent(prompt);
       const response = result.response.text();
       
       let jsonStr = response.trim();
@@ -113,7 +105,7 @@ Trả về JSON:
 
 CHỈ trả về JSON.`;
 
-      const result = await model.generateContent(prompt);
+      const result = await geminiModelManager.generateContent(prompt);
       const response = result.response.text();
       
       let jsonStr = response.trim();
@@ -156,7 +148,7 @@ Trả về JSON:
 
 CHỈ trả về JSON.`;
 
-      const result = await model.generateContent(prompt);
+      const result = await geminiModelManager.generateContent(prompt);
       const response = result.response.text();
       
       let jsonStr = response.trim();

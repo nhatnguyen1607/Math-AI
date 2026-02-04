@@ -64,6 +64,13 @@ function LoginPage() {
         <div className="text-center text-sm text-gray-600">
           <p>AI sẽ đồng hành và hướng dẫn bạn</p>
           <p>những <strong className="text-purple-600">không giải hộ</strong> đâu nhé! 😊</p>
+          <hr className="my-4" />
+          <a 
+            href="/admin" 
+            className="text-purple-600 hover:text-purple-800 font-semibold inline-flex items-center gap-1"
+          >
+            🔐 Đăng nhập quản trị
+          </a>
         </div>
       </div>
     </div>

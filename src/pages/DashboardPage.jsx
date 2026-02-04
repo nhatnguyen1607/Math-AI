@@ -10,7 +10,7 @@ function DashboardPage({ user, onStartProblem, onSignOut }) {
   const [userResults, setUserResults] = useState({});
   const [userStats, setUserStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('topics'); // 'topics' or 'problems'
+  const [view, setView] = useState('topics'); 
 
   useEffect(() => {
     loadData();

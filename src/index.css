@@ -2,6 +2,653 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom animations */
+@layer components {
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .text-shadow {
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Default styling for elements */
+  .faculty-page {
+    @apply min-h-screen bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600;
+  }
+
+  .faculty-content {
+    @apply p-8;
+  }
+
+  .options-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto;
+  }
+
+  .option-card {
+    @apply relative bg-white rounded-lg shadow-lg p-8 cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 overflow-hidden;
+  }
+
+  .option-icon {
+    @apply text-6xl mb-4 block;
+  }
+
+  .option-card h2 {
+    @apply text-2xl font-bold text-gray-800 mb-2;
+  }
+
+  .option-card p {
+    @apply text-gray-600 mb-4;
+  }
+
+  .option-btn {
+    @apply w-full px-6 py-3 border-none rounded-lg font-semibold cursor-pointer transition-all duration-300;
+  }
+
+  .btn-startup {
+    @apply bg-gradient-to-r from-purple-500 to-purple-700 text-white hover:shadow-lg hover:shadow-purple-500/30;
+  }
+
+  .btn-worksheet {
+    @apply bg-gradient-to-r from-blue-500 to-blue-700 text-white hover:shadow-lg hover:shadow-blue-500/30;
+  }
+
+  .faculty-loading {
+    @apply text-center py-12 text-purple-500 text-xl;
+  }
+
+  /* Student page styles */
+  .student-class-management {
+    @apply p-0 min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex flex-col;
+  }
+
+  .student-class-selection {
+    @apply min-h-screen bg-gradient-to-br from-blue-50 to-blue-100;
+  }
+
+  .selection-content {
+    @apply p-8 max-w-6xl mx-auto;
+  }
+
+  .join-form {
+    @apply bg-white rounded-lg shadow-lg p-6 mb-8;
+  }
+
+  .join-form h3 {
+    @apply text-2xl font-bold text-gray-800 mb-4;
+  }
+
+  .join-form form {
+    @apply flex gap-3 flex-wrap;
+  }
+
+  .input-field {
+    @apply flex-1 min-w-64 px-4 py-3 border-2 border-gray-300 rounded-lg text-base transition-colors focus:outline-none focus:border-blue-500;
+  }
+
+  .btn-join {
+    @apply px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white border-none rounded-lg font-semibold cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-green-500/30;
+  }
+
+  .error-message {
+    @apply bg-red-100 text-red-800 px-6 py-4 rounded-lg mb-4 border-l-4 border-red-800 shadow-md;
+  }
+
+  .success-message {
+    @apply bg-green-100 text-green-800 px-6 py-4 rounded-lg mb-4 border-l-4 border-green-800 shadow-md;
+  }
+
+  .empty-state {
+    @apply text-center py-16 bg-white rounded-lg shadow-lg;
+  }
+
+  .empty-state p:first-child {
+    @apply text-5xl mb-0;
+  }
+
+  .empty-state p:last-child {
+    @apply mt-4 mb-0 text-gray-600 text-lg;
+  }
+
+  .classes-section {
+    @apply bg-white rounded-lg shadow-lg p-8;
+  }
+
+  .classes-section h2 {
+    @apply text-3xl font-bold text-gray-800 mb-6;
+  }
+
+  .classes-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+
+  .class-card {
+    @apply bg-gray-50 rounded-lg p-6 shadow-md hover:shadow-xl text-center cursor-pointer transition-all duration-300 border-2 border-transparent hover:border-blue-500 hover:-translate-y-1;
+  }
+
+  .class-icon {
+    @apply text-5xl mb-4 block;
+  }
+
+  .class-card h3 {
+    @apply text-2xl font-bold text-gray-800 my-2;
+  }
+
+  .class-grade {
+    @apply text-lg font-semibold text-gray-600 my-2;
+  }
+
+  .class-code {
+    @apply text-sm text-gray-500 my-2;
+  }
+
+  .btn-select {
+    @apply w-full mt-4 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white border-none rounded-lg font-semibold cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/30;
+  }
+
+  loading {
+    @apply text-center py-12 text-purple-500 text-xl;
+  }
+
+  /* Exam Lobby Styles */
+  .exam-lobby {
+    @apply min-h-screen bg-gradient-to-br from-blue-50 to-blue-100;
+  }
+
+  .countdown-overlay {
+    @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50;
+  }
+
+  .countdown-box {
+    @apply bg-white rounded-lg p-8 text-center shadow-2xl;
+  }
+
+  .countdown-box h2 {
+    @apply text-3xl font-bold text-gray-800 mb-4;
+  }
+
+  .countdown-animation {
+    @apply py-8;
+  }
+
+  .pulse {
+    @apply text-5xl font-bold text-blue-600 animate-pulse;
+  }
+
+  .countdown-box p {
+    @apply text-lg text-gray-600 mt-4;
+  }
+
+  .ended-overlay {
+    @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50;
+  }
+
+  .ended-box {
+    @apply bg-white rounded-lg p-8 text-center shadow-2xl max-w-md;
+  }
+
+  .ended-box h2 {
+    @apply text-2xl font-bold text-red-600 mb-4;
+  }
+
+  .ended-box p {
+    @apply text-gray-600 mb-6;
+  }
+
+  .btn-back {
+    @apply px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white border-none rounded-lg font-semibold cursor-pointer transition-all duration-300 hover:shadow-lg;
+  }
+
+  .lobby-content {
+    @apply p-8 max-w-6xl mx-auto;
+  }
+
+  .lobby-main {
+    @apply grid grid-cols-1 lg:grid-cols-3 gap-8;
+  }
+
+  .exam-card {
+    @apply lg:col-span-2 bg-white rounded-lg shadow-lg p-8;
+  }
+
+  .exam-card h2 {
+    @apply text-2xl font-bold text-gray-800 mb-4;
+  }
+
+  .exam-card .description {
+    @apply text-gray-600 mb-6;
+  }
+
+  .info-grid {
+    @apply grid grid-cols-2 md:grid-cols-4 gap-4;
+  }
+
+  .info-item {
+    @apply bg-gray-50 rounded-lg p-4 text-center;
+  }
+
+  .info-item .label {
+    @apply block text-sm text-gray-500 mb-2;
+  }
+
+  .info-item .value {
+    @apply block text-2xl font-bold text-gray-800;
+  }
+
+  .info-item .status {
+    @apply inline-block px-3 py-1 rounded-full text-sm font-semibold text-white;
+  }
+
+  .info-item .status.waiting {
+    @apply bg-yellow-500;
+  }
+
+  .info-item .status.starting {
+    @apply bg-blue-500;
+  }
+
+  .info-item .status.started {
+    @apply bg-green-500;
+  }
+
+  .info-item .status.ended {
+    @apply bg-red-500;
+  }
+
+  .instructions-card {
+    @apply bg-blue-50 rounded-lg p-6 border-l-4 border-blue-500;
+  }
+
+  .instructions-card h3 {
+    @apply font-bold text-gray-800 mb-3;
+  }
+
+  .instructions-card ul {
+    @apply list-disc list-inside text-gray-700 space-y-2;
+  }
+
+  .sidebar-section {
+    @apply bg-white rounded-lg shadow-lg p-6;
+  }
+
+  .sidebar-section h3 {
+    @apply text-lg font-bold text-gray-800 mb-4;
+  }
+
+  .participants-list {
+    @apply space-y-2;
+  }
+
+  .participant-item {
+    @apply flex items-center gap-3 p-3 bg-gray-50 rounded-lg;
+  }
+
+  .participant-avatar {
+    @apply w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm;
+  }
+
+  .participant-name {
+    @apply text-sm text-gray-700;
+  }
+
+  .btn-start-exam {
+    @apply w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white border-none rounded-lg font-bold text-lg cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-green-500/30 mt-6;
+  }
+
+  .btn-start-exam:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* Exam Result Page Styles */
+  .exam-result-page {
+    @apply min-h-screen bg-gradient-to-br from-blue-50 to-blue-100;
+  }
+
+  .result-container {
+    @apply max-w-4xl mx-auto p-8;
+  }
+
+  .result-header {
+    @apply bg-white rounded-lg shadow-lg p-8 text-center mb-8;
+  }
+
+  .result-header.passed {
+    @apply border-t-4 border-green-500;
+  }
+
+  .result-header.failed {
+    @apply border-t-4 border-red-500;
+  }
+
+  .result-icon {
+    @apply text-6xl mb-4;
+  }
+
+  .result-header h1 {
+    @apply text-3xl font-bold text-gray-800 mb-2;
+  }
+
+  .exam-title {
+    @apply text-lg text-gray-600;
+  }
+
+  .score-section {
+    @apply bg-white rounded-lg shadow-lg p-8 mb-8;
+  }
+
+  .score-circle {
+    @apply flex flex-col items-center justify-center;
+  }
+
+  .score-number {
+    @apply text-6xl font-bold text-blue-600;
+  }
+
+  .passing-score {
+    @apply text-gray-600 mt-2;
+  }
+
+  .answer-review {
+    @apply bg-white rounded-lg shadow-lg p-8;
+  }
+
+  .answer-review h2 {
+    @apply text-2xl font-bold text-gray-800 mb-6;
+  }
+
+  .answer-item {
+    @apply border-b border-gray-200 pb-6 mb-6 last:border-b-0;
+  }
+
+  .answer-item h3 {
+    @apply font-bold text-gray-800 mb-4;
+  }
+
+  .answer-item.correct {
+    @apply border-l-4 border-green-500 pl-4;
+  }
+
+  .answer-item.incorrect {
+    @apply border-l-4 border-red-500 pl-4;
+  }
+
+  .user-answer {
+    @apply text-red-600 font-semibold;
+  }
+
+  .correct-answer {
+    @apply text-green-600 font-semibold;
+  }
+
+  .option {
+    @apply p-3 bg-gray-50 rounded-lg mb-2 cursor-pointer;
+  }
+
+  .option.selected {
+    @apply bg-blue-100 border-2 border-blue-500;
+  }
+
+  .option.correct {
+    @apply bg-green-100 border-2 border-green-500;
+  }
+
+  .option.incorrect {
+    @apply bg-red-100 border-2 border-red-500;
+  }
+
+  /* Faculty pages styles */
+  .faculty-exam-management {
+    @apply min-h-screen bg-gradient-to-br from-purple-50 to-purple-100;
+  }
+
+  .faculty-topic-management {
+    @apply min-h-screen bg-gradient-to-br from-purple-50 to-purple-100;
+  }
+
+  .faculty-exam-live-session {
+    @apply min-h-screen bg-gradient-to-br from-purple-50 to-purple-100;
+  }
+
+  .faculty-game-lobby {
+    @apply min-h-screen bg-gradient-to-br from-purple-50 to-purple-100;
+  }
+
+  .page-header {
+    @apply flex justify-between items-center mb-8;
+  }
+
+  .page-header h1 {
+    @apply text-4xl font-bold text-gray-800;
+  }
+
+  .form-card {
+    @apply bg-white rounded-lg shadow-lg p-8 mb-8;
+  }
+
+  .form-group {
+    @apply mb-6;
+  }
+
+  .form-group label {
+    @apply block text-sm font-semibold text-gray-700 mb-2;
+  }
+
+  .form-input,
+  .form-select,
+  .form-textarea {
+    @apply w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 text-base;
+  }
+
+  .form-textarea {
+    @apply min-h-24 resize-y;
+  }
+
+  .form-actions {
+    @apply flex gap-3;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white border-none rounded-lg font-semibold cursor-pointer transition-all duration-300 hover:shadow-lg;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-gray-300 text-gray-800 border-none rounded-lg font-semibold cursor-pointer transition-all duration-300 hover:bg-gray-400;
+  }
+
+  .items-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+
+  .item-card {
+    @apply bg-white rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+  }
+
+  .item-card h3 {
+    @apply text-xl font-bold text-gray-800 mb-2;
+  }
+
+  .item-card p {
+    @apply text-gray-600 text-sm mb-4;
+  }
+
+  .item-actions {
+    @apply flex gap-2;
+  }
+
+  .item-btn {
+    @apply flex-1 px-3 py-2 text-sm font-semibold rounded-lg border-none cursor-pointer transition-all duration-300;
+  }
+
+  .btn-edit {
+    @apply bg-blue-500 text-white hover:bg-blue-600;
+  }
+
+  .btn-delete {
+    @apply bg-red-500 text-white hover:bg-red-600;
+  }
+
+  .btn-activate {
+    @apply bg-green-500 text-white hover:bg-green-600;
+  }
+
+  /* Leaderboard styles */
+  .leaderboard-container {
+    @apply bg-white rounded-lg shadow-lg p-8;
+  }
+
+  .leaderboard-title {
+    @apply text-2xl font-bold text-gray-800 mb-6;
+  }
+
+  .leaderboard-table {
+    @apply w-full;
+  }
+
+  .leaderboard-table thead tr {
+    @apply bg-gray-100;
+  }
+
+  .leaderboard-table th {
+    @apply px-4 py-3 text-left font-semibold text-gray-700;
+  }
+
+  .leaderboard-table td {
+    @apply px-4 py-3 border-b border-gray-200;
+  }
+
+  .rank-badge {
+    @apply inline-block w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm;
+  }
+
+  .rank-1 {
+    @apply bg-yellow-500;
+  }
+
+  .rank-2 {
+    @apply bg-gray-500;
+  }
+
+  .rank-3 {
+    @apply bg-orange-500;
+  }
+
+  .student-name {
+    @apply font-semibold text-gray-800;
+  }
+
+  .score-display {
+    @apply text-lg font-bold text-blue-600;
+  }
+
+  /* Modal styles */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50;
+  }
+
+  .modal-content {
+    @apply bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 p-8;
+  }
+
+  .modal-header h2 {
+    @apply text-2xl font-bold text-gray-800 mb-4;
+  }
+
+  .modal-body {
+    @apply mb-6;
+  }
+
+  .modal-footer {
+    @apply flex gap-3;
+  }
+
+  .btn-cancel {
+    @apply flex-1 px-4 py-2 bg-gray-300 text-gray-800 border-none rounded-lg font-semibold cursor-pointer transition-all duration-300 hover:bg-gray-400;
+  }
+
+  .btn-confirm {
+    @apply flex-1 px-4 py-2 bg-green-500 text-white border-none rounded-lg font-semibold cursor-pointer transition-all duration-300 hover:bg-green-600;
+  }
+
+  /* Faculty Topic Management Page */
+  .faculty-topic-management {
+    @apply min-h-screen bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600;
+  }
+
+  .topic-header-actions {
+    @apply px-8 pt-8 mb-8 flex justify-between items-center;
+  }
+
+  .add-topic-btn {
+    @apply px-6 py-3 bg-gradient-to-r from-green-500 to-green-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl hover:shadow-green-500/30 transition-all duration-300 border-none cursor-pointer text-lg;
+  }
+
+  .topics-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-8 pb-8;
+  }
+
+  .empty-state {
+    @apply col-span-full text-center py-12 text-white text-xl font-semibold;
+  }
+
+  /* TopicCard styling */
+  .topic-card {
+    @apply bg-white rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border-l-4 border-green-500;
+  }
+
+  .topic-card-header {
+    @apply p-4 border-b border-gray-200;
+  }
+
+  .topic-card-icon {
+    @apply text-4xl mb-2;
+  }
+
+  .topic-card-title {
+    @apply text-lg font-bold text-gray-800;
+  }
+
+  .topic-card-body {
+    @apply p-4;
+  }
+
+  .topic-card-description {
+    @apply text-sm text-gray-600 mb-3 line-clamp-2;
+  }
+
+  .topic-card-grade {
+    @apply text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full inline-block;
+  }
+
+  .topic-card-actions {
+    @apply p-4 bg-gray-50 border-t border-gray-200 flex gap-2;
+  }
+
+  .topic-card-btn {
+    @apply flex-1 px-3 py-2 border-none rounded-lg font-semibold cursor-pointer transition-all duration-300 text-sm;
+  }
+
+  .topic-edit-btn {
+    @apply bg-blue-500 text-white hover:bg-blue-600 hover:shadow-md;
+  }
+
+  .topic-delete-btn {
+    @apply bg-red-500 text-white hover:bg-red-600 hover:shadow-md;
+  }
+
+  .topic-exam-btn {
+    @apply bg-gradient-to-r from-purple-500 to-purple-700 text-white hover:shadow-lg hover:shadow-purple-500/30;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

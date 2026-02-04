@@ -1,0 +1,730 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import authService from '../../services/authService';
+import facultyService from '../../services/faculty/facultyService';
+import classService from '../../services/classService';
+import ExamCard from '../../components/cards/ExamCard';
+import FacultyHeader from '../../components/faculty/FacultyHeader';
+
+const FacultyExamManagementPage = () => {
+  const [exams, setExams] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [topics, setTopics] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [user, setUser] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  
+  // Selection state - initialize as null
+  const [selectedClassId, setSelectedClassId] = useState(() => {
+    // Priority: URL params > location.state > sessionStorage > null
+    const urlClassId = searchParams.get('classId');
+    const stateClassId = location.state?.classId;
+    const sessionClassId = sessionStorage.getItem('selectedClassId');
+    return urlClassId || stateClassId || sessionClassId || null;
+  });
+  const [selectedTopicId, setSelectedTopicId] = useState(() => {
+    // Priority: URL params > location.state > null
+    const urlTopicId = searchParams.get('topicId');
+    const stateTopicId = location.state?.topicId;
+    return urlTopicId || stateTopicId || null;
+  });
+  const [selectedClassName, setSelectedClassName] = useState('');
+  const [selectedTopicName, setSelectedTopicName] = useState('');
+  
+  // Effect to load initial values from location.state or URL params
+  useEffect(() => {
+    // Priority: URL params > location.state > sessionStorage > null
+    const classIdFromUrl = searchParams.get('classId');
+    const topicIdFromUrl = searchParams.get('topicId');
+    const classIdFromState = location.state?.classId;
+    const topicIdFromState = location.state?.topicId;
+    const classIdFromSession = sessionStorage.getItem('selectedClassId');
+    
+    const finalClassId = classIdFromUrl || classIdFromState || classIdFromSession;
+    const finalTopicId = topicIdFromUrl || topicIdFromState;
+        
+    if (finalClassId) {
+      setSelectedClassId(finalClassId);
+      sessionStorage.setItem('selectedClassId', finalClassId);
+    }
+    if (finalTopicId) setSelectedTopicId(finalTopicId);
+  }, [location.state, searchParams]);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+  });
+  const [editingExam, setEditingExam] = useState(null);
+
+  // Exercises state
+  const [exercises, setExercises] = useState([
+    { name: 'BT Cơ bản', duration: 90, context: '', questions: [], scoring: { correct: 30, incorrect: 5, bonus: 10, bonusTimeThreshold: 30 } },
+    { name: 'BT Vận dụng', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
+    { name: 'BT GQVĐ', duration: 210, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } }
+  ]);
+  
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  
+  const navigate = useNavigate();
+  const authCheckedRef = useRef(false);
+
+  useEffect(() => {
+    if (authCheckedRef.current) return;
+    authCheckedRef.current = true;
+
+    const checkAuth = async () => {
+      try {
+        const currentUser = await authService.getCurrentUser();
+        if (!currentUser || currentUser.role !== 'faculty') {
+          navigate('/login');
+        } else {
+          setUser(currentUser);
+          // Load everything once user is authenticated
+          await loadAllData(currentUser.id, selectedClassId, selectedTopicId);
+        }
+      } catch (error) {
+        navigate('/login');
+      }
+    };
+    checkAuth();
+  }, [navigate, selectedClassId, selectedTopicId]);
+
+  // Load all data: classes, topics, and exams
+  const loadAllData = async (userId, classId, topicId) => {
+    try {
+      
+      // Load classes and topics in parallel
+      const [classesData, topicsData] = await Promise.all([
+        classService.getAllClasses(),
+        facultyService.getTopics()
+      ]);
+      
+      setClasses(classesData || []);
+      setTopics(topicsData || []);
+      
+      // Update names
+      if (classId && classesData) {
+        const className = classesData.find(c => c.id === classId)?.name;
+        if (className) {
+          setSelectedClassName(className);
+        }
+      }
+      
+      if (topicId && topicsData) {
+        const topicName = topicsData.find(t => t.id === topicId)?.name;
+        if (topicName) {
+          setSelectedTopicName(topicName);
+        }
+      }
+      
+      // Load exams if we have both classId and topicId
+      if (classId && topicId) {
+        const examsData = await facultyService.getExamsByFaculty(userId, classId, topicId);
+        setExams(examsData || []);
+      }
+    } catch (error) {
+      console.error('❌ Error loading data:', error);
+    }
+  };
+
+  useEffect(() => {
+    console.log('🔄 Selection changed:', { selectedClassId, selectedTopicId });
+    if (selectedClassId && selectedTopicId) {
+      setSearchParams({ classId: selectedClassId, topicId: selectedTopicId });
+    }
+  }, [selectedClassId, selectedTopicId, setSearchParams]);
+
+  const handleAddQuestion = () => {
+    const updatedExercises = [...exercises];
+    updatedExercises[currentExerciseIndex].questions.push({
+      id: Date.now(),
+      question: '',
+      type: 'single',
+      options: ['', '', '', ''],
+      correctAnswers: [0],
+      explanation: ''
+    });
+    setExercises(updatedExercises);
+  };
+
+  const handleUpdateQuestion = (index, field, value) => {
+    const updatedExercises = [...exercises];
+    const updated = [...updatedExercises[currentExerciseIndex].questions];
+    if (field === 'options') {
+      updated[index].options = value;
+    } else {
+      updated[index][field] = value;
+    }
+    updatedExercises[currentExerciseIndex].questions = updated;
+    setExercises(updatedExercises);
+  };
+
+  const handleRemoveQuestion = (index) => {
+    const updatedExercises = [...exercises];
+    updatedExercises[currentExerciseIndex].questions = updatedExercises[currentExerciseIndex].questions.filter((_, i) => i !== index);
+    setExercises(updatedExercises);
+    if (currentQuestionIndex >= updatedExercises[currentExerciseIndex].questions.length) {
+      setCurrentQuestionIndex(Math.max(0, updatedExercises[currentExerciseIndex].questions.length - 1));
+    }
+  };
+
+  const handleCreateExam = async (e) => {
+    e.preventDefault();
+
+    if (!formData.title.trim()) {
+      alert('Vui lòng nhập tiêu đề đề thi');
+      return;
+    }
+
+    // Validate exercises
+    for (let i = 0; i < exercises.length; i++) {
+      if (exercises[i].questions.length === 0) {
+        alert(`Vui lòng thêm ít nhất 1 câu hỏi cho ${exercises[i].name}`);
+        return;
+      }
+
+      for (let j = 0; j < exercises[i].questions.length; j++) {
+        const q = exercises[i].questions[j];
+        if (!q.question.trim()) {
+          alert(`${exercises[i].name}: Vui lòng nhập nội dung câu hỏi ${j + 1}`);
+          return;
+        }
+        if (q.options.some(opt => !opt.trim())) {
+          alert(`${exercises[i].name}: Vui lòng nhập đầy đủ các đáp án cho câu ${j + 1}`);
+          return;
+        }
+      }
+    }
+
+    setLoading(true);
+    try {
+      const examData = {
+        ...formData,
+        classId: selectedClassId,
+        topicId: selectedTopicId,
+        exercises,
+        status: editingExam?.status || 'draft',
+        ...(editingExam?.createdBy && { createdBy: editingExam.createdBy }),
+        ...(editingExam?.createdByName && { createdByName: editingExam.createdByName }),
+        ...((!editingExam) && { createdBy: user?.uid, createdByName: user?.displayName }),
+      };
+      
+      if (editingExam) {
+        // Update existing exam
+        await facultyService.updateExam(editingExam.id, examData);
+        alert('Cập nhật đề thi thành công!');
+      } else {
+        // Create new exam
+        await facultyService.createExam(examData, user?.uid);
+        alert('Tạo đề thi thành công!');
+      }
+      
+      resetForm();
+      // Reload exams
+      if (user?.uid && selectedClassId && selectedTopicId) {
+        const examsData = await facultyService.getExamsByFaculty(user.uid, selectedClassId, selectedTopicId);
+        setExams(examsData || []);
+      }
+    } catch (error) {
+      alert('Lỗi khi lưu đề thi');
+    } finally {
+      setLoading(false);
+    }
+  };;
+
+  const handleActivateExam = async (examId) => {
+    try {
+      await facultyService.activateExam(examId);
+      alert('Kích hoạt đề thi thành công!');
+      // Reload exams
+      if (user?.uid && selectedClassId && selectedTopicId) {
+        const examsData = await facultyService.getExamsByFaculty(user.uid, selectedClassId, selectedTopicId);
+        setExams(examsData || []);
+      }
+    } catch (error) {
+      alert('Lỗi khi kích hoạt đề thi');
+    }
+  };
+
+  const handleStartExam = async (examId) => {
+    try {
+      await facultyService.startExam(examId);
+      navigate(`/faculty/exam-live/${examId}`);
+    } catch (error) {
+      alert('Lỗi khi bắt đầu đề thi');
+    }
+  };
+
+  const handleEditExam = (exam) => {
+    setEditingExam(exam);
+    setFormData({
+      title: exam.title || '',
+      description: exam.description || ''
+    });
+    setExercises(exam.exercises || [
+      { name: 'BT Cơ bản', duration: 90, context: '', questions: [], scoring: { correct: 30, incorrect: 5, bonus: 10, bonusTimeThreshold: 30 } },
+      { name: 'BT Vận dụng', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
+      { name: 'BT GQVĐ', duration: 210, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } }
+    ]);
+    setCurrentExerciseIndex(0);
+    setCurrentQuestionIndex(0);
+    setShowForm(true);
+  };
+
+  const handleDeleteExam = async (examId) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa đề thi này?')) {
+      try {
+        await facultyService.deleteExam(examId);
+        alert('Xóa đề thi thành công!');
+        // Reload exams
+        if (user?.uid && selectedClassId && selectedTopicId) {
+          const examsData = await facultyService.getExamsByFaculty(user.uid, selectedClassId, selectedTopicId);
+          setExams(examsData || []);
+        }
+      } catch (error) {
+        console.error('Error deleting exam:', error);
+        alert('Lỗi khi xóa đề thi');
+      }
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+    });
+    setExercises([
+      { name: 'BT Cơ bản', duration: 90, context: '', questions: [], scoring: { correct: 30, incorrect: 5, bonus: 10, bonusTimeThreshold: 30 } },
+      { name: 'BT Vận dụng', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
+      { name: 'BT GQVĐ', duration: 210, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } }
+    ]);
+    setCurrentExerciseIndex(0);
+    setCurrentQuestionIndex(0);
+    setShowForm(false);
+    setEditingExam(null);
+  };
+
+  if (loading && exams.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const navItems = [
+    { icon: '📝', label: 'Quản lí Đề Thi' }
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+      {/* Header */}
+      <FacultyHeader user={user} onLogout={() => navigate('/login')} onBack={() => navigate('/faculty/class-management')} navItems={navItems} />
+
+      <div className="max-w-7xl mx-auto px-5 py-8">
+        {/* Class & Topic Selection */}
+        {!selectedClassId || !selectedTopicId ? (
+          <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl shadow-lg p-8 mb-8">
+            <h3 className="text-3xl font-bold mb-6 flex items-center gap-3">
+              <span>🎯</span>
+              Chọn Lớp Học và Chủ Đề
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Class Selection */}
+              <div>
+                <label className="block text-lg font-semibold text-white mb-3">📚 Lớp Học</label>
+                <select
+                  value={selectedClassId || ''}
+                  onChange={(e) => {
+                    const classId = e.target.value;
+                    setSelectedClassId(classId);
+                    setSearchParams({ classId: classId, topicId: selectedTopicId || '' });
+                  }}
+                  className="w-full px-4 py-3 bg-white text-gray-800 border-2 border-blue-300 rounded-lg font-semibold focus:outline-none focus:border-blue-500 transition-colors"
+                >
+                  <option value="">-- Chọn lớp học --</option>
+                  {classes.map(cls => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.name}
+                    </option>
+                  ))}
+                </select>
+                {classes.length === 0 && (
+                  <p className="text-yellow-200 mt-2">⚠️ Chưa có lớp học nào</p>
+                )}
+              </div>
+
+              {/* Topic Selection */}
+              <div>
+                <label className="block text-lg font-semibold text-white mb-3">📖 Chủ Đề</label>
+                <select
+                  value={selectedTopicId || ''}
+                  onChange={(e) => {
+                    const topicId = e.target.value;
+                    setSelectedTopicId(topicId);
+                    setSearchParams({ classId: selectedClassId, topicId: topicId });
+                  }}
+                  disabled={!selectedClassId}
+                  className="w-full px-4 py-3 bg-white text-gray-800 border-2 border-purple-300 rounded-lg font-semibold focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">-- Chọn chủ đề --</option>
+                  {topics.map(topic => (
+                    <option key={topic.id} value={topic.id}>
+                      {topic.name}
+                    </option>
+                  ))}
+                </select>
+                {!selectedClassId && (
+                  <p className="text-yellow-200 mt-2">⚠️ Vui lòng chọn lớp học trước</p>
+                )}
+              </div>
+            </div>
+
+            {selectedClassId && selectedTopicId && (
+              <div className="mt-6 p-4 bg-white bg-opacity-20 border-2 border-white rounded-lg">
+                <p className="text-white font-semibold">
+                  ✅ Đã chọn: <span className="font-bold">{classes.find(c => c.id === selectedClassId)?.name}</span> - <span className="font-bold">{topics.find(t => t.id === selectedTopicId)?.name}</span>
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="mb-8 p-4 bg-purple-50 border-2 border-purple-200 rounded-lg">
+            <p className="text-purple-700 font-semibold">
+              📚 {selectedClassName} • 📖 {selectedTopicName}
+            </p>
+          </div>
+        )}
+
+        {/* Create/Edit Form */}
+        {showForm && (
+          <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border-2 border-purple-100">
+            <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+              <span>{editingExam ? '📝' : '✨'}</span>
+              {editingExam ? `Sửa đề thi: ${editingExam.title}` : 'Tạo đề thi mới (7 phút)'}
+            </h3>
+            <form onSubmit={handleCreateExam}>
+              {/* Basic Info */}
+              <div className="mb-8">
+                <h4 className="text-lg font-semibold text-gray-700 mb-4">📋 Thông tin cơ bản</h4>
+                
+                <div className="mb-5 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                  <p className="text-blue-800 font-semibold mb-2">📚 Lớp học: {selectedClassName}</p>
+                  <p className="text-blue-800 font-semibold">📖 Chủ đề: {selectedTopicName}</p>
+                </div>
+                
+                <div className="mb-5">
+                  <label className="block mb-2 text-gray-700 font-semibold">Tiêu đề đề thi *</label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="Ví dụ: Kiểm tra chương 3"
+                    required
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                  />
+                </div>
+
+                <div className="mb-5">
+                  <label className="block mb-2 text-gray-700 font-semibold">Mô tả</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Mô tả đề thi..."
+                    rows="3"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Exercises Section */}
+              <div className="mb-8 pb-8 border-t border-gray-200 pt-8">
+                <h4 className="text-lg font-semibold text-gray-700 flex items-center gap-2 mb-6">
+                  <span>🎓</span>
+                  Tạo 3 Bài Tập (90s + 120s + 210s = 7 phút)
+                </h4>
+
+                {/* Exercise Tabs */}
+                <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+                  {exercises.map((exercise, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      className={`px-4 py-3 rounded-lg font-semibold whitespace-nowrap transition-all ${
+                        currentExerciseIndex === idx 
+                          ? 'bg-gradient-to-r from-purple-500 to-purple-700 text-white shadow-md' 
+                          : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-400'
+                      }`}
+                      onClick={() => {
+                        setCurrentExerciseIndex(idx);
+                        setCurrentQuestionIndex(0);
+                      }}
+                    >
+                      <div className="text-sm">{exercise.name}</div>
+                      <div className="text-xs mt-1">⏱️ {exercise.duration}s · {exercise.questions.length} câu</div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Exercise Content */}
+                <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                  <div className="bg-white rounded-lg p-4 mb-4 border-2 border-purple-200">
+                    <h5 className="font-semibold text-gray-800 mb-3">{exercises[currentExerciseIndex].name}</h5>
+                    <div className="grid grid-cols-3 gap-4 text-sm mb-4">
+                      <div className="bg-purple-50 p-3 rounded">
+                        <div className="text-gray-600">Thời gian</div>
+                        <div className="font-bold text-purple-600">{exercises[currentExerciseIndex].duration}s</div>
+                      </div>
+                      <div className="bg-blue-50 p-3 rounded">
+                        <div className="text-gray-600">Số câu</div>
+                        <div className="font-bold text-blue-600">{exercises[currentExerciseIndex].questions.length}</div>
+                      </div>
+                      <div className="bg-green-50 p-3 rounded">
+                        <div className="text-gray-600">Điểm đúng</div>
+                        <div className="font-bold text-green-600">{exercises[currentExerciseIndex].scoring.correct}</div>
+                      </div>
+                    </div>
+
+                    {/* Context for exercises 2 & 3 */}
+                    {currentExerciseIndex > 0 && (
+                      <div>
+                        <label className="block mb-2 text-gray-700 font-semibold text-sm">Đoạn văn/Bối cảnh (tuỳ chọn)</label>
+                        <textarea
+                          value={exercises[currentExerciseIndex].context}
+                          onChange={(e) => {
+                            const updatedExercises = [...exercises];
+                            updatedExercises[currentExerciseIndex].context = e.target.value;
+                            setExercises(updatedExercises);
+                          }}
+                          placeholder="Nhập đoạn văn bản chung cho các câu hỏi dưới đây..."
+                          rows="4"
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Questions */}
+                  <div className="flex items-center justify-between mb-6">
+                    <h5 className="font-semibold text-gray-700">❓ Câu hỏi ({exercises[currentExerciseIndex].questions.length})</h5>
+                    <button type="button" className="px-4 py-2 bg-purple-500 text-white rounded-lg font-semibold hover:bg-purple-600 transition-colors" onClick={handleAddQuestion}>
+                      + Thêm câu hỏi
+                    </button>
+                  </div>
+
+                  {exercises[currentExerciseIndex].questions.length > 0 && (
+                    <div>
+                      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 flex-wrap">
+                        {exercises[currentExerciseIndex].questions.map((_, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${
+                              currentQuestionIndex === index 
+                                ? 'bg-purple-500 text-white shadow-md' 
+                                : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-400'
+                            }`}
+                            onClick={() => setCurrentQuestionIndex(index)}
+                          >
+                            Câu {index + 1}
+                          </button>
+                        ))}
+                      </div>
+
+                      {currentQuestionIndex < exercises[currentExerciseIndex].questions.length && (
+                        <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                          <div className="mb-4">
+                            <label className="block mb-2 text-gray-700 font-semibold">Nội dung câu hỏi *</label>
+                            <input
+                              type="text"
+                              value={exercises[currentExerciseIndex].questions[currentQuestionIndex].question}
+                              onChange={(e) => handleUpdateQuestion(currentQuestionIndex, 'question', e.target.value)}
+                              placeholder="Nhập nội dung câu hỏi..."
+                              required
+                              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                            />
+                          </div>
+
+                          <div className="mb-4">
+                            <label className="block mb-2 text-gray-700 font-semibold">Loại câu hỏi *</label>
+                            <div className="flex gap-4">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={`type-${currentExerciseIndex}-${currentQuestionIndex}`}
+                                  value="single"
+                                  checked={exercises[currentExerciseIndex].questions[currentQuestionIndex].type === 'single'}
+                                  onChange={() => handleUpdateQuestion(currentQuestionIndex, 'type', 'single')}
+                                  className="w-4 h-4"
+                                />
+                                <span className="text-gray-700">Một đáp án đúng</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={`type-${currentExerciseIndex}-${currentQuestionIndex}`}
+                                  value="multiple"
+                                  checked={exercises[currentExerciseIndex].questions[currentQuestionIndex].type === 'multiple'}
+                                  onChange={() => handleUpdateQuestion(currentQuestionIndex, 'type', 'multiple')}
+                                  className="w-4 h-4"
+                                />
+                                <span className="text-gray-700">Nhiều đáp án đúng</span>
+                              </label>
+                            </div>
+                          </div>
+
+                          <div className="mb-4">
+                            {exercises[currentExerciseIndex].questions[currentQuestionIndex].type === 'single' ? (
+                              exercises[currentExerciseIndex].questions[currentQuestionIndex].options.map((option, optIndex) => (
+                                <div key={optIndex} className="flex items-center gap-3 mb-3">
+                                  <input
+                                    type="radio"
+                                    name={`correct-${currentExerciseIndex}-${currentQuestionIndex}`}
+                                    checked={exercises[currentExerciseIndex].questions[currentQuestionIndex].correctAnswers[0] === optIndex}
+                                    onChange={() => handleUpdateQuestion(currentQuestionIndex, 'correctAnswers', [optIndex])}
+                                    className="w-4 h-4"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={option}
+                                    onChange={(e) => {
+                                      const newOptions = [...exercises[currentExerciseIndex].questions[currentQuestionIndex].options];
+                                      newOptions[optIndex] = e.target.value;
+                                      handleUpdateQuestion(currentQuestionIndex, 'options', newOptions);
+                                    }}
+                                    placeholder={`Đáp án ${String.fromCharCode(65 + optIndex)}`}
+                                    required
+                                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                                  />
+                                </div>
+                              ))
+                            ) : (
+                              exercises[currentExerciseIndex].questions[currentQuestionIndex].options.map((option, optIndex) => (
+                                <div key={optIndex} className="flex items-center gap-3 mb-3">
+                                  <input
+                                    type="checkbox"
+                                    checked={exercises[currentExerciseIndex].questions[currentQuestionIndex].correctAnswers.includes(optIndex)}
+                                    onChange={(e) => {
+                                      const currentAnswers = exercises[currentExerciseIndex].questions[currentQuestionIndex].correctAnswers;
+                                      const newAnswers = e.target.checked
+                                        ? [...currentAnswers, optIndex].sort()
+                                        : currentAnswers.filter(a => a !== optIndex);
+                                      handleUpdateQuestion(currentQuestionIndex, 'correctAnswers', newAnswers);
+                                    }}
+                                    className="w-4 h-4"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={option}
+                                    onChange={(e) => {
+                                      const newOptions = [...exercises[currentExerciseIndex].questions[currentQuestionIndex].options];
+                                      newOptions[optIndex] = e.target.value;
+                                      handleUpdateQuestion(currentQuestionIndex, 'options', newOptions);
+                                    }}
+                                    placeholder={`Đáp án ${String.fromCharCode(65 + optIndex)}`}
+                                    required
+                                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                                  />
+                                </div>
+                              ))
+                            )}
+                          </div>
+
+                          <div className="mb-4">
+                            <label className="block mb-2 text-gray-700 font-semibold">Giải thích đáp án</label>
+                            <textarea
+                              value={exercises[currentExerciseIndex].questions[currentQuestionIndex].explanation}
+                              onChange={(e) => handleUpdateQuestion(currentQuestionIndex, 'explanation', e.target.value)}
+                              placeholder="Giải thích đáp án..."
+                              rows="2"
+                              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            className="w-full px-4 py-2 bg-red-100 text-red-600 rounded-lg font-semibold hover:bg-red-200 transition-colors"
+                            onClick={() => handleRemoveQuestion(currentQuestionIndex)}
+                          >
+                            Xóa câu hỏi này
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex gap-3 justify-end mt-8 pt-6 border-t border-gray-200">
+                <button 
+                  type="button" 
+                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors" 
+                  onClick={resetForm}
+                >
+                  Hủy
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-lg font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none" 
+                  disabled={loading}
+                >
+                  {loading ? 'Đang lưu...' : (editingExam ? 'Lưu đề thi' : 'Tạo đề thi')}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Show Form Button */}
+        {!showForm && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="mb-8 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+          >
+            ➕ Tạo đề thi mới
+          </button>
+        )}
+
+        {/* Exams List */}
+        {exams.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-xl shadow-md">
+            <span className="text-6xl mb-4 block">📝</span>
+            <p className="text-xl text-gray-500 mb-4">Chưa có đề thi nào</p>
+            <p className="text-gray-400 mb-6">Hãy tạo đề thi đầu tiên để bắt đầu!</p>
+            <button
+              onClick={() => setShowForm(true)}
+              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+            >
+              📝 Tạo đề thi mới
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {exams.map((exam) => (
+              <ExamCard
+                key={exam.id}
+                exam={exam}
+                onEdit={handleEditExam}
+                onDelete={handleDeleteExam}
+                onActivate={handleActivateExam}
+                onStart={handleStartExam}
+                onViewResults={(examId) => navigate(`/faculty/exam-live/${examId}`)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default FacultyExamManagementPage;

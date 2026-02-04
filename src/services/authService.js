@@ -4,8 +4,9 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged 
 } from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
+import { User } from "../models";
 
 // Cấu hình Google Provider với các scopes cần thiết
 const provider = new GoogleAuthProvider();
@@ -21,6 +22,26 @@ export const signInWithGoogle = async () => {
     const user = result.user;
     console.log("Đăng nhập thành công:", user.email);
 
+    // Kiểm tra tài khoản bị khóa
+    try {
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (userData.isLocked) {
+          // Logout user nếu tài khoản bị khóa
+          await firebaseSignOut(auth);
+          throw new Error('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ với quản trị viên');
+        }
+      }
+    } catch (lockCheckError) {
+      if (lockCheckError.message.includes('đã bị khóa')) {
+        throw lockCheckError;
+      }
+      console.error("Lỗi khi kiểm tra tài khoản:", lockCheckError);
+    }
+
     // Lưu thông tin user vào Firestore
     try {
       const userRef = doc(db, "users", user.uid);
@@ -28,15 +49,32 @@ export const signInWithGoogle = async () => {
 
       if (!userSnap.exists()) {
         console.log("Tạo user mới trong Firestore...");
-        await setDoc(userRef, {
-          uid: user.uid,
+        const newUser = new User({
+          id: user.uid,
           email: user.email,
           displayName: user.displayName,
           photoURL: user.photoURL,
-          createdAt: serverTimestamp(),
-          totalProblems: 0,
-          completedProblems: 0
+          role: 'student', // Mặc định là student
+          isActive: true,
+          isLocked: false,
+          createdAt: new Date(),
+          updatedAt: new Date()
         });
+        
+        await setDoc(userRef, newUser.toJSON());
+      } else {
+        // Cập nhật updatedAt mỗi lần đăng nhập
+        const existingData = userSnap.data();
+        const updateData = {
+          updatedAt: new Date()
+        };
+        
+        // Update displayName nếu chưa có
+        if (!existingData.displayName && user.displayName) {
+          updateData.displayName = user.displayName;
+        }
+        
+        await updateDoc(userRef, updateData);
       }
     } catch (firestoreError) {
       console.error("Lỗi khi lưu vào Firestore:", firestoreError);
@@ -48,7 +86,9 @@ export const signInWithGoogle = async () => {
     console.error("Chi tiết lỗi đăng nhập:", error.code, error.message);
     
     // Xử lý các lỗi cụ thể
-    if (error.code === 'auth/popup-blocked') {
+    if (error.message && error.message.includes('đã bị khóa')) {
+      throw error;
+    } else if (error.code === 'auth/popup-blocked') {
       throw new Error('Popup bị chặn. Vui lòng cho phép popup và thử lại.');
     } else if (error.code === 'auth/popup-closed-by-user') {
       throw new Error('Bạn đã đóng cửa sổ đăng nhập.');
@@ -86,7 +126,7 @@ export const getUserData = async (uid) => {
     const userSnap = await getDoc(userRef);
     
     if (userSnap.exists()) {
-      return userSnap.data();
+      return User.fromFirestore(userSnap.data(), userSnap.id);
     }
     return null;
   } catch (error) {
@@ -94,3 +134,67 @@ export const getUserData = async (uid) => {
     throw error;
   }
 };
+
+// Kiểm tra quyền - có phải admin không
+export const isAdmin = async (uid) => {
+  const user = await getUserData(uid);
+  return user && user.isAdmin && user.isActive && !user.isLocked;
+};
+
+// Kiểm tra quyền - có phải faculty không
+export const isFaculty = async (uid) => {
+  const user = await getUserData(uid);
+  return user && user.isFaculty() && user.isActive && !user.isLocked;
+};
+
+// Kiểm tra quyền - có phải student không
+export const isStudent = async (uid) => {
+  const user = await getUserData(uid);
+  return user && user.isStudent() && user.isActive && !user.isLocked;
+};
+
+// Kiểm tra user bị khóa hay không
+export const isUserLocked = async (uid) => {
+  const user = await getUserData(uid);
+  return user && user.isLocked;
+};
+
+// Lấy role của user
+export const getUserRole = async (uid) => {
+  const user = await getUserData(uid);
+  return user ? user.role : null;
+};
+
+// Default export with object API for compatibility
+const authService = {
+  signInWithGoogle,
+  signOut,
+  signOutUser,
+  onAuthChange,
+  getUserData,
+  isAdmin,
+  isFaculty,
+  isStudent,
+  isUserLocked,
+  getUserRole,
+  getCurrentUser: async () => {
+    // Get current user from Firebase auth
+    return new Promise((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        unsubscribe();
+        if (currentUser) {
+          try {
+            const userData = await getUserData(currentUser.uid);
+            resolve(userData);
+          } catch (error) {
+            resolve(null);
+          }
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  }
+};
+
+export default authService;

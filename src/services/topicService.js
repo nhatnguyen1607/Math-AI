@@ -20,12 +20,19 @@ class TopicService {
   // Tạo chủ đề mới
   async createTopic(topicData) {
     try {
-      const docRef = await addDoc(collection(db, this.collectionName), {
-        ...topicData,
+      const dataToSave = {
+        name: topicData.name || '',
+        description: topicData.description || '',
+        gradeLevel: topicData.gradeLevel || '',
+        classId: topicData.classId || '', // Class ID
+        type: topicData.type || 'startup', // 'startup' or 'worksheet'
+        createdBy: topicData.createdBy || '',
+        createdByName: topicData.createdByName || '',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         problemCount: 0
-      });
+      };
+      const docRef = await addDoc(collection(db, this.collectionName), dataToSave);
       return { id: docRef.id, ...topicData };
     } catch (error) {
       console.error("Error creating topic:", error);
@@ -48,6 +55,30 @@ class TopicService {
       return topics;
     } catch (error) {
       console.error("Error getting topics:", error);
+      throw error;
+    }
+  }
+
+  // Lấy chủ đề theo classId
+  async getTopicsByClass(classId) {
+    try {
+      // Lấy tất cả topics rồi filter phía client để tránh vấn đề composite index
+      const q = query(
+        collection(db, this.collectionName),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      const topics = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Filter theo classId phía client
+        if (data.classId === classId) {
+          topics.push({ id: doc.id, ...data });
+        }
+      });
+      return topics;
+    } catch (error) {
+      console.error("Error getting topics by class:", error);
       throw error;
     }
   }

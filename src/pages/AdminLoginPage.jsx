@@ -1,20 +1,29 @@
 import React, { useState } from 'react';
-import adminAuthService from '../services/adminAuthService';
+import adminAuthService from '../services/admin/adminAuthService';
 
 function AdminLoginPage({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     
-    const result = adminAuthService.login(username, password);
-    if (result.success) {
-      onLoginSuccess();
-    } else {
-      setError(result.error);
+    try {
+      const result = adminAuthService.login(username, password);
+      if (result.success) {
+        onLoginSuccess();
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError('Có lỗi xảy ra. Vui lòng thử lại.');
+      console.error('Login error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -66,9 +75,10 @@ function AdminLoginPage({ onLoginSuccess }) {
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white font-bold py-4 px-6 rounded-xl hover:shadow-lg transition-all"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white font-bold py-4 px-6 rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Đăng nhập
+            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
         </form>
 

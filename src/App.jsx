@@ -1,24 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { auth } from './firebase';
-import { signOutUser } from './services/authService';
-import adminAuthService from './services/adminAuthService';
+import { signOutUser, getUserData } from './services/authService';
+import adminAuthService from './services/admin/adminAuthService';
 import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import ProblemSolverPage from './pages/ProblemSolverPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminPage from './pages/AdminPage';
+import StudentDashboardPage from './pages/student/StudentDashboardPage';
+import StudentExamLobbyPage from './pages/student/StudentExamLobbyPage';
+import StudentExamPage from './pages/student/StudentExamPage';
+import StudentExamResultPage from './pages/student/StudentExamResultPage';
+import FacultyPage from './pages/faculty/FacultyPage';
+import FacultyTopicManagementPage from './pages/faculty/FacultyTopicManagementPage';
+import FacultyExamManagementPage from './pages/faculty/FacultyExamManagementPage';
+import FacultyExamLiveSessionPage from './pages/faculty/FacultyExamLiveSessionPage';
 
 function App() {
   const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState('dashboard'); // 'dashboard', 'solver', 'admin'
-  const [selectedProblem, setSelectedProblem] = useState(null);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [lockError, setLockError] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      
+      if (currentUser) {
+        // Kiểm tra tài khoản bị khóa
+        try {
+          const data = await getUserData(currentUser.uid);
+          setUserData(data);
+          
+          if (data && data.isLocked) {
+            setLockError('Tài khoản của bạn đã bị khóa');
+            await signOutUser();
+            setUser(null);
+            setUserData(null);
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      }
+      
       setLoading(false);
     });
 
@@ -28,18 +53,9 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // Kiểm tra nếu URL là /admin
-  useEffect(() => {
-    if (window.location.pathname === '/admin') {
-      setCurrentPage('admin');
-    }
-  }, []);
-
   const handleSignOut = async () => {
     try {
       await signOutUser();
-      setCurrentPage('dashboard');
-      setSelectedProblem(null);
     } catch (error) {
       console.error('Sign out error:', error);
     }
@@ -48,22 +64,11 @@ function App() {
   const handleAdminLogout = () => {
     adminAuthService.logout();
     setIsAdminAuthenticated(false);
-    setCurrentPage('dashboard');
     window.history.pushState({}, '', '/');
   };
 
   const handleAdminLoginSuccess = () => {
     setIsAdminAuthenticated(true);
-  };
-
-  const handleStartProblem = (problem) => {
-    setSelectedProblem(problem);
-    setCurrentPage('solver');
-  };
-
-  const handleBackToDashboard = () => {
-    setCurrentPage('dashboard');
-    setSelectedProblem(null);
   };
 
   if (loading) {
@@ -75,35 +80,52 @@ function App() {
     );
   }
 
-  // Admin route
-  if (currentPage === 'admin') {
-    if (!isAdminAuthenticated) {
-      return <AdminLoginPage onLoginSuccess={handleAdminLoginSuccess} />;
-    }
-    return <AdminPage onLogout={handleAdminLogout} />;
-  }
-
-  // User routes
-  if (!user) {
-    return <LoginPage />;
-  }
-
-  if (currentPage === 'solver') {
+  // Hiển thị thông báo khóa tài khoản
+  if (lockError) {
     return (
-      <ProblemSolverPage 
-        user={user}
-        problem={selectedProblem}
-        onBack={handleBackToDashboard}
-      />
+      <div className="flex flex-col items-center justify-center min-h-screen bg-red-50">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md text-center">
+          <p className="text-3xl mb-4">🔒</p>
+          <h2 className="text-2xl font-bold text-red-600 mb-2">Tài khoản bị khóa</h2>
+          <p className="text-gray-600 mb-6">{lockError}</p>
+          <p className="text-sm text-gray-500">Vui lòng liên hệ với quản trị viên để được mở khóa</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <DashboardPage 
-      user={user}
-      onStartProblem={handleStartProblem}
-      onSignOut={handleSignOut}
-    />
+    <BrowserRouter>
+      <Routes>
+        {/* Admin routes */}
+        <Route path="/admin" element={!isAdminAuthenticated ? <AdminLoginPage onLoginSuccess={handleAdminLoginSuccess} /> : <AdminPage onLogout={handleAdminLogout} />} />
+        
+        {/* Login route */}
+        <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={userData && userData.isFaculty() ? '/faculty' : '/student'} replace />} />
+        
+        {/* Faculty routes */}
+        <Route path="/faculty" element={userData && userData.isFaculty() ? <FacultyPage user={user} userData={userData} onSignOut={handleSignOut} /> : user ? <Navigate to="/student" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/faculty/topic-management" element={userData && userData.isFaculty() ? <FacultyTopicManagementPage user={user} userData={userData} onSignOut={handleSignOut} /> : user ? <Navigate to="/student" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/faculty/exam-management" element={userData && userData.isFaculty() ? <FacultyExamManagementPage user={user} userData={userData} onSignOut={handleSignOut} /> : user ? <Navigate to="/student" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/faculty/exam-live-session" element={userData && userData.isFaculty() ? <FacultyExamLiveSessionPage user={user} userData={userData} onSignOut={handleSignOut} /> : user ? <Navigate to="/student" replace /> : <Navigate to="/login" replace />} />
+        
+        {/* Student routes */}
+        <Route path="/student" element={user && (!userData || !userData.isFaculty()) ? <StudentDashboardPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/student/:classId/topic-management" element={user && (!userData || !userData.isFaculty()) ? <StudentDashboardPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/student/:classId/topic-management/:topicId" element={user && (!userData || !userData.isFaculty()) ? <StudentDashboardPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/student/:classId/exam-management" element={user && (!userData || !userData.isFaculty()) ? <StudentDashboardPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/student/:classId" element={user && (!userData || !userData.isFaculty()) ? <StudentDashboardPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/student/exam-lobby/:examId" element={user && (!userData || !userData.isFaculty()) ? <StudentExamLobbyPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/student/exam/:examId" element={user && (!userData || !userData.isFaculty()) ? <StudentExamPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/student/exam-result/:examId" element={user && (!userData || !userData.isFaculty()) ? <StudentExamResultPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
+        
+        {/* Default route */}
+        <Route path="/" element={user ? (userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/student" replace />) : <Navigate to="/login" replace />} />
+        
+        {/* Catch all - redirect to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

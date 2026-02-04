@@ -6,7 +6,7 @@ import { signOutUser, getUserData } from './services/authService';
 import adminAuthService from './services/admin/adminAuthService';
 import LoginPage from './pages/LoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
-import AdminPage from './pages/AdminPage';
+import AdminPage from './pages/admin/AdminPage';
 import StudentDashboardPage from './pages/student/StudentDashboardPage';
 import StudentExamLobbyPage from './pages/student/StudentExamLobbyPage';
 import StudentExamPage from './pages/student/StudentExamPage';

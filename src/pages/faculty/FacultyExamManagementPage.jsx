@@ -252,10 +252,13 @@ const FacultyExamManagementPage = () => {
 
   const handleStartExam = async (examId) => {
     try {
-      await facultyService.startExam(examId);
-      navigate(`/faculty/exam-live/${examId}`);
+      // startExam now returns sessionId
+      const sessionId = await facultyService.startExam(examId, user?.id, selectedClassId);
+      // Navigate to the exam lobby page with sessionId
+      navigate(`/faculty/exam-lobby/${sessionId}`);
     } catch (error) {
-      alert('Lỗi khi bắt đầu đề thi');
+      console.error('Error starting exam:', error);
+      alert('Lỗi khi bắt đầu đề thi: ' + error.message);
     }
   };
 

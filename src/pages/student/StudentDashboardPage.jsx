@@ -15,7 +15,6 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
   const [userStats, setUserStats] = useState(null);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [selectedClass, setSelectedClass] = useState(null);
-  const [topicExams, setTopicExams] = useState([]);
   
   // Determine current view from URL path
   const currentView = location.includes('/topic-management') ? 'topic-management' : location.includes('/exam-management') ? 'exam-management' : null;
@@ -82,13 +81,11 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
       const topic = topics.find(t => t.id === topicId);
       if (topic) {
         setSelectedTopic(topic);
-        const topicExamsList = exams.filter(exam => exam.topicId === topicId);
-        setTopicExams(topicExamsList);
       }
     } else if (!topicId) {
       setSelectedTopic(null);
     }
-  }, [topicId, topics, exams]);
+  }, [topicId, topics]);
 
   const handleSelectClass = useCallback((cls) => {
     setSelectedClass(cls);
@@ -133,7 +130,6 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
         selectedTopic={selectedTopic}
         setSelectedTopic={setSelectedTopic}
         topicId={topicId}
-        setTopicExams={setTopicExams}
       />
     );
   }

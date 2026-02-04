@@ -6,7 +6,11 @@ import {
   where,
   orderBy,
   limit,
-  serverTimestamp
+  serverTimestamp,
+  doc,
+  getDoc,
+  updateDoc,
+  setDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import problemService from './problemService';
@@ -339,7 +343,171 @@ class ResultService {
     
     return stepCount > 0 ? Math.round(totalScore / stepCount) : 0;
   }
-}
+
+  // ===== EXAM SESSION RESULTS (Live Exam) =====
+
+  /**
+   * Lưu kết quả thi trực tiếp của một học sinh
+   */
+  async saveExamSessionResult(sessionId, uid, examId, resultData) {
+    try {
+      const resultRef = doc(collection(db, 'exam_results'));
+      
+      const result = {
+        sessionId,
+        userId: uid,
+        examId,
+        score: resultData.score || 0,
+        totalQuestions: resultData.totalQuestions || 0,
+        correctAnswers: resultData.answers?.filter(a => a.isCorrect).length || 0,
+        incorrectAnswers: resultData.answers?.filter(a => !a.isCorrect).length || 0,
+        percentage: resultData.totalQuestions > 0 
+          ? Math.round((resultData.score / resultData.totalQuestions) * 100) 
+          : 0,
+        answers: resultData.answers || [],
+        timeSpent: resultData.timeSpent || 0,
+        submittedAt: serverTimestamp(),
+        aiAnalysis: null,
+        leaderboardPosition: 1
+      };
+      
+      await setDoc(resultRef, result);
+      return { id: resultRef.id, ...result };
+    } catch (error) {
+      console.error('Error saving exam session result:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy kết quả thi của một học sinh từ một phiên thi
+   */
+  async getExamSessionResult(sessionId, uid) {
+    try {
+      const q = query(
+        collection(db, 'exam_results'),
+        where('sessionId', '==', sessionId),
+        where('userId', '==', uid)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        return { id: doc.id, ...doc.data() };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting exam session result:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy tất cả kết quả từ một phiên thi
+   */
+  async getSessionResults(sessionId) {
+    try {
+      const q = query(
+        collection(db, 'exam_results'),
+        where('sessionId', '==', sessionId)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const results = [];
+      querySnapshot.forEach((doc) => {
+        results.push({ id: doc.id, ...doc.data() });
+      });
+      
+      return results;
+    } catch (error) {
+      console.error('Error getting session results:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy tất cả kết quả thi của một học sinh
+   */
+  async getUserExamResults(uid) {
+    try {
+      const q = query(
+        collection(db, 'exam_results'),
+        where('userId', '==', uid),
+        orderBy('submittedAt', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const results = [];
+      querySnapshot.forEach((doc) => {
+        results.push({ id: doc.id, ...doc.data() });
+      });
+      
+      return results;
+    } catch (error) {
+      console.error('Error getting user exam results:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy thống kê học sinh cho một bộ đề
+   */
+  async getStudentExamStatistics(uid, examId) {
+    try {
+      const q = query(
+        collection(db, 'exam_results'),
+        where('userId', '==', uid),
+        where('examId', '==', examId)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const results = [];
+      querySnapshot.forEach((doc) => {
+        results.push({ id: doc.id, ...doc.data() });
+      });
+      
+      if (results.length === 0) {
+        return {
+          totalAttempts: 0,
+          bestScore: 0,
+          averageScore: 0,
+          lastAttempt: null,
+          results: []
+        };
+      }
+      
+      const scores = results.map(r => r.percentage || 0);
+      const bestScore = Math.max(...scores);
+      const averageScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+      
+      return {
+        totalAttempts: results.length,
+        bestScore,
+        averageScore,
+        lastAttempt: results[0]?.submittedAt,
+        results
+      };
+    } catch (error) {
+      console.error('Error getting student exam statistics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cập nhật vị trí xếp hạng
+   */
+  async updateLeaderboardPosition(resultId, position) {
+    try {
+      const resultRef = doc(db, 'exam_results', resultId);
+      await updateDoc(resultRef, {
+        leaderboardPosition: position
+      });
+    } catch (error) {
+      console.error('Error updating leaderboard position:', error);
+      throw error;
+    }
+  }
+
 
 const resultServiceInstance = new ResultService();
 export default resultServiceInstance;

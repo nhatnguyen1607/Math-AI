@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import adminService from '../../services/admin/adminService';
-import { User } from '../../models';
 
 /**
  * Admin Dashboard
@@ -25,10 +24,33 @@ function AdminPage() {
     loadStatistics();
   }, []);
 
+  const filterUsers = useCallback(() => {
+    let filtered = users;
+
+    // Filter by tab
+    if (activeTab === 'students') {
+      filtered = filtered.filter(u => u.isStudent());
+    } else if (activeTab === 'faculty') {
+      filtered = filtered.filter(u => u.isFaculty());
+    } else if (activeTab === 'locked') {
+      filtered = filtered.filter(u => u.isLocked);
+    }
+
+    // Filter by search
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(u =>
+        u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.displayName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    setFilteredUsers(filtered);
+  }, [users, activeTab, searchTerm]);
+
   // Filter users when tab or search changes
   useEffect(() => {
     filterUsers();
-  }, [users, activeTab, searchTerm]);
+  }, [filterUsers]);
 
   const loadUsers = async () => {
     try {
@@ -50,29 +72,6 @@ function AdminPage() {
     } catch (error) {
       console.error('Error loading statistics:', error);
     }
-  };
-
-  const filterUsers = () => {
-    let filtered = users;
-
-    // Filter by tab
-    if (activeTab === 'students') {
-      filtered = filtered.filter(u => u.isStudent());
-    } else if (activeTab === 'faculty') {
-      filtered = filtered.filter(u => u.isFaculty());
-    } else if (activeTab === 'locked') {
-      filtered = filtered.filter(u => u.isLocked);
-    }
-
-    // Filter by search
-    if (searchTerm.trim()) {
-      filtered = filtered.filter(u =>
-        u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.displayName.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    setFilteredUsers(filtered);
   };
 
   const handleLockUser = async (userId, reason) => {

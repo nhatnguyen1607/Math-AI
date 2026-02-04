@@ -1,15 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import StudentHeader from '../../components/student/StudentHeader';
 
-const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selectedTopic, setSelectedTopic, topicId, setTopicExams }) => {
+const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selectedTopic, setSelectedTopic, topicId }) => {
   const navigate = useNavigate();
 
   const handleSelectTopic = (topic) => {
     setSelectedTopic(topic);
     navigate(`/student/${selectedClass.id}/topic-management/${topic.id}`);
-    const topicExamsList = exams.filter(exam => exam.topicId === topic.id);
-    setTopicExams(topicExamsList);
   };
 
   const handleJoinExam = (examId) => {

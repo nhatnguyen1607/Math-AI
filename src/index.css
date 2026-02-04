@@ -406,7 +406,127 @@
   }
 
   .faculty-exam-live-session {
-    @apply min-h-screen bg-gradient-to-br from-purple-50 to-purple-100;
+    @apply min-h-screen bg-gradient-to-br from-purple-50 to-purple-100 p-8;
+  }
+
+  .faculty-exam-live {
+    @apply min-h-screen bg-gradient-to-br from-purple-50 to-purple-100 p-8;
+  }
+
+  .live-session-content {
+    @apply mb-8 flex justify-between items-center;
+  }
+
+  .end-exam-btn {
+    @apply bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg transition-all duration-300;
+  }
+
+  .live-content {
+    @apply max-w-7xl mx-auto;
+  }
+
+  .stats-container {
+    @apply grid grid-cols-1 md:grid-cols-4 gap-4 mb-8;
+  }
+
+  .stat-card {
+    @apply bg-white rounded-lg shadow-lg p-6 flex items-center gap-4;
+  }
+
+  .stat-icon {
+    @apply text-4xl;
+  }
+
+  .stat-info {
+    @apply flex flex-col;
+  }
+
+  .stat-value {
+    @apply text-3xl font-bold text-gray-800;
+  }
+
+  .stat-label {
+    @apply text-sm text-gray-600;
+  }
+
+  .leaderboard-container {
+    @apply bg-white rounded-lg shadow-lg p-8;
+  }
+
+  .leaderboard-container h2 {
+    @apply text-2xl font-bold text-gray-800 mb-6;
+  }
+
+  .empty-state {
+    @apply text-center py-12;
+  }
+
+  .empty-state p {
+    @apply text-gray-500 text-lg;
+  }
+
+  .leaderboard-table {
+    @apply w-full;
+  }
+
+  .table-header {
+    @apply grid grid-cols-6 gap-4 bg-gray-100 p-4 rounded-t-lg font-semibold text-gray-700;
+  }
+
+  .table-row {
+    @apply grid grid-cols-6 gap-4 p-4 border-b border-gray-200 hover:bg-gray-50 transition-colors;
+  }
+
+  .table-row.rank-1 {
+    @apply bg-yellow-50;
+  }
+
+  .table-row.rank-2 {
+    @apply bg-gray-50;
+  }
+
+  .table-row.rank-3 {
+    @apply bg-orange-50;
+  }
+
+  .col {
+    @apply flex items-center;
+  }
+
+  .col-rank {
+    @apply text-center font-bold text-lg;
+  }
+
+  .col-name {
+    @apply font-semibold text-gray-800;
+  }
+
+  .col-score {
+    @apply justify-center;
+  }
+
+  .score {
+    @apply font-bold text-lg px-3 py-1 rounded;
+  }
+
+  .score.pass {
+    @apply bg-green-100 text-green-700;
+  }
+
+  .score.fail {
+    @apply bg-red-100 text-red-700;
+  }
+
+  .status-badge {
+    @apply px-3 py-1 rounded-full text-sm font-semibold;
+  }
+
+  .status-badge.submitted {
+    @apply bg-green-100 text-green-700;
+  }
+
+  .status-badge.pending {
+    @apply bg-yellow-100 text-yellow-700;
   }
 
   .faculty-game-lobby {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import authService from '../../services/authService';
 import studentService from '../../services/student/studentService';
@@ -31,17 +31,7 @@ const StudentExamResultPage = () => {
     checkAuth();
   }, [navigate]);
 
-  useEffect(() => {
-    // Lấy result từ location state hoặc từ database
-    if (location.state?.result) {
-      setResult(location.state.result);
-      loadExamData();
-    } else {
-      loadExamDataAndResult();
-    }
-  }, [examId, loadExamData, loadExamDataAndResult, location.state]);
-
-  const loadExamData = async () => {
+  const loadExamData = useCallback(async () => {
     try {
       const examData = await studentService.getExamById(examId);
       setExam(examData);
@@ -50,9 +40,9 @@ const StudentExamResultPage = () => {
       console.error('Error loading exam:', error);
       setLoading(false);
     }
-  };
+  }, [examId]);
 
-  const loadExamDataAndResult = async () => {
+  const loadExamDataAndResult = useCallback(async () => {
     try {
       const [examData, resultData] = await Promise.all([
         studentService.getExamById(examId),
@@ -65,7 +55,17 @@ const StudentExamResultPage = () => {
       console.error('Error loading data:', error);
       setLoading(false);
     }
-  };
+  }, [examId, user?.uid]);
+
+  useEffect(() => {
+    // Lấy result từ location state hoặc từ database
+    if (location.state?.result) {
+      setResult(location.state.result);
+      loadExamData();
+    } else {
+      loadExamDataAndResult();
+    }
+  }, [examId, user?.uid, location.state?.result, loadExamData, loadExamDataAndResult]);
 
   const handleRetakExam = () => {
     navigate(`/student/exam-lobby/${examId}`);

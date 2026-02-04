@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import authService from '../../services/authService';
 import studentService from '../../services/student/studentService';
@@ -30,14 +30,7 @@ const StudentExamLobbyPage = () => {
     checkAuth();
   }, [navigate]);
 
-  useEffect(() => {
-    loadExamData();
-    // Polling exam status every 1 second
-    const interval = setInterval(loadExamData, 1000);
-    return () => clearInterval(interval);
-  }, [examId, loadExamData]);
-
-  const loadExamData = async () => {
+  const loadExamData = useCallback(async () => {
     try {
       const [examData, participantsData] = await Promise.all([
         studentService.getExamById(examId),
@@ -69,7 +62,14 @@ const StudentExamLobbyPage = () => {
       alert('Lỗi khi tải thông tin đề thi');
       navigate('/student');
     }
-  };
+  }, [examId, navigate]);
+
+  useEffect(() => {
+    loadExamData();
+    // Polling exam status every 1 second
+    const interval = setInterval(loadExamData, 1000);
+    return () => clearInterval(interval);
+  }, [examId, loadExamData]);
 
   if (loading || !exam) {
     return <div className="loading">Đang tải...</div>;

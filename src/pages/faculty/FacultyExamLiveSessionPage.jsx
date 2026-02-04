@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import authService from '../../services/authService';
 import facultyService from '../../services/faculty/facultyService';
@@ -29,7 +29,7 @@ const FacultyExamLiveSessionPage = () => {
     checkAuth();
   }, [navigate]);
 
-  const loadExamData = async () => {
+  const loadExamData = useCallback(async () => {
     try {
       const data = await facultyService.getExamById(examId);
       setExam(data);
@@ -39,16 +39,16 @@ const FacultyExamLiveSessionPage = () => {
       alert('Lỗi khi tải đề thi');
       navigate('/faculty/exam-management');
     }
-  };
+  }, [examId, navigate]);
 
-  const loadParticipants = async () => {
+  const loadParticipants = useCallback(async () => {
     try {
       const data = await facultyService.getExamParticipants(examId);
       setParticipants(data || []);
     } catch (error) {
       console.error('Error loading participants:', error);
     }
-  };
+  }, [examId]);
 
   useEffect(() => {
     loadExamData();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import authService from '../../services/authService';
 import studentService from '../../services/student/studentService';
@@ -15,6 +15,66 @@ const StudentExamPage = () => {
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+  const timeLeftRef = useRef(0);
+
+  useEffect(() => {
+    timeLeftRef.current = timeLeft;
+  }, [timeLeft]);
+
+  const loadExamData = useCallback(async () => {
+    try {
+      const examData = await studentService.getExamById(examId);
+      setExam(examData);
+      setTimeLeft(examData.duration * 60); // Convert minutes to seconds
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading exam:', error);
+      alert('Lỗi khi tải đề thi');
+      navigate('/student');
+    }
+  }, [examId, navigate]);
+
+  const handleSubmitExam = useCallback(async () => {
+    if (submitting) return;
+
+    setSubmitting(true);
+    try {
+      // Tính điểm
+      let correctCount = 0;
+      exam.questions.forEach((question, index) => {
+        if (answers[index] === question.correctAnswer) {
+          correctCount++;
+        }
+      });
+
+      const score = Math.round((correctCount / exam.questions.length) * 100);
+      const passed = score >= exam.passingScore;
+
+      const result = {
+        studentId: user.uid,
+        studentName: user.displayName,
+        examId: exam.id,
+        examTitle: exam.title,
+        answers,
+        correctAnswers: correctCount,
+        totalQuestions: exam.questions.length,
+        score,
+        passed,
+        submittedAt: new Date(),
+        timeTaken: exam.duration * 60 - timeLeftRef.current
+      };
+
+      // Lưu kết quả
+      await studentService.submitExam(result);
+      
+      // Chuyển tới trang kết quả
+      navigate(`/student/exam-result/${examId}`, { state: { result } });
+    } catch (error) {
+      console.error('Error submitting exam:', error);
+      alert('Lỗi khi nộp bài');
+      setSubmitting(false);
+    }
+  }, [submitting, exam, answers, user.uid, user.displayName, examId, navigate]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -36,19 +96,6 @@ const StudentExamPage = () => {
   useEffect(() => {
     loadExamData();
   }, [examId, loadExamData]);
-
-  const loadExamData = async () => {
-    try {
-      const examData = await studentService.getExamById(examId);
-      setExam(examData);
-      setTimeLeft(examData.duration * 60); // Convert minutes to seconds
-      setLoading(false);
-    } catch (error) {
-      console.error('Error loading exam:', error);
-      alert('Lỗi khi tải đề thi');
-      navigate('/student');
-    }
-  };
 
   // Countdown timer
   useEffect(() => {
@@ -85,48 +132,6 @@ const StudentExamPage = () => {
 
   const handleGoToQuestion = (index) => {
     setCurrentQuestion(index);
-  };
-
-  const handleSubmitExam = async () => {
-    if (submitting) return;
-
-    setSubmitting(true);
-    try {
-      // Tính điểm
-      let correctCount = 0;
-      exam.questions.forEach((question, index) => {
-        if (answers[index] === question.correctAnswer) {
-          correctCount++;
-        }
-      });
-
-      const score = Math.round((correctCount / exam.questions.length) * 100);
-      const passed = score >= exam.passingScore;
-
-      const result = {
-        studentId: user.uid,
-        studentName: user.displayName,
-        examId: exam.id,
-        examTitle: exam.title,
-        answers,
-        correctAnswers: correctCount,
-        totalQuestions: exam.questions.length,
-        score,
-        passed,
-        submittedAt: new Date(),
-        timeTaken: exam.duration * 60 - timeLeft
-      };
-
-      // Lưu kết quả
-      await studentService.submitExam(result);
-      
-      // Chuyển tới trang kết quả
-      navigate(`/student/exam-result/${examId}`, { state: { result } });
-    } catch (error) {
-      console.error('Error submitting exam:', error);
-      alert('Lỗi khi nộp bài');
-      setSubmitting(false);
-    }
   };
 
   const formatTime = (seconds) => {

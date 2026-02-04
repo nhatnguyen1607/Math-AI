@@ -95,12 +95,6 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
     navigate(`/student/${cls.id}`);
   }, [navigate]);
 
-  const handleBackToClasses = useCallback(() => {
-    setSelectedClass(null);
-    setSelectedTopic(null);
-    navigate('/student');
-  }, [navigate]);
-
   const handleStartupClick = useCallback(() => {
     if (selectedClass) {
       navigate(`/student/${selectedClass.id}/topic-management`);

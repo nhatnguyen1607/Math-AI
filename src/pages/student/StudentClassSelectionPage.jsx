@@ -43,14 +43,6 @@ const StudentClassSelectionPage = ({ user, onSelectClass, onSignOut }) => {
     loadClasses();
   }, [loadClasses]);
 
-  const handleLogout = async () => {
-    try {
-      await onSignOut();
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
   const handleJoinClass = async (e) => {
     e.preventDefault();
     if (!joinCode.trim()) {

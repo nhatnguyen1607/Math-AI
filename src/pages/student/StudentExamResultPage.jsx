@@ -39,7 +39,7 @@ const StudentExamResultPage = () => {
     } else {
       loadExamDataAndResult();
     }
-  }, [examId]);
+  }, [examId, loadExamData, loadExamDataAndResult, location.state]);
 
   const loadExamData = async () => {
     try {

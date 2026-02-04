@@ -29,13 +29,6 @@ const FacultyExamLiveSessionPage = () => {
     checkAuth();
   }, [navigate]);
 
-  useEffect(() => {
-    loadExamData();
-    // Polling realtime participants every 2 seconds
-    const interval = setInterval(loadParticipants, 2000);
-    return () => clearInterval(interval);
-  }, [examId]);
-
   const loadExamData = async () => {
     try {
       const data = await facultyService.getExamById(examId);
@@ -56,6 +49,13 @@ const FacultyExamLiveSessionPage = () => {
       console.error('Error loading participants:', error);
     }
   };
+
+  useEffect(() => {
+    loadExamData();
+    // Polling realtime participants every 2 seconds
+    const interval = setInterval(loadParticipants, 2000);
+    return () => clearInterval(interval);
+  }, [examId, loadExamData, loadParticipants]);
 
   const handleEndExam = async () => {
     if (window.confirm('Bạn có chắc chắn muốn kết thúc phiên thi?')) {

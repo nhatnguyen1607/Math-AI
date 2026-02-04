@@ -11,7 +11,6 @@ const StudentExamLobbyPage = () => {
   const [loading, setLoading] = useState(true);
   const [participants, setParticipants] = useState([]);
   const [examStatus, setExamStatus] = useState('waiting'); // waiting, starting, started, ended
-  const [countdownText, setCountdownText] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,7 +35,7 @@ const StudentExamLobbyPage = () => {
     // Polling exam status every 1 second
     const interval = setInterval(loadExamData, 1000);
     return () => clearInterval(interval);
-  }, [examId]);
+  }, [examId, loadExamData]);
 
   const loadExamData = async () => {
     try {
@@ -68,12 +67,6 @@ const StudentExamLobbyPage = () => {
     } catch (error) {
       console.error('Error loading exam:', error);
       alert('Lỗi khi tải thông tin đề thi');
-      navigate('/student');
-    }
-  };
-
-  const handleLeaveExam = () => {
-    if (window.confirm('Bạn chắc chắn muốn rời khỏi phòng chờ?')) {
       navigate('/student');
     }
   };

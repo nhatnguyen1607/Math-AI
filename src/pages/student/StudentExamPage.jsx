@@ -35,7 +35,7 @@ const StudentExamPage = () => {
 
   useEffect(() => {
     loadExamData();
-  }, [examId]);
+  }, [examId, loadExamData]);
 
   const loadExamData = async () => {
     try {
@@ -62,7 +62,7 @@ const StudentExamPage = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, exam]);
+  }, [timeLeft, exam, handleSubmitExam]);
 
   const handleSelectAnswer = (questionIndex, answerIndex) => {
     setAnswers({
@@ -142,7 +142,6 @@ const StudentExamPage = () => {
   }
 
   const question = exam.questions[currentQuestion];
-  const answered = answers.hasOwnProperty(currentQuestion);
 
   const navItems = [
     { icon: '📝', label: 'Làm Bài: ' + exam.title }

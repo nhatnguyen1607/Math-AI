@@ -210,7 +210,13 @@ export const submitAnswer = async (sessionId, uid, answerData) => {
     // Đọc data hiện tại một lần
     const sessionSnap = await getDoc(sessionRef);
     const sessionData = sessionSnap.data();
-    const currentAnswers = sessionData?.participants?.[uid]?.answers || [];
+    
+    // Ensure answers is an array
+    let currentAnswers = sessionData?.participants?.[uid]?.answers;
+    if (!Array.isArray(currentAnswers)) {
+      console.warn('⚠️ currentAnswers is not an array, resetting to empty array');
+      currentAnswers = [];
+    }
 
     // Thêm answer mới vào danh sách
     const updatedAnswers = [...currentAnswers, answerData];

@@ -769,13 +769,521 @@
   }
 }
 
+/* ========== BASELINE UPGRADE STYLES (STUDENT PAGES) ========== */
+
+/* Import Quicksand font for kid-friendly appearance */
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap');
+
+/* Pastel Colors Palette */
+:root {
+  --pastel-pink: #FFDEE9;
+  --pastel-green: #D5FFD0;
+  --pastel-yellow: #FEE140;
+  --pastel-blue: #D4E4FF;
+  --pastel-purple: #E6D5FF;
+  --pastel-orange: #FFDCC4;
+}
+
+/* ========== SHARED COMPONENTS ========== */
+
+/* Game Card with 3D Shadow Effect */
+.game-card {
+  box-shadow: 0 10px 0 0 #e2e8f0;
+  border: 3px solid #f1f5f9;
+  transition: all 0.3s ease;
+}
+
+.game-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 0 0 #cbd5e1;
+}
+
+/* Soft Shadow */
+.soft-shadow {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+}
+
+.soft-shadow-lg {
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.12);
+}
+
+/* Max Rounded Corners */
+.rounded-max {
+  border-radius: 40px;
+}
+
+/* ========== FONT FAMILY ========== */
+.font-quicksand {
+  font-family: 'Quicksand', sans-serif;
+}
+
+.font-nunito {
+  font-family: 'Nunito', sans-serif;
+}
+
 body {
+  font-family: 'Quicksand', 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+/* ========== ANIMATIONS ========== */
+
+/* Float animation for cards */
+@keyframes float-gentle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+/* Bounce animation */
+@keyframes bounce-soft {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Zoom in animation for countdown */
+@keyframes zoom-in {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Confetti burst animation */
+@keyframes burst {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--tx), var(--ty)) scale(0);
+    opacity: 0;
+  }
+}
+
+/* Rocket movement animation */
+@keyframes rocket-fly {
+  0% {
+    transform: translateX(0) rotate(0deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(0deg);
+  }
+}
+
+/* Jelly button effect */
+@keyframes jelly-squeeze {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scaleY(0.9) scaleX(1.05);
+  }
+  50% {
+    transform: scale(1);
+  }
+  75% {
+    transform: scaleY(1.05) scaleX(0.95);
+  }
+}
+
+/* ========== STUDENT SPECIFIC STYLES ========== */
+
+/* Pastel Color Cards */
+.card-pastel-pink {
+  background-color: var(--pastel-pink);
+  border: 3px solid #FFB3D9;
+}
+
+.card-pastel-green {
+  background-color: var(--pastel-green);
+  border: 3px solid #A8F5A4;
+}
+
+.card-pastel-yellow {
+  background-color: var(--pastel-yellow);
+  border: 3px solid #FDD835;
+}
+
+.card-pastel-blue {
+  background-color: var(--pastel-blue);
+  border: 3px solid #90CAF9;
+}
+
+.card-pastel-purple {
+  background-color: var(--pastel-purple);
+  border: 3px solid #CE93D8;
+}
+
+.card-pastel-orange {
+  background-color: var(--pastel-orange);
+  border: 3px solid #FFAB91;
+}
+
+/* 3D Button Effect */
+.btn-3d {
+  position: relative;
+  display: inline-block;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  box-shadow: 0 10px 0 0 rgba(0, 0, 0, 0.2);
+  transition: all 0.1s ease;
+}
+
+.btn-3d:active {
+  transform: translateY(8px);
+  box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.2);
+}
+
+.btn-3d:hover {
+  box-shadow: 0 12px 0 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Bounce animation class */
+.animate-bounce-gentle {
+  animation: bounce-soft 2.5s ease-in-out infinite;
+}
+
+/* Adventure Map - Topic Island Cards */
+.adventure-card {
+  border-radius: 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 24px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.adventure-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3), transparent);
+  transition: all 0.3s ease;
+}
+
+.adventure-card:hover {
+  transform: translateY(-12px) scale(1.05);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+}
+
+/* Avatar Circle Style */
+.avatar-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 5px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.avatar-circle-pink {
+  border-color: #FF69B4;
+  background: linear-gradient(135deg, #FFB3D9, #FF69B4);
+}
+
+.avatar-circle-green {
+  border-color: #00BFA5;
+  background: linear-gradient(135deg, #D5FFD0, #00BFA5);
+}
+
+.avatar-circle-blue {
+  border-color: #2196F3;
+  background: linear-gradient(135deg, #D4E4FF, #2196F3);
+}
+
+.avatar-circle-yellow {
+  border-color: #FFC107;
+  background: linear-gradient(135deg, #FEE140, #FFC107);
+}
+
+/* Star Badge - for completion tracking */
+.star-badge {
+  display: inline-block;
+  font-size: 20px;
+  margin: 0 4px;
+}
+
+.star-earned {
+  color: #FFD700;
+  filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.5));
+}
+
+.star-empty {
+  color: #D3D3D3;
+  opacity: 0.5;
+}
+
+/* Rocket Progress Bar */
+.rocket-progress {
+  position: relative;
+  width: 100%;
+  height: 60px;
+  background: linear-gradient(90deg, #E8F5E9, #E3F2FD);
+  border-radius: 40px;
+  overflow: hidden;
+  border: 3px solid #4CAF50;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.rocket-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  border-radius: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 12px;
+  font-size: 32px;
+  transition: width 0.5s ease;
+}
+
+.rocket-progress-text {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 700;
+  color: #2E7D32;
+  z-index: 2;
+  font-size: 18px;
+}
+
+/* Jelly Button - Answer Options */
+.jelly-btn {
+  border-radius: 24px;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 20px 40px;
+  border: 3px solid;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 8px 0 0 rgba(0, 0, 0, 0.1);
+}
+
+.jelly-btn:active {
+  animation: jelly-squeeze 0.3s ease;
+  transform: translateY(6px);
+  box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.1);
+}
+
+.jelly-btn:hover {
+  box-shadow: 0 10px 0 0 rgba(0, 0, 0, 0.15);
+}
+
+.jelly-btn-a {
+  background-color: var(--pastel-pink);
+  border-color: #FFB3D9;
+  color: #C2185B;
+}
+
+.jelly-btn-b {
+  background-color: var(--pastel-blue);
+  border-color: #90CAF9;
+  color: #1565C0;
+}
+
+.jelly-btn-c {
+  background-color: var(--pastel-green);
+  border-color: #A8F5A4;
+  color: #00695C;
+}
+
+.jelly-btn-d {
+  background-color: var(--pastel-yellow);
+  border-color: #FDD835;
+  color: #F57F17;
+}
+
+/* Correct Answer Feedback */
+.feedback-correct {
+  animation: pulse 0.6s ease, confetti-burst 0.8s ease;
+  background: linear-gradient(135deg, #4CAF50, #81C784);
+  color: white;
+  border-color: #2E7D32 !important;
+  box-shadow: 0 0 20px rgba(76, 175, 80, 0.6) !important;
+}
+
+/* Encouraging Feedback */
+.feedback-wrong {
+  animation: shake 0.5s ease;
+  background: linear-gradient(135deg, #EF9A9A, #E57373);
+  color: white;
+  border-color: #C62828 !important;
+  box-shadow: 0 0 20px rgba(229, 115, 115, 0.4) !important;
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-8px);
+  }
+  75% {
+    transform: translateX(8px);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Trophy/Medal Display */
+.trophy-container {
+  text-align: center;
+  padding: 24px;
+  border-radius: 40px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(192, 192, 192, 0.1));
+  border: 3px solid;
+  margin: 20px 0;
+}
+
+.trophy-icon {
+  font-size: 80px;
+  margin: 10px 0;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  animation: bounce-soft 2s ease-in-out infinite;
+}
+
+.trophy-gold {
+  border-color: #FFD700;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05));
+}
+
+.trophy-silver {
+  border-color: #C0C0C0;
+  background: linear-gradient(135deg, rgba(192, 192, 192, 0.15), rgba(192, 192, 192, 0.05));
+}
+
+.trophy-bronze {
+  border-color: #CD7F32;
+  background: linear-gradient(135deg, rgba(205, 127, 50, 0.15), rgba(205, 127, 50, 0.05));
+}
+
+/* Speech Bubble - AI Teacher */
+.speech-bubble {
+  position: relative;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 20px 24px;
+  border-radius: 24px;
+  margin: 20px 0;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  font-family: 'Quicksand', sans-serif;
+}
+
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 30px;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 0 0 20px 0;
+}
+
+.speech-bubble-with-avatar {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  margin: 20px 0;
+}
+
+.teacher-avatar {
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFB3D9, #FF69B4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.speech-content {
+  flex: 1;
+}
+
+.speech-content p {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* ========== COUNTDOWN STYLES ========== */
+
+.countdown-number {
+  animation: zoom-in 1s ease;
+  font-size: 120px;
+  font-weight: 900;
+  font-family: 'Quicksand', sans-serif;
+}
+
+.countdown-3 {
+  color: #FF6B6B;
+}
+
+.countdown-2 {
+  color: #FFA500;
+}
+
+.countdown-1 {
+  color: #4CAF50;
+}
+
+.countdown-go {
+  color: #2196F3;
+  font-size: 100px;
+}
+
+/* Confetti particle */
+.confetti {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  animation: confetti-fall 2s ease-out forwards;
+}
+
+@keyframes confetti-fall {
+  to {
+    transform: translateY(100vh) translateX(var(--tx)) rotate(360deg);
+    opacity: 0;
+  }
 }
 
 code {

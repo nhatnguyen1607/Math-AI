@@ -215,10 +215,10 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-5">
-          <div className="w-12 h-12 border-4 border-purple-300 border-t-white rounded-full animate-spin"></div>
-          <p className="text-white text-lg font-medium">Đang tải phiên thi...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="text-6xl animate-bounce-gentle">🐻</div>
+          <div className="text-2xl font-bold text-gray-700 font-quicksand">Đang tải phiên thi...</div>
         </div>
       </div>
     );
@@ -227,14 +227,14 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
   // Error state
   if (error && !session) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900">
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
         <div className="flex flex-col items-center justify-center gap-8 px-5 py-20">
           <div className="text-8xl">⚠️</div>
-          <h2 className="text-white text-2xl font-bold">{error}</h2>
+          <h2 className="text-gray-800 text-3xl font-bold font-quicksand text-center">{error}</h2>
           <button
             onClick={handleLeaveExam}
-            className="px-8 py-3 bg-white text-purple-600 font-semibold rounded-lg hover:shadow-lg hover:scale-105 transition-all"
+            className="btn-3d px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-quicksand rounded-max hover:shadow-lg transition-all"
           >
             Quay lại
           </button>
@@ -245,39 +245,44 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900">
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
         <div className="flex items-center justify-center pt-20">
-          <div className="w-12 h-12 border-4 border-purple-300 border-t-white rounded-full animate-spin"></div>
+          <div className="text-6xl animate-bounce-gentle">🐻</div>
         </div>
       </div>
     );
   }
 
-  // Countdown screen (3-2-1)
+  // Countdown screen with colorful animated numbers
   if (showCountdown) {
-    const countdownText = countdown > 0 ? countdown : '🎯 BẮT ĐẦU!';
+    const countdownColors = {
+      3: 'countdown-3',
+      2: 'countdown-2',
+      1: 'countdown-1',
+      0: 'countdown-go'
+    };
+
+    const countdownText = countdown > 0 ? countdown : '🎯';
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-white text-2xl font-semibold mb-8">Chuẩn bị bắt đầu...</p>
-          <div
-            className={`text-9xl font-bold mb-8 ${
-              countdown === 0 ? 'text-green-300 animate-bounce' : 'text-white animate-pulse'
-            }`}
-            style={{
-              animation: countdown === 0 ? 'bounce 0.6s ease infinite' : 'pulse 1s ease-in-out infinite'
-            }}
-          >
-            {countdownText}
-          </div>
-          <p className="text-white text-xl">
-            {countdown > 0
-              ? 'Chuẩn bị chứng tỏ kiến thức của bạn! 🚀'
-              : 'Chúc bạn làm bài tốt! 💪'}
-          </p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex flex-col items-center justify-center relative overflow-hidden">
+        {/* Mascot Waiting */}
+        <div className="absolute top-10 left-10 text-8xl animate-bounce-gentle">🐻</div>
+        
+        <p className="text-gray-800 text-3xl font-bold mb-12 font-quicksand">
+          🚀 Chuẩn bị bắt đầu...
+        </p>
+        
+        <div className={`countdown-number ${countdownColors[countdown]} mb-12 font-quicksand`}>
+          {countdownText}
         </div>
+        
+        <p className="text-gray-700 text-2xl font-quicksand">
+          {countdown > 0
+            ? '⏰ Chứng tỏ kiến thức của bạn!'
+            : '💪 Chúc bạn làm bài tốt!'}
+        </p>
       </div>
     );
   }
@@ -299,90 +304,89 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
     finished: '✅ Đã kết thúc'
   };
 
+  // Avatar colors palette
+  const avatarColors = [
+    'avatar-circle-pink',
+    'avatar-circle-green',
+    'avatar-circle-blue',
+    'avatar-circle-yellow'
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900 pb-10">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 pb-10">
       <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
 
-      <div className="max-w-4xl mx-auto px-5 pt-10">
-        {/* Exam Card */}
-        <div className="bg-white rounded-3xl shadow-2xl p-10 mb-10 text-center animate-in slide-in-from-bottom duration-500">
-          <div className="text-6xl mb-4">📝</div>
-          <h1 className="text-4xl font-bold text-gray-800 mb-3">{exam?.title || 'Phòng thi trực tiếp'}</h1>
+      <div className="max-w-5xl mx-auto px-5 pt-10">
+        {/* Exam Card - Nâng cấp */}
+        <div className="game-card bg-gradient-to-br from-purple-300 to-pink-300 rounded-max shadow-2xl p-12 mb-12 text-center">
+          <div className="text-8xl mb-6">📝</div>
+          <h1 className="text-5xl font-bold text-gray-800 mb-4 font-quicksand">{exam?.title || 'Phòng thi trực tiếp'}</h1>
           {exam?.description && (
-            <p className="text-gray-600 text-lg">{exam.description}</p>
+            <p className="text-gray-700 text-xl font-quicksand">{exam.description}</p>
           )}
         </div>
 
-        {/* Status & Info Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-          <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
-            <div className="text-3xl mb-2">📊</div>
-            <div className="text-sm text-gray-500 font-semibold uppercase mb-2">Trạng thái</div>
-            <div className="text-lg font-bold text-purple-600">{statusText[session.status]}</div>
+        {/* Status & Info Grid - Nâng cấp với Pastel */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+          <div className="game-card bg-card-pastel-blue rounded-max p-6 text-center shadow-lg">
+            <div className="text-4xl mb-3">📊</div>
+            <div className="text-sm text-gray-700 font-bold font-quicksand mb-2">Trạng thái</div>
+            <div className="text-xl font-bold text-blue-700 font-quicksand">{statusText[session.status]}</div>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
-            <div className="text-3xl mb-2">👥</div>
-            <div className="text-sm text-gray-500 font-semibold uppercase mb-2">Người tham gia</div>
-            <div className="text-lg font-bold text-purple-600">{participants.length}</div>
+          <div className="game-card bg-card-pastel-pink rounded-max p-6 text-center shadow-lg">
+            <div className="text-4xl mb-3">👥</div>
+            <div className="text-sm text-gray-700 font-bold font-quicksand mb-2">Người tham gia</div>
+            <div className="text-xl font-bold text-pink-700 font-quicksand">{participants.length}</div>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
-            <div className="text-3xl mb-2">⏱️</div>
-            <div className="text-sm text-gray-500 font-semibold uppercase mb-2">Thời lượng</div>
-            <div className="text-lg font-bold text-purple-600">7 phút</div>
+          <div className="game-card bg-card-pastel-green rounded-max p-6 text-center shadow-lg">
+            <div className="text-4xl mb-3">⏱️</div>
+            <div className="text-sm text-gray-700 font-bold font-quicksand mb-2">Thời lượng</div>
+            <div className="text-xl font-bold text-green-700 font-quicksand">
+              {exam?.duration || 7} phút
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
-            <div className="text-3xl mb-2">❓</div>
-            <div className="text-sm text-gray-500 font-semibold uppercase mb-2">Số câu</div>
-            <div className="text-lg font-bold text-purple-600">{session.totalQuestions || 0}</div>
+          <div className="game-card bg-card-pastel-yellow rounded-max p-6 text-center shadow-lg">
+            <div className="text-4xl mb-3">❓</div>
+            <div className="text-sm text-gray-700 font-bold font-quicksand mb-2">Số câu</div>
+            <div className="text-xl font-bold text-yellow-700 font-quicksand">{session.totalQuestions || 0}</div>
           </div>
         </div>
 
-        {/* Participants Section */}
-        <div className="bg-white rounded-3xl shadow-lg p-8 mb-10">
-          <h3 className="text-2xl font-bold text-gray-800 mb-6">👥 Người tham gia ({participantNames.length})</h3>
+        {/* Participants Section - Avatar Circle */}
+        <div className="bg-white rounded-max shadow-lg p-10 mb-12 game-card">
+          <h3 className="text-3xl font-bold text-gray-800 mb-8 font-quicksand">👥 Người tham gia ({participantNames.length})</h3>
 
           {participantNames.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 py-10 text-gray-400">
-              <div className="text-6xl">🦗</div>
-              <p className="text-lg">Chưa có ai tham gia</p>
+            <div className="flex flex-col items-center gap-4 py-12 text-gray-400">
+              <div className="text-7xl">🦗</div>
+              <p className="text-xl font-quicksand">Chưa có ai tham gia</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {participantNames.map((participant) => (
-                <div
-                  key={participant.uid}
-                  className={`flex items-center gap-4 p-4 rounded-lg transition-all ${
-                    participant.isCurrentUser
-                      ? 'bg-purple-50 border-2 border-purple-400'
-                      : 'bg-gray-50 border-2 border-gray-200'
-                  }`}
-                >
-                  <div className="relative">
-                    <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white ${
-                        participant.isCurrentUser
-                          ? 'bg-gradient-to-br from-purple-600 to-purple-700'
-                          : 'bg-gradient-to-br from-blue-600 to-blue-700'
-                      }`}
-                    >
-                      {(participant.name || 'U').charAt(0).toUpperCase()}
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
+            <div className="flex flex-wrap gap-6 justify-center">
+              {participantNames.map((participant, idx) => (
+                <div key={participant.uid} className="flex flex-col items-center">
+                  {/* Avatar Circle */}
+                  <div className={`avatar-circle ${avatarColors[idx % avatarColors.length]} mb-3`}>
+                    {(participant.name || 'U').charAt(0).toUpperCase()}
                   </div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-gray-800 flex items-center gap-2">
-                      {participant.name || 'Unknown'}
-                      {participant.isCurrentUser && (
-                        <span className="text-xs bg-purple-600 text-white px-3 py-1 rounded-full font-bold">
-                          Bạn
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-green-600 font-semibold text-sm">🟢 Online</div>
+                  
+                  {/* Name and Status */}
+                  <p className="font-bold text-gray-800 text-center font-quicksand">
+                    {participant.name || 'Unknown'}
+                  </p>
+                  
+                  {participant.isCurrentUser && (
+                    <span className="text-xs bg-purple-600 text-white px-3 py-1 rounded-full font-bold mt-2">
+                      Bạn
+                    </span>
+                  )}
+                  
+                  <p className="text-green-600 font-semibold text-sm mt-2 font-quicksand">
+                    🟢 Online
+                  </p>
                 </div>
               ))}
             </div>
@@ -391,49 +395,49 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
 
         {/* Messages */}
         {error && (
-          <div className="flex items-center gap-3 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg mb-8 animate-in">
-            <span className="text-xl">⚠️</span>
+          <div className="flex items-center gap-3 bg-red-400 text-white px-6 py-4 rounded-max shadow-lg mb-8 font-quicksand">
+            <span className="text-2xl">⚠️</span>
             <span className="flex-1">{error}</span>
-            <button onClick={() => setError(null)} className="text-xl font-bold">✕</button>
+            <button onClick={() => setError(null)} className="text-2xl font-bold">✕</button>
           </div>
         )}
 
         {!joined && session.status !== 'finished' && (
-          <div className="flex items-center gap-3 bg-blue-500 text-white px-6 py-4 rounded-lg shadow-lg mb-8">
-            <span className="text-xl">ℹ️</span>
+          <div className="flex items-center gap-3 bg-blue-400 text-white px-6 py-4 rounded-max shadow-lg mb-8 font-quicksand">
+            <span className="text-2xl">ℹ️</span>
             <span>Hãy nhấn "Tham gia" để sẵn sàng. Chờ giảng viên bắt đầu khi tất cả đã sẵn sàng.</span>
           </div>
         )}
 
         {joined && session.status === 'waiting' && (
-          <div className="flex items-center gap-3 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg mb-8">
-            <span className="text-xl">✅</span>
+          <div className="flex items-center gap-3 bg-green-400 text-white px-6 py-4 rounded-max shadow-lg mb-8 font-quicksand">
+            <span className="text-2xl">✅</span>
             <span>Bạn đã tham gia thành công. Chờ giảng viên bắt đầu...</span>
           </div>
         )}
 
         {!joined && session.status === 'waiting' && (
-          <div className="flex items-center gap-3 bg-yellow-500 text-white px-6 py-4 rounded-lg shadow-lg mb-8">
-            <span className="text-xl">⚠️</span>
-            <span>Chuẩn bị sẵn sàng: Bạn sẽ có 7 phút để hoàn thành bài thi.</span>
+          <div className="flex items-center gap-3 bg-yellow-400 text-white px-6 py-4 rounded-max shadow-lg mb-8 font-quicksand">
+            <span className="text-2xl">⚠️</span>
+            <span>Chuẩn bị sẵn sàng: Bạn sẽ có {exam?.duration || 7} phút để hoàn thành bài thi.</span>
           </div>
         )}
 
         {session.status === 'finished' && (
-          <div className="flex items-center gap-3 bg-teal-500 text-white px-6 py-4 rounded-lg shadow-lg mb-8">
-            <span className="text-xl">✅</span>
+          <div className="flex items-center gap-3 bg-teal-400 text-white px-6 py-4 rounded-max shadow-lg mb-8 font-quicksand">
+            <span className="text-2xl">✅</span>
             <span>Phiên thi đã kết thúc. Vui lòng chờ để xem kết quả...</span>
           </div>
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-5 mb-10 flex-col md:flex-row">
+        <div className="flex gap-6 mb-12 flex-col md:flex-row">
           {!joined && session.status !== 'finished' && (
             <>
               <button
                 onClick={handleJoinExam}
                 disabled={joiningLoading}
-                className="flex-1 py-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-bold text-lg rounded-xl hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="btn-3d flex-1 py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold text-lg rounded-max hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2 font-quicksand"
               >
                 {joiningLoading ? (
                   <>
@@ -446,7 +450,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
               </button>
               <button
                 onClick={handleLeaveExam}
-                className="flex-1 py-4 bg-white text-purple-600 font-bold text-lg rounded-xl border-2 border-purple-600 hover:shadow-lg transition-all"
+                className="btn-3d flex-1 py-4 bg-white text-gray-800 font-bold text-lg rounded-max border-3 border-gray-400 hover:shadow-lg transition-all font-quicksand"
               >
                 ✕ Quay lại
               </button>
@@ -456,7 +460,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
           {joined && session.status === 'waiting' && (
             <button
               onClick={handleLeaveExam}
-              className="w-full py-4 bg-white text-purple-600 font-bold text-lg rounded-xl border-2 border-purple-600 hover:shadow-lg transition-all"
+              className="btn-3d w-full py-4 bg-white text-gray-800 font-bold text-lg rounded-max border-3 border-gray-400 hover:shadow-lg transition-all font-quicksand"
             >
               ✕ Rời khỏi phòng
             </button>
@@ -465,7 +469,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
           {session.status === 'finished' && (
             <button
               onClick={() => navigate(`/student/exam-result/${actualSessionId}`)}
-              className="w-full py-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-bold text-lg rounded-xl hover:shadow-lg transition-all"
+              className="btn-3d w-full py-4 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold text-lg rounded-max hover:shadow-lg transition-all font-quicksand"
             >
               📊 Xem kết quả
             </button>
@@ -473,28 +477,28 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
         </div>
 
         {/* Tips Section */}
-        <div className="bg-white rounded-3xl shadow-lg p-8">
-          <h3 className="text-2xl font-bold text-gray-800 mb-6">💡 Lời khuyên trước khi bắt đầu</h3>
-          <ul className="space-y-3">
-            <li className="flex items-start gap-3 text-gray-700">
-              <span className="text-2xl flex-shrink-0">✓</span>
-              <span>Kiểm tra kết nối Internet ổn định</span>
+        <div className="bg-white rounded-max shadow-lg p-10 game-card">
+          <h3 className="text-3xl font-bold text-gray-800 mb-8 font-quicksand">💡 Lời khuyên trước khi bắt đầu</h3>
+          <ul className="space-y-4">
+            <li className="flex items-start gap-3 text-gray-700 font-quicksand">
+              <span className="text-3xl flex-shrink-0">✓</span>
+              <span className="text-lg">Kiểm tra kết nối Internet ổn định</span>
             </li>
-            <li className="flex items-start gap-3 text-gray-700">
-              <span className="text-2xl flex-shrink-0">✓</span>
-              <span>Đảm bảo pin thiết bị đầy đủ</span>
+            <li className="flex items-start gap-3 text-gray-700 font-quicksand">
+              <span className="text-3xl flex-shrink-0">✓</span>
+              <span className="text-lg">Đảm bảo pin thiết bị đầy đủ</span>
             </li>
-            <li className="flex items-start gap-3 text-gray-700">
-              <span className="text-2xl flex-shrink-0">✓</span>
-              <span>Tìm một nơi yên tĩnh để tập trung</span>
+            <li className="flex items-start gap-3 text-gray-700 font-quicksand">
+              <span className="text-3xl flex-shrink-0">✓</span>
+              <span className="text-lg">Tìm một nơi yên tĩnh để tập trung</span>
             </li>
-            <li className="flex items-start gap-3 text-gray-700">
-              <span className="text-2xl flex-shrink-0">✓</span>
-              <span>Đọc kỹ từng câu hỏi trước khi trả lời</span>
+            <li className="flex items-start gap-3 text-gray-700 font-quicksand">
+              <span className="text-3xl flex-shrink-0">✓</span>
+              <span className="text-lg">Đọc kỹ từng câu hỏi trước khi trả lời</span>
             </li>
-            <li className="flex items-start gap-3 text-gray-700">
-              <span className="text-2xl flex-shrink-0">✓</span>
-              <span>Quản lý thời gian hợp lý (7 phút cho tất cả)</span>
+            <li className="flex items-start gap-3 text-gray-700 font-quicksand">
+              <span className="text-3xl flex-shrink-0">✓</span>
+              <span className="text-lg">Quản lý thời gian hợp lý ({exam?.duration || 7} phút cho tất cả)</span>
             </li>
           </ul>
         </div>

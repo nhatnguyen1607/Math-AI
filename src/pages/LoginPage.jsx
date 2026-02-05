@@ -1,12 +1,17 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { signInWithGoogle } from '../services/authService';
 
 function LoginPage() {
+  const navigate = useNavigate();
+
   const handleGoogleSignIn = async () => {
     try {
       console.log("Nhấn nút đăng nhập...");
       await signInWithGoogle();
       console.log("Đăng nhập hoàn tất!");
+      // Navigate to student dashboard instead of letting Firebase handle it
+      navigate('/student/dashboard');
     } catch (error) {
       console.error("Lỗi:", error);
       const errorMessage = error.message || 'Đăng nhập thất bại. Vui lòng thử lại!';

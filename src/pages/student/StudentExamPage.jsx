@@ -81,24 +81,35 @@ const StudentExamPage = ({ user, onSignOut }) => {
               if (!exam && sessionData.examId) {
                 try {
                   const examData = await examService.getExamById(sessionData.examId);
+                  console.log('📋 Exam data fetched:', examData);
+                  console.log('📋 Exercises:', examData?.exercises);
                   setExam(examData);
 
                   // Lấy danh sách câu hỏi với context từ exercise
                   if (examData.exercises && examData.exercises.length > 0) {
                     const allQuestions = [];
                     examData.exercises.forEach((exercise, exerciseIndex) => {
+                      console.log(`📋 Processing exercise ${exerciseIndex}:`, exercise);
+                      console.log(`📋 Exercise questions:`, exercise.questions);
+                      
                       if (exercise.questions && exercise.questions.length > 0) {
-                        exercise.questions.forEach((question) => {
+                        exercise.questions.forEach((question, qIdx) => {
+                          console.log(`📋 Question ${qIdx}:`, question);
                           allQuestions.push({
                             ...question,
-                            exerciseContext: exercise.context || '',
+                            exerciseContext: exercise.context || exercise.name || '',
                             exerciseId: exercise.id,
                             exerciseIndex
                           });
                         });
+                      } else {
+                        console.warn(`⚠️ Exercise ${exerciseIndex} has no questions`);
                       }
                     });
+                    console.log('📋 All questions loaded:', allQuestions);
                     setQuestions(allQuestions);
+                  } else {
+                    console.warn('⚠️ Exam has no exercises');
                   }
                 } catch (err) {
                   console.error('Error loading exam:', err);
@@ -456,10 +467,10 @@ const StudentExamPage = ({ user, onSignOut }) => {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-5">
-          <div className="w-12 h-12 border-4 border-purple-300 border-t-white rounded-full animate-spin"></div>
-          <p className="text-white text-lg font-medium">Đang tải bài thi...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="text-6xl animate-bounce-gentle">🚀</div>
+          <p className="text-2xl font-bold text-gray-700 font-quicksand">Đang tải bài thi...</p>
         </div>
       </div>
     );
@@ -468,14 +479,14 @@ const StudentExamPage = ({ user, onSignOut }) => {
   // Error state
   if (error && !session) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900">
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
         <div className="flex flex-col items-center justify-center gap-8 px-5 py-20">
           <div className="text-8xl">⚠️</div>
-          <h2 className="text-white text-2xl font-bold">{error}</h2>
+          <h2 className="text-gray-800 text-3xl font-bold font-quicksand">{error}</h2>
           <button
             onClick={() => navigate(-1)}
-            className="px-8 py-3 bg-white text-purple-600 font-semibold rounded-lg hover:shadow-lg hover:scale-105 transition-all"
+            className="btn-3d px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-quicksand rounded-max hover:shadow-lg transition-all"
           >
             Quay lại
           </button>
@@ -486,10 +497,10 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
   if (!session || !exam || questions.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900">
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
         <div className="flex items-center justify-center pt-20">
-          <div className="w-12 h-12 border-4 border-purple-300 border-t-white rounded-full animate-spin"></div>
+          <div className="text-6xl animate-bounce-gentle">🚀</div>
         </div>
       </div>
     );
@@ -498,11 +509,11 @@ const StudentExamPage = ({ user, onSignOut }) => {
   // Completed state
   if (isCompleted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-8 bg-white rounded-3xl p-10 shadow-2xl">
-          <div className="text-7xl">✅</div>
-          <h2 className="text-2xl font-bold text-gray-800">Bài thi của bạn đã hoàn thành!</h2>
-          <p className="text-gray-600">Đang chuyển đến trang kết quả...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-8 bg-white rounded-max p-12 shadow-2xl game-card">
+          <div className="text-8xl animate-bounce-gentle">✅</div>
+          <h2 className="text-4xl font-bold text-gray-800 font-quicksand text-center">Bài thi của bạn đã hoàn thành!</h2>
+          <p className="text-xl text-gray-600 font-quicksand">Đang chuyển đến trang kết quả...</p>
           <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
         </div>
       </div>
@@ -552,12 +563,69 @@ const StudentExamPage = ({ user, onSignOut }) => {
     );
   }
 
-  if (!session || !exam || questions.length === 0) {
+  if (!session || !exam) {
     return (
       <div className="student-exam-page">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
         <div className="loading-spinner">
           <div className="spinner"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback: if no questions loaded but exam has exercises, try to extract
+  let displayQuestions = questions;
+  if (questions.length === 0 && exam?.exercises?.length > 0) {
+    console.warn('⚠️ No questions loaded, attempting fallback extraction from exercises');
+    const fallbackQuestions = [];
+    exam.exercises.forEach((exercise, exerciseIndex) => {
+      if (exercise.questions && exercise.questions.length > 0) {
+        exercise.questions.forEach((q) => {
+          fallbackQuestions.push({
+            ...q,
+            exerciseContext: exercise.context || exercise.name || '',
+            exerciseId: exercise.id,
+            exerciseIndex
+          });
+        });
+      }
+    });
+    displayQuestions = fallbackQuestions;
+    if (fallbackQuestions.length > 0) {
+      setQuestions(fallbackQuestions);
+    }
+  }
+
+  if (!session || displayQuestions.length === 0) {
+    return (
+      <div className="student-exam-page">
+        <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
+        <div className="text-center py-20">
+          <p className="text-xl text-gray-700 font-quicksand">
+            {!session ? 'Không tìm thấy phiên thi' : 'Không tìm thấy câu hỏi trong đề thi'}
+          </p>
+          <button
+            onClick={() => navigate(-1)}
+            className="btn-3d mt-6 px-6 py-3 bg-blue-500 text-white rounded-max font-quicksand"
+          >
+            ← Quay lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if exam session already finished
+  if (session?.status === 'finished') {
+    console.warn('⚠️ Exam session already finished, redirecting to result page');
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-8 bg-white rounded-max p-12 shadow-2xl game-card">
+          <div className="text-8xl animate-bounce-gentle">✅</div>
+          <h2 className="text-4xl font-bold text-gray-800 font-quicksand text-center">Đề thi đã kết thúc!</h2>
+          <p className="text-xl text-gray-600 font-quicksand">Giáo viên đã kết thúc bài thi. Đang chuyển đến trang kết quả...</p>
+          <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
         </div>
       </div>
     );
@@ -577,39 +645,56 @@ const StudentExamPage = ({ user, onSignOut }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
       <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
 
       <div className="max-w-7xl mx-auto px-5 py-8">
+        {/* Rocket Progress Bar */}
+        <div className="mb-10 game-card">
+          <div className="rocket-progress">
+            <div
+              className="rocket-progress-fill"
+              style={{ width: `${progressPercent}%` }}
+            >
+              🚀
+            </div>
+          </div>
+          <div className="text-center mt-3 font-bold text-gray-700 font-quicksand">
+            Câu {currentQuestionIndex + 1} / {questions.length}
+          </div>
+        </div>
+
         {/* Header Bar with Timer */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 flex items-center justify-between gap-6 flex-wrap md:flex-nowrap">
+        <div className="bg-white rounded-max shadow-lg p-6 mb-8 flex items-center justify-between gap-6 flex-wrap md:flex-nowrap game-card">
           {/* Timer */}
           <div
-            className={`flex items-center gap-3 px-6 py-3 rounded-xl font-bold text-lg transition-all ${
+            className={`flex items-center gap-3 px-6 py-3 rounded-max font-bold text-lg transition-all ${
               isTimeRunningOut
-                ? 'bg-red-100 text-red-700 animate-pulse'
+                ? 'bg-red-200 text-red-700 animate-pulse'
                 : isTimeWarning
-                ? 'bg-yellow-100 text-yellow-700'
-                : 'bg-purple-100 text-purple-700'
+                ? 'bg-yellow-200 text-yellow-700'
+                : 'bg-blue-200 text-blue-700'
             }`}
           >
-            <span className="text-2xl">⏱️</span>
-            <div>
-              <div className="text-xl">{timeText}</div>
+            <span className="text-3xl">⏱️</span>
+            <div className="font-quicksand">
+              <div className="text-2xl">{timeText}</div>
               <div className="text-xs opacity-75">Thời gian còn lại</div>
             </div>
           </div>
 
-          {/* Progress */}
-          <div className="flex-1 min-w-[200px]">
-            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden mb-2">
-              <div
-                className="bg-gradient-to-r from-purple-600 to-purple-700 h-full transition-all duration-500"
-                style={{ width: `${progressPercent}%` }}
-              ></div>
+          {/* Stats */}
+          <div className="flex gap-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600 font-quicksand">{correctCount}</div>
+              <div className="text-sm text-gray-600 font-quicksand">Câu đúng</div>
             </div>
-            <div className="text-center text-sm font-semibold text-white">
-              Câu {currentQuestionIndex + 1} / {questions.length}
+            <div className="border-l border-gray-300"></div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600 font-quicksand">
+                {Object.values(answers).reduce((sum, answer) => sum + (answer.points || 0), 0)}
+              </div>
+              <div className="text-sm text-gray-600 font-quicksand">Điểm</div>
             </div>
           </div>
 
@@ -617,7 +702,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
           <button
             onClick={handleAutoSubmit}
             disabled={isSubmitting}
-            className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50"
+            className="btn-3d px-8 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-max font-quicksand hover:shadow-lg transition-all disabled:opacity-50"
           >
             {isSubmitting ? '⏳ Đang nộp...' : '✓ Nộp bài'}
           </button>
@@ -625,11 +710,11 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar - Question List */}
-          <aside className="lg:col-span-1 bg-white rounded-2xl shadow-lg p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-6">Danh sách câu hỏi</h3>
+          <aside className="lg:col-span-1 bg-white rounded-max shadow-lg p-6 game-card">
+            <h3 className="text-xl font-bold text-gray-800 mb-6 font-quicksand">Danh sách câu hỏi</h3>
 
             <div className="grid grid-cols-5 gap-2 mb-8">
-              {questions.map((_, idx) => {
+              {displayQuestions.map((_, idx) => {
                 const isCurrentQuestion = idx === currentQuestionIndex;
                 const answerData = answers[idx];
                 const isAnswered = answerData !== undefined;
@@ -670,7 +755,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
               })}
             </div>
 
-            <div className="border-t-2 border-gray-200 pt-6 space-y-3">
+            <div className="border-t-2 border-gray-200 pt-6 space-y-3 font-quicksand">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 font-medium">Đã trả lời:</span>
                 <span className="text-lg font-bold text-purple-600">{Object.keys(answers).length}/{questions.length}</span>
@@ -693,11 +778,11 @@ const StudentExamPage = ({ user, onSignOut }) => {
           {/* Main Question Area */}
           <main className="lg:col-span-3">
             {currentQuestion && (
-              <div className="bg-white rounded-2xl shadow-lg p-8">
+              <div className="bg-white rounded-max shadow-lg p-10 game-card">
                 {/* Exercise Context (if available) */}
                 {currentQuestion.exerciseContext && (
-                  <div className="mb-8 p-6 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
-                    <p className="text-blue-900 leading-relaxed whitespace-pre-wrap">
+                  <div className="mb-8 p-6 bg-blue-100 border-l-4 border-blue-500 rounded-max">
+                    <p className="text-blue-900 leading-relaxed whitespace-pre-wrap font-quicksand">
                       {currentQuestion.exerciseContext}
                     </p>
                   </div>
@@ -705,41 +790,44 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
                 {/* Question Text */}
                 <div className="mb-10">
-                  <h2 className="text-2xl font-bold text-gray-800 leading-relaxed">
-                    {currentQuestion.text || currentQuestion.question}
+                  <h2 className="text-3xl font-bold text-gray-800 leading-relaxed font-quicksand">
+                    {currentQuestion.text || currentQuestion.question || currentQuestion.content}
                   </h2>
                 </div>
 
-                {/* Options */}
+                {/* Jelly Buttons - Answer Options */}
                 <div className="space-y-4 mb-10">
-                  {(currentQuestion.options || []).map((option, idx) => {
-                    const isMultipleChoice = currentQuestion.type === 'multiple';
-                    const isSelected = isMultipleChoice
-                      ? (Array.isArray(selectedAnswer) ? selectedAnswer.includes(idx) : false)
-                      : (selectedAnswer === idx);
-                    const isCorrectAnswer = (currentQuestion.correctAnswers || []).includes(idx);
-                    let buttonClass =
-                      'w-full flex items-center gap-4 p-5 rounded-lg border-2 transition-all text-left font-medium ';
+                  {console.log('🎯 Current question:', currentQuestion) || null}
+                  {console.log('🎯 Options:', currentQuestion.options) || null}
+                  {(currentQuestion.options || []).length === 0 ? (
+                    <div className="text-center py-8 text-gray-600">
+                      <p>Không có câu trả lời nào cho câu hỏi này</p>
+                    </div>
+                  ) : (
+                    (currentQuestion.options || []).map((option, idx) => {
+                      const isMultipleChoice = currentQuestion.type === 'multiple';
+                      const isSelected = isMultipleChoice
+                        ? (Array.isArray(selectedAnswer) ? selectedAnswer.includes(idx) : false)
+                        : (selectedAnswer === idx);
+                      const isCorrectAnswer = (currentQuestion.correctAnswers || []).includes(idx);
+                      
+                      let jellyButtonClass = 'jelly-btn ';
 
                     if (isAnswered) {
                       if (isSelected && isCorrectAnswer) {
-                        buttonClass += 'border-green-500 bg-green-50 text-green-700 ';
+                        jellyButtonClass += 'feedback-correct ';
                       } else if (isSelected && !isCorrectAnswer) {
-                        buttonClass += 'border-red-500 bg-red-50 text-red-700 ';
+                        jellyButtonClass += 'feedback-wrong ';
                       } else if (isCorrectAnswer) {
-                        // Chỉ hiển thị đáp án đúng sau khi học sinh trả lời
-                        buttonClass += 'border-green-500 bg-green-50 text-green-700 ';
+                        jellyButtonClass += 'jelly-btn-a opacity-80 ';
                       } else {
-                        buttonClass += 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed ';
+                        jellyButtonClass += 'opacity-30 cursor-not-allowed ';
                       }
                     } else {
-                      if (isSelected) {
-                        buttonClass +=
-                          'border-purple-600 bg-purple-50 text-purple-700 cursor-pointer hover:shadow-lg ';
-                      } else {
-                        buttonClass +=
-                          'border-gray-300 bg-white text-gray-800 cursor-pointer hover:border-purple-400 hover:shadow-lg ';
-                      }
+                      if (idx === 0) jellyButtonClass += 'jelly-btn-a ';
+                      else if (idx === 1) jellyButtonClass += 'jelly-btn-b ';
+                      else if (idx === 2) jellyButtonClass += 'jelly-btn-c ';
+                      else jellyButtonClass += 'jelly-btn-d ';
                     }
 
                     return (
@@ -747,50 +835,55 @@ const StudentExamPage = ({ user, onSignOut }) => {
                         key={idx}
                         onClick={() => !isAnswered && handleSelectAnswer(idx)}
                         disabled={isAnswered}
-                        className={buttonClass}
+                        className={jellyButtonClass}
                       >
-                        <span
-                          className={`flex items-center justify-center w-10 h-10 rounded-lg font-bold text-white flex-shrink-0 ${
-                            isAnswered && isCorrectAnswer
-                              ? 'bg-green-600'
-                              : isAnswered && isSelected && !isCorrectAnswer
-                              ? 'bg-red-600'
-                              : 'bg-gradient-to-br from-purple-600 to-purple-700'
-                          }`}
-                        >
+                        <span className="inline-block w-12 h-12 rounded-full bg-white font-bold text-lg mr-4 flex-shrink-0 flex items-center justify-center">
                           {String.fromCharCode(65 + idx)}
                         </span>
-                        <span className="flex-1">{option}</span>
+                        <span className="flex-1 text-left text-lg">{option}</span>
                         {isAnswered && isCorrectAnswer && (
-                          <span className="text-2xl font-bold">✓</span>
+                          <span className="text-3xl font-bold">✓</span>
                         )}
                         {isAnswered && isSelected && !isCorrectAnswer && (
-                          <span className="text-2xl font-bold">✗</span>
+                          <span className="text-3xl font-bold">✗</span>
                         )}
                       </button>
                     );
-                  })}
+                    })
+                  )}
                 </div>
 
-                {/* Feedback */}
+                {/* Feedback with Encouragement */}
                 {isAnswered && (() => {
                   const answerData = answers[currentQuestionIndex];
                   const answeredCorrectly = answerData?.isCorrect || false;
+                  const feedbackMessages = {
+                    correct: ['🎉 Tuyệt vời!', '⭐ Xuất sắc!', '🏆 Đúng rồi!', '💪 Siêu tuyệt!'],
+                    wrong: ['💪 Cố lên!', '🎯 Lần tới sẽ được!', '📚 Cần ôn tập thêm!', '✨ Tiếp tục nỗ lực!']
+                  };
+                  const messageKey = answeredCorrectly ? 'correct' : 'wrong';
+                  const randomMessage = feedbackMessages[messageKey][Math.floor(Math.random() * feedbackMessages[messageKey].length)];
+                  
                   return (
                     <div
-                      className={`flex items-center gap-4 p-6 rounded-lg mb-8 ${
+                      className={`flex items-center gap-4 p-8 rounded-max mb-8 font-quicksand ${
                         answeredCorrectly
-                          ? 'bg-green-50 border-2 border-green-500'
-                          : 'bg-red-50 border-2 border-red-500'
+                          ? 'bg-gradient-to-r from-green-100 to-emerald-100 border-3 border-green-400'
+                          : 'bg-gradient-to-r from-orange-100 to-yellow-100 border-3 border-orange-400'
                       }`}
                     >
-                      <span className="text-4xl">
-                        {answeredCorrectly ? '🎉' : '❌'}
+                      <span className="text-5xl animate-bounce-gentle">
+                        {answeredCorrectly ? '🎊' : '🌟'}
                       </span>
-                      <div className="text-lg font-bold text-gray-800">
-                        {answeredCorrectly
-                          ? 'Câu trả lời chính xác!'
-                          : 'Câu trả lời không chính xác.'}
+                      <div>
+                        <div className="text-2xl font-bold text-gray-800">
+                          {randomMessage}
+                        </div>
+                        <div className="text-gray-700 mt-1">
+                          {answeredCorrectly
+                            ? `+${answerData?.points || 0} điểm`
+                            : 'Hãy cố gắng hơn ở lần tới!'}
+                        </div>
                       </div>
                     </div>
                   );
@@ -801,20 +894,20 @@ const StudentExamPage = ({ user, onSignOut }) => {
                   <div className="mb-6">
                     <button
                       onClick={handleSubmitMultipleChoice}
-                      className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold rounded-lg hover:shadow-lg transition-all"
+                      className="btn-3d w-full px-6 py-4 bg-gradient-to-r from-blue-400 to-blue-500 text-white font-bold rounded-max font-quicksand text-lg"
                     >
-                      Xác nhận đáp án
+                      ✓ Xác nhận đáp án
                     </button>
                   </div>
                 )}
 
                 {/* Navigation */}
                 {isAnswered && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 font-quicksand">
                     <button
                       onClick={handlePrevQuestion}
                       disabled={!canGoPrev}
-                      className="px-6 py-3 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="btn-3d px-6 py-4 bg-gray-200 text-gray-800 font-bold rounded-max hover:bg-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       ← Câu trước
                     </button>
@@ -822,14 +915,14 @@ const StudentExamPage = ({ user, onSignOut }) => {
                     {currentQuestionIndex < questions.length - 1 ? (
                       <button
                         onClick={handleNextQuestion}
-                        className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+                        className="btn-3d px-6 py-4 bg-gradient-to-r from-purple-400 to-purple-500 text-white font-bold rounded-max hover:shadow-lg transition-all"
                       >
                         Câu tiếp theo →
                       </button>
                     ) : (
                       <button
                         onClick={handleAutoSubmit}
-                        className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+                        className="btn-3d px-6 py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-max hover:shadow-lg transition-all"
                       >
                         Nộp bài ✓
                       </button>
@@ -843,9 +936,9 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
         {/* Error Message */}
         {error && (
-          <div className="fixed bottom-6 right-6 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 max-w-xs animate-in">
+          <div className="fixed bottom-6 right-6 bg-red-500 text-white px-6 py-4 rounded-max shadow-lg flex items-center gap-3 max-w-xs animate-in font-quicksand">
             <span>⚠️ {error}</span>
-            <button onClick={() => setError(null)} className="text-xl font-bold">
+            <button onClick={() => setError(null)} className="text-2xl font-bold">
               ✕
             </button>
           </div>
@@ -853,13 +946,13 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
         {/* Time Warning */}
         {isTimeWarning && !isTimeRunningOut && (
-          <div className="fixed bottom-6 left-6 bg-yellow-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-2 max-w-xs animate-in">
+          <div className="fixed bottom-6 left-6 bg-yellow-500 text-white px-6 py-4 rounded-max shadow-lg flex items-center gap-2 max-w-xs animate-in font-quicksand">
             <span>⏰ Thời gian sắp hết! Vui lòng hoàn thành bài thi nhanh chóng.</span>
           </div>
         )}
 
         {isTimeRunningOut && (
-          <div className="fixed bottom-6 left-6 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-2 max-w-xs animate-in animate-pulse">
+          <div className="fixed bottom-6 left-6 bg-red-600 text-white px-6 py-4 rounded-max shadow-lg flex items-center gap-2 max-w-xs animate-in animate-pulse font-quicksand">
             <span>🚨 Hết giờ! Bài thi sẽ được nộp tự động.</span>
           </div>
         )}

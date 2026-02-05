@@ -116,10 +116,10 @@ Trả lời bằng tiếng Việt.
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-5">
-          <div className="w-12 h-12 border-4 border-purple-300 border-t-white rounded-full animate-spin"></div>
-          <p className="text-white text-lg font-medium">Đang tải kết quả...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="text-6xl animate-bounce-gentle">🏆</div>
+          <p className="text-2xl font-bold text-gray-700 font-quicksand">Đang tải kết quả...</p>
         </div>
       </div>
     );
@@ -128,14 +128,14 @@ Trả lời bằng tiếng Việt.
   // Error state
   if (error || !session) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900">
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
         <div className="flex flex-col items-center justify-center gap-8 px-5 py-20">
           <div className="text-8xl">⚠️</div>
-          <h2 className="text-white text-2xl font-bold text-center">{error || 'Không thể tải kết quả'}</h2>
+          <h2 className="text-gray-800 text-3xl font-bold font-quicksand text-center">{error || 'Không thể tải kết quả'}</h2>
           <button
             onClick={() => navigate(-1)}
-            className="px-8 py-3 bg-white text-purple-600 font-semibold rounded-lg hover:shadow-lg hover:scale-105 transition-all"
+            className="btn-3d px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-quicksand rounded-max hover:shadow-lg transition-all"
           >
             Quay lại
           </button>
@@ -147,14 +147,14 @@ Trả lời bằng tiếng Việt.
   const participantData = session.participants[user?.uid];
   if (!participantData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900">
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
         <div className="flex flex-col items-center justify-center gap-8 px-5 py-20">
           <div className="text-8xl">❓</div>
-          <h2 className="text-white text-2xl font-bold">Không tìm thấy dữ liệu kết quả</h2>
+          <h2 className="text-gray-800 text-3xl font-bold font-quicksand">Không tìm thấy dữ liệu kết quả</h2>
           <button
             onClick={() => navigate(-1)}
-            className="px-8 py-3 bg-white text-purple-600 font-semibold rounded-lg hover:shadow-lg hover:scale-105 transition-all"
+            className="btn-3d px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-quicksand rounded-max hover:shadow-lg transition-all"
           >
             Quay lại
           </button>
@@ -169,49 +169,69 @@ Trả lời bằng tiếng Việt.
   const percentage = Math.round((correctCount / session.totalQuestions) * 100);
   const isPassed = percentage >= 50; // 50% là pass
 
+  // Determine trophy level
+  const getTrophyIcon = () => {
+    if (percentage === 100) return { icon: '🏆', label: 'Hạng vàng', className: 'trophy-gold' };
+    if (percentage >= 80) return { icon: '🥈', label: 'Hạng bạc', className: 'trophy-silver' };
+    if (percentage >= 50) return { icon: '🥉', label: 'Hạng đồng', className: 'trophy-bronze' };
+    return { icon: '🎯', label: 'Cố gắng thêm', className: 'trophy-bronze' };
+  };
+
+  const trophy = getTrophyIcon();
+
   // Hiển thị kết quả
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900 pb-10">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 pb-10">
       <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
 
-      <div className="max-w-4xl mx-auto px-5 pt-10">
-        {/* Result Card */}
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden mb-8 animate-in slide-in-from-bottom duration-500">
+      <div className="max-w-5xl mx-auto px-5 pt-10">
+        {/* Main Result Card with Trophy */}
+        <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 animate-bounce-gentle game-card">
           {/* Result Header */}
           <div
-            className={`p-10 text-center text-white relative overflow-hidden ${
+            className={`p-12 text-center text-white relative overflow-hidden ${
               isPassed
-                ? 'bg-gradient-to-br from-teal-500 to-green-600'
-                : 'bg-gradient-to-br from-red-400 to-red-500'
+                ? 'bg-gradient-to-br from-green-400 to-emerald-500'
+                : 'bg-gradient-to-br from-orange-400 to-yellow-500'
             }`}
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
-            <div className="text-6xl mb-4 block animate-bounce">{isPassed ? '🎉' : '💪'}</div>
-            <h1 className="text-4xl font-bold mb-2 relative z-10">
+            <div className="text-7xl mb-4 block animate-bounce-gentle relative z-10">{isPassed ? '🎉' : '💪'}</div>
+            <h1 className="text-5xl font-bold mb-3 relative z-10 font-quicksand">
               {isPassed ? 'Chúc mừng!' : 'Cố gắng thêm lần tới!'}
             </h1>
-            <p className="text-lg opacity-95 relative z-10">{exam?.title || 'Bài thi'}</p>
+            <p className="text-xl opacity-95 relative z-10 font-quicksand">{exam?.title || 'Bài thi'}</p>
           </div>
 
-          {/* Score Section */}
-          <div className="grid grid-cols-3 gap-5 px-10 py-10 md:grid-cols-3 sm:grid-cols-1 md:items-center">
-            {/* Score Display */}
-            <div className="flex flex-col items-center gap-2">
-              <div className="text-4xl font-bold text-purple-600">{correctCount}/{session.totalQuestions}</div>
-              <div className="text-sm text-gray-500 font-medium uppercase">Câu đúng</div>
+          {/* Trophy & Score Section */}
+          <div className={`trophy-container ${trophy.className}`}>
+            <div className="trophy-icon">{trophy.icon}</div>
+            <div className="text-center font-quicksand">
+              <h2 className="text-2xl font-bold text-gray-800">{trophy.label}</h2>
+              <p className="text-gray-600 mt-2">Bạn đạt được {percentage}% điểm số</p>
+            </div>
+          </div>
+
+          {/* Score Display */}
+          <div className="grid grid-cols-3 gap-6 px-12 py-12 md:grid-cols-3 sm:grid-cols-1 md:items-center">
+            {/* Correct Count */}
+            <div className="flex flex-col items-center gap-3 p-6 bg-green-100 rounded-max">
+              <div className="text-5xl font-bold text-green-600 font-quicksand">{correctCount}</div>
+              <div className="text-gray-700 font-bold font-quicksand">Câu đúng</div>
+              <div className="text-sm text-gray-600">({percentage}%)</div>
             </div>
 
             {/* Percentage Circle */}
-            <div className="relative w-40 h-40 mx-auto">
+            <div className="relative w-48 h-48 mx-auto">
               <svg viewBox="0 0 120 120" className="w-full h-full transform -rotate-90">
-                <circle cx="60" cy="60" r="50" fill="none" stroke="#f0f0f0" strokeWidth="8" />
+                <circle cx="60" cy="60" r="50" fill="none" stroke="#e5e7eb" strokeWidth="10" />
                 <circle
                   cx="60"
                   cy="60"
                   r="50"
                   fill="none"
-                  stroke={isPassed ? '#11998e' : '#ff6b6b'}
-                  strokeWidth="8"
+                  stroke={isPassed ? '#10b981' : '#f97316'}
+                  strokeWidth="10"
                   strokeLinecap="round"
                   style={{
                     strokeDasharray: `${(percentage / 100) * 314} 314`,
@@ -220,78 +240,79 @@ Trả lời bằng tiếng Việt.
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-4xl font-bold text-purple-600">{percentage}%</div>
+                <div className="text-5xl font-bold text-gray-800 font-quicksand">{percentage}%</div>
               </div>
             </div>
 
             {/* Status Display */}
-            <div className="flex flex-col items-center gap-2">
-              <div className={`text-4xl font-bold ${isPassed ? 'text-teal-600' : 'text-red-600'}`}>
-                {isPassed ? '✓ PASS' : '✗ FAIL'}
+            <div className="flex flex-col items-center gap-3 p-6 bg-yellow-100 rounded-max">
+              <div className={`text-5xl font-bold font-quicksand ${isPassed ? 'text-green-600' : 'text-orange-600'}`}>
+                {isPassed ? '✓' : '✗'}
               </div>
-              <div className="text-sm text-gray-500 font-medium uppercase">Kết quả</div>
+              <div className={`text-2xl font-bold font-quicksand ${isPassed ? 'text-green-600' : 'text-orange-600'}`}>
+                {isPassed ? 'PASS' : 'FAIL'}
+              </div>
+              <div className="text-sm text-gray-600">Kết quả</div>
             </div>
           </div>
 
           {/* Stats Grid */}
-          <div className="border-t-2 border-gray-200 grid grid-cols-2 gap-4 md:grid-cols-4 px-10 py-8">
-            <div className="flex flex-col items-center gap-2 p-3 bg-gray-50 rounded-lg">
-              <div className="text-sm text-gray-500 uppercase font-semibold">Câu đúng</div>
-              <div className="text-2xl font-bold text-teal-600">{correctCount}</div>
+          <div className="border-t-4 border-gray-200 grid grid-cols-2 gap-6 md:grid-cols-4 px-12 py-10">
+            <div className="flex flex-col items-center gap-2 p-4 bg-gradient-to-br from-green-100 to-green-50 rounded-max">
+              <div className="text-sm text-gray-700 uppercase font-bold font-quicksand">Câu đúng</div>
+              <div className="text-4xl font-bold text-green-600 font-quicksand">{correctCount}</div>
             </div>
-            <div className="flex flex-col items-center gap-2 p-3 bg-gray-50 rounded-lg">
-              <div className="text-sm text-gray-500 uppercase font-semibold">Câu sai</div>
-              <div className="text-2xl font-bold text-red-600">{session.totalQuestions - correctCount}</div>
+            <div className="flex flex-col items-center gap-2 p-4 bg-gradient-to-br from-red-100 to-red-50 rounded-max">
+              <div className="text-sm text-gray-700 uppercase font-bold font-quicksand">Câu sai</div>
+              <div className="text-4xl font-bold text-red-600 font-quicksand">{session.totalQuestions - correctCount}</div>
             </div>
-            <div className="flex flex-col items-center gap-2 p-3 bg-gray-50 rounded-lg">
-              <div className="text-sm text-gray-500 uppercase font-semibold">Tổng câu</div>
-              <div className="text-2xl font-bold text-gray-700">{session.totalQuestions}</div>
+            <div className="flex flex-col items-center gap-2 p-4 bg-gradient-to-br from-blue-100 to-blue-50 rounded-max">
+              <div className="text-sm text-gray-700 uppercase font-bold font-quicksand">Tổng câu</div>
+              <div className="text-4xl font-bold text-blue-600 font-quicksand">{session.totalQuestions}</div>
             </div>
-            <div className="flex flex-col items-center gap-2 p-3 bg-gray-50 rounded-lg">
-              <div className="text-sm text-gray-500 uppercase font-semibold">Thời gian</div>
-              <div className="text-2xl font-bold text-gray-700">
+            <div className="flex flex-col items-center gap-2 p-4 bg-gradient-to-br from-purple-100 to-purple-50 rounded-max">
+              <div className="text-sm text-gray-700 uppercase font-bold font-quicksand">Thời gian</div>
+              <div className="text-4xl font-bold text-purple-600 font-quicksand">
                 {participantData.completedAt
                   ? Math.round(
                       (participantData.completedAt.getTime() - session.startTime.getTime()) / 1000 / 60
-                    ) + ' phút'
+                    ) + ' min'
                   : '-'}
               </div>
             </div>
           </div>
         </div>
 
-        {/* AI Analysis Card */}
+        {/* AI Teacher Speech Bubble */}
         {(aiAnalysis || loadingAnalysis) && (
-          <div className="bg-white rounded-3xl p-8 mb-8 border-l-4 border-purple-600 shadow-lg animate-in slide-in-from-bottom duration-500 delay-100">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="text-4xl">🤖</div>
-              <h2 className="text-2xl font-bold text-gray-800">Nhận xét từ AI</h2>
+          <div className="mb-10 game-card">
+            <div className="speech-bubble-with-avatar">
+              <div className="teacher-avatar">👨‍🏫</div>
+              <div className="speech-bubble">
+                {loadingAnalysis ? (
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <p className="font-quicksand">Thầy đang phân tích kết quả của em...</p>
+                  </div>
+                ) : aiAnalysis ? (
+                  <p className="font-quicksand text-lg">{aiAnalysis}</p>
+                ) : null}
+              </div>
             </div>
-
-            {loadingAnalysis ? (
-              <div className="flex flex-col items-center gap-4 py-8">
-                <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-                <p className="text-gray-600 text-center">AI đang phân tích kết quả của bạn...</p>
-              </div>
-            ) : aiAnalysis ? (
-              <div className="p-5 bg-gray-50 rounded-lg">
-                <p className="text-gray-700 leading-relaxed">{aiAnalysis}</p>
-              </div>
-            ) : null}
           </div>
         )}
 
         {/* Details Toggle */}
         <button
           onClick={() => setShowDetails(!showDetails)}
-          className="w-full p-5 bg-white border-2 border-gray-300 rounded-3xl text-lg font-semibold text-purple-600 cursor-pointer transition-all hover:bg-gray-50 hover:border-purple-600 hover:shadow-lg hover:-translate-y-1 mb-8"
+          className="btn-3d w-full p-6 bg-white border-3 border-purple-400 rounded-max text-lg font-bold text-gray-800 cursor-pointer transition-all hover:bg-purple-50 hover:shadow-lg font-quicksand mb-8"
         >
           {showDetails ? '▼' : '▶'} Xem chi tiết câu trả lời ({correctCount}/{session.totalQuestions} đúng)
         </button>
 
         {/* Details Section */}
         {showDetails && (
-          <div className="bg-white rounded-3xl p-5 shadow-lg mb-8 animate-in">
+          <div className="bg-white rounded-max p-8 shadow-lg mb-8 animate-bounce-gentle game-card">
             {Object.entries(participantData.answers || {}).map(([qIdx, answerData], idx) => {
               const questionIndex = parseInt(qIdx);
               const question = exam?.exercises
@@ -305,14 +326,16 @@ Trả lời bằng tiếng Việt.
               return (
                 <div
                   key={questionIndex}
-                  className={`mb-4 rounded-lg overflow-hidden border-2 transition-all ${
+                  className={`mb-4 rounded-max overflow-hidden border-3 transition-all ${
                     answerData.isCorrect
-                      ? 'border-teal-500 bg-teal-50'
-                      : 'border-red-500 bg-red-50'
+                      ? 'border-green-400 bg-green-50'
+                      : 'border-red-400 bg-red-50'
                   }`}
                 >
                   <div
-                    className="flex justify-between items-center p-5 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                    className={`flex justify-between items-center p-6 cursor-pointer hover:bg-gray-100 transition-colors font-quicksand ${
+                      answerData.isCorrect ? 'bg-green-100' : 'bg-red-100'
+                    }`}
                     onClick={() =>
                       setExpandedQuestions({
                         ...expandedQuestions,
@@ -320,19 +343,19 @@ Trả lời bằng tiếng Việt.
                       })
                     }
                   >
-                    <div className="text-lg font-semibold text-gray-800">
-                      {answerData.isCorrect ? '✓' : '✗'} Câu {questionIndex + 1}
+                    <div className="text-lg font-bold text-gray-800">
+                      {answerData.isCorrect ? '✅' : '❌'} Câu {questionIndex + 1}
                     </div>
-                    <div className="text-gray-600">{isExpanded ? '▼' : '▶'}</div>
+                    <div className="text-gray-600 text-2xl">{isExpanded ? '▼' : '▶'}</div>
                   </div>
 
                   {isExpanded && (
-                    <div className="p-6 animate-in">
-                      <div className="text-lg font-semibold text-gray-800 mb-5 pb-5 border-b-2 border-gray-200">
+                    <div className="p-8 animate-bounce-gentle font-quicksand">
+                      <div className="text-2xl font-bold text-gray-800 mb-6 pb-6 border-b-3 border-gray-300">
                         {question.text || question.question}
                       </div>
 
-                      <div className="space-y-3 mb-5">
+                      <div className="space-y-4 mb-8">
                         {(question.options || []).map((option, oIdx) => {
                           const isSelected = answerData.answer === oIdx;
                           const isCorrectAnswer = oIdx === question.correctAnswerIndex;
@@ -340,31 +363,31 @@ Trả lời bằng tiếng Việt.
                           return (
                             <div
                               key={oIdx}
-                              className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${
+                              className={`flex items-center gap-4 p-5 rounded-max border-3 transition-all ${
                                 isCorrectAnswer
-                                  ? 'border-teal-500 bg-teal-50'
+                                  ? 'border-green-500 bg-green-100'
                                   : isSelected
-                                  ? 'border-purple-500 bg-purple-50'
-                                  : 'border-gray-200 bg-white'
+                                  ? 'border-red-500 bg-red-100'
+                                  : 'border-gray-300 bg-gray-50'
                               }`}
                             >
                               <span
-                                className={`flex items-center justify-center w-9 h-9 rounded-lg font-bold text-white text-sm flex-shrink-0 ${
+                                className={`flex items-center justify-center w-12 h-12 rounded-full font-bold text-white text-lg flex-shrink-0 ${
                                   isCorrectAnswer
-                                    ? 'bg-gradient-to-br from-teal-500 to-green-600'
+                                    ? 'bg-gradient-to-br from-green-500 to-emerald-600'
                                     : 'bg-gradient-to-br from-purple-600 to-purple-700'
                                 }`}
                               >
                                 {String.fromCharCode(65 + oIdx)}
                               </span>
-                              <span className="flex-1 text-gray-700 text-sm leading-relaxed">{option}</span>
+                              <span className="flex-1 text-gray-800 text-base leading-relaxed">{option}</span>
                               {isCorrectAnswer && (
-                                <span className="px-3 py-1 bg-teal-600 text-white rounded-lg text-xs font-semibold flex-shrink-0">
+                                <span className="px-4 py-2 bg-green-600 text-white rounded-max text-sm font-bold flex-shrink-0">
                                   ✓ Đúng
                                 </span>
                               )}
                               {isSelected && !isCorrectAnswer && (
-                                <span className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs font-semibold flex-shrink-0">
+                                <span className="px-4 py-2 bg-red-600 text-white rounded-max text-sm font-bold flex-shrink-0">
                                   ✗ Bạn chọn
                                 </span>
                               )}
@@ -374,9 +397,9 @@ Trả lời bằng tiếng Việt.
                       </div>
 
                       {question.explanation && (
-                        <div className="p-4 bg-gray-50 border-l-4 border-purple-600 rounded-lg">
-                          <h4 className="text-sm font-bold text-gray-800 uppercase mb-2">Giải thích:</h4>
-                          <p className="text-gray-700 leading-relaxed text-sm">{question.explanation}</p>
+                        <div className="p-6 bg-purple-100 border-l-4 border-purple-600 rounded-max">
+                          <h4 className="text-sm font-bold text-gray-800 uppercase mb-3">📚 Giải thích:</h4>
+                          <p className="text-gray-800 leading-relaxed text-base">{question.explanation}</p>
                         </div>
                       )}
                     </div>
@@ -388,16 +411,16 @@ Trả lời bằng tiếng Việt.
         )}
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-5 pb-5 md:grid-cols-2 sm:grid-cols-1">
+        <div className="grid grid-cols-2 gap-6 pb-8 md:grid-cols-2 sm:grid-cols-1 font-quicksand">
           <button
             onClick={() => navigate('/student')}
-            className="px-6 py-3 bg-white text-purple-600 border-2 border-purple-600 rounded-lg font-semibold transition-all hover:bg-gray-50 hover:-translate-y-1 hover:shadow-lg"
+            className="btn-3d px-6 py-4 bg-white text-gray-800 border-3 border-gray-400 rounded-max font-bold text-lg transition-all hover:bg-gray-100 hover:shadow-lg"
           >
             ← Quay lại Dashboard
           </button>
           <button
             onClick={() => navigate('/student/class-selection')}
-            className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg font-semibold transition-all hover:-translate-y-1 hover:shadow-lg"
+            className="btn-3d px-6 py-4 bg-gradient-to-r from-purple-400 to-pink-400 text-white rounded-max font-bold text-lg transition-all hover:shadow-lg"
           >
             Làm bài khác →
           </button>

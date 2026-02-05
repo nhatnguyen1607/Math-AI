@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import authService from '../../services/authService';
 import facultyService from '../../services/faculty/facultyService';
+import examSessionService from '../../services/examSessionService';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 
 const FacultyExamLiveSessionPage = () => {
@@ -11,6 +12,7 @@ const FacultyExamLiveSessionPage = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
+  const unsubscribeRef = useRef(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -38,7 +40,6 @@ const FacultyExamLiveSessionPage = () => {
       }
       
       // Get exam session data first to get examId
-      const examSessionService = (await import('../../services/examSessionService')).default;
       const session = await examSessionService.getExamSession(sessionId);
       
       if (session && session.examId) {
@@ -56,36 +57,37 @@ const FacultyExamLiveSessionPage = () => {
     }
   }, [sessionId, navigate]);
 
-  const loadParticipants = useCallback(async () => {
-    try {
-      if (!sessionId) return;
-      const examSessionService = (await import('../../services/examSessionService')).default;
-      const session = await examSessionService.getExamSession(sessionId);
-      if (session && session.participants) {
-        const participantList = Object.entries(session.participants).map(([uid, data]) => ({
-          uid,
-          ...data
-        }));
-        setParticipants(participantList || []);
-      }
-    } catch (error) {
-      console.error('Error loading participants:', error);
-    }
-  }, [sessionId]);
-
+  // Subscribe to realtime session updates - THAY setInterval bằng onSnapshot
   useEffect(() => {
-    if (sessionId) {
-      loadExamData();
-      // Polling realtime participants every 2 seconds
-      const interval = setInterval(loadParticipants, 2000);
-      return () => clearInterval(interval);
-    }
-  }, [sessionId, loadExamData, loadParticipants]);
+    if (!sessionId) return;
+
+    // Load exam data once
+    loadExamData();
+
+    // Subscribe to participants realtime updates
+    unsubscribeRef.current = examSessionService.subscribeToExamSession(
+      sessionId,
+      (sessionData) => {
+        if (sessionData && sessionData.participants) {
+          const participantList = Object.entries(sessionData.participants).map(([uid, data]) => ({
+            uid,
+            ...data
+          }));
+          setParticipants(participantList || []);
+        }
+      }
+    );
+
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
+  }, [sessionId, loadExamData]);
 
   const handleEndExam = async () => {
     if (window.confirm('Bạn có chắc chắn muốn kết thúc phiên thi?')) {
       try {
-        const examSessionService = (await import('../../services/examSessionService')).default;
         await examSessionService.finishExamSession(sessionId);
         alert('Phiên thi đã kết thúc!');
         navigate('/faculty/exam-management');

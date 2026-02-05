@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, collection, setDoc, updateDoc, deleteDoc, getDoc, query, where, orderBy, getDocs, onSnapshot, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, collection, setDoc, updateDoc, deleteDoc, getDoc, query, where, orderBy, getDocs, onSnapshot, serverTimestamp, increment } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 // Cấu hình từ Firebase Console
@@ -21,6 +21,6 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 
 // Xuất các Firestore functions
-export { doc, collection, setDoc, updateDoc, deleteDoc, getDoc, query, where, orderBy, getDocs, onSnapshot, serverTimestamp };
+export { doc, collection, setDoc, updateDoc, deleteDoc, getDoc, query, where, orderBy, getDocs, onSnapshot, serverTimestamp, increment };
 
 export default app;

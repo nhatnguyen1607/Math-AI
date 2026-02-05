@@ -143,14 +143,24 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
 
   // Xử lý countdown khi Faculty bắt đầu
   useEffect(() => {
-    if (!showCountdown) return;
+    if (!showCountdown || !session || !session.startTime) return;
 
     let countdownTimer;
-    let startTime = Date.now();
 
     const updateCountdown = () => {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      const remaining = Math.max(0, 3 - elapsed);
+      // Convert Firestore Timestamp to milliseconds if needed
+      let startTimeMs = session.startTime;
+      if (typeof session.startTime === 'object' && session.startTime.toDate) {
+        // Firestore Timestamp object
+        startTimeMs = session.startTime.toDate().getTime();
+      } else if (typeof session.startTime === 'object' && session.startTime.seconds) {
+        // Firestore Timestamp with seconds property
+        startTimeMs = session.startTime.seconds * 1000;
+      }
+
+      const now = Date.now();
+      const timeElapsed = Math.floor((now - startTimeMs) / 1000);
+      const remaining = Math.max(0, 3 - timeElapsed);
 
       setCountdown(remaining);
 
@@ -158,6 +168,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
         // Chuyển đến trang làm bài
         navigate(`/student/exam/${actualSessionId}`, { state: { sessionId: actualSessionId } });
       } else {
+        // Update mỗi 100ms để smooth
         countdownTimer = setTimeout(updateCountdown, 100);
       }
     };
@@ -167,7 +178,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
     return () => {
       if (countdownTimer) clearTimeout(countdownTimer);
     };
-  }, [showCountdown, actualSessionId, navigate]);
+  }, [showCountdown, actualSessionId, navigate, session]);
 
   // Handler: Tham gia phòng thi
   const handleJoinExam = async () => {

@@ -16,7 +16,8 @@ import {
   query,
   where,
   getDocs,
-  orderBy
+  orderBy,
+  increment
 } from '../firebase';
 
 import { ExamSession } from '../models/ExamSession';
@@ -206,29 +207,25 @@ export const submitAnswer = async (sessionId, uid, answerData) => {
   try {
     const sessionRef = doc(db, 'exam_sessions', sessionId);
 
-    // Lấy data hiện tại của học sinh
+    // Đọc data hiện tại một lần
     const sessionSnap = await getDoc(sessionRef);
     const sessionData = sessionSnap.data();
-    const currentParticipant = sessionData?.participants?.[uid] || {};
+    const currentAnswers = sessionData?.participants?.[uid]?.answers || [];
 
-    // Update điểm (sử dụng points từ scoring service)
+    // Thêm answer mới vào danh sách
+    const updatedAnswers = [...currentAnswers, answerData];
     const pointsEarned = answerData.points || 0;
-    const newScore = (currentParticipant.score || 0) + pointsEarned;
-    const newQuestion = (currentParticipant.currentQuestion || 0) + 1;
-    const newAnswers = [...(currentParticipant.answers || []), answerData];
 
-    // Cập nhật participants
+    // Sử dụng increment() để cộng điểm trực tiếp trên server (tránh race condition)
+    // increment() là atomic operation - an toàn khi có nhiều request đồng thời
     await updateDoc(sessionRef, {
-      [`participants.${uid}`]: {
-        ...currentParticipant,
-        score: newScore,
-        currentQuestion: newQuestion,
-        answers: newAnswers,
-        lastUpdated: serverTimestamp()
-      }
+      [`participants.${uid}.score`]: increment(pointsEarned),
+      [`participants.${uid}.currentQuestion`]: increment(1),
+      [`participants.${uid}.answers`]: updatedAnswers,
+      [`participants.${uid}.lastUpdated`]: serverTimestamp()
     });
 
-    console.log('✅ Answer submitted:', uid, 'points earned:', pointsEarned, 'total score:', newScore);
+    console.log('✅ Answer submitted:', uid, 'points earned:', pointsEarned);
   } catch (error) {
     console.error('❌ Error submitting answer:', error);
     throw error;

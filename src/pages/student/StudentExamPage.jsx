@@ -39,6 +39,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
   // Refs
   const timerRef = useRef(null);
   const sessionStartTimeRef = useRef(null);
+  const draftSaveTimerRef = useRef(null);
 
   // Lắng nghe session realtime
   useEffect(() => {
@@ -249,6 +250,45 @@ const StudentExamPage = ({ user, onSignOut }) => {
     };
   }, [session, isCompleted, handleAutoSubmit]);
 
+  // Auto-save draft answers cho multiple choice questions
+  // Mỗi 3 giây, lưu các lựa chọn draft vào Firestore để tránh mất dữ liệu nếu reload
+  useEffect(() => {
+    if (!user?.uid || isCompleted || !session || !isAnswered) return;
+
+    const currentQuestion = questions[currentQuestionIndex];
+    if (!currentQuestion || currentQuestion.type !== 'multiple') return;
+
+    const saveDraftAnswer = async () => {
+      try {
+        const answerData = answers[currentQuestionIndex];
+        // Chỉ save draft nếu chưa được submit (isCorrect === false)
+        if (answerData && answerData.isCorrect === false) {
+          // Lưu draft vào Firestore - không ghi đè score
+          await examSessionService.submitAnswer(session.id, user.uid, {
+            questionId: currentQuestion.id,
+            questionIndex: currentQuestionIndex,
+            answer: answerData.answer || [],
+            isDraft: true, // Đánh dấu đây là draft
+            exerciseIndex: currentQuestion.exerciseIndex || 0,
+            points: 0,
+            basePoints: 0,
+            bonusPoints: 0,
+            timeUsed: 420 - timeRemaining
+          }).catch(err => console.warn('⚠️ Draft save failed (non-critical):', err));
+        }
+      } catch (error) {
+        console.warn('⚠️ Error auto-saving draft:', error);
+      }
+    };
+
+    // Tự động save mỗi 3 giây
+    draftSaveTimerRef.current = setInterval(saveDraftAnswer, 3000);
+
+    return () => {
+      if (draftSaveTimerRef.current) clearInterval(draftSaveTimerRef.current);
+    };
+  }, [user?.uid, currentQuestionIndex, answers, questions, isAnswered, isCompleted, timeRemaining, session]);
+
   // Handler: Trả lời câu hỏi
   const handleSelectAnswer = (optionIndex) => {
     if (isAnswered || isCompleted) return;
@@ -391,6 +431,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
           questionIndex: currentQuestionIndex,
           answer: selectedAnswers,
           isCorrect,
+          isDraft: false, // Đây là câu trả lời chính thức, không phải draft
           exerciseIndex,
           points: scoreData.totalPoints,
           basePoints: scoreData.basePoints,

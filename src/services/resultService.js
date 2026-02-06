@@ -6,7 +6,11 @@ import {
   where,
   orderBy,
   limit,
-  serverTimestamp
+  serverTimestamp,
+  doc,
+  getDoc,
+  updateDoc,
+  setDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import problemService from './problemService';
@@ -338,6 +342,314 @@ class ResultService {
     });
     
     return stepCount > 0 ? Math.round(totalScore / stepCount) : 0;
+  }
+
+  // ===== EXAM SESSION RESULTS (Live Exam) =====
+
+  /**
+   * Lưu kết quả thi trực tiếp của một học sinh
+   */
+  async saveExamSessionResult(sessionId, uid, examId, resultData) {
+    try {
+      const resultRef = doc(collection(db, 'exam_results'));
+      
+      const result = {
+        sessionId,
+        userId: uid,
+        examId,
+        score: resultData.score || 0,
+        totalQuestions: resultData.totalQuestions || 0,
+        correctAnswers: resultData.answers?.filter(a => a.isCorrect).length || 0,
+        incorrectAnswers: resultData.answers?.filter(a => !a.isCorrect).length || 0,
+        percentage: resultData.totalQuestions > 0 
+          ? Math.round((resultData.score / resultData.totalQuestions) * 100) 
+          : 0,
+        answers: resultData.answers || [],
+        timeSpent: resultData.timeSpent || 0,
+        submittedAt: serverTimestamp(),
+        aiAnalysis: null,
+        leaderboardPosition: 1
+      };
+      
+      await setDoc(resultRef, result);
+      return { id: resultRef.id, ...result };
+    } catch (error) {
+      console.error('Error saving exam session result:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy kết quả thi của một học sinh từ một phiên thi
+   */
+  async getExamSessionResult(sessionId, uid) {
+    try {
+      const q = query(
+        collection(db, 'exam_results'),
+        where('sessionId', '==', sessionId),
+        where('userId', '==', uid)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        return { id: doc.id, ...doc.data() };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting exam session result:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy tất cả kết quả từ một phiên thi
+   */
+  async getSessionResults(sessionId) {
+    try {
+      const q = query(
+        collection(db, 'exam_results'),
+        where('sessionId', '==', sessionId)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const results = [];
+      querySnapshot.forEach((doc) => {
+        results.push({ id: doc.id, ...doc.data() });
+      });
+      
+      return results;
+    } catch (error) {
+      console.error('Error getting session results:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy tất cả kết quả thi của một học sinh
+   */
+  async getUserExamResults(uid) {
+    try {
+      const q = query(
+        collection(db, 'exam_results'),
+        where('userId', '==', uid),
+        orderBy('submittedAt', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const results = [];
+      querySnapshot.forEach((doc) => {
+        results.push({ id: doc.id, ...doc.data() });
+      });
+      
+      return results;
+    } catch (error) {
+      console.error('Error getting user exam results:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy thống kê học sinh cho một bộ đề
+   */
+  async getStudentExamStatistics(uid, examId) {
+    try {
+      const q = query(
+        collection(db, 'exam_results'),
+        where('userId', '==', uid),
+        where('examId', '==', examId)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const results = [];
+      querySnapshot.forEach((doc) => {
+        results.push({ id: doc.id, ...doc.data() });
+      });
+      
+      if (results.length === 0) {
+        return {
+          totalAttempts: 0,
+          bestScore: 0,
+          averageScore: 0,
+          lastAttempt: null,
+          results: []
+        };
+      }
+      
+      const scores = results.map(r => r.percentage || 0);
+      const bestScore = Math.max(...scores);
+      const averageScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+      
+      return {
+        totalAttempts: results.length,
+        bestScore,
+        averageScore,
+        lastAttempt: results[0]?.submittedAt,
+        results
+      };
+    } catch (error) {
+      console.error('Error getting student exam statistics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cập nhật vị trí xếp hạng
+   */
+  async updateLeaderboardPosition(resultId, position) {
+    try {
+      const resultRef = doc(db, 'exam_results', resultId);
+      await updateDoc(resultRef, {
+        leaderboardPosition: position
+      });
+    } catch (error) {
+      console.error('Error updating leaderboard position:', error);
+      throw error;
+    }
+  }
+
+  // ===== EXAM PROGRESS (Khởi động, Luyện tập, Vận dụng) =====
+
+  /**
+   * Lưu hoặc cập nhật tiến trình thi của học sinh
+   * Document ID: {userId}_{examId}
+   * Always save the latest sessionId for result display without session reference
+   */
+  async upsertExamProgress(userId, examId, progressData) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+
+      // Lấy dữ liệu hiện tại nếu tồn tại
+      const existingDoc = await getDoc(progressRef);
+      let updateData = {};
+
+      if (existingDoc.exists()) {
+        // Nếu document đã tồn tại, cập nhật phần tương ứng
+        const existingData = existingDoc.data();
+        const { part, data, sessionId } = progressData;
+
+        updateData = {
+          ...existingData,
+          parts: {
+            ...existingData.parts,
+            [part]: data
+          },
+          latestSessionId: sessionId || null, // Luôn lưu sessionId gần nhất
+          lastUpdatedAt: serverTimestamp()
+        };
+
+        // Cập nhật status nếu phần hoàn thành
+        if (part === 'khoiDong' && data.completedAt) {
+          updateData.status = 'khoiDong_done';
+        } else if (part === 'luyenTap' && data.completedAt) {
+          updateData.status = 'luyenTap_done';
+        } else if (part === 'vanDung' && data.completedAt) {
+          updateData.status = 'all_done';
+          updateData.isFirst = false;
+        }
+      } else {
+        // Tạo document mới
+        const { part, data, sessionId } = progressData;
+        updateData = {
+          userId,
+          examId,
+          isFirst: true,
+          status: 'khoiDong_done',
+          latestSessionId: sessionId || null, // Lưu sessionId
+          parts: {
+            khoiDong: part === 'khoiDong' ? data : null,
+            luyenTap: part === 'luyenTap' ? data : null,
+            vanDung: part === 'vanDung' ? data : null
+          },
+          createdAt: serverTimestamp(),
+          lastUpdatedAt: serverTimestamp()
+        };
+      }
+
+      await setDoc(progressRef, updateData, { merge: true });
+      return { id: docId, ...updateData };
+    } catch (error) {
+      console.error('Error upserting exam progress:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy tiến trình thi của học sinh
+   */
+  async getExamProgress(userId, examId) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+      const docSnapshot = await getDoc(progressRef);
+
+      if (docSnapshot.exists()) {
+        return { id: docSnapshot.id, ...docSnapshot.data() };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting exam progress:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cập nhật flag isFirst
+   */
+  async updateIsFirstFlag(userId, examId, isFirst) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+      
+      await updateDoc(progressRef, {
+        isFirst,
+        lastUpdatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Error updating isFirst flag:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy kết quả thi cuối cùng của học sinh từ student_exam_progress
+   * Dùng khi exam.isLocked === true để hiển thị kết quả mà không cần sessionId
+   */
+  async getFinalExamResults(userId, examId) {
+    try {
+      const progress = await this.getExamProgress(userId, examId);
+      
+      if (!progress) {
+        return null;
+      }
+
+      // Trích xuất dữ liệu từ phần khoiDong (Khởi động)
+      const khoiDongData = progress.parts?.khoiDong;
+      
+      if (!khoiDongData) {
+        return null;
+      }
+
+      return {
+        userId,
+        examId,
+        latestSessionId: progress.latestSessionId,
+        completedAt: khoiDongData.completedAt,
+        score: khoiDongData.score,
+        totalQuestions: khoiDongData.totalQuestions,
+        correctAnswers: khoiDongData.correctAnswers,
+        percentage: khoiDongData.percentage,
+        answers: khoiDongData.answers,
+        timeSpent: khoiDongData.timeSpent,
+        aiAnalysis: khoiDongData.aiAnalysis,
+        isLocked: true,
+        data: progress // Return full progress data for UI rendering
+      };
+    } catch (error) {
+      console.error('Error getting final exam results:', error);
+      throw error;
+    }
   }
 }
 

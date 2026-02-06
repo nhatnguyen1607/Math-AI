@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import topicService from '../../services/topicService';
 import authService from '../../services/authService';
+import facultyService from '../../services/faculty/facultyService';
 import TopicCard from '../../components/cards/TopicCard';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 
@@ -32,7 +33,27 @@ const FacultyTopicManagementPage = () => {
         return;
       }
       const data = await topicService.getTopicsByClass(selectedClassId);
-      setTopics(data);
+      
+      // Fetch exam count for each topic
+      const topicsWithExamCount = await Promise.all(
+        data.map(async (topic) => {
+          try {
+            const exams = await facultyService.getExamsByTopic(topic.id);
+            return {
+              ...topic,
+              examCount: exams.length
+            };
+          } catch (error) {
+            console.error(`Error fetching exams for topic ${topic.id}:`, error);
+            return {
+              ...topic,
+              examCount: 0
+            };
+          }
+        })
+      );
+      
+      setTopics(topicsWithExamCount);
     } catch (error) {
       alert('Lỗi khi tải danh sách chủ đề');
     } finally {

@@ -1,236 +1,649 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import authService from '../../services/authService';
-import studentService from '../../services/student/studentService';
 import StudentHeader from '../../components/student/StudentHeader';
+import examSessionService from '../../services/examSessionService';
+import examService from '../../services/examService';
+import geminiService from '../../services/geminiService';
+import resultService from '../../services/resultService';
 
-const StudentExamResultPage = () => {
-  const { examId } = useParams();
-  const [exam, setExam] = useState(null);
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
-  const [showAnswers, setShowAnswers] = useState(false);
+/**
+ * StudentExamResultPage
+ * Trang quản lý tiến trình học sinh với 3 phần:
+ * - Khởi động (mới hoàn thành)
+ * - Luyện tập (phát triển sau)
+ * - Vận dụng (phát triển sau)
+ */
+
+const StudentExamResultPage = ({ user, onSignOut }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { sessionId, examId: examIdParam } = useParams();
+  const fromExam = location.state?.fromExam || false;
+  const examIdFromState = location.state?.examId;
 
+  // Data states
+  const [session, setSession] = useState(null);
+  const [exam, setExam] = useState(null);
+  const [examProgress, setExamProgress] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isLockedExam, setIsLockedExam] = useState(false);
+
+  // UI states
+  const [activeTab, setActiveTab] = useState('khoiDong');
+  const [showDetails, setShowDetails] = useState(false);
+  const [expandedQuestions, setExpandedQuestions] = useState({});
+  const [showCongrats, setShowCongrats] = useState(fromExam);
+
+  // Lấy dữ liệu phiên thi và tiến trình
   useEffect(() => {
-    const checkAuth = async () => {
+    const finalExamId = examIdParam || examIdFromState;
+    
+    if (!sessionId && !finalExamId) {
+      setError('Không tìm thấy ID phiên thi hoặc bài thi');
+      setLoading(false);
+      return;
+    }
+
+    const loadData = async () => {
       try {
-        const currentUser = await authService.getCurrentUser();
-        if (!currentUser || currentUser.role !== 'student') {
-          navigate('/login');
-        } else {
-          setUser(currentUser);
+        let examData = null;
+        let sessionData = null;
+
+        // Nếu có examId (và exam.isLocked), lấy dữ liệu từ progress
+        if (finalExamId) {
+          examData = await examService.getExamById(finalExamId);
+          
+          if (examData?.isLocked && user?.uid) {
+            // Exam đã bị khóa, lấy kết quả từ progress
+            setIsLockedExam(true);
+            const progress = await resultService.getExamProgress(user.uid, finalExamId);
+            setExamProgress(progress);
+            setExam(examData);
+            setLoading(false);
+            return;
+          }
         }
-      } catch (error) {
-        navigate('/login');
+
+        // Nếu không có exam.isLocked hoặc chỉ có sessionId, lấy dữ liệu từ session
+        if (!sessionId) {
+          setError('Không tìm thấy ID phiên thi');
+          setLoading(false);
+          return;
+        }
+
+        sessionData = await examSessionService.getExamSession(sessionId);
+        if (!sessionData) {
+          setError('Phiên thi không tồn tại');
+          setLoading(false);
+          return;
+        }
+
+        setSession(sessionData);
+
+        // Lấy exam data từ session
+        try {
+          examData = await examService.getExamById(sessionData.examId);
+          setExam(examData);
+
+          // Lấy tiến trình học sinh
+          if (user?.uid) {
+            const progress = await resultService.getExamProgress(user.uid, sessionData.examId);
+            setExamProgress(progress);
+          }
+        } catch (err) {
+          console.error('Error loading exam:', err);
+        }
+
+        setLoading(false);
+      } catch (err) {
+        console.error('Error loading data:', err);
+        setError('Lỗi khi tải dữ liệu');
+        setLoading(false);
       }
     };
 
-    checkAuth();
-  }, [navigate]);
+    loadData();
+  }, [sessionId, examIdParam, examIdFromState, user?.uid]);
 
-  const loadExamData = useCallback(async () => {
-    try {
-      const examData = await studentService.getExamById(examId);
-      setExam(examData);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error loading exam:', error);
-      setLoading(false);
-    }
-  }, [examId]);
-
-  const loadExamDataAndResult = useCallback(async () => {
-    try {
-      const [examData, resultData] = await Promise.all([
-        studentService.getExamById(examId),
-        studentService.getExamResult(examId, user?.uid)
-      ]);
-      setExam(examData);
-      setResult(resultData);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      setLoading(false);
-    }
-  }, [examId, user?.uid]);
-
-  useEffect(() => {
-    // Lấy result từ location state hoặc từ database
-    if (location.state?.result) {
-      setResult(location.state.result);
-      loadExamData();
-    } else {
-      loadExamDataAndResult();
-    }
-  }, [examId, user?.uid, location.state?.result, loadExamData, loadExamDataAndResult]);
-
-  const handleRetakExam = () => {
-    navigate(`/student/exam-lobby/${examId}`);
-  };
-
-  const handleBackToDashboard = () => {
-    navigate('/student');
-  };
-
+  // Loading state
   if (loading) {
-    return <div className="loading">Đang tải kết quả...</div>;
-  }
-
-  if (!result || !exam) {
     return (
-      <div className="error-page">
-        <p>Không tìm thấy kết quả bài thi</p>
-        <button className="back-btn" onClick={handleBackToDashboard}>
-          Quay lại trang chủ
-        </button>
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="text-6xl animate-bounce-gentle">🏆</div>
+          <p className="text-2xl font-bold text-gray-700 font-quicksand">Đang tải kết quả...</p>
+        </div>
       </div>
     );
   }
 
-  const scorePercentage = result.score;
-  const isPassed = result.passed;
-
-  const navItems = [
-    { icon: '📊', label: 'Kết Quả: ' + (exam?.title || 'Bài Thi') }
-  ];
-
-  return (
-    <div className="exam-result-page">
-      <StudentHeader user={user} onLogout={() => navigate('/login')} onBack={() => navigate('/student')} navItems={navItems} />
-
-      <div className="result-container">
-        {/* Header */}
-        <div className={`result-header ${isPassed ? 'passed' : 'failed'}`}>
-          <div className="result-icon">
-            {isPassed ? '🎉' : '📖'}
-          </div>
-          <h1>{isPassed ? 'Chúc mừng!' : 'Cố gắng lên!'}</h1>
-          <p className="exam-title">{exam.title}</p>
-        </div>
-
-        {/* Score Display */}
-        <div className="score-section">
-          <div className="score-circle">
-            <div className="score-number">{result.score}%</div>
-            <div className="passing-score">
-              Điểm đạt: {exam.passingScore}%
-            </div>
-          </div>
-
-          <div className="score-details">
-            <div className={`detail-item ${result.passed ? 'pass' : 'fail'}`}>
-              <span className="detail-label">Kết quả</span>
-              <span className="detail-value">
-                {result.passed ? '✓ Đạt' : '✗ Không đạt'}
-              </span>
-            </div>
-            <div className="detail-item">
-              <span className="detail-label">Câu đúng</span>
-              <span className="detail-value">
-                {result.correctAnswers}/{result.totalQuestions}
-              </span>
-            </div>
-            <div className="detail-item">
-              <span className="detail-label">Thời gian</span>
-              <span className="detail-value">
-                {Math.floor(result.timeTaken / 60)}m {result.timeTaken % 60}s
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="progress-section">
-          <div className="progress-bar">
-            <div className="progress-fill" style={{
-              width: `${scorePercentage}%`,
-              background: isPassed 
-                ? 'linear-gradient(90deg, #26a69a 0%, #2e7d32 100%)'
-                : 'linear-gradient(90deg, #ff6b6b 0%, #d32f2f 100%)'
-            }}>
-            </div>
-          </div>
-          <p className="progress-text">
-            {result.correctAnswers} câu đúng trong {result.totalQuestions} câu
-          </p>
-        </div>
-
-        {/* Toggle Answers */}
-        <div className="toggle-section">
+  // Error state
+  if (error || (!session && !isLockedExam)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
+        <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
+        <div className="flex flex-col items-center justify-center gap-8 px-5 py-20">
+          <div className="text-8xl">⚠️</div>
+          <h2 className="text-gray-800 text-3xl font-bold font-quicksand text-center">{error || 'Không thể tải kết quả'}</h2>
           <button
-            className="toggle-btn"
-            onClick={() => setShowAnswers(!showAnswers)}
+            onClick={() => navigate(-1)}
+            className="btn-3d px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-quicksand rounded-max hover:shadow-lg transition-all"
           >
-            {showAnswers ? '▼' : '▶'} Chi tiết đáp án
+            Quay lại
           </button>
         </div>
+      </div>
+    );
+  }
 
-        {/* Detailed Answers */}
-        {showAnswers && (
-          <div className="answers-section">
-            {exam.questions.map((question, index) => {
-              const isCorrect = result.answers[index] === question.correctAnswer;
-              const userAnswer = result.answers[index];
+  // For locked exams, use exam data directly
+  const participantData = isLockedExam 
+    ? examProgress?.parts?.khoiDong 
+    : session?.participants?.[user?.uid];
+    
+  if (!participantData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
+        <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
+        <div className="flex flex-col items-center justify-center gap-8 px-5 py-20">
+          <div className="text-8xl">❓</div>
+          <h2 className="text-gray-800 text-3xl font-bold font-quicksand">Không tìm thấy dữ liệu kết quả {isLockedExam ? '(Locked exam)' : '(Regular exam)'}</h2>
+          <p className="text-gray-600 text-lg">examProgress: {examProgress ? 'exists' : 'null'}, parts: {examProgress?.parts ? 'exists' : 'null'}, khoiDong: {examProgress?.parts?.khoiDong ? 'exists' : 'null'}</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="btn-3d px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-quicksand rounded-max hover:shadow-lg transition-all"
+          >
+            Quay lại
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-              return (
-                <div key={index} className={`answer-card ${isCorrect ? 'correct' : 'incorrect'}`}>
-                  <div className="answer-header">
-                    <span className={`question-number ${isCorrect ? 'correct' : 'incorrect'}`}>
-                      {isCorrect ? '✓' : '✗'} Câu {index + 1}
-                    </span>
-                  </div>
+  // Calculate score from participantData
+  const correctCount = isLockedExam
+    ? participantData?.correctAnswers || 0
+    : Object.values(participantData?.answers || {}).filter((a) => a.isCorrect).length;
+  
+  const totalQuestions = isLockedExam
+    ? participantData?.totalQuestions || exam?.totalQuestions || 1
+    : session?.totalQuestions || exam?.totalQuestions || 1;
+    
+  const percentage = isLockedExam
+    ? participantData?.percentage || Math.round((correctCount / totalQuestions) * 100)
+    : Math.round((correctCount / totalQuestions) * 100);
+    
+  const isPassed = percentage >= 50;
 
-                  <div className="question-text">
-                    <p>{question.question}</p>
-                  </div>
+  // Render content based on active tab
+  const renderTabContent = () => {
+    if (activeTab === 'khoiDong') {
+      return renderKhoiDongTab();
+    } else if (activeTab === 'luyenTap') {
+      return renderLuyenTapTab();
+    } else if (activeTab === 'vanDung') {
+      return renderVanDungTab();
+    }
+  };
 
-                  <div className="options-display">
-                    {question.options.map((option, optIndex) => {
-                      const isCorrectOption = optIndex === question.correctAnswer;
-                      const isUserChoice = optIndex === userAnswer;
+  const renderKhoiDongTab = () => {
+    return (
+      <div>
+        {/* Congratulations Banner (only on first visit from exam) */}
+        {showCongrats && (
+          <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 animate-bounce-gentle game-card">
+            <div
+              className={`p-12 text-center text-white relative overflow-hidden ${
+                isPassed
+                  ? 'bg-gradient-to-br from-green-400 to-emerald-500'
+                  : 'bg-gradient-to-br from-orange-400 to-yellow-500'
+              }`}
+            >
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
+              <div className="text-7xl mb-4 block animate-bounce-gentle relative z-10">{isPassed ? '🎉' : '💪'}</div>
+              <h1 className="text-5xl font-bold mb-3 relative z-10 font-quicksand">
+                {isPassed ? 'Chúc mừng!' : 'Cố gắng thêm lần tới!'}
+              </h1>
+              <p className="text-xl opacity-95 relative z-10 font-quicksand">{exam?.title || 'Bài thi'}</p>
+              <button
+                onClick={() => setShowCongrats(false)}
+                className="mt-6 px-6 py-2 bg-white/30 text-white rounded-full font-bold hover:bg-white/50 transition-all"
+              >
+                Đóng ✕
+              </button>
+            </div>
+          </div>
+        )}
 
+        {/* Khởi động Results */}
+        <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 game-card">
+          {/* Result Header */}
+          <div className={`p-10 text-center text-white ${isPassed ? 'bg-gradient-to-br from-green-400 to-emerald-500' : 'bg-gradient-to-br from-orange-400 to-yellow-500'}`}>
+            <h2 className="text-4xl font-bold mb-2 font-quicksand">🚀 Phần Khởi động</h2>
+            <p className="text-lg opacity-90">{exam?.title || 'Bài thi'}</p>
+          </div>
+
+          {/* Score Display */}
+          <div className="grid grid-cols-3 gap-6 px-12 py-12 md:grid-cols-3 sm:grid-cols-1">
+            <div className="flex flex-col items-center gap-3 p-6 bg-green-100 rounded-max">
+              <div className="text-5xl font-bold text-green-600 font-quicksand">{correctCount}</div>
+              <div className="text-gray-700 font-bold font-quicksand">Câu đúng</div>
+              <div className="text-sm text-gray-600">({percentage}%)</div>
+            </div>
+
+            <div className="relative w-48 h-48 mx-auto">
+              <svg viewBox="0 0 120 120" className="w-full h-full transform -rotate-90">
+                <circle cx="60" cy="60" r="50" fill="none" stroke="#e5e7eb" strokeWidth="10" />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="50"
+                  fill="none"
+                  stroke={isPassed ? '#10b981' : '#f97316'}
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  style={{
+                    strokeDasharray: `${(percentage / 100) * 314} 314`,
+                    transition: 'stroke-dasharray 0.6s ease'
+                  }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-5xl font-bold text-gray-800 font-quicksand">{percentage}%</div>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-3 p-6 bg-yellow-100 rounded-max">
+              <div className={`text-5xl font-bold font-quicksand ${isPassed ? 'text-green-600' : 'text-orange-600'}`}>
+                {isPassed ? '✓' : '✗'}
+              </div>
+              <div className={`text-2xl font-bold font-quicksand ${isPassed ? 'text-green-600' : 'text-orange-600'}`}>
+                {isPassed ? 'PASS' : 'FAIL'}
+              </div>
+            </div>
+          </div>
+
+          {/* AI Analysis from evaluateCompetence */}
+          {examProgress?.parts?.khoiDong?.aiAnalysis && (
+            <div className="border-t-4 border-gray-200 p-8">
+              <h3 className="text-2xl font-bold text-gray-800 mb-6 font-quicksand">📊 Đánh giá năng lực</h3>
+              
+              {/* Competence Assessment */}
+              {examProgress.parts.khoiDong.aiAnalysis.competenceAssessment && (
+                <div>
+                  <h4 className="text-lg font-bold text-gray-700 mb-4 font-quicksand">Đánh giá năng lực (TC1-TC3):</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {['TC1', 'TC2', 'TC3'].map((tc) => {
+                      const assessment = examProgress.parts.khoiDong.aiAnalysis.competenceAssessment[tc];
+                      const levelColor = assessment?.level === 'Tốt' ? 'bg-green-100 border-green-500' : assessment?.level === 'Đạt' ? 'bg-yellow-100 border-yellow-500' : 'bg-red-100 border-red-500';
+                      const levelTextColor = assessment?.level === 'Tốt' ? 'text-green-700' : assessment?.level === 'Đạt' ? 'text-yellow-700' : 'text-red-700';
+                      
                       return (
-                        <div
-                          key={optIndex}
-                          className={`option-display ${
-                            isCorrectOption ? 'correct-answer' : ''
-                          } ${
-                            isUserChoice && !isCorrect ? 'wrong-answer' : ''
-                          }`}
-                        >
-                          <span className="option-letter">
-                            {String.fromCharCode(65 + optIndex)}.
-                          </span>
-                          <span className="option-content">{option}</span>
-                          {isCorrectOption && <span className="badge">✓ Đúng</span>}
-                          {isUserChoice && !isCorrect && <span className="badge wrong">✗ Bạn chọn</span>}
+                        <div key={tc} className={`p-4 rounded-max border-2 ${levelColor}`}>
+                          <p className="font-bold text-gray-800 mb-2 font-quicksand">{tc}</p>
+                          <p className={`font-bold text-lg mb-2 font-quicksand ${levelTextColor}`}>{assessment?.level}</p>
+                          <p className="text-gray-700 text-sm">{assessment?.reason}</p>
                         </div>
                       );
                     })}
                   </div>
+                </div>
+              )}
 
-                  {question.explanation && (
-                    <div className="explanation">
-                      <h4>💡 Giải thích:</h4>
-                      <p>{question.explanation}</p>
+              {/* Overall Assessment */}
+              {examProgress.parts.khoiDong.aiAnalysis.overallAssessment && (
+                <div className="mt-8 space-y-4 bg-gradient-to-br from-purple-50 to-blue-50 p-6 rounded-max border-2 border-purple-300">
+                  <div>
+                    <p className="font-bold text-lg text-gray-800 mb-2 font-quicksand">
+                      🎯 Mức năng lực chung: <span className={`${
+                        examProgress.parts.khoiDong.aiAnalysis.overallAssessment.level === 'Tốt' ? 'text-green-600' :
+                        examProgress.parts.khoiDong.aiAnalysis.overallAssessment.level === 'Đạt' ? 'text-yellow-600' : 'text-red-600'
+                      }`}>
+                        {examProgress.parts.khoiDong.aiAnalysis.overallAssessment.level}
+                      </span></p>
+                    <p className="text-gray-700">{examProgress.parts.khoiDong.aiAnalysis.overallAssessment.summary}</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {examProgress.parts.khoiDong.aiAnalysis.overallAssessment.strengths && (
+                      <div className="p-4 bg-green-100 rounded-max border-l-4 border-green-600">
+                        <p className="font-bold text-green-800 mb-2 font-quicksand">💪 Điểm mạnh:</p>
+                        <ul className="text-sm text-green-700 space-y-1">
+                          {examProgress.parts.khoiDong.aiAnalysis.overallAssessment.strengths.map((strength, idx) => (
+                            <li key={idx}>• {strength}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {examProgress.parts.khoiDong.aiAnalysis.overallAssessment.areasToImprove && (
+                      <div className="p-4 bg-orange-100 rounded-max border-l-4 border-orange-600">
+                        <p className="font-bold text-orange-800 mb-2 font-quicksand">🎯 Cần cải thiện:</p>
+                        <ul className="text-sm text-orange-700 space-y-1">
+                          {examProgress.parts.khoiDong.aiAnalysis.overallAssessment.areasToImprove.map((area, idx) => (
+                            <li key={idx}>• {area}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {examProgress.parts.khoiDong.aiAnalysis.overallAssessment.recommendations && (
+                    <div className="p-4 bg-blue-100 rounded-max border-l-4 border-blue-600">
+                      <p className="font-bold text-blue-800 mb-2 font-quicksand">💡 Lời khuyên:</p>
+                      <p className="text-sm text-blue-700">{examProgress.parts.khoiDong.aiAnalysis.overallAssessment.recommendations}</p>
                     </div>
                   )}
                 </div>
-              );
-            })}
+              )}
+            </div>
+          )}
+
+          {/* Show Details Section - Chia 3 phần BT */}
+          <div className="border-t-4 border-gray-200">
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              className="btn-3d w-full p-6 bg-white border-b-3 border-purple-400 rounded-none text-lg font-bold text-gray-800 cursor-pointer transition-all hover:bg-purple-50 font-quicksand"
+            >
+              {showDetails ? '▼' : '▶'} Xem chi tiết câu trả lời 
+            </button>
+
+            {showDetails && (
+              <div className="p-8 bg-gray-50 space-y-8">
+                {/* Render each exercise separately */}
+                {exam?.exercises && exam.exercises.length > 0 ? (
+                  exam.exercises.map((exercise, exerciseIdx) => (
+                    <div key={exerciseIdx} className="bg-white rounded-max p-6 shadow-md">
+                      {/* Exercise Header */}
+                      <div className="mb-6 pb-4 border-b-3 border-blue-300">
+                        <h4 className="text-2xl font-bold text-gray-800 font-quicksand mb-2">
+                          {exerciseIdx === 0 ? '📝 Bài tập 1' : exerciseIdx === 1 ? '📚 Bài tập 2' : '🎯 Bài tập 3'}
+                        </h4>
+                        {exercise.context && (
+                          <div className="p-4 bg-blue-50 rounded-max border-l-4 border-blue-500 text-gray-700">
+                            <p className="font-bold text-sm uppercase mb-2 font-quicksand">Bài toán:</p>
+                            <p>{exercise.context}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Questions in this exercise */}
+                      <div className="space-y-4">
+                        {exercise.questions && exercise.questions.length > 0 ? (
+                          exercise.questions.map((question, questionIdx) => {
+                            // Find the global question index
+                            let globalQuestionIndex = 0;
+                            for (let i = 0; i < exerciseIdx; i++) {
+                              globalQuestionIndex += exam.exercises[i].questions?.length || 0;
+                            }
+                            globalQuestionIndex += questionIdx;
+
+                            // Handle both array and object formats of answers
+                            let answerData;
+                            if (Array.isArray(participantData.answers)) {
+                              // Array format - find by questionIndex or use index directly
+                              answerData = participantData.answers.find(a => a.questionIndex === globalQuestionIndex) || participantData.answers[globalQuestionIndex];
+                            } else {
+                              // Object format - use key directly
+                              answerData = participantData.answers?.[globalQuestionIndex];
+                            }
+                            
+                            if (!answerData) {
+                              console.warn(`No answer data for question ${globalQuestionIndex}`);
+                              return null;
+                            }
+
+                            // Debug log for this question
+                            if (globalQuestionIndex === 0 || globalQuestionIndex === 7) {
+                              console.log(`Q${globalQuestionIndex}:`, {
+                                answer: answerData.answer,
+                                isCorrect: answerData.isCorrect,
+                                correctAnswerIndex: question.correctAnswerIndex,
+                                type: typeof answerData.answer
+                              });
+                            }
+
+                            // Auto-expand BT Cơ bản (first exercise)
+                            const isExpanded = exerciseIdx === 0 || expandedQuestions[globalQuestionIndex];
+
+                            return (
+                              <div
+                                key={globalQuestionIndex}
+                                className={`rounded-max overflow-hidden border-3 transition-all ${
+                                  answerData.isCorrect
+                                    ? 'border-green-400 bg-green-50'
+                                    : 'border-red-400 bg-red-50'
+                                }`}
+                              >
+                                <div
+                                  className={`flex justify-between items-center p-6 cursor-pointer hover:bg-gray-100 transition-colors font-quicksand ${
+                                    answerData.isCorrect ? 'bg-green-100' : 'bg-red-100'
+                                  }`}
+                                  onClick={() =>
+                                    setExpandedQuestions({
+                                      ...expandedQuestions,
+                                      [globalQuestionIndex]: !isExpanded
+                                    })
+                                  }
+                                >
+                                  <div className="text-lg font-bold text-gray-800">
+                                    {answerData.isCorrect ? '✅' : '❌'} Câu {globalQuestionIndex + 1}
+                                  </div>
+                                  <div className="text-gray-600 text-2xl">{isExpanded ? '▼' : '▶'}</div>
+                                </div>
+
+                                {isExpanded && (
+                                  <div className="p-8 animate-bounce-gentle font-quicksand">
+                                    <div className="text-2xl font-bold text-gray-800 mb-6 pb-6 border-b-3 border-gray-300">
+                                      {question.text || question.question}
+                                    </div>
+
+                                    <div className="space-y-4 mb-8">
+                                      {(question.options || []).map((option, oIdx) => {
+                                        // Handle both array (multiple select) and single answer formats
+                                        const isMultipleSelect = Array.isArray(answerData.answer);
+                                        const selectedAnswers = isMultipleSelect ? answerData.answer : [answerData.answer];
+                                        const isSelected = selectedAnswers.includes(oIdx);
+                                        
+                                        // For multiple select, we can't have a single correctAnswerIndex
+                                        // So we check if the answer is correct based on isCorrect flag
+                                        const isCorrectAnswer = answerData.correctAnswerIndex === oIdx;
+                                        
+                                        // Hiển thị "✓ Bạn chọn" (green) khi học sinh chọn và câu đúng
+                                        const showAsCorrect = isSelected && answerData.isCorrect;
+                                        // Hiển thị "✓ Bạn chọn" (red) khi học sinh chọn nhưng câu sai
+                                        const showAsWrong = isSelected && !answerData.isCorrect;
+
+                                        return (
+                                          <div
+                                            key={oIdx}
+                                            className={`flex items-center gap-4 p-5 rounded-max border-3 transition-all ${
+                                              showAsCorrect
+                                                ? 'border-green-500 bg-green-100'
+                                                : showAsWrong
+                                                ? 'border-red-500 bg-red-100'
+                                                : isCorrectAnswer
+                                                ? 'border-green-300 bg-green-50'
+                                                : 'border-gray-300 bg-gray-50'
+                                            }`}
+                                          >
+                                            <span
+                                              className={`flex items-center justify-center w-12 h-12 rounded-full font-bold text-white text-lg flex-shrink-0 ${
+                                                showAsCorrect
+                                                  ? 'bg-gradient-to-br from-green-500 to-emerald-600'
+                                                  : showAsWrong
+                                                  ? 'bg-gradient-to-br from-red-500 to-red-600'
+                                                  : isCorrectAnswer
+                                                  ? 'bg-gradient-to-br from-green-400 to-green-500'
+                                                  : 'bg-gradient-to-br from-purple-600 to-purple-700'
+                                              }`}
+                                            >
+                                              {String.fromCharCode(65 + oIdx)}
+                                            </span>
+                                            <span className="flex-1 text-gray-800 text-base leading-relaxed">{option}</span>
+                                            {showAsCorrect && (
+                                              <span className="px-4 py-2 bg-green-600 text-white rounded-max text-sm font-bold flex-shrink-0">
+                                                ✓ Bạn chọn
+                                              </span>
+                                            )}
+                                            {showAsWrong && (
+                                              <span className="px-4 py-2 bg-red-600 text-white rounded-max text-sm font-bold flex-shrink-0">
+                                                ✓ Bạn chọn
+                                              </span>
+                                            )}
+                                            {isCorrectAnswer && !isSelected && !answerData.isCorrect && (
+                                              <span className="px-4 py-2 bg-green-600 text-white rounded-max text-sm font-bold flex-shrink-0">
+                                                ✓ Đúng
+                                              </span>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+
+                                    {(() => {
+                                      // Find the AI comment for this question
+                                      const aiComment = examProgress.parts.khoiDong.aiAnalysis.questionComments?.find(
+                                        (c) => c.questionNum === globalQuestionIndex + 1
+                                      );
+                                      const displayText = aiComment?.comment || question.explanation;
+                                      const isAIComment = !!aiComment?.comment;
+
+                                      return displayText && (
+                                        <div className={`p-6 border-l-4 rounded-max ${isAIComment ? 'bg-blue-100 border-blue-600' : 'bg-purple-100 border-purple-600'}`}>
+                                          <h4 className="text-sm font-bold text-gray-800 uppercase mb-3">
+                                            {isAIComment ? '💡 Nhận xét:' : '📚 Giải thích:'}
+                                          </h4>
+                                          <p className="text-gray-800 leading-relaxed text-base">{displayText}</p>
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-gray-600 text-center py-4">Không có câu hỏi trong phần này</p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-600 text-center">Không có dữ liệu bài tập</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderLuyenTapTab = () => {
+    return (
+      <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 game-card">
+        <div className="p-10 text-center text-white bg-gradient-to-br from-blue-400 to-blue-500">
+          <h2 className="text-4xl font-bold mb-2 font-quicksand">📚 Phần Luyện tập</h2>
+          <p className="text-lg opacity-90">Phát triển sau</p>
+        </div>
+
+        {!examProgress?.parts?.luyenTap ? (
+          <div className="p-12 text-center">
+            <div className="text-6xl mb-6">📚</div>
+            <h3 className="text-3xl font-bold text-gray-800 mb-4 font-quicksand">Bạn đã sẵn sàng cho phần Luyện tập?</h3>
+            <p className="text-lg text-gray-600 mb-8 font-quicksand">Dựa vào nhận xét AI, hãy thử sức với các bài toán tương tự nhé!</p>
+            <button
+              onClick={() => navigate(`/student/practice/${exam?.id}`)}
+              className="btn-3d px-12 py-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xl font-bold rounded-full hover:shadow-lg transition-all font-quicksand"
+            >
+              Bắt đầu Luyện tập thôi! 🚀
+            </button>
+          </div>
+        ) : (
+          <div className="p-12">
+            <p className="text-gray-700 text-lg font-quicksand">Phần Luyện tập đang phát triển</p>
           </div>
         )}
+      </div>
+    );
+  };
 
-        {/* Actions */}
-        <div className="action-buttons">
-          <button className="btn-primary" onClick={handleRetakExam}>
-            Làm lại bài thi
+  const renderVanDungTab = () => {
+    return (
+      <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 game-card">
+        <div className="p-10 text-center text-white bg-gradient-to-br from-yellow-400 to-orange-500">
+          <h2 className="text-4xl font-bold mb-2 font-quicksand">🌟 Phần Vận dụng</h2>
+          <p className="text-lg opacity-90">Phát triển sau</p>
+        </div>
+
+        {!examProgress?.parts?.vanDung ? (
+          <div className="p-12 text-center">
+            <div className="text-6xl mb-6">🌟</div>
+            <h3 className="text-3xl font-bold text-gray-800 mb-4 font-quicksand">Bạn đã sẵn sàng cho phần Vận dụng?</h3>
+            <p className="text-lg text-gray-600 mb-8 font-quicksand">Áp dụng kiến thức vào những tình huống thực tế thú vị!</p>
+            <button
+              disabled
+              className="btn-3d px-12 py-5 bg-gray-400 text-white text-xl font-bold rounded-full cursor-not-allowed font-quicksand opacity-50"
+            >
+              Sắp có (Phát triển sau) 🚀
+            </button>
+          </div>
+        ) : (
+          <div className="p-12">
+            <p className="text-gray-700 text-lg font-quicksand">Phần Vận dụng đang phát triển</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 pb-10">
+      <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
+
+      <div className="max-w-5xl mx-auto px-5 pt-10">
+        {/* Tab Navigation */}
+        <div className="flex justify-center gap-4 mb-10 flex-wrap">
+          {[
+            { id: 'khoiDong', label: '🚀 Khởi động', icon: '🚀' },
+            { id: 'luyenTap', label: '📚 Luyện tập', icon: '📚' },
+            { id: 'vanDung', label: '🌟 Vận dụng', icon: '🌟' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setShowDetails(false);
+              }}
+              className={`px-8 py-3 rounded-full font-bold text-lg transition-all font-quicksand ${
+                activeTab === tab.id
+                  ? 'bg-yellow-400 shadow-3d text-gray-900'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        {renderTabContent()}
+
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-6 pb-8 md:grid-cols-2 sm:grid-cols-1 font-quicksand">
+          <button
+            onClick={() => navigate('/student')}
+            className="btn-3d px-6 py-4 bg-white text-gray-800 border-3 border-gray-400 rounded-max font-bold text-lg transition-all hover:bg-gray-100 hover:shadow-lg"
+          >
+            ← Quay lại Dashboard
           </button>
-          <button className="btn-secondary" onClick={handleBackToDashboard}>
-            Quay lại trang chủ
+          <button
+            onClick={() => navigate('/student/class-selection')}
+            className="btn-3d px-6 py-4 bg-gradient-to-r from-purple-400 to-pink-400 text-white rounded-max font-bold text-lg transition-all hover:shadow-lg"
+          >
+            Làm bài khác →
           </button>
         </div>
       </div>

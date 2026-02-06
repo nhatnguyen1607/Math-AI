@@ -6,13 +6,11 @@
 import { 
   collection, 
   query, 
-  where, 
   getDocs, 
   doc, 
   updateDoc, 
   getDoc,
-  orderBy,
-  limit
+  orderBy
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { User } from '../../models';
@@ -256,4 +254,6 @@ class AdminService {
   }
 }
 
-export default new AdminService();
+const adminServiceInstance = new AdminService();
+
+export default adminServiceInstance;

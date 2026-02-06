@@ -241,11 +241,13 @@ class FacultyService {
    */
   async updateExam(examId, updates) {
     try {
+      console.log('💾 facultyService.updateExam:', { examId, updates });
       const examRef = doc(db, 'exams', examId);
       await updateDoc(examRef, {
         ...updates,
         updatedAt: new Date()
       });
+      console.log('✅ Exam updated successfully');
       return true;
     } catch (error) {
       console.error('Error updating exam:', error);
@@ -360,10 +362,25 @@ class FacultyService {
   }
 
   /**
-   * Bắt đầu đề thi (chuyển từ open sang in_progress)
+   * Bắt đầu đề thi (tạo exam session)
+   * @param {string} examId - ID của bộ đề thi
+   * @param {string} facultyId - ID của giảng viên
+   * @param {string} classId - ID của lớp học
+   * @returns {Promise<string>} - ID của session vừa tạo
    */
-  async startExam(examId) {
+  async startExam(examId, facultyId, classId) {
     try {
+      // Import examSessionService để tạo session
+      const { createExamSession } = await import('../examSessionService');
+      
+      // Lấy thông tin đề thi để biết tổng số câu hỏi
+      const exam = await this.getExamById(examId);
+      const totalQuestions = exam?.exercises?.reduce((sum, e) => sum + e.questions.length, 0) || 0;
+      
+      // Tạo exam session mới với status = 'waiting'
+      const sessionId = await createExamSession(examId, facultyId, classId, totalQuestions);
+      
+      // Cập nhật exam status
       const now = new Date();
       await this.updateExam(examId, {
         status: 'in_progress',
@@ -371,9 +388,10 @@ class FacultyService {
         endTime: new Date(now.getTime() + 420000) // 7 minutes
       });
 
-      return true;
+      console.log('✅ Exam session created:', sessionId);
+      return sessionId;
     } catch (error) {
-      console.error('Error starting exam:', error);
+      console.error('❌ Error starting exam:', error);
       throw error;
     }
   }

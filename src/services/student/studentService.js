@@ -32,10 +32,8 @@ class StudentService {
       let exams = snapshot.docs.map(doc => Exam.fromFirestore(doc.data(), doc.id));
       console.log('📊 Total exams found:', exams.length);
 
-      // Filter in memory for flexibility (status, classId, type)
-      // Filter by status
-      exams = exams.filter(e => e.status === 'open' || e.status === 'in_progress');
-      console.log('📊 After status filter:', exams.length);
+      // Filter in memory for flexibility (classId, type)
+      // Always show all exams regardless of status - UI layer will check isLocked to determine button
       
       // Only filter by classId if provided and valid
       if (classId && classId.trim()) {
@@ -54,6 +52,13 @@ class StudentService {
       }
 
       console.log('✅ Final exams:', exams.length);
+      
+      // Debug log to show isLocked status of each exam
+      exams.forEach(exam => {
+        console.log(`📋 Exam details: id=${exam.id}, title="${exam.title}", isLocked=${exam.isLocked} (type: ${typeof exam.isLocked}), status=${exam.status}`);
+      });
+      console.log('📋 Full exams JSON:', JSON.stringify(exams.map(e => ({id: e.id, title: e.title, isLocked: e.isLocked}))));
+      
       return exams;
     } catch (error) {
       console.error('Error getting available exams:', error);

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import classService from '../../services/classService';
 import facultyService from '../../services/faculty/facultyService';
 
-const ExamCard = ({ exam, onEdit, onDelete, onActivate, onStart, onViewResults }) => {
+const ExamCard = ({ exam, onEdit, onDelete, onActivate, onStart, onViewResults, onViewLeaderboard }) => {
   const [className, setClassName] = useState('');
   const [topicName, setTopicName] = useState('');
 
@@ -89,27 +89,33 @@ const ExamCard = ({ exam, onEdit, onDelete, onActivate, onStart, onViewResults }
 
         {/* Row 2: Status-specific buttons */}
         <div className="flex gap-2 w-full flex-wrap">
-          {exam.status === 'draft' && onActivate && (
+          {exam.isLocked === true && onViewLeaderboard && (
+            <button className="flex-1 min-h-10 px-3 py-2.5 border-none rounded-lg text-sm font-semibold cursor-pointer transition-all duration-300 whitespace-nowrap text-center flex items-center justify-center bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-yellow-500/30" onClick={() => onViewLeaderboard(exam.id)}>
+              🏆 Xem kết quả
+            </button>
+          )}
+          
+          {exam.isLocked !== true && exam.status === 'draft' && onActivate && (
             <button className="flex-1 min-h-10 px-3 py-2.5 border-none rounded-lg text-sm font-semibold cursor-pointer transition-all duration-300 whitespace-nowrap text-center flex items-center justify-center bg-gradient-to-r from-green-500 to-green-600 text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-green-500/30" onClick={() => onActivate(exam.id)}>
               ✅ Kích hoạt
             </button>
           )}
 
-          {exam.status === 'active' && onStart && (
+          {exam.isLocked !== true && exam.status === 'active' && onStart && (
             <button className="flex-1 min-h-10 px-3 py-2.5 border-none rounded-lg text-sm font-semibold cursor-pointer transition-all duration-300 whitespace-nowrap text-center flex items-center justify-center bg-gradient-to-r from-green-500 to-green-600 text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-green-500/30" onClick={() => onStart(exam.id)}>
               🎮 Tham gia
             </button>
           )}
 
-          {exam.status === 'in_progress' && onViewResults && (
+          {exam.isLocked !== true && exam.status === 'in_progress' && onViewResults && (
             <button className="flex-1 min-h-10 px-3 py-2.5 border-none rounded-lg text-sm font-semibold cursor-pointer transition-all duration-300 whitespace-nowrap text-center flex items-center justify-center bg-gradient-to-r from-green-500 to-green-600 text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-green-500/30" onClick={() => onViewResults(exam.id)}>
               📊 Xem bảng xếp hạng
             </button>
           )}
         </div>
 
-        {/* Join button - always available */}
-        {onStart && (
+        {/* Join button - only if not locked */}
+        {exam.isLocked !== true && onStart && (
           <button className="flex-1 w-full px-3 py-2.5 border-none rounded-lg text-sm font-semibold cursor-pointer transition-all duration-300 whitespace-nowrap text-center bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-500/30 mt-1" onClick={() => onStart(exam.id)}>
             🚀 Tham gia
           </button>

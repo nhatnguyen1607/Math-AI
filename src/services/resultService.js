@@ -508,6 +508,107 @@ class ResultService {
     }
   }
 
+  // ===== EXAM PROGRESS (Khởi động, Luyện tập, Vận dụng) =====
+
+  /**
+   * Lưu hoặc cập nhật tiến trình thi của học sinh
+   * Document ID: {userId}_{examId}
+   */
+  async upsertExamProgress(userId, examId, progressData) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+
+      // Lấy dữ liệu hiện tại nếu tồn tại
+      const existingDoc = await getDoc(progressRef);
+      let updateData = {};
+
+      if (existingDoc.exists()) {
+        // Nếu document đã tồn tại, cập nhật phần tương ứng
+        const existingData = existingDoc.data();
+        const { part, data } = progressData;
+
+        updateData = {
+          ...existingData,
+          parts: {
+            ...existingData.parts,
+            [part]: data
+          },
+          lastUpdatedAt: serverTimestamp()
+        };
+
+        // Cập nhật status nếu phần hoàn thành
+        if (part === 'khoiDong' && data.completedAt) {
+          updateData.status = 'khoiDong_done';
+        } else if (part === 'luyenTap' && data.completedAt) {
+          updateData.status = 'luyenTap_done';
+        } else if (part === 'vanDung' && data.completedAt) {
+          updateData.status = 'all_done';
+          updateData.isFirst = false;
+        }
+      } else {
+        // Tạo document mới
+        const { part, data } = progressData;
+        updateData = {
+          userId,
+          examId,
+          isFirst: true,
+          status: 'khoiDong_done',
+          parts: {
+            khoiDong: part === 'khoiDong' ? data : null,
+            luyenTap: part === 'luyenTap' ? data : null,
+            vanDung: part === 'vanDung' ? data : null
+          },
+          createdAt: serverTimestamp(),
+          lastUpdatedAt: serverTimestamp()
+        };
+      }
+
+      await setDoc(progressRef, updateData, { merge: true });
+      return { id: docId, ...updateData };
+    } catch (error) {
+      console.error('Error upserting exam progress:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy tiến trình thi của học sinh
+   */
+  async getExamProgress(userId, examId) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+      const docSnapshot = await getDoc(progressRef);
+
+      if (docSnapshot.exists()) {
+        return { id: docSnapshot.id, ...docSnapshot.data() };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting exam progress:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cập nhật flag isFirst
+   */
+  async updateIsFirstFlag(userId, examId, isFirst) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+      
+      await updateDoc(progressRef, {
+        isFirst,
+        lastUpdatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Error updating isFirst flag:', error);
+      throw error;
+    }
+  }
+}
 
 const resultServiceInstance = new ResultService();
 export default resultServiceInstance;

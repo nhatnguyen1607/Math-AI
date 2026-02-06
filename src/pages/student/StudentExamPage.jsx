@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import StudentHeader from '../../components/student/StudentHeader';
 import examSessionService from '../../services/examSessionService';
 import examService from '../../services/examService';
 import scoringService from '../../services/scoringService';
+import geminiService from '../../services/geminiService';
+import resultService from '../../services/resultService';
 
 /**
  * StudentExamPage
@@ -160,11 +162,63 @@ const StudentExamPage = ({ user, onSignOut }) => {
         });
       }
 
+      // 1. Gọi AI Đánh giá năng lực (Truyền thêm questions để lấy explanation)
+      const frameworkText = `
+        Khung đánh giá năng lực giải quyết vấn đề toán học cho học sinh lớp 5
+        
+        TC1. Nhận biết được vấn đề cần giải quyết:
+        - Cần cố gắng: Không xác định được đầy đủ cái đã cho và cái cần tìm
+        - Đạt: Xác định đầy đủ dữ kiện và yêu cầu bài toán
+        - Tốt: Xác định chính xác dữ kiện, yêu cầu bài toán và mối quan hệ giữa chúng
+        
+        TC2. Nêu được cách thức GQVĐ:
+        - Cần cố gắng: Không nhận dạng được dạng toán hoặc không áp dụng được vào bài toán
+        - Đạt: Nhận dạng được dạng toán và áp dụng vào bài toán đã cho
+        - Tốt: Nhận dạng đúng dạng toán, đề xuất được các cách giải khác nhau, trình bày theo trình tự logic hợp lý
+        
+        TC3. Trình bày được cách thức GQVĐ:
+        - Cần cố gắng: Thực hiện phép tính còn sai nhiều
+        - Đạt: Thực hiện đúng các bước giải và phép tính cơ bản
+        - Tốt: Thực hiện đúng và đầy đủ các phép tính với các cách giải khác nhau
+      `;
+
+      let aiAnalysis = null;
+      try {
+        // Convert answers object to array format for evaluation
+        const answersArray = Object.values(answers);
+        aiAnalysis = await geminiService.evaluateCompetence(
+          answersArray,
+          questions,
+          frameworkText
+        );
+      } catch (aiError) {
+        console.error('Error in AI evaluation:', aiError);
+        // Nếu AI evaluation thất bại, vẫn tiếp tục lưu kết quả
+        aiAnalysis = null;
+      }
+
+      // 2. Lưu vào tiến trình (Lưu vào parts.khoiDong)
+      if (user?.uid && exam?.id) {
+        await resultService.upsertExamProgress(user.uid, exam.id, {
+          part: 'khoiDong',
+          data: {
+            score: totalScore,
+            correctAnswers,
+            totalQuestions: questions.length,
+            answers: answers,
+            aiAnalysis: aiAnalysis,
+            completedAt: new Date().toISOString()
+          }
+        });
+      }
+
       setIsCompleted(true);
 
-      // Chuyển đến trang kết quả sau 2 giây
+      // 3. Chuyển sang trang kết quả (với flag fromExam để hiển thị lời chúc mừng)
       setTimeout(() => {
-        navigate(`/student/exam-result/${sessionId}`);
+        navigate(`/student/exam-result/${sessionId}`, {
+          state: { fromExam: true, examId: exam?.id }
+        });
       }, 2000);
     } catch (err) {
       console.error('Error submitting exam:', err);
@@ -172,7 +226,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [answers, sessionId, user?.uid, isCompleted, isSubmitting, questions.length, navigate]);
+  }, [answers, sessionId, user?.uid, exam?.id, isCompleted, isSubmitting, questions.length, questions, navigate]);
 
   // Handler: Câu hỏi tiếp theo
   const handleNextQuestion = () => {

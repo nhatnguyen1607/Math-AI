@@ -4,6 +4,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import studentService from '../../services/student/studentService';
 import classService from '../../services/classService';
+import resultService from '../../services/resultService';
 import StudentClassSelectionPage from './StudentClassSelectionPage';
 import StudentHeader from '../../components/student/StudentHeader';
 import StudentTopicPage from './StudentTopicPage';
@@ -141,8 +142,28 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
     }
   }, [navigate, selectedClass]);
 
-  const handleJoinExam = (examId) => {
-    window.location.href = `/student/exam-lobby/${examId}`;
+  const handleJoinExam = async (examId) => {
+    try {
+      // Check if student has already completed the exam (isFirst flag)
+      if (user?.uid) {
+        const progress = await resultService.getExamProgress(user.uid, examId);
+        
+        // If progress exists and isFirst is false, redirect to result page
+        if (progress && progress.isFirst === false) {
+          navigate(`/student/exam-result/${progress.sessionId || examId}`, {
+            state: { fromExam: false, examId }
+          });
+          return;
+        }
+      }
+
+      // Otherwise, go to exam lobby (first time or in progress)
+      window.location.href = `/student/exam-lobby/${examId}`;
+    } catch (error) {
+      console.error('Error checking exam progress:', error);
+      // If there's an error, go to exam lobby as fallback
+      window.location.href = `/student/exam-lobby/${examId}`;
+    }
   };
 
   // Redirect if user logs out
@@ -315,7 +336,7 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
             >
               <div className="text-7xl mb-6 text-center animate-bounce-gentle">🚀</div>
               <h2 className="text-3xl font-bold text-gray-800 mb-3 font-quicksand text-center">
-                🗺️ Khởi động
+                🗺️ Trò chơi
               </h2>
               <p className="text-gray-700 mb-8 font-quicksand text-center">
                 Chọn chủ đề và bắt đầu hành trình học tập của bạn

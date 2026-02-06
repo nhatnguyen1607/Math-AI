@@ -340,6 +340,116 @@ Chỉ gợi ý hướng suy nghĩ hoặc 1 câu hỏi dẫn dắt ngắn gọn.`
       currentStep: this.currentStep
     };
   }
+
+  /**
+   * Đánh giá năng lực giải quyết vấn đề toán học dựa trên Khung đánh giá
+   * Input: studentAnswers, questions (với explanation), frameworkText (nội dung khung đánh giá)
+   * Output: JSON với per-question comments và competence assessment (TC1, TC2, TC3)
+   */
+  async evaluateCompetence(studentAnswers, questions, frameworkText) {
+    try {
+      const model = geminiModelManager.getModel();
+
+      // Chuẩn bị dữ liệu câu hỏi kèm giải thích cho AI
+      const questionsContext = questions.map((q, idx) => ({
+        questionNum: idx + 1,
+        text: q.text || q.question,
+        options: q.options || [],
+        studentAnswerIndex: studentAnswers[idx]?.answer,
+        isCorrect: studentAnswers[idx]?.isCorrect,
+        correctAnswerIndex: q.correctAnswerIndex,
+        explanation: q.explanation || 'Không có giải thích'
+      }));
+
+      const prompt = `You are an expert mathematics educator evaluating a 5th-grade student's exam performance.
+
+## Competence Assessment Framework (Vietnamese):
+${frameworkText}
+
+## Student's Answers:
+${JSON.stringify(questionsContext, null, 2)}
+
+## CRITICAL Evaluation Criteria:
+
+### For each competence level:
+
+**TỐT (Good/Excellent)** - Assign when:
+- Student answers 80%+ of questions CORRECTLY
+- Demonstrates clear understanding of concepts
+- Shows logical problem-solving approach
+- Answers are well-reasoned and complete
+
+**ĐẠT (Pass/Basic)** - Assign when:
+- Student answers 50-79% correctly
+- Shows partial understanding
+- Some reasoning is present but may have gaps
+- Makes occasional mistakes
+
+**CẦN CỐ GẮNG (Needs Effort)** - Assign when:
+- Student answers less than 50% correctly
+- Shows limited understanding
+- Lacks clear reasoning
+- Many fundamental errors
+
+## Task:
+1. For EACH question: Analyze what the student chose, compare with correct answer, and based on the explanation, write ONE meaningful comment about what they did right/wrong. Store this as a comment for that question.
+
+2. Calculate accuracy rate: (correct answers / total questions) × 100
+   - If accuracy ≥ 80%: Strongly consider "Tốt" for that competence
+   - If accuracy 50-79%: Consider "Đạt"
+   - If accuracy < 50%: Consider "Cần cố gắng"
+
+3. Assess the student's competence across three dimensions (TC1, TC2, TC3) using the accuracy rate as PRIMARY indicator.
+
+4. Provide an overall assessment with specific strengths, areas to improve, and recommendations.
+
+## Response Format (JSON - ALL text MUST be in Vietnamese):
+{
+  "questionComments": [
+    {
+      "questionNum": 1,
+      "comment": "Nhận xét chi tiết về câu trả lời này (what they did right/wrong, dựa trên explanation)"
+    }
+  ],
+  "competenceAssessment": {
+    "TC1": {
+      "level": "Tốt|Đạt|Cần cố gắng",
+      "reason": "Lý do đánh giá mức này dựa trên tỷ lệ câu trả lời chính xác và mức độ hiểu biết"
+    },
+    "TC2": {
+      "level": "Tốt|Đạt|Cần cố gắng",
+      "reason": "Lý do đánh giá mức này dựa trên tỷ lệ câu trả lời chính xác và mức độ hiểu biết"
+    },
+    "TC3": {
+      "level": "Tốt|Đạt|Cần cố gắng",
+      "reason": "Lý do đánh giá mức này dựa trên tỷ lệ câu trả lời chính xác và mức độ hiểu biết"
+    }
+  },
+  "overallAssessment": {
+    "level": "Tốt|Đạt|Cần cố gắng",
+    "summary": "Tóm tắt mức năng lực chung của học sinh (2-3 câu). Nếu tỷ lệ câu đúng ≥80% thì xứng đáng 'Tốt'",
+    "strengths": ["Điểm mạnh 1", "Điểm mạnh 2"],
+    "areasToImprove": ["Cần cải thiện 1", "Cần cải thiện 2"],
+    "recommendations": "Lời khuyên cụ thể để học sinh cải thiện (2-3 câu)"
+  }
+}`;
+
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text();
+
+      // Parse JSON response
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('Invalid response format from Gemini');
+      }
+
+      const assessment = JSON.parse(jsonMatch[0]);
+      return assessment;
+    } catch (error) {
+      console.error('Error evaluating competence:', error);
+      throw error;
+    }
+  }
 }
 
 const geminiServiceInstance = new GeminiService();

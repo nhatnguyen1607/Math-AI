@@ -3,7 +3,6 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import StudentHeader from '../../components/student/StudentHeader';
 import examSessionService from '../../services/examSessionService';
 import examService from '../../services/examService';
-import geminiService from '../../services/geminiService';
 import resultService from '../../services/resultService';
 
 /**

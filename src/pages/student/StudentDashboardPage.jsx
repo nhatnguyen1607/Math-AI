@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
 import studentService from '../../services/student/studentService';
 import classService from '../../services/classService';
 import resultService from '../../services/resultService';
@@ -57,7 +55,7 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
     };
     
     loadStudentClasses();
-  }, [user?.uid]);
+  }, [user?.uid, classId, selectedClass]);
 
   const loadClassData = useCallback(async (userId) => {
     if (!userId) {
@@ -112,7 +110,7 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
         setSelectedClass(cls);
       }
     }
-  }, [classId, studentClasses]);
+  }, [classId, studentClasses, selectedClass]);
 
   // Load selected topic when topicId URL param changes
   useEffect(() => {

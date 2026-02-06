@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import StudentHeader from '../../components/student/StudentHeader';
 import examSessionService from '../../services/examSessionService';
 import examService from '../../services/examService';
@@ -226,7 +226,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [answers, sessionId, user?.uid, exam?.id, isCompleted, isSubmitting, questions.length, questions, navigate]);
+  }, [answers, sessionId, user?.uid, exam?.id, isCompleted, isSubmitting, questions, navigate]);
 
   // Handler: Câu hỏi tiếp theo
   const handleNextQuestion = () => {

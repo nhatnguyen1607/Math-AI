@@ -1,14 +1,14 @@
 import geminiModelManager from "./geminiModelManager";
 
 // System prompt cho AI trợ lý học toán
-const SYSTEM_PROMPT = `Bạn là trợ lý học tập ảo thân thiện, hỗ trợ học sinh lớp 5 giải toán theo 4 bước Polya.
+const SYSTEM_PROMPT = `Mình là trợ lý học tập ảo thân thiện, hỗ trợ bạn lớp 5 giải toán theo 4 bước Polya.
 
 NGUYÊN TẮC QUAN TRỌNG:
-- KHÔNG BAO GIỜ giải bài toán thay học sinh
-- KHÔNG đưa ra đáp án dù học sinh làm sai
+- KHÔNG BAO GIỜ giải bài toán thay bạn
+- KHÔNG đưa ra đáp án dù bạn làm sai
 - CHỈ đặt câu hỏi gợi mở, định hướng
 - MỖI LẦN CHỈ HỎI 1 CÂU
-- Phát hiện lỗi sai của học sinh và gợi ý để học sinh tự sửa
+- Phát hiện lỗi sai của bạn và gợi ý để bạn tự sửa
 - Ngôn ngữ thân thiện, dễ thương như người bạn
 
 4 BƯỚC GIẢI TOÁN:
@@ -58,7 +58,7 @@ export class GeminiService {
         },
         {
           role: "model",
-          parts: [{ text: "Chào em! Mình là trợ lý học toán, sẽ đồng hành cùng em giải quyết bài toán theo 4 bước nhé! Mình sẽ không giải hộ em mà chỉ hỏi các câu để em tự tìm ra cách giải. Sẵn sàng bắt đầu chưa? 😊" }],
+          parts: [{ text: "Chào bạn! Mình là trợ lý học toán, sẽ đồng hành cùng bạn giải toán theo 4 bước nhé! Mình sẽ không giải hộ bạn mà chỉ hỏi các câu để bạn tự tìm ra cách giải. Sẵn sàng bắt đầu chưa? 😊" }],
         },
       ],
       generationConfig: {
@@ -73,7 +73,7 @@ export class GeminiService {
     const initialPrompt = `Đề bài: ${problemText}
 
 Hãy bắt đầu BƯỚC 1: HIỂU BÀI TOÁN
-Đặt 1 câu hỏi đầu tiên để giúp học sinh xác định dữ kiện hoặc yêu cầu của bài toán.
+Đặt 1 câu hỏi đầu tiên để giúp bạn xác định dữ kiện hoặc yêu cầu của bài toán.
 Nhớ: Chỉ hỏi 1 câu, ngôn ngữ thân thiện.`;
 
     try {
@@ -91,7 +91,7 @@ Nhớ: Chỉ hỏi 1 câu, ngôn ngữ thân thiện.`;
     }
   }
 
-  // Xử lý phản hồi của học sinh
+  // Xử lý phản hồi của bạn
   async processStudentResponse(studentAnswer) {
     if (!this.chat) {
       throw new Error("Chưa khởi tạo bài toán. Vui lòng gọi startNewProblem() trước.");
@@ -183,27 +183,27 @@ Nhớ: Chỉ hỏi 1 câu, ngôn ngữ thân thiện.`;
     return 'pass'; // Mặc định
   }
 
-  // Gửi câu trả lời của học sinh (giữ để tương thích)
+  // Gửi câu trả lời của bạn (giữ để tương thích)
   async sendStudentResponse(studentAnswer) {
     return this.processStudentResponse(studentAnswer);
   }
 
   // Xây dựng prompt theo từng bước
   _buildContextPrompt(studentAnswer) {
-    let prompt = `Câu trả lời của học sinh: "${studentAnswer}"\n\n`;
+    let prompt = `Câu trả lời của bạn: "${studentAnswer}"\n\n`;
 
     switch (this.currentStep) {
       case 1: // Hiểu bài toán
         prompt += `Đang ở BƯỚC 1: HIỂU BÀI TOÁN
 Phân tích câu trả lời:
-- Học sinh đã xác định đúng/đủ dữ kiện chưa?
-- Học sinh đã hiểu đúng yêu cầu bài toán chưa?
+- Bạn đã xác định đúng/đủ dữ kiện chưa?
+- Bạn đã hiểu đúng yêu cầu bài toán chưa?
 - Có nhầm lẫn về đại lượng, đơn vị không?
 
-Nếu chưa đủ/đúng: Đặt câu hỏi gợi ý để học sinh tự phát hiện và bổ sung.
+Nếu chưa đủ/đúng: Đặt câu hỏi gợi ý để bạn tự phát hiện và bổ sung.
 Nếu đã đủ/đúng: 
-  - Khen ngợi học sinh
-  - Kết thúc tin nhắn bằng cụm: "Bây giờ chúng ta sang BƯỚC 2 nhé!"
+  - Khen ngợi bạn
+  - Kết thúc tin nhắn bằng cụm: "Bây giờ chúng mình sang BƯỚC 2 nhé!"
   - Đặt câu hỏi đầu tiên cho bước 2
 
 CHỈ HỎI 1-2 CÂU. Không giải hộ.`;
@@ -212,17 +212,17 @@ CHỈ HỎI 1-2 CÂU. Không giải hộ.`;
       case 2: // Lập kế hoạch
         prompt += `Đang ở BƯỚC 2: LẬP KẾ HOẠCH GIẢI
 Phân tích:
-- Học sinh đã đề xuất phép tính/công thức phù hợp chưa?
+- Bạn đã đề xuất phép tính/công thức phù hợp chưa?
 - Các bước giải có đầy đủ, đúng thứ tự không?
-- Học sinh chỉ nêu ý tưởng, CHƯA TÍNH CỤ THỂ chứ?
+- Bạn chỉ nêu ý tưởng, CHƯA TÍNH CỤ THỂ chứ?
 
 QUAN TRỌNG: 
-- KHÔNG cho học sinh thực hiện phép tính ở bước này
+- KHÔNG cho bạn thực hiện phép tính ở bước này
 - CHỈ yêu cầu nêu KẾ HOẠCH (làm gì trước, làm gì sau)
-- Khi học sinh đã nêu ĐẦY ĐỦ các bước:
+- Khi bạn đã nêu ĐẦY ĐỦ các bước:
   - Khen ngợi
   - Kết thúc tin nhắn bằng: "Tuyệt! Bây giờ sang BƯỚC 3 nhé!"
-  - Yêu cầu học sinh thực hiện bước đầu tiên
+  - Yêu cầu bạn thực hiện bước đầu tiên
 
 CHỈ HỎI 1-2 CÂU để định hướng kế hoạch.`;
         break;
@@ -230,14 +230,14 @@ CHỈ HỎI 1-2 CÂU để định hướng kế hoạch.`;
       case 3: // Thực hiện kế hoạch
         prompt += `Đang ở BƯỚC 3: THỰC HIỆN KẾ HOẠCH
 Phân tích:
-- Học sinh tính toán đúng chưa?
+- Bạn tính toán đúng chưa?
 - Có sai sót về phép tính số thập phân, đơn vị không?
 - Trình bày lời giải có rõ ràng không?
 
 Nếu SAI:
 - KHÔNG đưa đáp án đúng
 - Chỉ ra dấu hiệu sai (vd: "Kết quả này có vẻ không hợp lý...")
-- Đặt câu hỏi để học sinh tự kiểm tra và sửa
+- Đặt câu hỏi để bạn tự kiểm tra và sửa
 
 Nếu ĐÚNG: 
 - Khen ngợi
@@ -249,34 +249,34 @@ CHỈ HỎI 1-2 CÂU. Không tính hộ.`;
 
       case 4: // Kiểm tra & mở rộng
         prompt += `Đang ở BƯỚC 4: KIỂM TRA & MỞ RỘNG
-Hỏi học sinh:
+Hỏi bạn:
 - Kết quả có hợp lý không? Vì sao?
 - Có cách giải nào khác không?
 - Nếu thay đổi dữ liệu, cách giải có đổi không?
 
-Sau khi học sinh trả lời đầy đủ:
+Sau khi bạn trả lời đầy đủ:
 - Đánh giá tổng thể 4 bước (Cần cố gắng/Đạt/Tốt)
 - Khen ngợi và động viên
-- Kết thúc bằng: "Chúc mừng em đã HOÀN THÀNH! 🎉"
+- Kết thúc bằng: "Chúc mừng bạn đã HOÀN THÀNH! 🎉"
 
 CHỈ HỎI 1-2 CÂU.`;
         break;
 
       default:
-        prompt += 'Vui lòng hỗ trợ học sinh theo bước hiện tại.';
+        prompt += 'Vui lòng hỗ trợ bạn theo bước hiện tại.';
         break;
     }
 
     return prompt;
   }
 
-  // Lấy gợi ý khi học sinh gặp khó khăn
+  // Lấy gợi ý khi bạn gặp khó khăn
   async getHint() {
     if (!this.chat) {
       throw new Error("Chưa khởi tạo bài toán.");
     }
 
-    const hintPrompt = `Học sinh đang gặp khó khăn ở BƯỚC ${this.currentStep}.
+    const hintPrompt = `Bạn đang gặp khó khăn ở BƯỚC ${this.currentStep}.
 Hãy đưa ra 1 gợi ý NHẸ NHÀNG (KHÔNG giải hộ, KHÔNG đưa đáp án).
 Chỉ gợi ý hướng suy nghĩ hoặc 1 câu hỏi dẫn dắt ngắn gọn.`;
 
@@ -403,34 +403,41 @@ ${JSON.stringify(questionsContext, null, 2)}
 
 4. Provide an overall assessment with specific strengths, areas to improve, and recommendations.
 
-## Response Format (JSON - ALL text MUST be in Vietnamese):
+## IMPORTANT: Vietnamese Language Rules:
+- ALWAYS use "bạn" instead of "học sinh" or "em"
+- ALWAYS use "mình" instead of "em"
+- Example: "Bạn xác định được..." NOT "Học sinh xác định được..."
+- Example: "Bạn còn cần cải thiện..." NOT "Em còn cần cải thiện..."
+- Example: "Mình thấy bạn..." NOT "Em..."
+
+## Response Format (JSON - ALL text MUST be in Vietnamese using "bạn/mình" pronouns):
 {
   "questionComments": [
     {
       "questionNum": 1,
-      "comment": "Nhận xét chi tiết về câu trả lời này (what they did right/wrong, dựa trên explanation)"
+      "comment": "Nhận xét chi tiết về câu trả lời này (what they did right/wrong, dựa trên explanation) - dùng 'bạn/mình' không dùng 'em/học sinh'"
     }
   ],
   "competenceAssessment": {
     "TC1": {
       "level": "Tốt|Đạt|Cần cố gắng",
-      "reason": "Lý do đánh giá mức này dựa trên tỷ lệ câu trả lời chính xác và mức độ hiểu biết"
+      "reason": "Lý do đánh giá mức này dựa trên tỷ lệ câu trả lời chính xác và mức độ hiểu biết của bạn - dùng 'bạn/mình' không dùng 'em/học sinh'"
     },
     "TC2": {
       "level": "Tốt|Đạt|Cần cố gắng",
-      "reason": "Lý do đánh giá mức này dựa trên tỷ lệ câu trả lời chính xác và mức độ hiểu biết"
+      "reason": "Lý do đánh giá mức này dựa trên tỷ lệ câu trả lời chính xác và mức độ hiểu biết của bạn - dùng 'bạn/mình' không dùng 'em/học sinh'"
     },
     "TC3": {
       "level": "Tốt|Đạt|Cần cố gắng",
-      "reason": "Lý do đánh giá mức này dựa trên tỷ lệ câu trả lời chính xác và mức độ hiểu biết"
+      "reason": "Lý do đánh giá mức này dựa trên tỷ lệ câu trả lời chính xác và mức độ hiểu biết của bạn - dùng 'bạn/mình' không dùng 'em/học sinh'"
     }
   },
   "overallAssessment": {
     "level": "Tốt|Đạt|Cần cố gắng",
-    "summary": "Tóm tắt mức năng lực chung của học sinh (2-3 câu). Nếu tỷ lệ câu đúng ≥80% thì xứng đáng 'Tốt'",
+    "summary": "Tóm tắt mức năng lực chung của bạn (2-3 câu). Nếu tỷ lệ câu đúng ≥80% thì xứng đáng 'Tốt'. LUÔN dùng 'bạn' hoặc 'mình', KHÔNG dùng 'em' hoặc 'học sinh'",
     "strengths": ["Điểm mạnh 1", "Điểm mạnh 2"],
     "areasToImprove": ["Cần cải thiện 1", "Cần cải thiện 2"],
-    "recommendations": "Lời khuyên cụ thể để học sinh cải thiện (2-3 câu)"
+    "recommendations": "Lời khuyên cụ thể để bạn cải thiện (2-3 câu) - Dùng 'bạn/mình' không dùng 'em/học sinh'"
   }
 }`;
 

@@ -14,6 +14,11 @@ const FacultyGameLobbyPage = () => {
   const [unsubscribe, setUnsubscribe] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
   const [gameStarted, setGameStarted] = useState(false);
+  
+  // Countdown and awarding states
+  const [timeRemaining, setTimeRemaining] = useState(420); // 7 minutes in seconds
+  const [isAwarding, setIsAwarding] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -42,11 +47,22 @@ const FacultyGameLobbyPage = () => {
     try {
       setLoading(true);
       const examData = await facultyService.getExamById(examId);
+      console.log('🎮 FacultyGameLobbyPage loadExam:', {
+        status: examData.status,
+        endTime: examData.endTime,
+        activeStudents: examData.activeStudents?.length,
+        completedStudents: examData.completedStudents?.length
+      });
       setExam(examData);
       setGameStarted(examData.status === 'in_progress');
 
       // Subscribe to realtime updates
       const unsub = facultyService.subscribeToExam(examId, (updatedExam) => {
+        console.log('📡 Exam realtime update:', {
+          status: updatedExam.status,
+          endTime: updatedExam.endTime,
+          gameStarted: updatedExam.status === 'in_progress'
+        });
         setExam(updatedExam);
         setGameStarted(updatedExam.status === 'in_progress');
         
@@ -66,7 +82,6 @@ const FacultyGameLobbyPage = () => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     return () => {
       if (unsubscribe) {
@@ -74,6 +89,8 @@ const FacultyGameLobbyPage = () => {
       }
     };
   }, [unsubscribe]);
+
+  // Countdown timer moved to FacultyExamLiveSessionPage
 
   const handleStartGame = async () => {
     try {
@@ -91,12 +108,15 @@ const FacultyGameLobbyPage = () => {
         score: 0
       }));
 
+      const endTime = new Date(Date.now() + 420000); // 7 minutes
+      console.log('🎮 handleStartGame - endTime:', endTime);
+      
       await facultyService.updateExam(examId, {
         status: 'in_progress',
         activeStudents,
         waitingStudents: [],
         startTime: new Date(),
-        endTime: new Date(Date.now() + 420000) // 7 minutes
+        endTime: endTime
       });
 
       alert('Trò chơi đã bắt đầu!');
@@ -109,13 +129,57 @@ const FacultyGameLobbyPage = () => {
   const handleEndGame = async () => {
     if (window.confirm('Bạn chắc chắn muốn kết thúc trò chơi? Học sinh vẫn đang chơi sẽ không được tính điểm.')) {
       try {
-        await facultyService.endExam(examId);
-        alert('Trò chơi đã kết thúc');
+        // Set isLocked and save finalLeaderboard
+        const finalBoard = [...leaderboard].map((s, idx) => ({
+          ...s,
+          rank: idx + 1,
+          medal: idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null
+        }));
+
+        await facultyService.updateExam(examId, {
+          isLocked: true,
+          finalLeaderboard: finalBoard,
+          status: 'finished'
+        });
+        
+        alert('Trò chơi đã kết thúc và khóa!');
         navigate('/faculty/exam-management');
       } catch (error) {
         console.error('Error ending game:', error);
         alert('Lỗi khi kết thúc trò chơi');
       }
+    }
+  };
+
+  const handleAward = async () => {
+    try {
+      setShowConfetti(true);
+      
+      // Save Final Leaderboard and lock exam
+      const finalBoard = [...leaderboard].map((s, idx) => ({
+        ...s,
+        rank: idx + 1,
+        medal: idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null
+      }));
+
+      await facultyService.updateExam(examId, {
+        isLocked: true,
+        finalLeaderboard: finalBoard,
+        status: 'finished'
+      });
+
+      // Show confetti for 3 seconds
+      setTimeout(() => {
+        setShowConfetti(false);
+      }, 3000);
+
+      setTimeout(() => {
+        alert('🏆 Trao giải hoàn tất! Đề thi đã được khóa.');
+        navigate('/faculty/exam-management');
+      }, 3500);
+    } catch (error) {
+      console.error('Error awarding:', error);
+      alert('Lỗi khi trao giải');
     }
   };
 
@@ -165,7 +229,7 @@ const FacultyGameLobbyPage = () => {
               🚀 Bắt đầu
             </button>
           )}
-          {gameStarted && (
+          {gameStarted && !isAwarding && (
             <button 
               className="px-6 py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all"
               onClick={handleEndGame}
@@ -173,7 +237,17 @@ const FacultyGameLobbyPage = () => {
               ⏹️ Kết thúc
             </button>
           )}
+          {isAwarding && (
+            <button 
+              className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-lg font-bold hover:shadow-xl transition-all animate-bounce"
+              onClick={handleAward}
+            >
+              🏆 Công bố Kết quả
+            </button>
+          )}
         </div>
+
+        {/* Countdown Timer and Awarding moved to FacultyExamLiveSessionPage */}
 
         {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -296,7 +370,9 @@ const FacultyGameLobbyPage = () => {
                 {/* Active Students List */}
                 {activeCount > 0 && (
                   <div className="mt-6 pt-6 border-t border-gray-200">
-                    <h4 className="font-bold text-gray-700 mb-3">👤 Đang chơi ({activeCount})</h4>
+                 isAwarding ? (
+                  <span className="text-yellow-600">🏆 Trao giải</span>
+                ) :    <h4 className="font-bold text-gray-700 mb-3">👤 Đang chơi ({activeCount})</h4>
                     <div className="grid grid-cols-2 gap-2">
                       {exam.activeStudents.map((student, idx) => (
                         <div key={idx} className="flex items-center gap-2 p-2 bg-blue-50 rounded">

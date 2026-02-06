@@ -20,8 +20,16 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
     navigate(`/student/${selectedClass.id}/topic-management/${topic.id}`);
   };
 
-  const handleJoinExam = (examId) => {
-    window.location.href = `/student/exam-lobby/${examId}`;
+  const handleJoinExam = (exam) => {
+    console.log(`🎯 StudentTopicPage handleJoinExam: id=${exam.id}, title="${exam.title}", isLocked=${exam.isLocked}`);
+    
+    if (exam.isLocked === true) {
+      // Locked exam - navigate to result page
+      navigate(`/student/exam-result/${exam.id}`, { state: { fromExam: false, examId: exam.id } });
+    } else {
+      // Unlocked exam - navigate to exam lobby
+      window.location.href = `/student/exam-lobby/${exam.id}`;
+    }
   };
 
   const handleBack = () => {
@@ -161,7 +169,9 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
             {/* Exams Section */}
             <div className="space-y-6">
               {exams.filter(exam => exam.topicId === topicId).length > 0 ? (
-                exams.filter(exam => exam.topicId === topicId).map((exam, idx) => (
+                exams.filter(exam => exam.topicId === topicId).map((exam, idx) => {
+                  console.log(`🎯 RENDERING EXAM in StudentTopicPage: title="${exam.title}", isLocked=${exam.isLocked}`);
+                  return (
                   <div 
                     key={exam.id} 
                     className="bg-white rounded-max shadow-lg hover:shadow-2xl p-8 transition-all duration-300 transform hover:-translate-y-2 game-card border-l-8 border-purple-500"
@@ -208,13 +218,18 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
 
                     {/* Join Button */}
                     <button
-                      className="btn-3d w-full bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-4 px-6 rounded-max transition-all duration-300 font-quicksand text-lg"
-                      onClick={() => handleJoinExam(exam.id)}
+                      className={`btn-3d w-full font-bold py-4 px-6 rounded-max transition-all duration-300 font-quicksand text-lg text-white ${
+                        exam.isLocked === true
+                          ? 'bg-gradient-to-r from-purple-400 to-indigo-500 hover:from-purple-500 hover:to-indigo-600'
+                          : 'bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600'
+                      }`}
+                      onClick={() => handleJoinExam(exam)}
                     >
-                      🚀 Bắt đầu thi
+                      {exam.isLocked === true ? '📊 Xem kết quả' : '🚀 Bắt đầu thi'}
                     </button>
                   </div>
-                ))
+                );
+                })
               ) : (
                 <div className="bg-white rounded-max shadow-lg p-16 text-center game-card">
                   <p className="text-5xl mb-4">📝</p>

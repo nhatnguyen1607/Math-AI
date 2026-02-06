@@ -61,9 +61,9 @@ const FacultyExamManagementPage = () => {
 
   // Exercises state
   const [exercises, setExercises] = useState([
-    { name: 'BT Cơ bản', duration: 90, context: '', questions: [], scoring: { correct: 30, incorrect: 5, bonus: 10, bonusTimeThreshold: 30 } },
-    { name: 'BT Vận dụng', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
-    { name: 'BT GQVĐ', duration: 210, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } }
+    { name: 'Bài tập 1', duration: 90, context: '', questions: [], scoring: { correct: 30, incorrect: 5, bonus: 10, bonusTimeThreshold: 30 } },
+    { name: 'Bài tập 2', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
+    { name: 'Bài tập 3', duration: 210, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } }
   ]);
   
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -262,6 +262,11 @@ const FacultyExamManagementPage = () => {
     }
   };
 
+  const handleViewLeaderboard = (examId) => {
+    // Navigate to exam results list page
+    navigate(`/faculty/exam-results/${examId}`);
+  };
+
   const handleEditExam = (exam) => {
     setEditingExam(exam);
     setFormData({
@@ -269,9 +274,9 @@ const FacultyExamManagementPage = () => {
       description: exam.description || ''
     });
     setExercises(exam.exercises || [
-      { name: 'BT Cơ bản', duration: 90, context: '', questions: [], scoring: { correct: 30, incorrect: 5, bonus: 10, bonusTimeThreshold: 30 } },
-      { name: 'BT Vận dụng', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
-      { name: 'BT GQVĐ', duration: 210, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } }
+      { name: 'Bài tập 1', duration: 90, context: '', questions: [], scoring: { correct: 30, incorrect: 5, bonus: 10, bonusTimeThreshold: 30 } },
+      { name: 'Bài tập 2', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
+      { name: 'Bài tập 3', duration: 210, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } }
     ]);
     setCurrentExerciseIndex(0);
     setCurrentQuestionIndex(0);
@@ -301,9 +306,9 @@ const FacultyExamManagementPage = () => {
       description: '',
     });
     setExercises([
-      { name: 'BT Cơ bản', duration: 90, context: '', questions: [], scoring: { correct: 30, incorrect: 5, bonus: 10, bonusTimeThreshold: 30 } },
-      { name: 'BT Vận dụng', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
-      { name: 'BT GQVĐ', duration: 210, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } }
+      { name: 'Bài tập 1', duration: 90, context: '', questions: [], scoring: { correct: 30, incorrect: 5, bonus: 10, bonusTimeThreshold: 30 } },
+      { name: 'Bài tập 2', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
+      { name: 'Bài tập 3', duration: 210, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } }
     ]);
     setCurrentExerciseIndex(0);
     setCurrentQuestionIndex(0);
@@ -322,14 +327,14 @@ const FacultyExamManagementPage = () => {
     );
   }
 
-  const navItems = [
-    { icon: '📝', label: 'Quản lí Đề Thi' }
-  ];
+  // const navItems = [
+  //   { icon: '📝', label: 'Quản lí Đề Thi' }
+  // ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
       {/* Header */}
-      <FacultyHeader user={user} onLogout={() => navigate('/login')} onBack={() => navigate('/faculty/class-management')} navItems={navItems} />
+      <FacultyHeader user={user} onLogout={() => navigate('/login')} onBack={() => navigate('/faculty/class-management')}  />
 
       <div className="max-w-7xl mx-auto px-5 py-8">
         {/* Class & Topic Selection */}
@@ -721,6 +726,7 @@ const FacultyExamManagementPage = () => {
                 onActivate={handleActivateExam}
                 onStart={handleStartExam}
                 onViewResults={(examId) => navigate(`/faculty/exam-live/${examId}`)}
+                onViewLeaderboard={handleViewLeaderboard}
               />
             ))}
           </div>

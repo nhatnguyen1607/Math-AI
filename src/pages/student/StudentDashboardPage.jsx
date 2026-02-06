@@ -78,6 +78,13 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
       ]);
       setTopics(topicsData || []);
       setExams(examsData || []);
+      
+      // Debug log to show what exams were loaded with their isLocked status
+      (examsData || []).forEach(e => {
+        console.log(`💾 Exam loaded: title="${e.title}", isLocked=${e.isLocked}, status=${e.status}, type=${typeof e.isLocked}`);
+      });
+      console.log('💾 Full exam data:', JSON.stringify((examsData || []).map(e => ({id: e.id, title: e.title, isLocked: e.isLocked}))));
+      
       setUserStats(statsData);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -142,27 +149,47 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
     }
   }, [navigate, selectedClass]);
 
-  const handleJoinExam = async (examId) => {
+  const handleJoinExam = async (exam) => {
     try {
-      // Check if student has already completed the exam (isFirst flag)
+      console.log('🔍 handleJoinExam called:', { 
+        examId: exam?.id, 
+        title: exam?.title,
+        isLocked: exam?.isLocked,
+        type: typeof exam?.isLocked,
+        status: exam?.status
+      });
+
+      // Check if exam is locked
+      if (exam?.isLocked === true) {
+        console.log('🔐 Exam is locked, redirecting to result page');
+        // For locked exams, navigate to result page by examId
+        navigate(`/student/exam-result/${exam.id}`, {
+          state: { fromExam: false, examId: exam.id }
+        });
+        return;
+      }
+
+      console.log('🟢 Exam is not locked, proceeding with normal flow');
+
+      // For unlocked exams, check if student has already completed
       if (user?.uid) {
-        const progress = await resultService.getExamProgress(user.uid, examId);
+        const progress = await resultService.getExamProgress(user.uid, exam.id);
         
         // If progress exists and isFirst is false, redirect to result page
         if (progress && progress.isFirst === false) {
-          navigate(`/student/exam-result/${progress.sessionId || examId}`, {
-            state: { fromExam: false, examId }
+          navigate(`/student/exam-result/${progress.sessionId || exam.id}`, {
+            state: { fromExam: false, examId: exam.id }
           });
           return;
         }
       }
 
       // Otherwise, go to exam lobby (first time or in progress)
-      window.location.href = `/student/exam-lobby/${examId}`;
+      window.location.href = `/student/exam-lobby/${exam.id}`;
     } catch (error) {
       console.error('Error checking exam progress:', error);
       // If there's an error, go to exam lobby as fallback
-      window.location.href = `/student/exam-lobby/${examId}`;
+      window.location.href = `/student/exam-lobby/${exam.id}`;
     }
   };
 
@@ -389,7 +416,9 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
 
             <div className="space-y-6">
               {exams && exams.length > 0 ? (
-                exams.map((exam, idx) => (
+                exams.map((exam, idx) => {
+                  console.log(`🎯 RENDERING EXAM CARD ${idx}: title="${exam.title}", isLocked=${exam.isLocked}`);
+                  return (
                   <div 
                     key={exam.id} 
                     className="game-card bg-white rounded-max shadow-lg hover:shadow-2xl p-8 transition-all duration-300 transform hover:-translate-y-2 border-l-8 border-blue-500"
@@ -436,13 +465,21 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
 
                     {/* Join Button */}
                     <button
-                      className="btn-3d w-full bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-4 px-6 rounded-max transition-all duration-300 font-quicksand text-lg"
-                      onClick={() => handleJoinExam(exam.id)}
+                      className={`btn-3d w-full font-bold py-4 px-6 rounded-max transition-all duration-300 font-quicksand text-lg ${
+                        exam?.isLocked === true
+                          ? 'bg-gradient-to-r from-purple-400 to-indigo-500 hover:from-purple-500 hover:to-indigo-600'
+                          : 'bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600'
+                      } text-white`}
+                      onClick={() => {
+                        console.log('Button clicked, exam.isLocked:', exam?.isLocked);
+                        handleJoinExam(exam);
+                      }}
                     >
-                      🚀 Bắt đầu thi
+                      {exam?.isLocked === true ? '📊 Xem kết quả' : '🚀 Bắt đầu thi'}
                     </button>
                   </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="bg-white rounded-max shadow-lg p-16 text-center game-card">
                   <p className="text-5xl mb-4">📭</p>

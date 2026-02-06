@@ -42,6 +42,10 @@ export class Exam {
     this.activeStudents = data.activeStudents || []; // Đang làm
     this.completedStudents = data.completedStudents || []; // Hoàn thành
     
+    // Exam lock and results
+    this.isLocked = data.isLocked === true; // Luôn là boolean (true/false), không undefined
+    this.finalLeaderboard = data.finalLeaderboard || []; // Bảng xếp hạng cuối cùng sau khi trao giải
+    
     this.isActive = data.isActive !== undefined ? data.isActive : true;
   }
 
@@ -113,11 +117,17 @@ export class Exam {
       waitingStudents: this.waitingStudents,
       activeStudents: this.activeStudents,
       completedStudents: this.completedStudents,
+      isLocked: this.isLocked,
+      finalLeaderboard: this.finalLeaderboard,
       isActive: this.isActive
     };
   }
 
   static fromFirestore(data, id) {
-    return new Exam({ ...data, id });
+    const examData = { ...data, id };
+    console.log(`🔄 Exam.fromFirestore - Raw: id=${id}, title="${data.title}", rawIsLocked=${data.isLocked} (type: ${typeof data.isLocked})`);
+    const exam = new Exam(examData);
+    console.log(`🔄 Exam.fromFirestore - After constructor: id=${exam.id}, title="${exam.title}", finalIsLocked=${exam.isLocked} (type: ${typeof exam.isLocked})`);
+    return exam;
   }
 }

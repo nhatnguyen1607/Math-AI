@@ -17,8 +17,9 @@ import resultService from '../../services/resultService';
 const StudentExamResultPage = ({ user, onSignOut }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { sessionId } = useParams();
+  const { sessionId, examId: examIdParam } = useParams();
   const fromExam = location.state?.fromExam || false;
+  const examIdFromState = location.state?.examId;
 
   // Data states
   const [session, setSession] = useState(null);
@@ -26,6 +27,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
   const [examProgress, setExamProgress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isLockedExam, setIsLockedExam] = useState(false);
 
   // UI states
   const [activeTab, setActiveTab] = useState('khoiDong');
@@ -35,16 +37,42 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
 
   // Lấy dữ liệu phiên thi và tiến trình
   useEffect(() => {
-    if (!sessionId) {
-      setError('Không tìm thấy ID phiên thi');
+    const finalExamId = examIdParam || examIdFromState;
+    
+    if (!sessionId && !finalExamId) {
+      setError('Không tìm thấy ID phiên thi hoặc bài thi');
       setLoading(false);
       return;
     }
 
     const loadData = async () => {
       try {
-        // Lấy session data
-        const sessionData = await examSessionService.getExamSession(sessionId);
+        let examData = null;
+        let sessionData = null;
+
+        // Nếu có examId (và exam.isLocked), lấy dữ liệu từ progress
+        if (finalExamId) {
+          examData = await examService.getExamById(finalExamId);
+          
+          if (examData?.isLocked && user?.uid) {
+            // Exam đã bị khóa, lấy kết quả từ progress
+            setIsLockedExam(true);
+            const progress = await resultService.getExamProgress(user.uid, finalExamId);
+            setExamProgress(progress);
+            setExam(examData);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Nếu không có exam.isLocked hoặc chỉ có sessionId, lấy dữ liệu từ session
+        if (!sessionId) {
+          setError('Không tìm thấy ID phiên thi');
+          setLoading(false);
+          return;
+        }
+
+        sessionData = await examSessionService.getExamSession(sessionId);
         if (!sessionData) {
           setError('Phiên thi không tồn tại');
           setLoading(false);
@@ -53,9 +81,9 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
 
         setSession(sessionData);
 
-        // Lấy exam data
+        // Lấy exam data từ session
         try {
-          const examData = await examService.getExamById(sessionData.examId);
+          examData = await examService.getExamById(sessionData.examId);
           setExam(examData);
 
           // Lấy tiến trình học sinh
@@ -69,14 +97,14 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
 
         setLoading(false);
       } catch (err) {
-        console.error('Error loading session:', err);
-        setError('Lỗi khi tải dữ liệu phiên thi');
+        console.error('Error loading data:', err);
+        setError('Lỗi khi tải dữ liệu');
         setLoading(false);
       }
     };
 
     loadData();
-  }, [sessionId, user?.uid]);
+  }, [sessionId, examIdParam, examIdFromState, user?.uid]);
 
   // Loading state
   if (loading) {
@@ -91,7 +119,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
   }
 
   // Error state
-  if (error || !session) {
+  if (error || (!session && !isLockedExam)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
@@ -109,14 +137,19 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
     );
   }
 
-  const participantData = session.participants[user?.uid];
+  // For locked exams, use exam data directly
+  const participantData = isLockedExam 
+    ? examProgress?.parts?.khoiDong 
+    : session?.participants?.[user?.uid];
+    
   if (!participantData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
         <div className="flex flex-col items-center justify-center gap-8 px-5 py-20">
           <div className="text-8xl">❓</div>
-          <h2 className="text-gray-800 text-3xl font-bold font-quicksand">Không tìm thấy dữ liệu kết quả</h2>
+          <h2 className="text-gray-800 text-3xl font-bold font-quicksand">Không tìm thấy dữ liệu kết quả {isLockedExam ? '(Locked exam)' : '(Regular exam)'}</h2>
+          <p className="text-gray-600 text-lg">examProgress: {examProgress ? 'exists' : 'null'}, parts: {examProgress?.parts ? 'exists' : 'null'}, khoiDong: {examProgress?.parts?.khoiDong ? 'exists' : 'null'}</p>
           <button
             onClick={() => navigate(-1)}
             className="btn-3d px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-quicksand rounded-max hover:shadow-lg transition-all"
@@ -128,10 +161,19 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
     );
   }
 
-  const correctCount = Object.values(participantData.answers || {}).filter(
-    (a) => a.isCorrect
-  ).length;
-  const percentage = Math.round((correctCount / session.totalQuestions) * 100);
+  // Calculate score from participantData
+  const correctCount = isLockedExam
+    ? participantData?.correctAnswers || 0
+    : Object.values(participantData?.answers || {}).filter((a) => a.isCorrect).length;
+  
+  const totalQuestions = isLockedExam
+    ? participantData?.totalQuestions || exam?.totalQuestions || 1
+    : session?.totalQuestions || exam?.totalQuestions || 1;
+    
+  const percentage = isLockedExam
+    ? participantData?.percentage || Math.round((correctCount / totalQuestions) * 100)
+    : Math.round((correctCount / totalQuestions) * 100);
+    
   const isPassed = percentage >= 50;
 
   // Render content based on active tab
@@ -304,7 +346,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
               onClick={() => setShowDetails(!showDetails)}
               className="btn-3d w-full p-6 bg-white border-b-3 border-purple-400 rounded-none text-lg font-bold text-gray-800 cursor-pointer transition-all hover:bg-purple-50 font-quicksand"
             >
-              {showDetails ? '▼' : '▶'} Xem chi tiết câu trả lời ({correctCount}/{session.totalQuestions} đúng)
+              {showDetails ? '▼' : '▶'} Xem chi tiết câu trả lời 
             </button>
 
             {showDetails && (
@@ -316,7 +358,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                       {/* Exercise Header */}
                       <div className="mb-6 pb-4 border-b-3 border-blue-300">
                         <h4 className="text-2xl font-bold text-gray-800 font-quicksand mb-2">
-                          {exerciseIdx === 0 ? '📝 BT Cơ bản' : exerciseIdx === 1 ? '📚 BT Vận dụng' : '🎯 BT GQVĐ'}
+                          {exerciseIdx === 0 ? '📝 Bài tập 1' : exerciseIdx === 1 ? '📚 Bài tập 2' : '🎯 Bài tập 3'}
                         </h4>
                         {exercise.context && (
                           <div className="p-4 bg-blue-50 rounded-max border-l-4 border-blue-500 text-gray-700">

@@ -241,11 +241,13 @@ class FacultyService {
    */
   async updateExam(examId, updates) {
     try {
+      console.log('💾 facultyService.updateExam:', { examId, updates });
       const examRef = doc(db, 'exams', examId);
       await updateDoc(examRef, {
         ...updates,
         updatedAt: new Date()
       });
+      console.log('✅ Exam updated successfully');
       return true;
     } catch (error) {
       console.error('Error updating exam:', error);

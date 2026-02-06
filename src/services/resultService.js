@@ -513,6 +513,7 @@ class ResultService {
   /**
    * Lưu hoặc cập nhật tiến trình thi của học sinh
    * Document ID: {userId}_{examId}
+   * Always save the latest sessionId for result display without session reference
    */
   async upsertExamProgress(userId, examId, progressData) {
     try {
@@ -526,7 +527,7 @@ class ResultService {
       if (existingDoc.exists()) {
         // Nếu document đã tồn tại, cập nhật phần tương ứng
         const existingData = existingDoc.data();
-        const { part, data } = progressData;
+        const { part, data, sessionId } = progressData;
 
         updateData = {
           ...existingData,
@@ -534,6 +535,7 @@ class ResultService {
             ...existingData.parts,
             [part]: data
           },
+          latestSessionId: sessionId || null, // Luôn lưu sessionId gần nhất
           lastUpdatedAt: serverTimestamp()
         };
 
@@ -548,12 +550,13 @@ class ResultService {
         }
       } else {
         // Tạo document mới
-        const { part, data } = progressData;
+        const { part, data, sessionId } = progressData;
         updateData = {
           userId,
           examId,
           isFirst: true,
           status: 'khoiDong_done',
+          latestSessionId: sessionId || null, // Lưu sessionId
           parts: {
             khoiDong: part === 'khoiDong' ? data : null,
             luyenTap: part === 'luyenTap' ? data : null,
@@ -605,6 +608,46 @@ class ResultService {
       });
     } catch (error) {
       console.error('Error updating isFirst flag:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy kết quả thi cuối cùng của học sinh từ student_exam_progress
+   * Dùng khi exam.isLocked === true để hiển thị kết quả mà không cần sessionId
+   */
+  async getFinalExamResults(userId, examId) {
+    try {
+      const progress = await this.getExamProgress(userId, examId);
+      
+      if (!progress) {
+        return null;
+      }
+
+      // Trích xuất dữ liệu từ phần khoiDong (Khởi động)
+      const khoiDongData = progress.parts?.khoiDong;
+      
+      if (!khoiDongData) {
+        return null;
+      }
+
+      return {
+        userId,
+        examId,
+        latestSessionId: progress.latestSessionId,
+        completedAt: khoiDongData.completedAt,
+        score: khoiDongData.score,
+        totalQuestions: khoiDongData.totalQuestions,
+        correctAnswers: khoiDongData.correctAnswers,
+        percentage: khoiDongData.percentage,
+        answers: khoiDongData.answers,
+        timeSpent: khoiDongData.timeSpent,
+        aiAnalysis: khoiDongData.aiAnalysis,
+        isLocked: true,
+        data: progress // Return full progress data for UI rendering
+      };
+    } catch (error) {
+      console.error('Error getting final exam results:', error);
       throw error;
     }
   }

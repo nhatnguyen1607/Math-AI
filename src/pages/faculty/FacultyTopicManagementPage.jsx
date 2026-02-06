@@ -165,13 +165,23 @@ const FacultyTopicManagementPage = () => {
     return <div className="min-h-screen bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 flex items-center justify-center"><span className="text-white text-xl">Đang tải...</span></div>;
   }
 
-  const navItems = [
-    { icon: '📚', label: 'Quản lí Chủ Đề' }
-  ];
+  // const navItems = [
+  //   { icon: '📚', label: 'Quản lí Chủ Đề' }
+  // ];
 
   return (
     <div className="faculty-topic-management min-h-screen bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600">
-      <FacultyHeader user={user} onLogout={() => navigate('/login')} onBack={() => navigate('/faculty/class-management')} navItems={navItems} />
+      <FacultyHeader user={user} onLogout={() => navigate('/login')} />
+      
+      {/* Back Button */}
+      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 px-8 lg:px-12 py-3 shadow-soft-md">
+        <button
+          onClick={() => navigate('/faculty/class-management')}
+          className="px-4 lg:px-6 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold rounded-lg transition-all duration-300 flex items-center gap-2"
+        >
+          ← Quay lại
+        </button>
+      </div>
 
       <div className="topic-header-actions px-12 pt-8 mb-8 flex justify-between items-center max-w-6xl mx-auto w-full">
         <button className="add-topic-btn px-6 py-3 bg-gradient-to-r from-green-500 to-green-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 border-none cursor-pointer text-lg" onClick={() => {

@@ -86,7 +86,17 @@ const FacultyExamResultsListPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
       {/* Header */}
-      <FacultyHeader user={user} onLogout={() => navigate('/login')} onBack={() => navigate('/faculty/exam-management')} />
+      <FacultyHeader user={user} onLogout={() => navigate('/login')} />
+      
+      {/* Back Button */}
+      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 px-8 lg:px-12 py-3 shadow-soft-md">
+        <button
+          onClick={() => navigate('/faculty/exam-management')}
+          className="px-4 lg:px-6 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold rounded-lg transition-all duration-300 flex items-center gap-2"
+        >
+          ← Quay lại
+        </button>
+      </div>
 
       <div className="max-w-6xl mx-auto px-5 py-8">
         {/* Page Title */}

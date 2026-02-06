@@ -75,13 +75,15 @@ const FacultyClassManagementPage = ({ user, onSelectClass, onSignOut }) => {
     return <div className="text-center py-12 text-purple-500 text-xl">Đang tải...</div>;
   }
 
-  const navItems = [
-    { icon: '📚', label: 'Quản lí Lớp' }
-  ];
+  // const navItems = [
+  //   { icon: '📚', label: 'Quản lí Lớp' }
+  // ];
 
   return (
     <div className="p-0 min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex flex-col">
-      <FacultyHeader user={user} onLogout={onSignOut} navItems={navItems} />
+      <FacultyHeader user={user} onLogout={onSignOut} />
+      
+
 
       <div className="px-12 py-8 max-w-6xl mx-auto w-full">
         <button

@@ -205,7 +205,17 @@ const FacultyExamLiveSessionPage = () => {
           50% { opacity: 0.7; }
         }
       `}</style>
-      <FacultyHeader user={user} onLogout={() => navigate('/login')} onBack={() => navigate(-1)}  />
+      <FacultyHeader user={user} onLogout={() => navigate('/login')} />
+      
+      {/* Back Button */}
+      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 px-8 lg:px-12 py-3 shadow-soft-md">
+        <button
+          onClick={() => navigate(-1)}
+          className="px-4 lg:px-6 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold rounded-lg transition-all duration-300 flex items-center gap-2"
+        >
+          ← Quay lại
+        </button>
+      </div>
 
       <div className="live-session-content" style={{ padding: '20px' }}>
         {/* Game Controls */}

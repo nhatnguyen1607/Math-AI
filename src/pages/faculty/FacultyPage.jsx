@@ -39,14 +39,23 @@ const FacultyPage = ({ user, userData, onSignOut }) => {
     return <FacultyClassManagementPage user={user} onSelectClass={handleSelectClass} onSignOut={onSignOut} />;
   }
 
-  // Return class details page if class selected
-  const navItems = [
-    { icon: '📚', label: 'Quản lí Lớp: ' + selectedClass.name }
-  ];
+  // const navItems = [
+  //   { icon: '📚', label: 'Quản lí Lớp: ' + selectedClass.name }
+  // ];
 
   return (
     <div className="faculty-page min-h-screen bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600">
-      <FacultyHeader user={user} onLogout={onSignOut} onBack={handleBackToClasses} navItems={navItems} />
+      <FacultyHeader user={user} onLogout={onSignOut} />
+      
+  
+      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 px-8 lg:px-12 py-3 shadow-soft-md">
+        <button
+          onClick={handleBackToClasses}
+          className="px-4 lg:px-6 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold rounded-lg transition-all duration-300 flex items-center gap-2"
+        >
+          ← Quay lại
+        </button>
+      </div>
       
       <div className="px-12 py-8 max-w-6xl mx-auto w-full">
         {/* Welcome Section */}

@@ -332,14 +332,24 @@ const FacultyExamManagementPage = () => {
   // ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
-      <FacultyHeader user={user} onLogout={() => navigate('/login')} onBack={() => navigate('/faculty/class-management')}  />
+      <FacultyHeader user={user} onLogout={() => navigate('/login')} />
+      
+      {/* Back Button */}
+      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 px-8 lg:px-12 py-3 shadow-soft-md">
+        <button
+          onClick={() => navigate('/faculty/class-management')}
+          className="px-4 lg:px-6 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold rounded-lg transition-all duration-300 flex items-center gap-2"
+        >
+          ← Quay lại
+        </button>
+      </div>
 
       <div className="max-w-7xl mx-auto px-5 py-8">
         {/* Class & Topic Selection */}
         {!selectedClassId || !selectedTopicId ? (
-          <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl shadow-lg p-8 mb-8">
+          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-3xl shadow-soft-lg p-6 lg:p-8 mb-8">
             <h3 className="text-3xl font-bold mb-6 flex items-center gap-3">
               <span>🎯</span>
               Chọn Lớp Học và Chủ Đề
@@ -405,7 +415,7 @@ const FacultyExamManagementPage = () => {
             )}
           </div>
         ) : (
-          <div className="mb-8 p-4 bg-purple-50 border-2 border-purple-200 rounded-lg">
+          <div className="mb-8 p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl">
             <p className="text-purple-700 font-semibold">
               📚 {selectedClassName} • 📖 {selectedTopicName}
             </p>
@@ -414,7 +424,7 @@ const FacultyExamManagementPage = () => {
 
         {/* Create/Edit Form */}
         {showForm && (
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border-2 border-purple-100">
+          <div className="bg-white rounded-3xl shadow-soft-lg p-6 lg:p-8 mb-8 border-2 border-indigo-100">
             <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
               <span>{editingExam ? '📝' : '✨'}</span>
               {editingExam ? `Sửa đề thi: ${editingExam.title}` : 'Tạo đề thi mới (7 phút)'}

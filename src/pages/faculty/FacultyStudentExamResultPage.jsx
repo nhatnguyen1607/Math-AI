@@ -76,9 +76,9 @@ const FacultyStudentExamResultPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-500 mx-auto mb-4"></div>
           <p className="text-gray-600 text-lg">Đang tải kết quả...</p>
         </div>
       </div>
@@ -87,7 +87,7 @@ const FacultyStudentExamResultPage = () => {
 
   if (!exam || !studentResult) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600 text-lg">Không tìm thấy dữ liệu</p>
         </div>
@@ -103,46 +103,55 @@ const FacultyStudentExamResultPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
       <FacultyHeader 
         user={user} 
-        onLogout={() => navigate('/login')} 
-        onBack={() => navigate(`/faculty/exam-results/${examId}`)} 
+        onLogout={() => navigate('/login')}
       />
+      
+      {/* Back Button */}
+      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 px-8 lg:px-12 py-3 shadow-soft-md">
+        <button
+          onClick={() => navigate(`/faculty/exam-results/${examId}`)}
+          className="px-4 lg:px-6 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold rounded-lg transition-all duration-300 flex items-center gap-2"
+        >
+          ← Quay lại
+        </button>
+      </div>
 
       <div className="max-w-6xl mx-auto px-5 py-8">
         {/* Page Title */}
-        <div className="mb-8 p-6 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl shadow-lg">
+        <div className="mb-8 p-6 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-3xl shadow-soft-lg">
           <div className="flex items-center gap-3 mb-4">
             {student?.medal && <span className="text-4xl">{student.medal}</span>}
             <div>
               <h2 className="text-3xl font-bold">{student?.name || 'Unknown'}</h2>
-              <p className="text-purple-100">Xếp hạng: <strong>#{student?.rank || '-'}</strong></p>
+              <p className="text-pink-100">Xếp hạng: <strong>#{student?.rank || '-'}</strong></p>
             </div>
           </div>
         </div>
 
         {/* Part Header Section */}
-        <div className="mb-8 bg-gradient-to-r from-green-400 to-green-500 text-white rounded-2xl p-8 shadow-lg">
-          <h3 className="text-3xl font-bold mb-2 flex items-center gap-3">
+        <div className="mb-8 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white rounded-3xl p-6 lg:p-8 shadow-soft-lg">
+          <h3 className="text-2xl lg:text-3xl font-bold mb-2 flex items-center gap-3">
             <span>🚀</span> Phần Khởi động
           </h3>
-          <p className="text-green-50">Nhân số thập phân</p>
+          <p className="text-indigo-50">Nhân số thập phân</p>
         </div>
 
         {/* Summary Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mb-8">
           {/* Correct Answers Card */}
-          <div className="bg-green-50 border-2 border-green-300 rounded-2xl p-8 text-center">
-            <div className="text-5xl font-bold text-green-600 mb-2">{studentResult.correctAnswers || 0}</div>
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-3xl p-6 lg:p-8 text-center shadow-soft hover:shadow-soft-lg transition-shadow">
+            <div className="text-4xl lg:text-5xl font-bold text-green-600 mb-2">{studentResult.correctAnswers || 0}</div>
             <div className="text-gray-600 font-semibold mb-1">Câu đúng</div>
             <div className="text-gray-500 text-sm">({studentResult.percentage || 0}%)</div>
           </div>
 
           {/* Percentage Circle Card */}
-          <div className="bg-white border-2 border-gray-200 rounded-2xl p-8 flex flex-col items-center justify-center">
-            <div className="relative w-32 h-32 mb-4">
+          <div className="bg-gradient-to-br from-white to-indigo-50 border-2 border-indigo-200 rounded-3xl p-6 lg:p-8 flex flex-col items-center justify-center shadow-soft hover:shadow-soft-lg transition-shadow">
+            <div className="relative w-28 h-28 lg:w-32 lg:h-32 mb-4">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
                 <circle
                   cx="60"
@@ -157,22 +166,24 @@ const FacultyStudentExamResultPage = () => {
                   cy="60"
                   r="50"
                   fill="none"
-                  stroke="#10b981"
+                  stroke="#6366f1"
                   strokeWidth="8"
                   strokeDasharray={`${(studentResult.percentage || 0) * 3.14}`}
                   strokeLinecap="round"
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-3xl font-bold text-gray-800">{studentResult.percentage || 0}%</span>
+                <span className="text-2xl lg:text-3xl font-bold text-indigo-700">{studentResult.percentage || 0}%</span>
               </div>
             </div>
+            <p className="text-xs lg:text-sm text-gray-600 font-semibold">Tỷ lệ đúng</p>
           </div>
 
           {/* Status Card */}
-          <div className="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-8 flex flex-col items-center justify-center">
-            <div className="text-6xl font-bold text-yellow-500 mb-2">✓</div>
-            <div className="text-2xl font-bold text-yellow-600">PASS</div>
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-300 rounded-3xl p-6 lg:p-8 flex flex-col items-center justify-center shadow-soft hover:shadow-soft-lg transition-shadow">
+            <div className="text-5xl lg:text-6xl font-bold text-purple-600 mb-2">✓</div>
+            <div className="text-xl lg:text-2xl font-bold text-purple-600">PASS</div>
+            <p className="text-xs text-gray-600 mt-2">Đạt yêu cầu</p>
           </div>
         </div>
 
@@ -185,8 +196,8 @@ const FacultyStudentExamResultPage = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-6 py-3 font-semibold rounded-full transition-all ${
                   activeTab === tab.id
-                    ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-soft-lg hover:-translate-y-1'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 shadow-soft'
                 }`}
               >
                 {tab.label}
@@ -200,8 +211,8 @@ const FacultyStudentExamResultPage = () => {
           <div className="space-y-8">
             {/* AI Analysis Section */}
             {studentResult.data?.parts?.khoiDong?.aiAnalysis && (
-              <div className="bg-white rounded-2xl shadow-lg p-8 border-t-4 border-gray-200">
-                <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+              <div className="bg-white rounded-3xl shadow-soft-lg p-6 lg:p-8 border-t-4 border-indigo-300">
+                <h3 className="text-xl lg:text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
                   <span>📊</span> Đánh giá năng lực (TC1-TC3)
                 </h3>
                 
@@ -216,7 +227,7 @@ const FacultyStudentExamResultPage = () => {
                       const textColor = levelColor === 'green' ? 'text-green-800' : levelColor === 'yellow' ? 'text-yellow-800' : 'text-orange-800';
                       
                       return (
-                        <div key={comp} className={`border-2 ${bgColor} rounded-xl p-4 hover:shadow-lg transition-shadow`}>
+                        <div key={comp} className={`border-2 ${bgColor} rounded-2xl p-4 hover:shadow-soft-lg transition-shadow`}>
                           <div className={`text-lg font-bold ${textColor} mb-3`}>{comp}</div>
                           <div className={`text-base ${textColor} font-semibold mb-3`}>{levelText}</div>
                           {reason && (
@@ -232,10 +243,10 @@ const FacultyStudentExamResultPage = () => {
 
                 {/* Overall Assessment */}
                 {studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment && (
-                  <div className="mt-8 space-y-4 bg-gradient-to-br from-purple-50 to-blue-50 p-6 rounded-xl border-2 border-purple-300">
+                  <div className="mt-8 space-y-4 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-6 rounded-2xl border-2 border-indigo-300 shadow-soft">
                     <div>
                       <p className="font-bold text-lg text-gray-800 mb-2">
-                        🎯 Mức năng lực chung: <span className="text-purple-600">
+                        🎯 Mức năng lực chung: <span className="text-indigo-600 font-bold">
                           {typeof studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment === 'string' 
                             ? studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment 
                             : studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment?.level || 'Đạt'}
@@ -251,7 +262,7 @@ const FacultyStudentExamResultPage = () => {
                     {!typeof studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment !== 'string' && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment?.strengths && (
-                          <div className="p-4 bg-green-100 rounded-lg border-l-4 border-green-600">
+                          <div className="p-4 bg-green-100 rounded-xl border-l-4 border-green-600">
                             <p className="font-bold text-green-800 mb-2">💪 Điểm mạnh:</p>
                             <ul className="text-sm text-green-700 space-y-1">
                               {(Array.isArray(studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment.strengths) 
@@ -264,7 +275,7 @@ const FacultyStudentExamResultPage = () => {
                         )}
                         
                         {studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment?.areasToImprove && (
-                          <div className="p-4 bg-orange-100 rounded-lg border-l-4 border-orange-600">
+                          <div className="p-4 bg-orange-100 rounded-xl border-l-4 border-orange-600">
                             <p className="font-bold text-orange-800 mb-2">🎯 Cần cải thiện:</p>
                             <ul className="text-sm text-orange-700 space-y-1">
                               {(Array.isArray(studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment.areasToImprove) 
@@ -279,9 +290,9 @@ const FacultyStudentExamResultPage = () => {
                     )}
 
                     {studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment?.recommendations && (
-                      <div className="p-4 bg-blue-100 rounded-lg border-l-4 border-blue-600">
-                        <p className="font-bold text-blue-800 mb-2">💡 Lời khuyên:</p>
-                        <p className="text-sm text-blue-700">
+                      <div className="p-4 bg-indigo-100 rounded-xl border-l-4 border-indigo-600">
+                        <p className="font-bold text-indigo-800 mb-2">💡 Lời khuyên:</p>
+                        <p className="text-sm text-indigo-700">
                           {studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment.recommendations}
                         </p>
                       </div>
@@ -292,19 +303,19 @@ const FacultyStudentExamResultPage = () => {
             )}
 
             {/* Xem chi tiết câu trả lời */}
-            <div className="border-t-4 border-gray-200">
-              <div className="p-8 bg-gray-50 space-y-8">
+            <div className="border-t-4 border-indigo-200">
+              <div className="p-6 lg:p-8 bg-indigo-50 space-y-6 lg:space-y-8 rounded-2xl">
                 {/* Render each exercise separately */}
                 {exam?.exercises && exam.exercises.length > 0 ? (
                   exam.exercises.map((exercise, exerciseIdx) => (
-                    <div key={exerciseIdx} className="bg-white rounded-2xl p-6 shadow-md">
+                    <div key={exerciseIdx} className="bg-white rounded-3xl p-5 lg:p-6 shadow-soft-md border border-indigo-100">
                       {/* Exercise Header */}
-                      <div className="mb-6 pb-4 border-b-3 border-blue-300">
+                      <div className="mb-6 pb-4 border-b-3 border-indigo-300">
                         <h4 className="text-2xl font-bold text-gray-800 mb-2">
                           {exerciseIdx === 0 ? '📝 Bài tập 1' : exerciseIdx === 1 ? '📚 Bài tập 2' : '🎯 Bài tập 3'}
                         </h4>
                         {exercise.context && (
-                          <div className="p-4 bg-blue-50 rounded-xl border-l-4 border-blue-500 text-gray-700">
+                          <div className="p-4 bg-indigo-50 rounded-2xl border-l-4 border-indigo-500 text-gray-700 mt-3">
                             <p className="font-bold text-sm uppercase mb-2">Bài toán:</p>
                             <p>{exercise.context}</p>
                           </div>
@@ -342,10 +353,10 @@ const FacultyStudentExamResultPage = () => {
                             return (
                               <div
                                 key={globalQuestionIndex}
-                                className={`rounded-max overflow-hidden border-3 transition-all ${
+                                className={`rounded-2xl overflow-hidden border-3 transition-all shadow-soft ${
                                   answerData.isCorrect
-                                    ? 'border-green-400 bg-green-50'
-                                    : 'border-red-400 bg-red-50'
+                                    ? 'border-green-400 bg-green-50 hover:shadow-soft-lg'
+                                    : 'border-red-400 bg-red-50 hover:shadow-soft-lg'
                                 }`}
                               >
                                 <div
@@ -443,7 +454,7 @@ const FacultyStudentExamResultPage = () => {
                                       const isAIComment = !!aiComment?.comment;
 
                                       return displayText && (
-                                        <div className={`p-6 border-l-4 rounded-max ${isAIComment ? 'bg-blue-100 border-blue-600' : 'bg-purple-100 border-purple-600'}`}>
+                                        <div className={`p-6 border-l-4 rounded-2xl ${isAIComment ? 'bg-indigo-100 border-indigo-600' : 'bg-purple-100 border-purple-600'}`}>
                                           <h4 className="text-sm font-bold text-gray-800 uppercase mb-3">
                                             {isAIComment ? '💡 Nhận xét:' : '📚 Giải thích:'}
                                           </h4>
@@ -472,7 +483,7 @@ const FacultyStudentExamResultPage = () => {
 
         {/* Placeholder for other tabs */}
         {(activeTab === 'luyenTap' || activeTab === 'vanDung') && (
-          <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+          <div className="bg-white rounded-3xl shadow-soft-lg p-6 lg:p-8 text-center border border-indigo-100">
             <p className="text-gray-500 text-lg">Phần này sẽ được phát triển sớm</p>
           </div>
         )}

@@ -1287,7 +1287,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
                 </div>
 
                 {/* Jelly Buttons - Answer Options */}
-                <div className="space-y-4 mb-10">
+                <div className="space-y-3 mb-10 w-full">
                   {console.log('🎯 Current question:', currentQuestion) || null}
                   {console.log('🎯 Options:', currentQuestion.options) || null}
                   {(currentQuestion.options || []).length === 0 ? (
@@ -1302,7 +1302,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
                         : (selectedAnswer === idx);
                       const isCorrectAnswer = (currentQuestion.correctAnswers || []).includes(idx);
                       
-                      let jellyButtonClass = 'jelly-btn ';
+                      let jellyButtonClass = 'jelly-btn w-full flex items-center justify-between px-6 py-4 ';
 
                     if (isAnswered) {
                       if (isSelected && isCorrectAnswer) {
@@ -1328,16 +1328,20 @@ const StudentExamPage = ({ user, onSignOut }) => {
                         disabled={isAnswered}
                         className={jellyButtonClass}
                       >
-                        <span className="inline-block w-12 h-12 rounded-full bg-white font-bold text-lg mr-4 flex-shrink-0 flex items-center justify-center">
-                          {String.fromCharCode(65 + idx)}
-                        </span>
-                        <span className="flex-1 text-left text-lg">{option}</span>
-                        {isAnswered && isCorrectAnswer && (
-                          <span className="text-3xl font-bold">✓</span>
-                        )}
-                        {isAnswered && isSelected && !isCorrectAnswer && (
-                          <span className="text-3xl font-bold">✗</span>
-                        )}
+                        <div className="flex items-center gap-4 flex-1">
+                          <span className="w-10 h-10 flex-shrink-0 rounded-full bg-white font-bold text-lg flex items-center justify-center">
+                            {String.fromCharCode(65 + idx)}
+                          </span>
+                          <span className="text-left text-lg">{option}</span>
+                        </div>
+                        <div className="flex-shrink-0 ml-4">
+                          {isAnswered && isCorrectAnswer && (
+                            <span className="text-3xl font-bold">✓</span>
+                          )}
+                          {isAnswered && isSelected && !isCorrectAnswer && (
+                            <span className="text-3xl font-bold">✗</span>
+                          )}
+                        </div>
                       </button>
                     );
                     })

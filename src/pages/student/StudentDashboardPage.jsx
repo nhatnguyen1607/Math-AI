@@ -105,7 +105,7 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
       console.log('Setting first class as default:', studentClasses[0]);
       setSelectedClass(studentClasses[0]);
     }
-  }, [studentClasses]);
+  }, [classId, selectedClass, studentClasses]);
 
   // Load selected topic when topicId URL param changes
   useEffect(() => {

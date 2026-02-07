@@ -77,47 +77,7 @@ export const COMPETENCY_CRITERIA = {
     scoreGuide: { need_effort: 0, achieved: 1, good: 2 }
   }
 };
-/**
- * Translate English comment to Vietnamese (simplified - uses built-in translations)
- * @param {string} comment - English comment
- * @param {string} criterion - TC1, TC2, TC3, or TC4
- * @returns {string} - Vietnamese comment
- */
-const translateComment = (comment, criterion) => {
-  // Map of common English phrases to Vietnamese equivalents
-  const translations = {
-    'problem recognition': 'nhận biết vấn đề',
-    'identify': 'xác định',
-    'given data': 'dữ kiện đã cho',
-    'problem requirements': 'yêu cầu bài toán',
-    'relationships': 'mối quan hệ',
-    'solution strategy': 'chiến lược giải',
-    'problem type': 'dạng toán',
-    'multiple solutions': 'nhiều cách giải',
-    'optimal strategy': 'chiến lược tối ưu',
-    'solution execution': 'thực hiện giải',
-    'calculations': 'phép tính',
-    'steps': 'các bước',
-    'clear presentation': 'trình bày rõ ràng',
-    'solution verification': 'kiểm tra giải pháp',
-    'check results': 'kiểm tra kết quả',
-    'similar problems': 'bài toán tương tự',
-    'multiple methods': 'nhiều phương pháp',
-    'advanced problems': 'bài toán nâng cao',
-    'cannot': 'không thể',
-    'correctly': 'đúng',
-    'mostly incorrect': 'sai hầu hết',
-    'does not': 'không'
-  };
-
-  let translated = comment;
-  for (const [english, vietnamese] of Object.entries(translations)) {
-    const regex = new RegExp(english, 'gi');
-    translated = translated.replace(regex, vietnamese);
-  }
-  
-  return translated.substring(0, 500);
-};
+// Note: translateComment function removed - not used in current implementation
 
 /**
  * Parse competency evaluation from Gemini response (now in Vietnamese)

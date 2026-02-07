@@ -74,7 +74,7 @@ export const startExamSession = async (sessionId) => {
     console.log('🚀 Starting exam session:', sessionId);
 
     // Cập nhật status và startTime CÙNG LÚC
-    const result = await updateDoc(sessionRef, {
+    await updateDoc(sessionRef, {
       status: 'starting',
       startTime: serverTimestamp()
     });
@@ -191,7 +191,7 @@ export const finishExamSession = async (sessionId) => {
     const examId = sessionData.examId;
     if (examId) {
       const examRef = doc(db, 'exams', examId);
-      const updateResult = await updateDoc(examRef, {
+      await updateDoc(examRef, {
         finalLeaderboard: finalLeaderboard,
         status: 'finished'
       });

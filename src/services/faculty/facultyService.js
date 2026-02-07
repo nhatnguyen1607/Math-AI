@@ -241,13 +241,11 @@ class FacultyService {
    */
   async updateExam(examId, updates) {
     try {
-      console.log('💾 facultyService.updateExam:', { examId, updates });
       const examRef = doc(db, 'exams', examId);
       await updateDoc(examRef, {
         ...updates,
         updatedAt: new Date()
       });
-      console.log('✅ Exam updated successfully');
       return true;
     } catch (error) {
       console.error('Error updating exam:', error);
@@ -388,7 +386,6 @@ class FacultyService {
         endTime: new Date(now.getTime() + 420000) // 7 minutes
       });
 
-      console.log('✅ Exam session created:', sessionId);
       return sessionId;
     } catch (error) {
       console.error('❌ Error starting exam:', error);
@@ -693,7 +690,6 @@ class FacultyService {
             const userSnap = await getDoc(userRef);
             if (userSnap.exists()) {
               studentName = userSnap.data().displayName || userSnap.data().name || `Student ${userId.substring(0, 8)}`;
-              console.log(`📝 Loaded name for user ${userId.substring(0, 8)}: ${studentName}`);
             } else {
               console.warn(`⚠️ User document not found for ${userId}`);
               studentName = `Student ${userId.substring(0, 8)}`;
@@ -721,13 +717,6 @@ class FacultyService {
         }
       }
 
-      console.log('📊 Loaded results from student_exam_progress:', {
-        examId,
-        totalFound: snapshot.docs.length,
-        completedCount: results.length,
-        completedStudentsMapSize: Object.keys(completedStudentsMap).length
-      });
-
       // Sắp xếp theo điểm giảm dần
       results.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
@@ -740,16 +729,6 @@ class FacultyService {
         rank: idx + 1,
         medal: idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : ''
       }));
-
-      console.log('✅ Final leaderboard:', {
-        examId,
-        totalStudents: leaderboard.length,
-        leaderboard: leaderboard.map(s => ({
-          rank: s.rank,
-          name: s.name,
-          score: s.score
-        }))
-      });
 
       return leaderboard;
     } catch (error) {

@@ -16,6 +16,8 @@ const FacultyStudentExamResultPage = () => {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('khoiDong');
   const [expandedQuestions, setExpandedQuestions] = useState({});
+  const [practiceData, setPracticeData] = useState(null);
+  const [loadingPractice, setLoadingPractice] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -61,16 +63,9 @@ const FacultyStudentExamResultPage = () => {
           const leaderboard = await facultyService.getExamStudentResults(examId);
           const studentData = leaderboard?.find(s => s.uid === userId);
           if (studentData) {
-            console.log('✅ Loaded student data from leaderboard:', {
-              uid: studentData.uid,
-              name: studentData.name,
-              rank: studentData.rank,
-              score: studentData.score
-            });
             setStudent(studentData);
           } else {
             // Fallback: create minimal student data
-            console.warn('⚠️ Student not found in leaderboard, using minimal data');
             setStudent({
               uid: userId,
               name: result.data?.studentName || `Student ${userId.substring(0, 8)}`,
@@ -79,7 +74,6 @@ const FacultyStudentExamResultPage = () => {
             });
           }
         } catch (leaderboardError) {
-          console.warn('⚠️ Error loading leaderboard, using student result data:', leaderboardError);
           setStudent({
             uid: userId,
             name: result.data?.studentName || `Student ${userId.substring(0, 8)}`,
@@ -88,7 +82,6 @@ const FacultyStudentExamResultPage = () => {
           });
         }
       } catch (error) {
-        console.error('Error loading student results:', error);
         alert('Lỗi khi tải kết quả');
         navigate(`/faculty/exam-results/${examId}`);
       } finally {
@@ -100,6 +93,24 @@ const FacultyStudentExamResultPage = () => {
       loadResults();
     }
   }, [examId, userId, navigate]);
+
+  // Load practice data
+  useEffect(() => {
+    const loadPracticeData = async () => {
+      try {
+        if (!userId || !examId) {
+          setLoadingPractice(false);
+          return;
+        }
+        const practice = await resultService.getPracticeSession(userId, examId);
+        setPracticeData(practice);
+        setLoadingPractice(false);
+      } catch (err) {
+        setLoadingPractice(false);
+      }
+    };
+    loadPracticeData();
+  }, [userId, examId]);
 
   if (loading) {
     return (
@@ -123,9 +134,8 @@ const FacultyStudentExamResultPage = () => {
   }
 
   const tabItems = [
-    { id: 'khoiDong', label: '🚀 Khởi động', icon: '🚀' }
-    // These can be added later
-    // { id: 'luyenTap', label: '📝 Luyện tập', icon: '📝' },
+    { id: 'khoiDong', label: '🚀 Khởi động', icon: '🚀' },
+    { id: 'luyenTap', label: '📚 Luyện tập', icon: '📚' }
     // { id: 'vanDung', label: '⚡ Vận dụng', icon: '⚡' }
   ];
 
@@ -159,15 +169,17 @@ const FacultyStudentExamResultPage = () => {
           </div>
         </div>
 
-        {/* Part Header Section */}
-        <div className="mb-8 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white rounded-3xl p-6 lg:p-8 shadow-soft-lg">
-          <h3 className="text-2xl lg:text-3xl font-bold mb-2 flex items-center gap-3">
-            <span>🚀</span> Phần Khởi động
-          </h3>
-          <p className="text-indigo-50">Nhân số thập phân</p>
-        </div>
+        {/* Part Header Section - Only show for khởi động tab */}
+        {activeTab === 'khoiDong' && (
+          <>
+            <div className="mb-8 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white rounded-3xl p-6 lg:p-8 shadow-soft-lg">
+              <h3 className="text-2xl lg:text-3xl font-bold mb-2 flex items-center gap-3">
+                <span>🚀</span> Phần Khởi động
+              </h3>
+              <p className="text-indigo-50">Nhân số thập phân</p>
+            </div>
 
-        {/* Summary Stats Cards */}
+            {/* Summary Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mb-8">
           {/* Correct Answers Card */}
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-3xl p-6 lg:p-8 text-center shadow-soft hover:shadow-soft-lg transition-shadow">
@@ -228,6 +240,8 @@ const FacultyStudentExamResultPage = () => {
             );
           })()}
         </div>
+          </>
+        )}
 
         {/* Tabs */}
         <div className="mb-8">
@@ -528,8 +542,159 @@ const FacultyStudentExamResultPage = () => {
           </div>
         )}
 
+        {/* Luyện tập Tab */}
+        {activeTab === 'luyenTap' && (
+          <div className="bg-white rounded-3xl shadow-soft-lg p-6 lg:p-8 border-t-4 border-blue-300">
+            <h3 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-8 flex items-center gap-3">
+              <span>📚</span> Phần Luyện tập
+            </h3>
+
+            {loadingPractice ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4 animate-bounce">📚</div>
+                <p className="text-gray-600 text-lg">Đang tải dữ liệu luyện tập...</p>
+              </div>
+            ) : !practiceData || (!practiceData.bai1 && !practiceData.bai2) ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📚</div>
+                <p className="text-gray-500 text-lg">Học sinh chưa hoàn thành luyện tập</p>
+              </div>
+            ) : (
+              <div className="space-y-12">
+                {['bai1', 'bai2'].map((baiNum, idx) => {
+                  const baiData = practiceData[baiNum];
+                  if (!baiData) return null;
+
+                  const evaluation = baiData.evaluation;
+                  const chatHistory = baiData.chatHistory || [];
+
+                  return (
+                    <div 
+                      key={baiNum}
+                      className="bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50 rounded-3xl p-6 lg:p-8 border-3 border-blue-200"
+                    >
+                      {/* Bài Header */}
+                      <div className="mb-6 pb-4 border-b-3 border-blue-300">
+                        <h4 className="text-2xl font-bold text-gray-800 mb-2">Bài {idx + 1}</h4>
+                        <p className="text-gray-700 text-sm">
+                          <strong>Đề bài:</strong> {baiData.deBai}
+                        </p>
+                      </div>
+
+                      {/* Chat History */}
+                      <div className="bg-white rounded-2xl p-6 mb-6 max-h-96 overflow-y-auto border border-blue-200">
+                        <h5 className="font-bold text-gray-800 mb-4">💬 Đoạn chat:</h5>
+                        <div className="space-y-4">
+                          {chatHistory.length > 0 ? (
+                            chatHistory.map((msg, msgIdx) => (
+                              <div 
+                                key={msgIdx}
+                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                              >
+                                <div 
+                                  className={`max-w-xs px-4 py-3 rounded-lg text-sm ${
+                                    msg.role === 'user'
+                                      ? 'bg-blue-500 text-white rounded-br-none'
+                                      : 'bg-gray-200 text-gray-800 rounded-bl-none'
+                                  }`}
+                                >
+                                  <p className="whitespace-pre-wrap">{msg.parts?.[0]?.text || msg.text || ''}</p>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-gray-500 text-center py-4">Không có đoạn chat</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Evaluation Results */}
+                      {evaluation && (
+                        <div className="space-y-4">
+                          <h5 className="font-bold text-gray-800 text-lg mb-4">📊 Đánh giá 4 Tiêu chí Năng lực (Tối đa 8 điểm)</h5>
+                          
+                          {/* 4 Tiêu chí TC1-TC4 */}
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {['TC1', 'TC2', 'TC3', 'TC4'].map((tc) => {
+                                const tcData = evaluation[tc];
+                                const tcNames = {
+                                  'TC1': 'Nhận biết vấn đề',
+                                  'TC2': 'Nêu cách giải',
+                                  'TC3': 'Trình bày giải',
+                                  'TC4': 'Kiểm tra giải pháp'
+                                };
+                                
+                                // Color based on score (0-2 per TC)
+                                const score = tcData?.diem || 0;
+                                const levelColor = 
+                                  score === 2 ? 'border-green-500 bg-green-50' :
+                                  score === 1 ? 'border-blue-500 bg-blue-50' :
+                                  'border-orange-500 bg-orange-50';
+                                const textColor =
+                                  score === 2 ? 'text-green-700' :
+                                  score === 1 ? 'text-blue-700' :
+                                  'text-orange-700';
+                                const levelLabel =
+                                  score === 2 ? 'Tốt' :
+                                  score === 1 ? 'Đạt' :
+                                  'Cần cố gắng';
+
+                                return (
+                                  <div key={tc} className={`p-5 rounded-lg border-l-4 border-b border-r ${levelColor}`}>
+                                    <div className="flex justify-between items-start mb-2">
+                                      <p className={`font-bold text-base ${textColor}`}>{tc}. {tcNames[tc]}</p>
+                                      <span className={`font-bold text-lg ${textColor}`}>{score}/2</span>
+                                    </div>
+                                    <p className="text-xs font-semibold mb-2" style={{ color: textColor }}>({levelLabel})</p>
+                                    <p className={`text-sm leading-relaxed whitespace-pre-wrap ${textColor}`}>{tcData?.nhanXet || ''}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Nhận xét chung và Tổng điểm */}
+                          {evaluation.tongNhanXet && (
+                            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-5 rounded-lg border-l-4 border-purple-500 space-y-3">
+                              <div>
+                                <p className="font-bold text-gray-800 mb-2">💭 Nhận xét chung:</p>
+                                <p className="text-gray-700 text-sm">{evaluation.tongNhanXet}</p>
+                              </div>
+                              <div className="pt-3 border-t border-purple-200">
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <p className="text-sm text-gray-600 font-medium">Tổng điểm 4 Tiêu chí</p>
+                                    <p className={`text-2xl font-bold ${
+                                      evaluation.tongDiem >= 7 ? 'text-green-600' :
+                                      evaluation.tongDiem >= 4 ? 'text-blue-600' :
+                                      'text-orange-600'
+                                    }`}>{evaluation.tongDiem || 0}/8</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-sm text-gray-600 font-medium">Mức độ chung</p>
+                                    <p className={`text-lg font-bold ${
+                                      evaluation.mucDoChinh === 'Tốt' ? 'text-green-600' :
+                                      evaluation.mucDoChinh === 'Đạt' ? 'text-blue-600' :
+                                      'text-orange-600'
+                                    }`}>{evaluation.mucDoChinh || '-'}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Placeholder for other tabs */}
-        {(activeTab === 'luyenTap' || activeTab === 'vanDung') && (
+        {activeTab === 'vanDung' && (
           <div className="bg-white rounded-3xl shadow-soft-lg p-6 lg:p-8 text-center border border-indigo-100">
             <p className="text-gray-500 text-lg">Phần này sẽ được phát triển sớm</p>
           </div>

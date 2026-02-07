@@ -53,7 +53,6 @@ export const createExamSession = async (examId, facultyId, classId, totalQuestio
     };
 
     await setDoc(sessionRef, sessionData);
-    console.log('✅ Exam session created:', sessionRef.id);
     return sessionRef.id;
   } catch (error) {
     console.error('❌ Error creating exam session:', error);
@@ -71,15 +70,11 @@ export const startExamSession = async (sessionId) => {
   try {
     const sessionRef = doc(db, 'exam_sessions', sessionId);
 
-    console.log('🚀 Starting exam session:', sessionId);
-
     // Cập nhật status và startTime CÙNG LÚC
     await updateDoc(sessionRef, {
       status: 'starting',
       startTime: serverTimestamp()
     });
-
-    console.log('⏱️ Set status=starting, startTime=serverTimestamp()');
 
     // Tự động chuyển sang 'ongoing' sau 3 giây
     setTimeout(async () => {
@@ -87,12 +82,6 @@ export const startExamSession = async (sessionId) => {
         // Get current session to verify startTime was set
         const sessionSnap = await getDoc(sessionRef);
         const currentData = sessionSnap.data();
-        
-        console.log('📋 Session data before transitioning to ongoing:', {
-          status: currentData.status,
-          hasStartTime: !!currentData.startTime,
-          startTime: currentData.startTime
-        });
 
         // Ensure startTime is set - if not, set it now as fallback
         if (!currentData.startTime) {
@@ -107,14 +96,11 @@ export const startExamSession = async (sessionId) => {
             status: 'ongoing'
           });
         }
-        
-        console.log('✅ Exam session transitioned to ongoing:', sessionId);
+
       } catch (error) {
         console.error('❌ Error transitioning to ongoing:', error);
       }
     }, 3000);
-
-    console.log('✅ Exam session start initiated:', sessionId);
   } catch (error) {
     console.error('❌ Error starting exam session:', error);
     throw error;
@@ -136,18 +122,6 @@ export const finishExamSession = async (sessionId) => {
 
     // Sắp xếp lại leaderboard
     const participants = sessionData.participants || {};
-    
-    console.log('🏁 Finishing exam session:', {
-      sessionId,
-      participantsCount: Object.keys(participants).length,
-      participantUIDs: Object.keys(participants),
-      participantScores: Object.entries(participants).map(([uid, data]) => ({
-        uid: uid.substring(0, 8) + '...',
-        name: data.name,
-        score: data.score,
-        isCompleted: data.isCompleted
-      }))
-    });
 
     const finalLeaderboard = Object.entries(participants)
       .map(([uid, data]) => ({
@@ -170,15 +144,6 @@ export const finishExamSession = async (sessionId) => {
         return { ...item, rank: idx + 1, medal };
       });
 
-    console.log('📊 Final leaderboard created:', {
-      count: finalLeaderboard.length,
-      students: finalLeaderboard.map(s => ({
-        rank: s.rank,
-        name: s.name,
-        score: s.score
-      }))
-    });
-
     // Cập nhật status, endTime, và leaderboard cuối cùng trong exam_sessions
     await updateDoc(sessionRef, {
       status: 'finished',
@@ -195,11 +160,9 @@ export const finishExamSession = async (sessionId) => {
         finalLeaderboard: finalLeaderboard,
         status: 'finished'
       });
-      console.log('✅ Updated exams.finalLeaderboard for exam:', examId, 'with', finalLeaderboard.length, 'students');
     }
 
-    console.log('✅ Exam session finished:', sessionId, 'with', finalLeaderboard.length, 'students');
-  } catch (error) {
+    } catch (error) {
     console.error('❌ Error finishing exam session:', error);
     throw error;
   }
@@ -217,8 +180,6 @@ export const deleteExamSession = async (sessionId) => {
       status: 'cancelled',
       endTime: serverTimestamp()
     });
-
-    console.log('✅ Exam session deleted:', sessionId);
   } catch (error) {
     console.error('❌ Error deleting exam session:', error);
     throw error;
@@ -255,8 +216,6 @@ export const joinExamSession = async (sessionId, uid, name) => {
     await updateDoc(sessionRef, {
       [`participants.${uid}`]: participantData
     });
-
-    console.log('✅ Student joined session:', uid, 'in session:', sessionId);
   } catch (error) {
     console.error('❌ Error joining exam session:', error);
     throw error;
@@ -297,8 +256,6 @@ export const submitAnswer = async (sessionId, uid, answerData) => {
       [`participants.${uid}.answers`]: updatedAnswers,
       [`participants.${uid}.lastUpdated`]: serverTimestamp()
     });
-
-    console.log('✅ Answer submitted:', uid, 'points earned:', pointsEarned);
   } catch (error) {
     console.error('❌ Error submitting answer:', error);
     throw error;
@@ -329,8 +286,6 @@ export const completeExamForStudent = async (sessionId, uid, finalData) => {
         lastUpdated: serverTimestamp()
       }
     });
-
-    console.log('✅ Student completed exam:', uid);
   } catch (error) {
     console.error('❌ Error completing exam for student:', error);
     throw error;
@@ -364,23 +319,14 @@ export const subscribeToExamSession = (sessionId, callback) => {
             ...data
           });
 
-          console.log(`📋 Session subscription received:`, {
-            status: session.status,
-            hasStartTime: !!session.startTime,
-            remainingSeconds: session.getRemainingSeconds(),
-            startTime: session.startTime
-          });
-
           // Tự động kết thúc phiên thi sau 7 phút nếu vẫn chưa kết thúc
           // Chỉ auto-finish nếu đang 'ongoing' VÀ hết thời gian (> 7 phút) VÀ chưa finished
           if (session.status === 'ongoing' && session.getRemainingSeconds() <= 0 && session.status !== 'finished') {
-            console.log('⏱️ Auto-finishing session because time is up');
             finishExamSession(sessionId);
           }
 
           callback(session);
         } else {
-          console.log('❌ Session not found:', sessionId);
           callback(null);
         }
       },
@@ -517,18 +463,14 @@ export const getActiveSessionsByExamId = async (examId) => {
     );
 
     if (activeSessions.length > 0) {
-      console.log(`✅ Found ${activeSessions.length} active sessions for exam ${examId}`);
       return activeSessions;
     }
 
     // Nếu không có session active, return session finished gần nhất
     const finishedSessions = allSessions.filter(s => s.status === 'finished');
     if (finishedSessions.length > 0) {
-      console.log(`⚠️ No active sessions, found ${finishedSessions.length} finished sessions for exam ${examId}`);
       return [finishedSessions[0]]; // Return the most recent finished session
     }
-
-    console.log(`⚠️ No active sessions found for exam ${examId}`);
     return [];
   } catch (error) {
     console.error('❌ Error getting active sessions by exam id:', error);

@@ -1,16 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(API_KEY);
+import apiKeyManager from "./apiKeyManager";
 
 // Danh sách các model với thứ tự ưu tiên
 const MODELS = [
-  {
-    name: "gemini-2.5-flash",
-    displayName: "Gemini 2.5 Flash TTS",
-    rpdLimit: 10,
-    type: "multimodal"
-  },
     {
     name: "gemini-2.5-flash-lite",
     displayName: "Gemini 2.5 Flash Lite",
@@ -23,12 +15,6 @@ const MODELS = [
     rpdLimit: 20,
     type: "text"
   },
-  {
-    name: "gemini-3-flash",
-    displayName: "Gemini 3 Flash",
-    rpdLimit: 20,
-    type: "text"
-  }
 ];
 
 class GeminiModelManager {
@@ -41,6 +27,14 @@ class GeminiModelManager {
     MODELS.forEach(model => {
       this.modelUsageCount[model.name] = 0;
     });
+  }
+
+  /**
+   * Lấy instance GoogleGenerativeAI với API key hiện tại
+   */
+  _getGeminiInstance() {
+    const apiKey = apiKeyManager.getCurrentKey();
+    return new GoogleGenerativeAI(apiKey);
   }
 
   // Reset bộ đếm nếu sang ngày mới
@@ -66,21 +60,19 @@ class GeminiModelManager {
       
       if (usageCount < model.rpdLimit) {
         this.currentModelIndex = i;
-        return genAI.getGenerativeModel({ model: model.name });
+        return this._getGeminiInstance().getGenerativeModel({ model: model.name });
       }
     }
     
     // Nếu tất cả model đã vượt limit, dùng model đầu tiên (sẽ nhận lỗi từ API)
     console.warn("Tất cả model đã vượt RPD limit!");
-    return genAI.getGenerativeModel({ model: MODELS[0].name });
+    return this._getGeminiInstance().getGenerativeModel({ model: MODELS[0].name });
   }
 
   // Tăng bộ đếm khi sử dụng model
   incrementUsage() {
     const currentModel = MODELS[this.currentModelIndex];
     this.modelUsageCount[currentModel.name]++;
-    
-    console.log(`Model: ${currentModel.displayName}, Usage: ${this.modelUsageCount[currentModel.name]}/${currentModel.rpdLimit}`);
   }
 
   // Lấy model tiếp theo (fallback)
@@ -96,8 +88,7 @@ class GeminiModelManager {
       
       if (usageCount < model.rpdLimit) {
         this.currentModelIndex = i;
-        console.log(`Fallback to: ${model.displayName}`);
-        return genAI.getGenerativeModel({ model: model.name });
+        return this._getGeminiInstance().getGenerativeModel({ model: model.name });
       }
     }
     
@@ -108,8 +99,7 @@ class GeminiModelManager {
       
       if (usageCount < model.rpdLimit) {
         this.currentModelIndex = i;
-        console.log(`Fallback to: ${model.displayName}`);
-        return genAI.getGenerativeModel({ model: model.name });
+        return this._getGeminiInstance().getGenerativeModel({ model: model.name });
       }
     }
     
@@ -120,60 +110,127 @@ class GeminiModelManager {
   getUsageInfo() {
     this._checkAndResetDailyCount();
     
-    return MODELS.map(model => ({
-      name: model.displayName,
-      used: this.modelUsageCount[model.name],
-      limit: model.rpdLimit,
-      available: this.modelUsageCount[model.name] < model.rpdLimit
-    }));
+    return {
+      models: MODELS.map(model => ({
+        name: model.displayName,
+        used: this.modelUsageCount[model.name],
+        limit: model.rpdLimit,
+        available: this.modelUsageCount[model.name] < model.rpdLimit
+      })),
+      apiKeys: apiKeyManager.getUsageStats(),
+      totalRequests: apiKeyManager.totalRequests,
+      availableKeys: apiKeyManager.getAvailableKeyCount(),
+      totalKeys: apiKeyManager.keyConfigs.length
+    };
   }
 
   // Gọi model với tự động fallback nếu hết RPD
+  // Logic: Thử tất cả models trước, chỉ đổi key khi tất cả models đã hết quota
   async generateContent(prompt) {
     let lastError = null;
-    
-    // Thử các model theo thứ tự ưu tiên
-    for (let i = 0; i < MODELS.length; i++) {
-      const model = MODELS[i];
-      const usageCount = this.modelUsageCount[model.name];
-      
-      // Bỏ qua model đã vượt limit
-      if (usageCount >= model.rpdLimit) {
-        console.log(`${model.displayName} đã vượt limit, bỏ qua...`);
-        continue;
-      }
-      
-      try {
-        const currentModel = genAI.getGenerativeModel({ model: model.name });
-        const result = await currentModel.generateContent(prompt);
+    let maxKeyAttempts = apiKeyManager.keyConfigs.length; // Số key khả dụng
+    let keyAttempts = 0;
+
+    while (keyAttempts < maxKeyAttempts) {
+      const modelsNotAvailableForThisKey = new Set(); // Track models hết quota/404 với key hiện tại
+      let modelAttempts = 0;
+
+      // Thử các model theo thứ tự ưu tiên với key hiện tại
+      for (let i = 0; i < MODELS.length; i++) {
+        const model = MODELS[i];
         
-        // Tăng bộ đếm khi thành công
-        this.modelUsageCount[model.name]++;
-        this.currentModelIndex = i;
-        
-        console.log(`✓ Sử dụng ${model.displayName} (${this.modelUsageCount[model.name]}/${model.rpdLimit})`);
-        return result;
-        
-      } catch (error) {
-        lastError = error;
-        console.warn(`✗ ${model.displayName} lỗi: ${error.message}`);
-        
-        // Kiểm tra nếu lỗi do vượt RPD limit
-        if (error.message?.includes("Rate limit") || 
-            error.message?.includes("quota") ||
-            error.status === 429) {
-          console.log(`${model.displayName} đã hết RPD, chuyển sang model khác...`);
-          this.modelUsageCount[model.name] = model.rpdLimit; // Đánh dấu là đã hết
+        // Bỏ qua model đã vượt limit (toàn cục) hoặc đã không khả dụng với key này
+        if (this.modelUsageCount[model.name] >= model.rpdLimit || 
+            modelsNotAvailableForThisKey.has(model.name)) {
           continue;
         }
+
+        modelAttempts++;
         
-        // Nếu lỗi khác, tiếp tục thử model tiếp theo
-        continue;
+        try {
+          const geminiInstance = this._getGeminiInstance();
+          const currentModel = geminiInstance.getGenerativeModel({ model: model.name });
+          const result = await currentModel.generateContent(prompt);
+          
+          // Tăng bộ đếm khi thành công
+          this.modelUsageCount[model.name]++;
+          apiKeyManager.incrementRequestCount();
+          this.currentModelIndex = i;
+          
+          return result;
+          
+        } catch (error) {
+          lastError = error;
+          const keyInfo = apiKeyManager.getCurrentKeyInfo();
+          console.warn(`✗ [${keyInfo.name}] ${model.displayName} lỗi: ${error.message}`);
+          
+          // Kiểm tra loại lỗi
+          const isQuotaError = error.message?.includes("Rate limit") || 
+                                error.message?.includes("quota") ||
+                                error.message?.includes("429") ||
+                                error.status === 429;
+          
+          const isNotFoundError = error.message?.includes("404") || 
+                                   error.message?.includes("not found") ||
+                                   error.status === 404;
+          
+          // Cả quota error lẫn not found error đều đánh dấu model không khả dụng
+          if (isQuotaError) {
+            modelsNotAvailableForThisKey.add(model.name);
+          } else if (isNotFoundError) {
+            modelsNotAvailableForThisKey.add(model.name);
+          }
+          // Các lỗi khác không đánh dấu, chỉ bỏ qua model này lần này
+        }
+      }
+
+      // Kiểm tra nếu tất cả models đã không khả dụng với key hiện tại
+      const allModelsUnavailableOrOverLimit = MODELS.every(model => 
+        this.modelUsageCount[model.name] >= model.rpdLimit || 
+        modelsNotAvailableForThisKey.has(model.name)
+      );
+
+      if (allModelsUnavailableOrOverLimit) {
+        apiKeyManager.markKeyAsExhausted(lastError);
+        
+        // Thử rotate sang key khác
+        if (apiKeyManager.rotateToNextKey()) {
+          keyAttempts++;
+        } else {
+          console.error(`❌ Không có key khác khả dụng`);
+          break;
+        }
+      } else if (modelAttempts === 0) {
+        // Không thử được model nào (tất cả vượt limit hoặc hết quota)
+        console.warn(`⚠️ Không có model nào khả dụng với key hiện tại`);
+        break;
+      } else {
+        // Có model được thử nhưng tất cả đều lỗi - có thể là lỗi tạm thời
+        // Thử rotate key để xem có phải do API key không tốt không
+        console.warn(`⚠️ Có model bị lỗi, thử đổi key để xem có phải do API key...`);
+        apiKeyManager.markKeyAsExhausted(lastError);
+        
+        if (apiKeyManager.rotateToNextKey()) {
+          keyAttempts++;
+          
+          // Chờ một chút trước khi retry
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } else {
+          console.error(`❌ Không có key khác khả dụng`);
+          break;
+        }
       }
     }
     
-    // Nếu tất cả model đều lỗi
-    throw new Error(`Tất cả model đã vượt RPD hoặc bị lỗi. Lỗi cuối: ${lastError?.message}`);
+    // Nếu tất cả key đều lỗi
+    console.error('❌ All keys and models exhausted or failed');
+    const availableKeys = apiKeyManager.getAvailableKeyCount();
+    throw new Error(`Tất cả API keys đã hết quota hoặc bị lỗi. Keys available: ${availableKeys}/${apiKeyManager.keyConfigs.length}. Last error: ${lastError?.message}`);
+  }
+
+  // Lấy log rotation API key
+  getKeyRotationLog() {
+    return apiKeyManager.getRotationLog();
   }
 
   // Reset usage (dùng cho testing)
@@ -182,6 +239,7 @@ class GeminiModelManager {
       this.modelUsageCount[model.name] = 0;
     });
     this.currentModelIndex = 0;
+    apiKeyManager.reset();
   }
 }
 

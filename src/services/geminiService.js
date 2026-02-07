@@ -1,4 +1,7 @@
 import geminiModelManager from "./geminiModelManager";
+import apiKeyManager from "./apiKeyManager";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import competencyEvaluationService from "./competencyEvaluationService";
 
 // System prompt cho AI trợ lý học toán
 const SYSTEM_PROMPT = `Mình là trợ lý học tập ảo thân thiện, hỗ trợ bạn lớp 5 giải toán theo 4 bước Polya.
@@ -6,16 +9,28 @@ const SYSTEM_PROMPT = `Mình là trợ lý học tập ảo thân thiện, hỗ 
 NGUYÊN TẮC QUAN TRỌNG:
 - KHÔNG BAO GIỜ giải bài toán thay bạn
 - KHÔNG đưa ra đáp án dù bạn làm sai
-- CHỈ đặt câu hỏi gợi mở, định hướng
-- MỖI LẦN CHỈ HỎI 1 CÂU
+- CHỈ đặt câu hỏi gợi mở, định hướng để bạn tự suy nghĩ
+- MỖI LẦN CHỈ HỎI 1 CÂU duy nhất
 - Phát hiện lỗi sai của bạn và gợi ý để bạn tự sửa
-- Ngôn ngữ thân thiện, dễ thương như người bạn
+- Ngôn ngữ thân thiện, dễ thương như người bạn của bạn
+- Khi bạn trả lời đúng, khen ngợi cụ thể và chuyển bước tiếp theo
 
 4 BƯỚC GIẢI TOÁN:
-1. HIỂU BÀI TOÁN: Xác định dữ kiện đã cho và yêu cầu bài toán
-2. LẬP KẾ HOẠCH: Đề xuất các bước giải, phép tính phù hợp
-3. THỰC HIỆN: Thực hiện phép tính, trình bày lời giải
-4. KIỂM TRA & MỞ RỘNG: Kiểm tra kết quả, tìm cách giải khác
+1. HIỂU BÀI TOÁN: Giúp bạn xác định dữ kiện đã cho và yêu cầu bài toán
+2. LẬP KẾ HOẠCH: Hỏi bạn nên làm gì, cần phép tính nào (KHÔNG tính cụ thể)
+3. THỰC HIỆN: Hỏi bạn tính toán từng bước, kiểm tra lỗi tính toán nếu có
+4. KIỂM TRA & MỞ RỘNG: Hỏi bạn liệu kết quả có hợp lý, có cách giải nào khác không
+
+CÁC LOẠI CÂU HỎI GỢI MỞ:
+- Để HIỂU BÀI: "Em thấy bài toán đang yêu cầu gì?"
+- Để LẬP KẾ HOẠCH: "Để tìm ..., em cần làm phép tính nào?"
+- Để THỰC HIỆN: "Em thử tính ... và xem kết quả nhé"
+- Để KIỂM TRA: "Kết quả này có hợp lý không? Vì sao?"
+
+NHỮNG GÌ KHÔNG NÊN LÀM:
+- Không hỏi "em làm đúng không?" → hỏi "vậy tiếp theo là gì?"
+- Không nói "sai" trực tiếp → nói "hãy xem lại..."
+- Không giải hoặc cho đáp án → chỉ hỏi câu để em suy nghĩ lại
 
 ĐÁNH GIÁ MỨC ĐỘ:
 - Cần cố gắng: Chưa hiểu rõ, nhiều sai sót
@@ -48,47 +63,89 @@ export class GeminiService {
       step4: null
     };
 
-    // Khởi tạo chat mới
-    const model = geminiModelManager.getModel();
-    this.chat = model.startChat({
-      history: [
-        {
-          role: "user",
-          parts: [{ text: SYSTEM_PROMPT }],
-        },
-        {
-          role: "model",
-          parts: [{ text: "Chào bạn! Mình là trợ lý học toán, sẽ đồng hành cùng bạn giải toán theo 4 bước nhé! Mình sẽ không giải hộ bạn mà chỉ hỏi các câu để bạn tự tìm ra cách giải. Sẵn sàng bắt đầu chưa? 😊" }],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 1024,
-      },
-    });
+    const maxRetries = 3; // Tối đa 3 lần retry (tổng 4 attempts)
+    let attemptCount = 0;
+    let lastError = null;
 
-    // Gửi đề bài và bắt đầu bước 1
-    const initialPrompt = `Đề bài: ${problemText}
+    while (attemptCount < maxRetries) {
+      attemptCount++;
+      
+      try {
+        // Gửi đề bài và bắt đầu bước 1 - dùng generateContent() có dual-level retry
+        const initialPrompt = `Đây là bài toán mà bạn cần giải: ${problemText}
 
 Hãy bắt đầu BƯỚC 1: HIỂU BÀI TOÁN
-Đặt 1 câu hỏi đầu tiên để giúp bạn xác định dữ kiện hoặc yêu cầu của bài toán.
-Nhớ: Chỉ hỏi 1 câu, ngôn ngữ thân thiện.`;
+Đặt 1 câu hỏi gợi mở để giúp bạn xác định:
+- Thông tin đã cho trong bài toán là gì?
+- Yêu cầu của bài toán là gì?
 
-    try {
-      const result = await this.chat.sendMessage(initialPrompt);
-      const response = result.response.text();
+Câu hỏi phải thân thiện, không quá phức tạp, giúp bạn suy nghĩ về những gì bài toán đang hỏi.`;
 
-      return {
-        message: response,
-        step: 1,
-        stepName: "Hiểu bài toán"
-      };
-    } catch (error) {
-      console.error("Error in startNewProblem:", error);
-      throw error;
+        // Sử dụng generateContent() để có dual-level retry (tries all models, then rotates key)
+        const initialResponse = await geminiModelManager.generateContent(initialPrompt);
+        const response = initialResponse.response.text();
+
+        // Khởi tạo chat mới với key/model đang work
+        const model = geminiModelManager.getModel();
+        this.chat = model.startChat({
+          history: [
+            {
+              role: "user",
+              parts: [{ text: SYSTEM_PROMPT }],
+            },
+            {
+              role: "model",
+              parts: [{ text: "Chào bạn! 👋 Mình là trợ lý học toán của bạn. Hôm nay chúng ta sẽ giải toán theo 4 bước Polya nhé! Mình sẽ không giải hộ bạn, mà sẽ hỏi các câu gợi ý để bạn tự suy nghĩ và tìm ra cách giải. Bạn sẵn sàng chưa? 😊" }],
+            },
+            {
+              role: "user",
+              parts: [{ text: initialPrompt }],
+            },
+            {
+              role: "model",
+              parts: [{ text: response }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          },
+        });
+
+        return {
+          message: response,
+          step: 1,
+          stepName: "Hiểu bài toán"
+        };
+      } catch (error) {
+        lastError = error;
+        console.error(`Error in startNewProblem (attempt ${attemptCount}/${maxRetries}):`, error);
+        
+        // Kiểm tra nếu là lỗi 429 (quota exceeded)
+        const isQuotaError = error.message?.includes("429") || 
+                             error.message?.includes("quota") ||
+                             error.message?.includes("exceeded");
+        
+        if (isQuotaError && attemptCount < maxRetries) {
+
+          // generateContent() đã tự handle key rotation
+          continue;
+        } else if (isQuotaError && attemptCount >= maxRetries) {
+          const totalKeys = apiKeyManager.keyConfigs.length;
+          console.error(`❌ All ${totalKeys} API keys are exhausted or hit quota limits`);
+          throw new Error(`Tất cả ${totalKeys} API keys đã hết quota free tier. Vui lòng chờ cho đến hôm sau hoặc nâng cấp tài khoản Google Cloud.`);
+        } else {
+          // Lỗi khác - không retry, throw ngay
+          throw error;
+        }
+      }
     }
+
+    // Nếu vượt quá số lần retry
+    console.error(`❌ Failed after ${maxRetries} retries`);
+    throw new Error(`Không thể khởi tạo bài toán sau ${maxRetries} lần thử. Error: ${lastError?.message || 'Unknown error'}`);
   }
 
   // Xử lý phản hồi của bạn
@@ -110,24 +167,55 @@ Nhớ: Chỉ hỏi 1 câu, ngôn ngữ thân thiện.`;
     try {
       result = await this.chat.sendMessage(contextPrompt);
     } catch (error) {
-      console.error("Error in chat.sendMessage, attempting fallback:", error);
+      console.error("Error in chat.sendMessage, attempting recovery:", error);
       
-      // Nếu chat session lỗi, thử tạo chat mới với model fallback
-      const newModel = geminiModelManager.getNextAvailableModel();
-      if (!newModel) {
-        throw new Error("Không có model nào khả dụng");
+      // Kiểm tra nếu là lỗi 429 (quota exceeded)
+      const isQuotaError = error.message?.includes("429") || 
+                           error.message?.includes("quota") ||
+                           error.message?.includes("exceeded");
+      
+      if (isQuotaError) {
+        // Force mark key as exhausted và rotate
+        apiKeyManager.markKeyAsExhausted(error);
+        const hasRotated = apiKeyManager.rotateToNextKey();
+        
+        if (!hasRotated) {
+          throw new Error("Tất cả API keys đã hết quota");
+        }
+        
+        // Recreate chat với key mới
+        const newGeminiInstance = new GoogleGenerativeAI(apiKeyManager.getCurrentKey());
+        const newModel = newGeminiInstance.getGenerativeModel({ model: "gemini-2.5-flash" });
+        
+        this.chat = newModel.startChat({
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          },
+        });
+        
+        // Retry với chat mới
+        result = await this.chat.sendMessage(contextPrompt);
+      } else {
+        // Với lỗi khác, thử fallback model
+        const newModel = geminiModelManager.getNextAvailableModel();
+        if (!newModel) {
+          throw error;
+        }
+        
+        this.chat = newModel.startChat({
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          },
+        });
+        
+        result = await this.chat.sendMessage(contextPrompt);
       }
-      
-      this.chat = newModel.startChat({
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        },
-      });
-      
-      result = await this.chat.sendMessage(contextPrompt);
     }
     
     let response = result.response.text();
@@ -139,28 +227,28 @@ Nhớ: Chỉ hỏi 1 câu, ngôn ngữ thân thiện.`;
     // Kiểm tra các dấu hiệu chuyển bước trong response (không phân biệt hoa thường)
     const lowerResponse = response.toLowerCase();
     
-    if (lowerResponse.includes("bước 2") && this.currentStep === 1) {
+    
+    if ((lowerResponse.includes("bước 2") || lowerResponse.includes("lập kế hoạch")) && this.currentStep === 1) {
       nextStep = 2;
       evaluation = this._extractEvaluation(response);
       this.evaluateStep(1, evaluation || 'pass');
       this.currentStep = 2;
-    } else if (lowerResponse.includes("bước 3") && this.currentStep === 2) {
+    } else if ((lowerResponse.includes("bước 3") || lowerResponse.includes("thực hiện kế hoạch")) && this.currentStep === 2) {
       nextStep = 3;
       evaluation = this._extractEvaluation(response);
       this.evaluateStep(2, evaluation || 'pass');
       this.currentStep = 3;
-    } else if (lowerResponse.includes("bước 4") && this.currentStep === 3) {
+    } else if ((lowerResponse.includes("bước 4") || lowerResponse.includes("kiểm tra & mở rộng")) && this.currentStep === 3) {
       nextStep = 4;
       evaluation = this._extractEvaluation(response);
       this.evaluateStep(3, evaluation || 'pass');
       this.currentStep = 4;
-    } else if ((lowerResponse.includes("hoàn thành") || lowerResponse.includes("hoàn tất")) && this.currentStep === 4) {
-      nextStep = 5;
+    } else if ((lowerResponse.includes("hoàn thành bài toán") || lowerResponse.includes("hoàn tất bài toán") || lowerResponse.includes("🎉")) && this.currentStep === 4) {
+      nextStep = 5; // Đã hoàn thành bước 4, bài toán xong
       evaluation = this._extractEvaluation(response);
       this.evaluateStep(4, evaluation || 'pass');
-    }
 
-    console.log(`Bước hiện tại: ${this.currentStep}, Next step: ${nextStep}`);
+    }
 
     return {
       message: response,
@@ -194,72 +282,72 @@ Nhớ: Chỉ hỏi 1 câu, ngôn ngữ thân thiện.`;
 
     switch (this.currentStep) {
       case 1: // Hiểu bài toán
-        prompt += `Đang ở BƯỚC 1: HIỂU BÀI TOÁN
+        prompt += `BƯỚC 1: HIỂU BÀI TOÁN
 Phân tích câu trả lời:
-- Bạn đã xác định đúng/đủ dữ kiện chưa?
-- Bạn đã hiểu đúng yêu cầu bài toán chưa?
-- Có nhầm lẫn về đại lượng, đơn vị không?
+- Bạn đã xác định đúng những thông tin chưa? (Dữ kiện: chiều dài, chiều rộng, yêu cầu)
+- Bạn hiểu đúng bài toán đang yêu cầu gì không?
 
-Nếu chưa đủ/đúng: Đặt câu hỏi gợi ý để bạn tự phát hiện và bổ sung.
-Nếu đã đủ/đúng: 
-  - Khen ngợi bạn
-  - Kết thúc tin nhắn bằng cụm: "Bây giờ chúng mình sang BƯỚC 2 nhé!"
-  - Đặt câu hỏi đầu tiên cho bước 2
+HÀNH ĐỘNG:
+- Nếu câu trả lời chưa đủ hoặc chưa rõ: Đặt 1 câu hỏi gợi ý để bạn tự phát hiện ra điều còn thiếu
+- Nếu câu trả lời đủ và đúng:
+  * Khen ngợi bạn cụ thể (ví dụ: "Tuyệt! Em đã xác định đúng dữ kiện và yêu cầu")
+  * QUAN TRỌNG: Phải viết rõ ràng: "Bây giờ chúng mình sang **BƯỚC 2: LẬP KẾ HOẠCH GIẢI** nhé!"
+  * Đặt 1 câu hỏi đầu tiên cho bước 2
 
-CHỈ HỎI 1-2 CÂU. Không giải hộ.`;
+NHẮC NHỐ: CHỈ HỎI 1 CÂU. Câu hỏi phải gợi mở, không kiểm tra "em đúng không".`;
         break;
 
       case 2: // Lập kế hoạch
-        prompt += `Đang ở BƯỚC 2: LẬP KẾ HOẠCH GIẢI
+        prompt += `BƯỚC 2: LẬP KẾ HOẠCH GIẢI
 Phân tích:
-- Bạn đã đề xuất phép tính/công thức phù hợp chưa?
-- Các bước giải có đầy đủ, đúng thứ tự không?
-- Bạn chỉ nêu ý tưởng, CHƯA TÍNH CỤ THỂ chứ?
+- Bạn nêu được phải làm gì (phép tính nào) không? (Ví dụ: nhân chiều dài với chiều rộng)
+- Bước giải có đầy đủ, đúng logic không?
+- QUAN TRỌNG: Bạn CHỈ nêu kế hoạch, CHƯA tính cụ thể số phải chứ?
 
-QUAN TRỌNG: 
-- KHÔNG cho bạn thực hiện phép tính ở bước này
-- CHỈ yêu cầu nêu KẾ HOẠCH (làm gì trước, làm gì sau)
-- Khi bạn đã nêu ĐẦY ĐỦ các bước:
-  - Khen ngợi
-  - Kết thúc tin nhắn bằng: "Tuyệt! Bây giờ sang BƯỚC 3 nhé!"
-  - Yêu cầu bạn thực hiện bước đầu tiên
+HÀNH ĐỘNG:
+- Nếu chưa có kế hoạch rõ ràng: Đặt 1 câu hỏi gợi ý (ví dụ: "Vậy để tính diện tích, em cần làm phép tính nào?")
+- Nếu kế hoạch đã đầy đủ:
+  * Khen ngợi: "Rất tốt! Em đã nêu đúng kế hoạch"
+  * QUAN TRỌNG: Phải viết rõ ràng: "Tuyệt! Bây giờ chúng mình sang **BƯỚC 3: THỰC HIỆN KẾ HOẠCH** nhé!"
+  * Yêu cầu bạn thực hiện phép tính đầu tiên
 
-CHỈ HỎI 1-2 CÂU để định hướng kế hoạch.`;
+NHẮC NHỐ: CHỈ HỎI 1 CÂU. Không cho bạn tính cụ thể ở bước này!`;
         break;
 
       case 3: // Thực hiện kế hoạch
-        prompt += `Đang ở BƯỚC 3: THỰC HIỆN KẾ HOẠCH
+        prompt += `BƯỚC 3: THỰC HIỆN KẾ HOẠCH
 Phân tích:
-- Bạn tính toán đúng chưa?
-- Có sai sót về phép tính số thập phân, đơn vị không?
-- Trình bày lời giải có rõ ràng không?
+- Phép tính có đúng không?
+- Cách tính với số thập phân có chính xác không?
+- Trình bày từng bước có rõ ràng không?
 
-Nếu SAI:
-- KHÔNG đưa đáp án đúng
-- Chỉ ra dấu hiệu sai (vd: "Kết quả này có vẻ không hợp lý...")
-- Đặt câu hỏi để bạn tự kiểm tra và sửa
+HÀNH ĐỘNG:
+- Nếu câu trả lời cho thấy sai sót:
+  * KHÔNG đưa ra đáp án đúng
+  * Chỉ ra dấu hiệu sai ("Kết quả này có vẻ lớn quá..." hoặc "Hãy kiểm tra lại phép tính...")
+  * Đặt 1 câu hỏi để bạn tự kiểm tra: "Em thử tính lại xem sao?"
+- Nếu tính toán đúng:
+  * Khen ngợi: "Chính xác rồi!"
+  * Nếu còn phép tính khác, hỏi bạn tiếp: "Vậy tiếp theo..."
+  * Nếu hoàn tất hết: QUAN TRỌNG: Phải viết rõ ràng: "Tuyệt vời! Bây giờ chúng mình sang **BƯỚC 4: KIỂM TRA & MỞ RỘNG** nhé!"
 
-Nếu ĐÚNG: 
-- Khen ngợi
-- Khi hoàn thành tất cả phép tính, kết thúc bằng: "Tuyệt vời! Sang BƯỚC 4 kiểm tra nhé!"
-- Hỏi câu đầu tiên cho bước 4
-
-CHỈ HỎI 1-2 CÂU. Không tính hộ.`;
+NHẮC NHỐ: CHỈ HỎI 1 CÂU. Không tính hộ hoặc gợi ý cách tính!`;
         break;
 
       case 4: // Kiểm tra & mở rộng
-        prompt += `Đang ở BƯỚC 4: KIỂM TRA & MỞ RỘNG
+        prompt += `BƯỚC 4: KIỂM TRA & MỞ RỘNG
 Hỏi bạn:
-- Kết quả có hợp lý không? Vì sao?
-- Có cách giải nào khác không?
-- Nếu thay đổi dữ liệu, cách giải có đổi không?
+- Kết quả có hợp lý không? (Ví dụ: diện tích của khu vườn, có lớn hợp lý không?)
+- Có cách nào giải khác không?
 
-Sau khi bạn trả lời đầy đủ:
-- Đánh giá tổng thể 4 bước (Cần cố gắng/Đạt/Tốt)
-- Khen ngợi và động viên
-- Kết thúc bằng: "Chúc mừng bạn đã HOÀN THÀNH! 🎉"
+HÀNH ĐỘNG:
+- Đặt 1 câu hỏi về việc kiểm tra hoặc mở rộng
+- Sau khi bạn trả lời:
+  * Đánh giá tổng thể 4 bước (Cần cố gắng/Đạt/Tốt)
+  * Khen ngợi và động viên
+  * QUAN TRỌNG: Phải viết rõ ràng: "Chúc mừng bạn đã **HOÀN THÀNH BÀI TOÁN**! 🎉"
 
-CHỈ HỎI 1-2 CÂU.`;
+NHẮC NHỐ: CHỈ HỎI 1 CÂU.`;
         break;
 
       default:
@@ -284,24 +372,57 @@ Chỉ gợi ý hướng suy nghĩ hoặc 1 câu hỏi dẫn dắt ngắn gọn.`
       const result = await this.chat.sendMessage(hintPrompt);
       return result.response.text();
     } catch (error) {
-      console.error("Error getting hint, attempting fallback:", error);
+      console.error("Error getting hint, attempting recovery:", error);
       
-      const newModel = geminiModelManager.getNextAvailableModel();
-      if (!newModel) {
-        throw new Error("Không có model nào khả dụng");
+      // Kiểm tra nếu là lỗi 429 (quota exceeded)
+      const isQuotaError = error.message?.includes("429") || 
+                           error.message?.includes("quota") ||
+                           error.message?.includes("exceeded");
+      
+      if (isQuotaError) {
+        // Force mark key as exhausted và rotate
+        apiKeyManager.markKeyAsExhausted(error);
+        const hasRotated = apiKeyManager.rotateToNextKey();
+        
+        if (!hasRotated) {
+          throw new Error("Tất cả API keys đã hết quota");
+        }
+        
+        // Recreate chat với key mới
+        const newGeminiInstance = new GoogleGenerativeAI(apiKeyManager.getCurrentKey());
+        const newModel = newGeminiInstance.getGenerativeModel({ model: "gemini-2.5-flash" });
+        
+        this.chat = newModel.startChat({
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          },
+        });
+        
+        // Retry với chat mới
+        const result = await this.chat.sendMessage(hintPrompt);
+        return result.response.text();
+      } else {
+        // Với lỗi khác, thử fallback model
+        const newModel = geminiModelManager.getNextAvailableModel();
+        if (!newModel) {
+          throw error;
+        }
+        
+        this.chat = newModel.startChat({
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          },
+        });
+        
+        const result = await this.chat.sendMessage(hintPrompt);
+        return result.response.text();
       }
-      
-      this.chat = newModel.startChat({
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        },
-      });
-      
-      const result = await this.chat.sendMessage(hintPrompt);
-      return result.response.text();
     }
   }
 
@@ -355,8 +476,6 @@ Chỉ gợi ý hướng suy nghĩ hoặc 1 câu hỏi dẫn dắt ngắn gọn.`
    */
   async evaluateQuestionComments(studentAnswers, questions) {
     try {
-      const model = geminiModelManager.getModel();
-
       // Chuẩn bị dữ liệu câu hỏi kèm giải thích cho AI
       const questionsContext = questions.map((q, idx) => ({
         questionNum: idx + 1,
@@ -389,7 +508,7 @@ For EACH question: Write ONE meaningful comment about what the student did right
   ]
 }`;
 
-      const result = await model.generateContent(prompt);
+      const result = await geminiModelManager.generateContent(prompt);
       const responseText = result.response.text();
 
       // Parse JSON response
@@ -414,8 +533,7 @@ For EACH question: Write ONE meaningful comment about what the student did right
    */
   async evaluateCompetencyFramework(studentAnswers, questions) {
     try {
-      // Import here to avoid circular dependency
-      const competencyEvaluationService = (await import('./competencyEvaluationService.js')).default;
+      // Import service for competency evaluation prompt generation
       
       // Build problem statement from questions and context
       let problemStatement = '';
@@ -478,12 +596,7 @@ For EACH question: Write ONE meaningful comment about what the student did right
         return responseText;
       });
 
-      console.log('🎯 Competency Evaluation Input:', {
-        studentResponsesCount: studentResponses.length,
-        problemStatementLength: problemStatement.length,
-        firstResponse: studentResponses[0],
-        problemStart: problemStatement.substring(0, 200)
-      });
+
 
       // Generate the prompt for competency evaluation
       const prompt = competencyEvaluationService.generateCompetencyEvaluationPrompt(
@@ -491,14 +604,9 @@ For EACH question: Write ONE meaningful comment about what the student did right
         problemStatement
       );
 
-      console.log('📝 Generated prompt (first 500 chars):', prompt.substring(0, 500));
-
-      // Call Gemini API
-      const model = geminiModelManager.getModel();
-      const result = await model.generateContent(prompt);
+      // Call Gemini API with key rotation for quota resilience
+      const result = await geminiModelManager.generateContent(prompt);
       const responseText = result.response.text();
-
-      console.log('Competency evaluation response:', responseText);
 
       // Parse the JSON response and translate to Vietnamese
       const competencyEvaluation = competencyEvaluationService.parseCompetencyEvaluation(responseText);
@@ -507,8 +615,207 @@ For EACH question: Write ONE meaningful comment about what the student did right
     } catch (error) {
       console.error('❌ Error evaluating competency framework:', error);
       // Return empty evaluation on error so as not to block submission
-      const competencyEvaluationService = (await import('./competencyEvaluationService.js')).default;
       return competencyEvaluationService.createEmptyEvaluation();
+    }
+  }
+
+  /**
+   * Tạo bài toán luyện tập dựa trên bài khởi động tương ứng
+   * @param {string} startupProblem1 - Bài 1 phần khởi động
+   * @param {string} startupProblem2 - Bài 2 phần khởi động
+   * @param {string} context - Bối cảnh/dạng toán
+   * @param {number} problemNumber - Số thứ tự bài luyện tập (1 hoặc 2)
+   * @returns {Promise<string>} - Bài toán luyện tập
+   */
+  async generateSimilarProblem(startupProblem1, startupProblem2, context = '', problemNumber = 1) {
+    try {
+      
+      let referenceProblem = '';
+      let difficultyGuidance = '';
+      
+      if (problemNumber === 1) {
+        referenceProblem = startupProblem1;
+        difficultyGuidance = `
+MỨC ĐỘ CỦA BÀI 1 LUYỆN TẬP:
+- Phải là MỨC ĐỘ DỄ, ĐƠN GIẢN, CHỈ CẦN 1-2 PHÉP TÍNH
+- Ít dữ kiện, không có khuyến mãi phức tạp hay điều kiện rắc rối
+- Ví dụ mức độ: "Cô giáo cần mua vải để may khăn quàng cho 19 bạn, mỗi khăn 0,75 m vải. Hỏi tổng số mét vải cần mua?"
+- Đây là bài để học sinh luyện tập đầu tiên, phải cơ bản và dễ hiểu`;
+      } else if (problemNumber === 2) {
+        referenceProblem = startupProblem2;
+        difficultyGuidance = `
+MỨC ĐỘ CỦA BÀI 2 LUYỆN TẬP:
+- Phải có độ khó TƯƠNG ĐƯƠNG với bài 2 khởi động
+- Có nhiều dữ kiện, có thể có khuyến mãi, điều kiện phức tạp hơn
+- Cùng số lượng phép tính và cấp độ suy luận với bài 2 khởi động
+- Đây là bài để học sinh luyện tập sau khi hoàn thành bài 1`;
+      }
+      
+      const prompt = `Bạn là giáo viên toán lớp 5 chuyên tạo bài tập luyện tập.
+
+BÀI KHỞI ĐỘNG (mẫu):
+${referenceProblem}
+
+${context ? `CHỦ ĐỀ/DẠNG TOÁN:
+${context}
+
+` : ''}
+
+NHIỆM VỤ:
+Tạo BÀI ${problemNumber} LUYỆN TẬP dựa vào bài khởi động trên:
+${difficultyGuidance}
+
+YÊU CẦU TỐI QUAN TRỌNG:
+1. ✅ KIỂM TRA KỸ NĂNG TOÁN HỌC: 
+   - Nếu bài khởi động dùng số thập phân → bài luyện tập PHẢI có số thập phân
+   - Nếu bài khởi động là phép nhân/chia/cộng/trừ → bài luyện tập PHẢI có cùng phép tính đó
+   - Nếu bài khởi động so sánh giá cả/chọn cửa hàng → bài luyện tập PHẢI là so sánh tương tự
+
+2. ✅ CHỈ MỘT CÂU HỎI CUỐI (không phải 2-3 câu):
+   - ĐÚNG: "Tổng số mét vải cần mua là bao nhiêu?"
+   - ĐÚNG: "Mua ở cửa hàng nào sẽ tiết kiệm hơn?"
+   - SAI: "Nội dung nào mô tả đúng bài toán? Để giải cần phép tính nào?"
+   - SAI: "Mua ở đâu tiết kiệm? Tại sao? Chênh lệch bao nhiêu?"
+
+3. ✅ THAY ĐỔI BỐI CẢNH: Tên nhân vật khác, tình huống khác, nhưng cấu trúc giữ nguyên
+
+4. ✅ NỘI DUNG THỰC TẾ: Bài toán phải sống động, dễ hình dung, liên quan đến cuộc sống học sinh
+
+HƯỚNG DẪN:
+- CHỈ trả về nội dung bài toán (không có "Bài toán mới:", không có lời giải)
+- Bài toán phải là một đoạn văn liền mạch, tự nhiên
+
+Bài toán mới:`;
+
+      // Sử dụng generateContent từ geminiModelManager (hỗ trợ auto-rotate key)
+      const result = await geminiModelManager.generateContent(prompt);
+      const similarProblem = result.response.text().trim();
+      return similarProblem;
+    } catch (error) {
+      console.error('❌ Error generating similar problem:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Đánh giá bài làm của học sinh theo khung năng lực 4 tiêu chí (TC1-TC4)
+   * Mỗi TC tối đa 2 điểm, tổng tối đa 8 điểm
+   * @param {Array} chatHistory - Lịch sử hội thoại giữa AI và học sinh
+   * @param {string} problem - Nội dung bài toán
+   * @returns {Promise<Object>} - Đánh giá chi tiết theo rubric
+   */
+  async evaluatePolyaStep(chatHistory, problem) {
+    try {
+      
+      // Định dạng chatHistory để gửi cho Gemini
+      let chatText = `BÀI TOÁN: ${problem}\n\n`;
+      chatText += `LỊCH SỬ HỘI THOẠI:\n`;
+      
+      if (!chatHistory || chatHistory.length === 0) {
+        chatText += '(Không có lịch sử hội thoại)';
+      } else {
+        chatHistory.forEach((msg, idx) => {
+          const sender = msg.role === 'user' ? 'HỌC SINH' : 'AI';
+          const text = msg.parts?.[0]?.text || msg.text || '';
+          chatText += `${sender}: ${text}\n`;
+        });
+      }
+
+      const evaluationPrompt = `Bạn là giáo viên toán lớp 5 chuyên về đánh giá năng lực giải quyết vấn đề toán học.
+
+${chatText}
+
+NHIỆM VỤ: Dựa trên lịch sử hội thoại trên, hãy đánh giá học sinh theo RUBRIC 4 TIÊU CHÍ:
+
+**TC1. NHẬN BIẾT ĐƯỢC VẤN ĐỀ CẦN GIẢI QUYẾT (Max 2 điểm)**
+Mục tiêu: Đánh giá xem học sinh đã xác định đầy đủ dữ kiện và yêu cầu bài toán chưa?
+- 0 điểm: Không xác định được đầy đủ cái đã cho và cái cần tìm, cần nhiều hỗ trợ từ AI
+- 1 điểm: Xác định đầy đủ dữ kiện và yêu cầu bài toán với gợi ý từ AI
+- 2 điểm: Xác định chính xác dữ kiện, yêu cầu bài toán và mối quan hệ giữa chúng
+
+**TC2. NÊU ĐƯỢC CÁCH THỨC GIẢI QUYẾT VẤN ĐỀ (Max 2 điểm)**
+Mục tiêu: Đánh giá xem học sinh đã nhận dạng dạng toán và chọn được phép toán phù hợp chưa?
+- 0 điểm: Không nhận dạng được dạng toán, hoặc không chọn được phép toán phù hợp
+- 1 điểm: Nhận dạng được dạng toán và chọn được phép toán cơ bản phù hợp với gợi ý từ AI
+- 2 điểm: Nhận dạng đúng dạng toán, đề xuất được cách giải hợp lý, chọn phép toán/chiến lược tối ưu
+
+**TC3. TRÌNH BÀY ĐƯỢC CÁCH THỨC GIẢI QUYẾT (Max 2 điểm)**
+Mục tiêu: Đánh giá xem học sinh đã thực hiện đúng các phép tính và lời giải chưa?
+- 0 điểm: Thực hiện phép tính còn sai nhiều, lời giải không đầy đủ/thiếu logic
+- 1 điểm: Thực hiện đúng các bước giải và phép tính cơ bản, trình bày lời giải đầy đủ từ phản hồi của AI
+- 2 điểm: Thực hiện đúng đầy đủ các phép tính, trình bày lời giải rõ ràng mạch lạc
+
+**TC4. KIỂM TRA ĐƯỢC GIẢI PHÁP ĐÃ THỰC HIỆN (Max 2 điểm)**
+Mục tiêu: Đánh giá xem học sinh đã kiểm tra lại kết quả và vận dụng được chưa?
+- 0 điểm: Không kiểm tra lại kết quả, không điều chỉnh hoặc không vận dụng vào bài toán tương tự
+- 1 điểm: Kiểm tra lại kết quả, điều chỉnh đúng khi có gợi ý từ AI
+- 2 điểm: Kiểm tra lại bằng các cách khác nhau, vận dụng vào bài toán mở rộng/nâng cao
+
+HƯỚNG DẪN TRẢ LỜI:
+- Cho MỖI tiêu chí, viết nhận xét CHI TIẾT (2-3 câu), giải thích rõ ràng tại sao học sinh được điểm đó
+- NHẤT ĐỊNH trả về JSON đúng format
+- Các comment phải cụ thể, dựa trên lịch sử hội thoại, không chung chung
+
+FORMAT JSON (PHẢI ĐÚNG):
+{
+  "TC1": {
+    "nhanXet": "Nhận xét chi tiết cụ thể về khía cạnh nhận biết (2-3 câu giải thích)",
+    "diem": 0
+  },
+  "TC2": {
+    "nhanXet": "Nhận xét chi tiết cụ thể về khía cạnh nêu cách giải (2-3 câu giải thích)",
+    "diem": 0
+  },
+  "TC3": {
+    "nhanXet": "Nhận xét chi tiết cụ thể về khía cạnh trình bày giải (2-3 câu giải thích)",
+    "diem": 0
+  },
+  "TC4": {
+    "nhanXet": "Nhận xét chi tiết cụ thể về khía cạnh kiểm tra (2-3 câu giải thích)",
+    "diem": 0
+  },
+  "tongNhanXet": "Nhận xét tổng thể 2-3 câu về bài làm của học sinh",
+  "tongDiem": 0,
+  "mucDoChinh": "Cần cố gắng"
+}`;
+
+      // Sử dụng generateContent từ geminiModelManager
+      const result = await geminiModelManager.generateContent(evaluationPrompt);
+      const responseText = result.response.text().trim();
+      
+      // Parse JSON từ response
+      let jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.warn('⚠️ No JSON found in response. Response:', responseText.substring(0, 200));
+        throw new Error('Could not parse evaluation response');
+      }
+      
+      const evaluation = JSON.parse(jsonMatch[0]);
+      
+      // Validate structure và fill missing fields
+      const validatedEval = {
+        TC1: evaluation.TC1 || { nhanXet: 'Chưa đánh giá', diem: 0 },
+        TC2: evaluation.TC2 || { nhanXet: 'Chưa đánh giá', diem: 0 },
+        TC3: evaluation.TC3 || { nhanXet: 'Chưa đánh giá', diem: 0 },
+        TC4: evaluation.TC4 || { nhanXet: 'Chưa đánh giá', diem: 0 },
+        tongNhanXet: evaluation.tongNhanXet || 'Lỗi khi đánh giá',
+        tongDiem: evaluation.tongDiem || 0,
+        mucDoChinh: evaluation.mucDoChinh || 'Cần cố gắng'
+      };
+      
+      return validatedEval;
+    } catch (error) {
+      console.error('❌ Error evaluating competencies:', error.message);
+      // Return default evaluation on error
+      return {
+        TC1: { nhanXet: 'Không thể đánh giá - Vui lòng thử lại', diem: 0 },
+        TC2: { nhanXet: 'Không thể đánh giá - Vui lòng thử lại', diem: 0 },
+        TC3: { nhanXet: 'Không thể đánh giá - Vui lòng thử lại', diem: 0 },
+        TC4: { nhanXet: 'Không thể đánh giá - Vui lòng thử lại', diem: 0 },
+        tongNhanXet: `Lỗi: ${error.message}. Vui lòng tải lại trang hoặc liên hệ hỗ trợ.`,
+        tongDiem: 0,
+        mucDoChinh: 'Cần cố gắng'
+      };
     }
   }
 }

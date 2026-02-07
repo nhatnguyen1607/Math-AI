@@ -90,7 +90,7 @@ const FacultyPage = ({ user, userData, onSignOut }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="option-card startup-card bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer p-8" onClick={() => handleNavigate('/faculty/topic-management', { type: 'startup' })}>
               <div className="option-icon text-5xl mb-4">🚀</div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Khởi động</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Trò chơi</h2>
               <p className="text-gray-600 mb-6">Tạo chủ đề mới và đề thi cho lớp học</p>
               <button className="option-btn btn-startup w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 border-none cursor-pointer">Bắt đầu</button>
             </div>

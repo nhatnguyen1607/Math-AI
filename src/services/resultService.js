@@ -652,6 +652,231 @@ class ResultService {
       throw error;
     }
   }
+
+  /**
+   * Khởi tạo phiên luyện tập (Practice Session)
+   * @param {string} userId - ID của học sinh
+   * @param {string} examId - ID của đề thi
+   * @param {Array} selectedProblems - Mảng 2 bài toán được chọn
+   * @returns {Promise<Object>} - Dữ liệu phiên luyện tập đã khởi tạo
+   */
+  // Lấy dữ liệu phiên luyện tập từ student_exam_progress
+  async getPracticeSessionData(userId, examId) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+      const existingDoc = await getDoc(progressRef);
+
+      if (existingDoc.exists()) {
+        const existingData = existingDoc.data();
+        return {
+          luyenTap: existingData.parts?.luyenTap || {},
+          userId,
+          examId,
+          status: existingData.status
+        };
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.error('Error getting practice session data:', error);
+      throw error;
+    }
+  }
+
+  async initializePracticeSession(userId, examId, selectedProblems = []) {
+    try {
+      // Lấy dữ liệu hiện tại từ student_exam_progress
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+      const existingDoc = await getDoc(progressRef);
+
+      // Tạo dữ liệu luyenTap
+      const luyenTapData = {
+        bai1: {
+          deBai: selectedProblems[0] || '',
+          originalContext: '',
+          chatHistory: [],
+          status: 'in_progress', // in_progress | completed
+          evaluation: {
+            nhanXet: '',
+            diemTC: { tc1: 0, tc2: 0, tc3: 0, tc4: 0 },
+            tongDiem: 0,
+            mucDo: 'Cần cố gắng' // Cần cố gắng | Đạt | Tốt
+          }
+        },
+        bai2: {
+          deBai: selectedProblems[1] || '',
+          originalContext: '',
+          chatHistory: [],
+          status: 'locked', // in_progress | completed | locked
+          evaluation: {
+            nhanXet: '',
+            diemTC: { tc1: 0, tc2: 0, tc3: 0, tc4: 0 },
+            tongDiem: 0,
+            mucDo: 'Cần cố gắng'
+          }
+        }
+      };
+
+      if (existingDoc.exists()) {
+        const existingData = existingDoc.data();
+        
+        // Kiểm tra nếu luyenTap đã có content rồi
+        const bai1HasContent = existingData?.parts?.luyenTap?.bai1?.deBai?.length > 50;
+        const bai2HasContent = existingData?.parts?.luyenTap?.bai2?.deBai?.length > 50;
+        
+        if (bai1HasContent && bai2HasContent) {
+          return {
+            luyenTap: existingData.parts.luyenTap,
+            userId,
+            examId,
+            status: existingData.status
+          };
+        }
+
+        // Cập nhật luyenTap với problems mới
+        const updatedData = {
+          ...existingData,
+          parts: {
+            ...existingData.parts,
+            luyenTap: luyenTapData
+          },
+          lastUpdatedAt: serverTimestamp()
+        };
+
+        await setDoc(progressRef, updatedData, { merge: true });
+        return {
+          luyenTap: luyenTapData,
+          userId,
+          examId,
+          status: 'in_progress'
+        };
+      } else {
+        // Tạo document mới với structure chuẩn
+        const newData = {
+          userId,
+          examId,
+          isFirst: true,
+          status: 'khoiDong_done',
+          parts: {
+            khoiDong: null,
+            luyenTap: luyenTapData,
+            vanDung: null
+          },
+          createdAt: serverTimestamp(),
+          lastUpdatedAt: serverTimestamp()
+        };
+
+        await setDoc(progressRef, newData, { merge: true });
+        return {
+          luyenTap: luyenTapData,
+          userId,
+          examId,
+          status: 'khoiDong_done'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error initializing practice session:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy dữ liệu phiên luyện tập
+   * @param {string} userId - ID của học sinh
+   * @param {string} examId - ID của đề thi
+   * @returns {Promise<Object>} - Dữ liệu phiên luyện tập
+   */
+  async getPracticeSession(userId, examId) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+      const progressDoc = await getDoc(progressRef);
+
+      if (!progressDoc.exists()) {
+        console.warn('⚠️ Practice session not found');
+        return null;
+      }
+
+      const data = progressDoc.data();
+      // Return chỉ phần luyenTap
+      return data.parts?.luyenTap || null;
+    } catch (error) {
+      console.error('❌ Error getting practice session:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cập nhật chat history của một bài luyện tập
+   * @param {string} userId - ID của học sinh
+   * @param {string} examId - ID của đề thi
+   * @param {string} baiNumber - Số bài (bai1 | bai2)
+   * @param {Array} newMessage - Tin nhắn mới { role: 'user'|'model', parts: [...] }
+   * @returns {Promise<void>}
+   */
+  async updatePracticeChatHistory(userId, examId, baiNumber, newMessage) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+
+      // Lấy dữ liệu hiện tại
+      const progressDoc = await getDoc(progressRef);
+      if (!progressDoc.exists()) {
+        throw new Error('Progress document not found');
+      }
+
+      const currentData = progressDoc.data();
+      const chatHistory = currentData.parts?.luyenTap?.[baiNumber]?.chatHistory || [];
+
+      // Thêm tin nhắn mới
+      chatHistory.push(newMessage);
+
+      // Cập nhật Firestore
+      await updateDoc(progressRef, {
+        [`parts.luyenTap.${baiNumber}.chatHistory`]: chatHistory,
+        lastUpdatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('❌ Error updating practice chat history:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Hoàn thành bài luyện tập
+   * @param {string} userId - ID của học sinh
+   * @param {string} examId - ID của đề thi
+   * @param {string} baiNumber - Số bài (bai1 | bai2)
+   * @param {Object} evaluation - Kết quả đánh giá từ Gemini
+   * @returns {Promise<void>}
+   */
+  async completePracticeExercise(userId, examId, baiNumber, evaluation) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+
+      // Xác định bài tiếp theo để mở
+      const nextBai = baiNumber === 'bai1' ? 'bai2' : null;
+
+      const updateData = {
+        [`parts.luyenTap.${baiNumber}.status`]: 'completed',
+        [`parts.luyenTap.${baiNumber}.evaluation`]: evaluation,
+        lastUpdatedAt: serverTimestamp()
+      };
+
+      // Nếu là bai1, mở khóa bai2
+      if (nextBai) {
+        updateData[`parts.luyenTap.${nextBai}.status`] = 'in_progress';
+      }
+
+      await updateDoc(progressRef, updateData);
+    } catch (error) {
+      console.error('❌ Error completing practice exercise:', error);
+      throw error;
+    }
+  }
 }
 
 const resultServiceInstance = new ResultService();

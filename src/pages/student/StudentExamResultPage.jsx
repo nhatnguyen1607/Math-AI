@@ -34,6 +34,10 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
   const [expandedQuestions, setExpandedQuestions] = useState({});
   const [showCongrats, setShowCongrats] = useState(fromExam);
 
+  // Practice states
+  const [practiceData, setPracticeData] = useState(null);
+  const [loadingPractice, setLoadingPractice] = useState(true);
+
   // Lấy dữ liệu phiên thi và tiến trình
   useEffect(() => {
     const finalExamId = examIdParam || examIdFromState;
@@ -91,12 +95,11 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
             setExamProgress(progress);
           }
         } catch (err) {
-          console.error('Error loading exam:', err);
+          // Handle error silently
         }
 
         setLoading(false);
       } catch (err) {
-        console.error('Error loading data:', err);
         setError('Lỗi khi tải dữ liệu');
         setLoading(false);
       }
@@ -104,6 +107,24 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
 
     loadData();
   }, [sessionId, examIdParam, examIdFromState, user?.uid]);
+
+  // Load practice data separately
+  useEffect(() => {
+    const loadPracticeData = async () => {
+      try {
+        if (!user?.uid || !exam?.id) {
+          setLoadingPractice(false);
+          return;
+        }
+        const practice = await resultService.getPracticeSession(user.uid, exam.id);
+        setPracticeData(practice);
+        setLoadingPractice(false);
+      } catch (err) {
+        setLoadingPractice(false);
+      }
+    };
+    loadPracticeData();
+  }, [user?.uid, exam?.id]);
 
   // Loading state
   if (loading) {
@@ -141,22 +162,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
     ? examProgress?.parts?.khoiDong 
     : session?.participants?.[user?.uid];
   
-  // 🔧 DEBUG: Log participantData structure
-  console.log('🔍 StudentExamResultPage - participantData structure:', {
-    isLockedExam,
-    hasParticipantData: !!participantData,
-    answersType: Array.isArray(participantData?.answers) ? 'array' : 'object',
-    answersLength: Array.isArray(participantData?.answers) ? participantData.answers.length : Object.keys(participantData?.answers || {}).length,
-    answerKeys: !Array.isArray(participantData?.answers) ? Object.keys(participantData?.answers || {}) : 'N/A',
-    correctAnswers: participantData?.correctAnswers,
-    percentage: participantData?.percentage,
-    totalQuestions: participantData?.totalQuestions,
-    // 🔧 ADD: Check specifically for answer 10
-    hasAnswer10: participantData?.answers?.[10] !== undefined || participantData?.answers?.['10'] !== undefined,
-    answer10Value: participantData?.answers?.[10] || participantData?.answers?.['10'],
-    // 🔧 ADD: Show all keys/indices
-    allAnswerData: !Array.isArray(participantData?.answers) ? participantData?.answers : participantData?.answers?.map((a, idx) => `[${idx}]`)
-  });
+
     
   if (!participantData) {
     return (
@@ -334,26 +340,8 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                             }
                             
                             if (!answerData) {
-                              console.warn(`⚠️ No answer data for question ${globalQuestionIndex}`, {
-                                globalQuestionIndex,
-                                answersType: Array.isArray(participantData.answers) ? 'array' : 'object',
-                                answersKeys: !Array.isArray(participantData.answers) ? Object.keys(participantData.answers || {}) : `array[${participantData.answers?.length || 0}]`,
-                                // 🔧 Check what we tried to access
-                                tryingKey: globalQuestionIndex,
-                                tryingStringKey: String(globalQuestionIndex),
-                                valueAtIndex: participantData.answers?.[globalQuestionIndex],
-                                valueAtStringKey: participantData.answers?.[String(globalQuestionIndex)],
-                                allAnswers: JSON.stringify(participantData.answers).substring(0, 500) // First 500 chars
-                              });
                               return null;
                             }
-
-                            // Debug log for all questions
-                            console.log(`✅ Found answer for Q${globalQuestionIndex}:`, {
-                              answer: answerData.answer,
-                              isCorrect: answerData.isCorrect,
-                              type: typeof answerData.answer
-                            });
 
                             // Auto-expand first exercise
                             const isExpanded = exerciseIdx === 0 || expandedQuestions[globalQuestionIndex];
@@ -493,28 +481,114 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
   };
 
   const renderLuyenTapTab = () => {
+    // Data structure is {bai1: {...}, bai2: {...}}
+    const hasPracticeData = practiceData && (practiceData.bai1 || practiceData.bai2);
+    const bai1Started = practiceData?.bai1?.status && practiceData.bai1.status !== 'not_started';
+    const bai2Started = practiceData?.bai2?.status && practiceData.bai2.status !== 'not_started';
+    const bai1Completed = practiceData?.bai1?.status === 'completed';
+    const bai2Completed = practiceData?.bai2?.status === 'completed';
+    const bothCompleted = bai1Completed && bai2Completed;
+    const anyProgress = bai1Started || bai2Started;
+
     return (
       <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 game-card">
         <div className="p-10 text-center text-white bg-gradient-to-br from-blue-400 to-blue-500">
           <h2 className="text-4xl font-bold mb-2 font-quicksand">📚 Phần Luyện tập</h2>
-          <p className="text-lg opacity-90">Phát triển sau</p>
+          <p className="text-lg opacity-90">
+            {bothCompleted ? '✅ Đã hoàn thành!' : anyProgress ? '⏳ Đang làm' : '🆕 Chưa thực hiện'}
+          </p>
         </div>
 
-        {!examProgress?.parts?.luyenTap ? (
+        {loadingPractice ? (
+          <div className="p-12 text-center">
+            <div className="text-6xl mb-6 animate-bounce-gentle">📚</div>
+            <p className="text-gray-600 text-lg font-quicksand">Đang tải dữ liệu...</p>
+          </div>
+        ) : bothCompleted ? (
+          // Show completed state with review button
+          <div className="p-12 text-center">
+            <div className="text-6xl mb-6 animate-bounce-gentle">✅</div>
+            <h3 className="text-3xl font-bold text-green-600 mb-4 font-quicksand">Bạn đã hoàn thành Luyện tập!</h3>
+            <p className="text-lg text-gray-600 mb-4 font-quicksand">Cả 2 bài luyện tập đều đã được hoàn thành và đánh giá.</p>
+            
+            {/* Progress Bar */}
+            <div className="mb-8 px-8">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-bold text-gray-700">Tiến độ hoàn thành</span>
+                <span className="text-sm font-bold text-green-600">2/2 bài</span>
+              </div>
+              <div className="w-full bg-gray-300 rounded-full h-4 overflow-hidden">
+                <div className="bg-green-500 h-full rounded-full" style={{ width: '100%' }}></div>
+              </div>
+            </div>
+            
+            <p className="text-lg text-gray-600 mb-8 font-quicksand">Xem lại các đoạn chat và kết quả đánh giá:</p>
+            <button
+              onClick={() => navigate(`/student/practice/${exam?.id}`)}
+              className="btn-3d px-12 py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xl font-bold rounded-full hover:shadow-lg transition-all font-quicksand"
+            >
+              📖 Xem lại đoạn chat →
+            </button>
+          </div>
+        ) : !hasPracticeData ? (
+          // Show not started state
           <div className="p-12 text-center">
             <div className="text-6xl mb-6">📚</div>
-            <h3 className="text-3xl font-bold text-gray-800 mb-4 font-quicksand">Bạn đã sẵn sàng cho phần Luyện tập?</h3>
-            <p className="text-lg text-gray-600 mb-8 font-quicksand">Dựa vào nhận xét AI, hãy thử sức với các bài toán tương tự nhé!</p>
+            <h3 className="text-3xl font-bold text-gray-800 mb-4 font-quicksand">Sẵn sàng bắt đầu Luyện tập?</h3>
+            <p className="text-lg text-gray-600 mb-2 font-quicksand">Dựa vào nhận xét AI ở phần Khởi động,</p>
+            <p className="text-lg text-gray-600 mb-8 font-quicksand">hãy thử sức với các bài toán tương tự!</p>
             <button
               onClick={() => navigate(`/student/practice/${exam?.id}`)}
               className="btn-3d px-12 py-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xl font-bold rounded-full hover:shadow-lg transition-all font-quicksand"
             >
-              Bắt đầu Luyện tập thôi! 🚀
+              🚀 Bắt đầu Luyện tập →
             </button>
           </div>
         ) : (
-          <div className="p-12">
-            <p className="text-gray-700 text-lg font-quicksand">Phần Luyện tập đang phát triển</p>
+          // Show in-progress state
+          <div className="p-12 text-center">
+            <div className="text-6xl mb-6 animate-pulse">⏳</div>
+            <h3 className="text-3xl font-bold text-blue-600 mb-4 font-quicksand">Bạn đang làm Luyện tập</h3>
+            
+            {/* Progress Bar */}
+            <div className="mb-8 px-8">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-bold text-gray-700">Tiến độ hoàn thành</span>
+                <span className="text-sm font-bold text-blue-600">
+                  {(bai1Completed ? 1 : 0) + (bai2Completed ? 1 : 0)}/2 bài
+                </span>
+              </div>
+              <div className="w-full bg-gray-300 rounded-full h-4 overflow-hidden">
+                <div 
+                  className="bg-blue-500 h-full rounded-full transition-all duration-500" 
+                  style={{ width: `${((bai1Completed ? 1 : 0) + (bai2Completed ? 1 : 0)) * 50}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Progress Details */}
+            <div className="grid grid-cols-2 gap-4 mb-8 max-w-md mx-auto">
+              <div className={`p-4 rounded-lg ${bai1Completed ? 'bg-green-100 border-2 border-green-500' : 'bg-gray-100 border-2 border-gray-400'}`}>
+                <p className="text-sm font-bold text-gray-700">Bài 1</p>
+                <p className={`text-lg font-bold ${bai1Completed ? 'text-green-600' : 'text-gray-600'}`}>
+                  {bai1Completed ? '✅ Hoàn thành' : '⏳ Đang làm'}
+                </p>
+              </div>
+              <div className={`p-4 rounded-lg ${bai2Completed ? 'bg-green-100 border-2 border-green-500' : 'bg-gray-100 border-2 border-gray-400'}`}>
+                <p className="text-sm font-bold text-gray-700">Bài 2</p>
+                <p className={`text-lg font-bold ${bai2Completed ? 'text-green-600' : 'text-gray-600'}`}>
+                  {bai2Completed ? '✅ Hoàn thành' : bai1Completed ? '⏳ Đang làm' : '⏸️ Chưa mở'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-lg text-gray-600 mb-8 font-quicksand">Tiếp tục làm bài của bạn:</p>
+            <button
+              onClick={() => navigate(`/student/practice/${exam?.id}`)}
+              className="btn-3d px-12 py-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xl font-bold rounded-full hover:shadow-lg transition-all font-quicksand"
+            >
+              ⏭️ Tiếp tục Luyện tập →
+            </button>
           </div>
         )}
       </div>
@@ -555,6 +629,16 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
       <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
 
       <div className="max-w-5xl mx-auto px-5 pt-10">
+        {/* Back Button */}
+        <div className="mb-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-max transition-all font-quicksand"
+          >
+            ← Quay lại
+          </button>
+        </div>
+
         {/* Tab Navigation */}
         <div className="flex justify-center gap-4 mb-10 flex-wrap">
           {[
@@ -583,7 +667,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
         {renderTabContent()}
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-6 pb-8 md:grid-cols-2 sm:grid-cols-1 font-quicksand">
+        {/* <div className="grid grid-cols-2 gap-6 pb-8 md:grid-cols-2 sm:grid-cols-1 font-quicksand">
           <button
             onClick={() => navigate('/student')}
             className="btn-3d px-6 py-4 bg-white text-gray-800 border-3 border-gray-400 rounded-max font-bold text-lg transition-all hover:bg-gray-100 hover:shadow-lg"
@@ -596,7 +680,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
           >
             Làm bài khác →
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

@@ -596,28 +596,89 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
   };
 
   const renderVanDungTab = () => {
+    const vanDungData = examProgress?.parts?.vanDung;
+    const luyenTapCompleted = 
+      examProgress?.parts?.luyenTap?.bai1?.status === 'completed' &&
+      examProgress?.parts?.luyenTap?.bai2?.status === 'completed';
+
     return (
       <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 game-card">
         <div className="p-10 text-center text-white bg-gradient-to-br from-yellow-400 to-orange-500">
           <h2 className="text-4xl font-bold mb-2 font-quicksand">🌟 Phần Vận dụng</h2>
-          <p className="text-lg opacity-90">Phát triển sau</p>
+          <p className="text-lg opacity-90">
+            {vanDungData?.status === 'completed' ? '✅ Đã hoàn thành!' : 
+             vanDungData?.status === 'in_progress' ? '⏳ Đang làm' : 
+             '🆕 Sẵn sàng bắt đầu'}
+          </p>
         </div>
 
-        {!examProgress?.parts?.vanDung ? (
+        {!vanDungData ? (
+          // Chưa bắt đầu Vận dụng
           <div className="p-12 text-center">
-            <div className="text-6xl mb-6">🌟</div>
-            <h3 className="text-3xl font-bold text-gray-800 mb-4 font-quicksand">Bạn đã sẵn sàng cho phần Vận dụng?</h3>
-            <p className="text-lg text-gray-600 mb-8 font-quicksand">Áp dụng kiến thức vào những tình huống thực tế thú vị!</p>
+            <div className="text-6xl mb-6 animate-bounce-gentle">🌟</div>
+            {!luyenTapCompleted ? (
+              <>
+                <h3 className="text-3xl font-bold text-gray-800 mb-4 font-quicksand">Hoàn thành Luyện tập trước!</h3>
+                <p className="text-lg text-gray-600 mb-8 font-quicksand">Bạn cần hoàn thành cả 2 bài Luyện tập trước khi vào Vận dụng</p>
+                <button
+                  disabled
+                  className="btn-3d px-12 py-5 bg-gray-400 text-white text-xl font-bold rounded-full cursor-not-allowed font-quicksand opacity-50"
+                >
+                  🔒 Mở khóa sau Luyện tập
+                </button>
+              </>
+            ) : (
+              <>
+                <h3 className="text-3xl font-bold text-gray-800 mb-4 font-quicksand">Bạn đã sẵn sàng cho phần Vận dụng!</h3>
+                <p className="text-lg text-gray-600 mb-2 font-quicksand">Hãy áp dụng kiến thức vào một bài toán</p>
+                <p className="text-lg text-gray-600 mb-8 font-quicksand">thực tế được tạo riêng dựa trên những điểm yếu của bạn</p>
+                <button
+                  onClick={() => navigate(`/student/van-dung/${exam?.id}`)}
+                  className="btn-3d px-12 py-5 bg-gradient-to-r from-orange-400 to-red-500 text-white text-xl font-bold rounded-full hover:shadow-lg transition-all font-quicksand"
+                >
+                  🚀 Bắt đầu Vận dụng →
+                </button>
+              </>
+            )}
+          </div>
+        ) : vanDungData?.status === 'completed' && vanDungData?.evaluation ? (
+          // Đã hoàn thành Vận dụng - hiển thị kết quả
+          <div className="p-12 text-center">
+            <div className="text-6xl mb-6 animate-bounce-gentle">✅</div>
+            <h3 className="text-3xl font-bold text-green-600 mb-4 font-quicksand">Bạn đã hoàn thành Vận dụng!</h3>
+            <p className="text-lg text-gray-600 mb-8 font-quicksand">Bài toán đã được đánh giá và lưu lại.</p>
+            
+            {/* Progress Bar */}
+            <div className="mb-8 px-8">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-bold text-gray-700">Trạng thái</span>
+                <span className="text-sm font-bold text-green-600">Hoàn thành</span>
+              </div>
+              <div className="w-full bg-gray-300 rounded-full h-4 overflow-hidden">
+                <div className="bg-green-500 h-full rounded-full" style={{ width: '100%' }}></div>
+              </div>
+            </div>
+            
+            <p className="text-lg text-gray-600 mb-8 font-quicksand">Xem lại bài làm của bạn:</p>
             <button
-              disabled
-              className="btn-3d px-12 py-5 bg-gray-400 text-white text-xl font-bold rounded-full cursor-not-allowed font-quicksand opacity-50"
+              onClick={() => navigate(`/student/van-dung/${exam?.id}`)}
+              className="btn-3d px-12 py-5 bg-gradient-to-r from-orange-400 to-red-500 text-white text-xl font-bold rounded-full hover:shadow-lg transition-all font-quicksand"
             >
-              Sắp có (Phát triển sau) 🚀
+              📖 Xem lại bài làm →
             </button>
           </div>
         ) : (
-          <div className="p-12">
-            <p className="text-gray-700 text-lg font-quicksand">Phần Vận dụng đang phát triển</p>
+          // Đang làm Vận dụng
+          <div className="p-12 text-center">
+            <div className="text-6xl mb-6 animate-pulse">⏳</div>
+            <h3 className="text-3xl font-bold text-orange-600 mb-4 font-quicksand">Bạn đang làm Vận dụng</h3>
+            <p className="text-lg text-gray-600 mb-8 font-quicksand">Tiếp tục giải bài toán của bạn:</p>
+            <button
+              onClick={() => navigate(`/student/van-dung/${exam?.id}`)}
+              className="btn-3d px-12 py-5 bg-gradient-to-r from-orange-400 to-red-500 text-white text-xl font-bold rounded-full hover:shadow-lg transition-all font-quicksand"
+            >
+              ⏭️ Tiếp tục Vận dụng →
+            </button>
           </div>
         )}
       </div>

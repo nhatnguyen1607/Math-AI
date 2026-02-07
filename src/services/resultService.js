@@ -877,6 +877,126 @@ class ResultService {
       throw error;
     }
   }
+
+  /**
+   * ========== VẬN DỤNG SESSION (Application Problem) ==========
+   */
+
+  /**
+   * Khởi tạo phiên Vận dụng với bài toán được tạo cá nhân hóa
+   * @param {string} userId - ID của học sinh
+   * @param {string} examId - ID của đề thi
+   * @param {string} problemText - Nội dung bài toán vận dụng
+   * @returns {Promise<Object>} - Dữ liệu vanDung được khởi tạo
+   */
+  async initializeVanDungSession(userId, examId, problemText) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+      
+      const vanDungData = {
+        deBai: problemText,
+        chatHistory: [],
+        status: 'in_progress',
+        evaluation: null,
+        createdAt: serverTimestamp()
+      };
+
+      // Cập nhật document với dữ liệu Vận dụng mới
+      await updateDoc(progressRef, {
+        'parts.vanDung': vanDungData,
+        lastUpdatedAt: serverTimestamp()
+      });
+
+      return vanDungData;
+    } catch (error) {
+      console.error('❌ Error initializing van dung session:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cập nhật chat history của phần Vận dụng
+   * @param {string} userId - ID của học sinh
+   * @param {string} examId - ID của đề thi
+   * @param {Object} newMessage - Tin nhắn mới { role: 'user'|'model', parts: [...] }
+   * @returns {Promise<void>}
+   */
+  async updateVanDungChatHistory(userId, examId, newMessage) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+
+      // Lấy dữ liệu hiện tại
+      const progressDoc = await getDoc(progressRef);
+      if (!progressDoc.exists()) {
+        throw new Error('Progress document not found');
+      }
+
+      const currentData = progressDoc.data();
+      const chatHistory = currentData.parts?.vanDung?.chatHistory || [];
+
+      // Thêm tin nhắn mới
+      chatHistory.push(newMessage);
+
+      // Cập nhật Firestore
+      await updateDoc(progressRef, {
+        'parts.vanDung.chatHistory': chatHistory,
+        lastUpdatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('❌ Error updating van dung chat history:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Hoàn thành phần Vận dụng và lưu đánh giá
+   * @param {string} userId - ID của học sinh
+   * @param {string} examId - ID của đề thi
+   * @param {Object} evaluation - Kết quả đánh giá (TC1-TC4)
+   * @returns {Promise<void>}
+   */
+  async completeVanDungExercise(userId, examId, evaluation) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+
+      await updateDoc(progressRef, {
+        'parts.vanDung.status': 'completed',
+        'parts.vanDung.evaluation': evaluation,
+        'status': 'all_done', // Đánh dấu hoàn thành toàn bộ đề thi
+        lastUpdatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('❌ Error completing van dung exercise:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy dữ liệu phiên Vận dụng
+   * @param {string} userId - ID của học sinh
+   * @param {string} examId - ID của đề thi
+   * @returns {Promise<Object|null>} - Dữ liệu vanDung hoặc null
+   */
+  async getVanDungSession(userId, examId) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+      const progressDoc = await getDoc(progressRef);
+
+      if (!progressDoc.exists()) {
+        return null;
+      }
+
+      const data = progressDoc.data();
+      return data.parts?.vanDung || null;
+    } catch (error) {
+      console.error('❌ Error getting van dung session:', error);
+      throw error;
+    }
+  }
 }
 
 const resultServiceInstance = new ResultService();

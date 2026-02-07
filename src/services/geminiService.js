@@ -294,7 +294,7 @@ HÀNH ĐỘNG:
   * QUAN TRỌNG: Phải viết rõ ràng: "Bây giờ chúng mình sang **BƯỚC 2: LẬP KẾ HOẠCH GIẢI** nhé!"
   * Đặt 1 câu hỏi đầu tiên cho bước 2
 
-NHẮC NHỐ: CHỈ HỎI 1 CÂU. Câu hỏi phải gợi mở, không kiểm tra "em đúng không".`;
+NHẮC NHỞ: CHỈ HỎI 1 CÂU. Câu hỏi phải gợi mở, không kiểm tra "em đúng không".`;
         break;
 
       case 2: // Lập kế hoạch
@@ -693,6 +693,88 @@ Bài toán mới:`;
       return similarProblem;
     } catch (error) {
       console.error('❌ Error generating similar problem:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Tạo bài toán Vận dụng được cá nhân hóa dựa trên các lỗi từ Khởi động và yếu điểm từ Luyện tập
+   * @param {Object} studentContext - Dữ liệu ngữ cảnh của học sinh:
+   *   - errorsInKhoiDong: Array<string> - Các lỗi từ phần Khởi động
+   *   - weaknessesInLuyenTap: Object - Đánh giá từ 2 bài Luyện tập (TC1-TC4 điểm thấp)
+   *   - topicName: string - Tên chủ đề bài thi
+   * @returns {Promise<string>} - Đề bài vận dụng
+   */
+  async generateApplicationProblem(studentContext) {
+    try {
+      const { errorsInKhoiDong = [], weaknessesInLuyenTap = {}, topicName = 'Bài toán' } = studentContext;
+      
+      // Xây dựng danh sách yếu điểm từ các tiêu chí
+      let weaknessText = '';
+      if (weaknessesInLuyenTap.TC1?.diem !== undefined) {
+        if (weaknessesInLuyenTap.TC1.diem < 2) weaknessText += `- Yếu ở khía cạnh nhận biết vấn đề\n`;
+      }
+      if (weaknessesInLuyenTap.TC2?.diem !== undefined) {
+        if (weaknessesInLuyenTap.TC2.diem < 2) weaknessText += `- Yếu ở khía cạnh nêu cách giải quyết\n`;
+      }
+      if (weaknessesInLuyenTap.TC3?.diem !== undefined) {
+        if (weaknessesInLuyenTap.TC3.diem < 2) weaknessText += `- Yếu ở khía cạnh thực hiện các bước giải\n`;
+      }
+      if (weaknessesInLuyenTap.TC4?.diem !== undefined) {
+        if (weaknessesInLuyenTap.TC4.diem < 2) weaknessText += `- Yếu ở khía cạnh kiểm tra lại kết quả\n`;
+      }
+
+      const prompt = `Bạn là giáo viên toán lớp 5 tâm huyết, chuyên tạo bài tập vận dụng vừa đủ khó để giúp học sinh nhận biết được các lỗi sai nhưng vẫn trong tầm cơ bản.
+
+HỒSƠ NĂNG LỰC HỌC SINH:
+Chủ đề: ${topicName}
+
+${errorsInKhoiDong.length > 0 ? `Những lỗi mắc phải ở phần Khởi động (trắc nghiệm):
+${errorsInKhoiDong.map((e, i) => `${i + 1}. ${e}`).join('\n')}
+
+` : ''}${weaknessText ? `Những điểm yếu khi giải toán Polya ở phần Luyện tập:
+${weaknessText}\n` : ''}
+
+NHIỆM VỤ:
+Tạo 1 BÀI TOÁN VẬN DỤNG (Real-world Application Problem) phù hợp với học sinh lớp 5 để giúp khắc phục những yếu điểm trên.
+**QUAN TRỌNG NHẤT: Bài toán PHẢI TẬP TRUNG VÀO CHỦĐỀ CHÍNH "${topicName}" - đó phải là phần chính và khó nhất của bài toán, không phải chỉ là phần phụ.**
+
+YÊU CẦU TỐI QUAN TRỌNG:
+1. ✅ MỨC ĐỘ PHẢI DỄ VÀ PHÁT TRIỂN CHỦĐỀ:
+   - Bài toán nên dựa trên một tình huống thực tế quen thuộc của học sinh lớp 5 (gia đình, nhà trường, chợ, cửa hàng, dã ngoại...)
+   - KHÔNG dùng phần trăm (%), vì em chưa được học
+   - KHÔNG dùng khái niệm phức tạp (lợi nhuận, lãi suất, tỉ lệ, tỷ số...)
+   - Bài toán nên CÓ 2-3 dữ kiện để cần phân tích, nhưng không quá nhiều
+   - Phép tính cơ bản như: cộng, trừ, nhân, chia, số thập phân đơn giản
+   
+2. ✅ CHỦĐỀ PHẢI LÀ TRUNG TÂM CỦA BÀI TOÁN:
+   - Nếu chủ đề là "Nhân số thập phân": Bài toán PHẢI CÓ NHIỀU phép nhân số thập phân làm nội dung chính. Ví dụ: "Mẹ mua 2,5 kg táo giá 35.500 đồng/kg. Bố mua 1,5 lít nước cam giá 18.000 đồng/lít. Hỏi tổng tiền mua là bao nhiêu?"
+   - Nếu chủ đề là "Chia số thập phân": Bài toán PHẢI làm nổi bật phép chia. Ví dụ: "Có 7,5 lít sữa chia đều vào các chai 1,5 lít. Hỏi cần bao nhiêu chai?"
+   - Nếu chủ đề liên quan "Cộng/Trừ số thập phân": Bài toán PHẢI có nhiều phép cộng/trừ với số thập phân
+   
+3. ✅ CHỈ MỘT CÂU HỎI CUỐI (không phải 2-3 câu)
+
+4. ✅ ĐỂ ĐỌC DỄ HIỂU: Viết dưới dạng câu chuyện bình thường, dễ tưởng tượng
+
+VÍ DỤ CHO CHỦĐỀ "NHÂN SỐ THẬP PHÂN":
+"Gia đình bạn An đi siêu thị chuẩn bị cho buổi dã ngoại. Bố mua 3 kg táo, mỗi kilogam giá 35.500 đồng. Mẹ mua 2,5 lít nước cam ép, mỗi lít giá 18.000 đồng. An còn xin mua thêm 4 gói bánh quy, mỗi gói giá 12.750 đồng. Hỏi nếu bố An mang theo 220.000 đồng, thì gia đình còn lại bao nhiêu tiền sau khi mua sắm?"
+
+VÍ DỤ CHO CHỦĐỀ "CHIA SỐ THẬP PHÂN":
+"Cô giáo có 12,5 lít nước khoáng để chia đều cho các bạn học sinh trong lớp. Mỗi bạn được 0,5 lít. Hỏi lớp đó có bao nhiêu bạn học sinh?"
+
+HƯỚNG DẪN TRẢ LỜI:
+- CHỈ trả về nội dung bài toán (không có "Bài toán mới:", không có lời giải, không có gợi ý)
+- Bài toán phải là một đoạn văn liền mạch, tự nhiên, dài 3-5 dòng
+- CHẮC CHẮN bài toán tập trung vào chủ đề "${topicName}"
+
+Bài toán vận dụng:`;
+
+      // Sử dụng generateContent từ geminiModelManager
+      const result = await geminiModelManager.generateContent(prompt);
+      const applicationProblem = result.response.text().trim();
+      return applicationProblem;
+    } catch (error) {
+      console.error('❌ Error generating application problem:', error);
       throw error;
     }
   }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import resultService from '../services/resultService';
 import geminiService from '../services/geminiService';
 
@@ -26,6 +26,21 @@ const PracticeChat = ({
   const chatContainerRef = useRef(null);
   const geminiServiceRef = useRef(new geminiService.constructor());
 
+  // Helper function để lưu chat history vào đúng service
+  const saveChatMessage = useCallback(async (message) => {
+    try {
+      if (baiNumber === 'vanDung') {
+        // Lưu vào Vận dụng
+        await resultService.updateVanDungChatHistory(userId, examId, message);
+      } else {
+        // Lưu vào Luyện tập (bai1 hoặc bai2)
+        await resultService.updatePracticeChatHistory(userId, examId, baiNumber, message);
+      }
+    } catch (err) {
+      console.error('Error saving chat message:', err);
+    }
+  }, [baiNumber, userId, examId]);
+
   // Reset state khi baiNumber thay đổi (chuyển từ bài 1 → bài 2)
   useEffect(() => {
     setMessages([]);
@@ -48,7 +63,7 @@ const PracticeChat = ({
         setMessages([aiMsg]);
         
         // Lưu AI message từ startNewProblem vào Firestore (QUAN TRỌNG!)
-        await resultService.updatePracticeChatHistory(userId, examId, baiNumber, aiMsg);
+        await saveChatMessage(aiMsg);
         
         if (onChatUpdate) {
           onChatUpdate([aiMsg]);
@@ -64,7 +79,7 @@ const PracticeChat = ({
     if (deBai && messages.length === 0 && chatHistory.length === 0 && !isCompleted) {
       initializeProblem();
     }
-  }, [deBai, messages, chatHistory, isCompleted, userId, examId, baiNumber, onChatUpdate]);
+  }, [deBai, messages, chatHistory, isCompleted, userId, examId, baiNumber, onChatUpdate, saveChatMessage]);
 
   // Auto scroll to bottom
   const scrollToBottom = () => {
@@ -104,7 +119,7 @@ const PracticeChat = ({
       setIsLoading(true);
 
       // Save user message to Firestore
-      await resultService.updatePracticeChatHistory(userId, examId, baiNumber, userMsg);
+      await saveChatMessage(userMsg);
 
       // Get AI response using geminiService
       const response = await geminiServiceRef.current.processStudentResponse(userMessage);
@@ -117,7 +132,7 @@ const PracticeChat = ({
       setMessages(prev => [...prev, aiMsg]);
 
       // Save AI response to Firestore
-      await resultService.updatePracticeChatHistory(userId, examId, baiNumber, aiMsg);
+      await saveChatMessage(aiMsg);
 
       // Callback to notify parent about updates
       if (onChatUpdate) {

@@ -103,14 +103,24 @@ const FacultyStudentExamResultPage = () => {
           return;
         }
         const practice = await resultService.getPracticeSession(userId, examId);
-        setPracticeData(practice);
+        const vanDung = await resultService.getVanDungSession(userId, examId);
+        
+        console.log('📚 Practice data loaded:', practice);
+        console.log('⚡ VanDung data loaded:', vanDung);
+        
+        setPracticeData({
+          ...practice,
+          vanDung
+        });
         setLoadingPractice(false);
       } catch (err) {
+        console.error('Error loading practice data:', err);
         setLoadingPractice(false);
       }
     };
+    
     loadPracticeData();
-  }, [userId, examId]);
+  }, [userId, examId, activeTab]);
 
   if (loading) {
     return (
@@ -135,8 +145,8 @@ const FacultyStudentExamResultPage = () => {
 
   const tabItems = [
     { id: 'khoiDong', label: '🚀 Khởi động', icon: '🚀' },
-    { id: 'luyenTap', label: '📚 Luyện tập', icon: '📚' }
-    // { id: 'vanDung', label: '⚡ Vận dụng', icon: '⚡' }
+    { id: 'luyenTap', label: '📚 Luyện tập', icon: '📚' },
+    { id: 'vanDung', label: '⚡ Vận dụng', icon: '⚡' }
   ];
 
   return (
@@ -692,11 +702,161 @@ const FacultyStudentExamResultPage = () => {
             )}
           </div>
         )}
-
-        {/* Placeholder for other tabs */}
         {activeTab === 'vanDung' && (
-          <div className="bg-white rounded-3xl shadow-soft-lg p-6 lg:p-8 text-center border border-indigo-100">
-            <p className="text-gray-500 text-lg">Phần này sẽ được phát triển sớm</p>
+          <div className="bg-white rounded-3xl shadow-soft-lg p-6 lg:p-8 border-t-4 border-yellow-300">
+            <h3 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-8 flex items-center gap-3">
+              <span>⚡</span> Phần Vận dụng
+            </h3>
+
+            {loadingPractice ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4 animate-bounce">⚡</div>
+                <p className="text-gray-600 text-lg">Đang tải dữ liệu vận dụng...</p>
+              </div>
+            ) : !practiceData?.vanDung ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">⚡</div>
+                <p className="text-gray-500 text-lg">Học sinh chưa hoàn thành phần vận dụng</p>
+              </div>
+            ) : (
+              <>
+                {(() => {
+                  console.log('🔍 vanDung data:', practiceData.vanDung);
+                  console.log('📋 chatHistory:', practiceData.vanDung?.chatHistory);
+                  console.log('📊 evaluation:', practiceData.vanDung?.evaluation);
+                  console.log('status:', practiceData.vanDung?.status);
+                  return null;
+                })()}
+                <div className="bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 rounded-3xl p-6 lg:p-8 border-3 border-yellow-200">
+                {/* Đề bài Header */}
+                <div className="mb-6 pb-4 border-b-3 border-yellow-300">
+                  <h4 className="text-2xl font-bold text-gray-800 mb-2">Bài Vận dụng</h4>
+                  <p className="text-gray-700 text-sm">
+                    <strong>Đề bài:</strong> {practiceData.vanDung?.deBai || 'Không có dữ liệu'}
+                  </p>
+                </div>
+
+                {/* Chat History */}
+                <div className="bg-white rounded-2xl p-6 mb-6 max-h-96 overflow-y-auto border border-yellow-200">
+                  <h5 className="font-bold text-gray-800 mb-4">💬 Đoạn chat:</h5>
+                  <div className="space-y-4">
+                    {practiceData.vanDung?.chatHistory && practiceData.vanDung.chatHistory.length > 0 ? (
+                      practiceData.vanDung.chatHistory.map((msg, msgIdx) => {
+                        const text = msg.parts?.[0]?.text || msg.text || '';
+                        return (
+                          <div 
+                            key={msgIdx}
+                            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div 
+                              className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg text-sm ${
+                                msg.role === 'user'
+                                  ? 'bg-orange-500 text-white rounded-br-none'
+                                  : 'bg-gray-200 text-gray-800 rounded-bl-none'
+                              }`}
+                            >
+                              <p className="whitespace-pre-wrap break-words">{text}</p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">Không có đoạn chat</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Evaluation Results */}
+                {practiceData.vanDung?.status === 'completed' && practiceData.vanDung?.evaluation ? (
+                  <div className="space-y-6">
+                    <h5 className="font-bold text-gray-800 text-lg mb-4">📊 Đánh giá 4 Tiêu chí Năng lực (Tối đa 8 điểm)</h5>
+                    
+                    {/* 4 Tiêu chí TC1-TC4 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {['TC1', 'TC2', 'TC3', 'TC4'].map((tc) => {
+                        const tcData = practiceData.vanDung.evaluation[tc];
+                        const tcNames = {
+                          'TC1': 'Nhận biết vấn đề',
+                          'TC2': 'Nêu cách giải',
+                          'TC3': 'Trình bày giải',
+                          'TC4': 'Kiểm tra giải pháp'
+                        };
+                        
+                        if (!tcData) return null;
+                        
+                        // Color based on score (0-2 per TC)
+                        const score = tcData?.diem || 0;
+                        const levelColor = 
+                          score === 2 ? 'border-green-500 bg-green-50' :
+                          score === 1 ? 'border-blue-500 bg-blue-50' :
+                          'border-orange-500 bg-orange-50';
+                        const textColor =
+                          score === 2 ? 'text-green-700' :
+                          score === 1 ? 'text-blue-700' :
+                          'text-orange-700';
+                        const levelLabel =
+                          score === 2 ? 'Tốt' :
+                          score === 1 ? 'Đạt' :
+                          'Cần cố gắng';
+
+                        return (
+                          <div key={tc} className={`p-5 rounded-lg border-l-4 border-b border-r ${levelColor}`}>
+                            <div className="flex justify-between items-start mb-3">
+                              <p className={`font-bold text-base ${textColor}`}>{tc}. {tcNames[tc]}</p>
+                              <span className={`font-bold text-lg ${textColor}`}>{score}/2</span>
+                            </div>
+                            <p className="text-xs font-semibold mb-2" style={{ color: textColor }}>({levelLabel})</p>
+                            {tcData?.nhanXet && (
+                              <p className={`text-sm leading-relaxed whitespace-pre-wrap ${textColor}`}>{tcData.nhanXet}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Nhận xét chung và Tổng điểm */}
+                    <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-6 rounded-lg border-l-4 border-orange-500 space-y-4">
+                      {practiceData.vanDung.evaluation?.tongNhanXet && (
+                        <div>
+                          <p className="font-bold text-gray-800 mb-2">💭 Nhận xét chung:</p>
+                          <p className="text-gray-700 text-sm leading-relaxed">{practiceData.vanDung.evaluation.tongNhanXet}</p>
+                        </div>
+                      )}
+                      <div className={`pt-3 ${practiceData.vanDung.evaluation?.tongNhanXet ? 'border-t border-orange-200' : ''}`}>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-sm text-gray-600 font-medium">Tổng điểm 4 Tiêu chí</p>
+                            <p className={`text-3xl font-bold ${
+                              (practiceData.vanDung.evaluation?.tongDiem || 0) >= 7 ? 'text-green-600' :
+                              (practiceData.vanDung.evaluation?.tongDiem || 0) >= 4 ? 'text-blue-600' :
+                              'text-orange-600'
+                            }`}>{practiceData.vanDung.evaluation?.tongDiem || 0}<span className="text-lg">/8</span></p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-600 font-medium">Mức độ chung</p>
+                            <p className={`text-lg font-bold ${
+                              practiceData.vanDung.evaluation?.mucDoChinh === 'Tốt' ? 'text-green-600' :
+                              practiceData.vanDung.evaluation?.mucDoChinh === 'Đạt' ? 'text-blue-600' :
+                              'text-orange-600'
+                            }`}>{practiceData.vanDung.evaluation?.mucDoChinh || '-'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-yellow-50 p-6 rounded-lg border-l-4 border-yellow-500 text-center">
+                    <p className="text-gray-600">Phần vận dụng chưa được đánh giá</p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      {practiceData.vanDung?.status === 'in_progress' 
+                        ? 'Đang trong quá trình thực hiện' 
+                        : 'Chưa có dữ liệu đánh giá'}
+                    </p>
+                  </div>
+                )}
+              </div>
+              </>
+            )}
           </div>
         )}
       </div>

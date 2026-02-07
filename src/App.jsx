@@ -12,6 +12,7 @@ import StudentExamLobbyPage from './pages/student/StudentExamLobbyPage';
 import StudentExamPage from './pages/student/StudentExamPage';
 import StudentExamResultPage from './pages/student/StudentExamResultPage';
 import StudentPracticePage from './pages/student/StudentPracticePage';
+import StudentVanDungPage from './pages/student/StudentVanDungPage';
 import FacultyPage from './pages/faculty/FacultyPage';
 import FacultyTopicManagementPage from './pages/faculty/FacultyTopicManagementPage';
 import FacultyExamManagementPage from './pages/faculty/FacultyExamManagementPage';
@@ -126,6 +127,7 @@ function App() {
         <Route path="/student/exam/:sessionId" element={user && (!userData || !userData.isFaculty()) ? <StudentExamPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
         <Route path="/student/exam-result/:sessionId" element={user && (!userData || !userData.isFaculty()) ? <StudentExamResultPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
         <Route path="/student/practice/:examId" element={user && (!userData || !userData.isFaculty()) ? <StudentPracticePage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/student/van-dung/:examId" element={user && (!userData || !userData.isFaculty()) ? <StudentVanDungPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
         
         {/* Default route */}
         <Route path="/" element={user ? (userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/student" replace />) : <Navigate to="/login" replace />} />

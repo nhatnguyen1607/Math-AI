@@ -61,9 +61,8 @@ const FacultyExamManagementPage = () => {
 
   // Exercises state
   const [exercises, setExercises] = useState([
-    { name: 'Bài tập 1', duration: 90, context: '', questions: [], scoring: { correct: 30, incorrect: 5, bonus: 10, bonusTimeThreshold: 30 } },
-    { name: 'Bài tập 2', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
-    { name: 'Bài tập 3', duration: 210, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } }
+    { name: 'Bài tập 1 - BT vận dụng, ứng dụng', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
+    { name: 'Bài tập 2 - BT GQVĐ', duration: 300, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 240 } }
   ]);
   
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -182,6 +181,12 @@ const FacultyExamManagementPage = () => {
 
     // Validate exercises
     for (let i = 0; i < exercises.length; i++) {
+      // Bài tập 1 phải có context (bối cảnh/đoạn văn)
+      if (i === 0 && !exercises[i].context.trim()) {
+        alert(`${exercises[i].name}: Vui lòng nhập đoạn văn bối cảnh`);
+        return;
+      }
+
       if (exercises[i].questions.length === 0) {
         alert(`Vui lòng thêm ít nhất 1 câu hỏi cho ${exercises[i].name}`);
         return;
@@ -274,9 +279,8 @@ const FacultyExamManagementPage = () => {
       description: exam.description || ''
     });
     setExercises(exam.exercises || [
-      { name: 'Bài tập 1', duration: 90, context: '', questions: [], scoring: { correct: 30, incorrect: 5, bonus: 10, bonusTimeThreshold: 30 } },
-      { name: 'Bài tập 2', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
-      { name: 'Bài tập 3', duration: 210, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } }
+      { name: 'Bài tập 1 - BT vận dụng, ứng dụng', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
+      { name: 'Bài tập 2 - BT GQVĐ', duration: 300, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 240 } }
     ]);
     setCurrentExerciseIndex(0);
     setCurrentQuestionIndex(0);
@@ -306,9 +310,8 @@ const FacultyExamManagementPage = () => {
       description: '',
     });
     setExercises([
-      { name: 'Bài tập 1', duration: 90, context: '', questions: [], scoring: { correct: 30, incorrect: 5, bonus: 10, bonusTimeThreshold: 30 } },
-      { name: 'Bài tập 2', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
-      { name: 'Bài tập 3', duration: 210, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } }
+      { name: 'Bài tập 1 - BT vận dụng, ứng dụng', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
+      { name: 'Bài tập 2 - BT GQVĐ', duration: 300, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 240 } }
     ]);
     setCurrentExerciseIndex(0);
     setCurrentQuestionIndex(0);
@@ -467,7 +470,7 @@ const FacultyExamManagementPage = () => {
               <div className="mb-8 pb-8 border-t border-gray-200 pt-8">
                 <h4 className="text-lg font-semibold text-gray-700 flex items-center gap-2 mb-6">
                   <span>🎓</span>
-                  Tạo 3 Bài Tập (90s + 120s + 210s = 7 phút)
+                  Tạo 2 Bài Tập (120s + 300s = 420s = 7 phút)
                 </h4>
 
                 {/* Exercise Tabs */}
@@ -511,23 +514,23 @@ const FacultyExamManagementPage = () => {
                       </div>
                     </div>
 
-                    {/* Context for exercises 2 & 3 */}
-                    {currentExerciseIndex > 0 && (
-                      <div>
-                        <label className="block mb-2 text-gray-700 font-semibold text-sm">Đoạn văn/Bối cảnh (tuỳ chọn)</label>
-                        <textarea
-                          value={exercises[currentExerciseIndex].context}
-                          onChange={(e) => {
-                            const updatedExercises = [...exercises];
-                            updatedExercises[currentExerciseIndex].context = e.target.value;
-                            setExercises(updatedExercises);
-                          }}
-                          placeholder="Nhập đoạn văn bản chung cho các câu hỏi dưới đây..."
-                          rows="4"
-                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
-                        />
-                      </div>
-                    )}
+                    {/* Context for all exercises */}
+                    <div>
+                      <label className="block mb-2 text-gray-700 font-semibold text-sm">
+                        Đoạn văn/Bối cảnh {currentExerciseIndex === 0 && <span className="text-red-500">*</span>} 
+                      </label>
+                      <textarea
+                        value={exercises[currentExerciseIndex].context}
+                        onChange={(e) => {
+                          const updatedExercises = [...exercises];
+                          updatedExercises[currentExerciseIndex].context = e.target.value;
+                          setExercises(updatedExercises);
+                        }}
+                        placeholder={currentExerciseIndex === 0 ? "Nhập bài toán/đoạn văn bối cảnh (bắt buộc)" : "Nhập đoạn văn bản chung cho các câu hỏi dưới đây (tuỳ chọn)..."}
+                        rows="4"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                      />
+                    </div>
                   </div>
 
                   {/* Questions */}

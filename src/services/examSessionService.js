@@ -71,25 +71,50 @@ export const startExamSession = async (sessionId) => {
   try {
     const sessionRef = doc(db, 'exam_sessions', sessionId);
 
-    // Cập nhật status và startTime
-    await updateDoc(sessionRef, {
+    console.log('🚀 Starting exam session:', sessionId);
+
+    // Cập nhật status và startTime CÙNG LÚC
+    const result = await updateDoc(sessionRef, {
       status: 'starting',
       startTime: serverTimestamp()
     });
 
+    console.log('⏱️ Set status=starting, startTime=serverTimestamp()');
+
     // Tự động chuyển sang 'ongoing' sau 3 giây
     setTimeout(async () => {
       try {
-        await updateDoc(sessionRef, {
-          status: 'ongoing'
+        // Get current session to verify startTime was set
+        const sessionSnap = await getDoc(sessionRef);
+        const currentData = sessionSnap.data();
+        
+        console.log('📋 Session data before transitioning to ongoing:', {
+          status: currentData.status,
+          hasStartTime: !!currentData.startTime,
+          startTime: currentData.startTime
         });
+
+        // Ensure startTime is set - if not, set it now as fallback
+        if (!currentData.startTime) {
+          console.warn('⚠️ startTime is missing! Setting it now as fallback');
+          await updateDoc(sessionRef, {
+            status: 'ongoing',
+            startTime: serverTimestamp()
+          });
+        } else {
+          // Normal transition to ongoing
+          await updateDoc(sessionRef, {
+            status: 'ongoing'
+          });
+        }
+        
         console.log('✅ Exam session transitioned to ongoing:', sessionId);
       } catch (error) {
         console.error('❌ Error transitioning to ongoing:', error);
       }
     }, 3000);
 
-    console.log('✅ Exam session started:', sessionId);
+    console.log('✅ Exam session start initiated:', sessionId);
   } catch (error) {
     console.error('❌ Error starting exam session:', error);
     throw error;
@@ -111,27 +136,69 @@ export const finishExamSession = async (sessionId) => {
 
     // Sắp xếp lại leaderboard
     const participants = sessionData.participants || {};
+    
+    console.log('🏁 Finishing exam session:', {
+      sessionId,
+      participantsCount: Object.keys(participants).length,
+      participantUIDs: Object.keys(participants),
+      participantScores: Object.entries(participants).map(([uid, data]) => ({
+        uid: uid.substring(0, 8) + '...',
+        name: data.name,
+        score: data.score,
+        isCompleted: data.isCompleted
+      }))
+    });
+
     const finalLeaderboard = Object.entries(participants)
       .map(([uid, data]) => ({
         uid,
         name: data.name,
-        score: data.score,
-        currentQuestion: data.currentQuestion
+        score: data.score || 0,
+        currentQuestion: data.currentQuestion || 0,
+        rank: 0, // Will be set after sorting
+        medal: {} // Will be set based on rank
       }))
       .sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
         return a.currentQuestion === b.currentQuestion ? 0 : b.currentQuestion - a.currentQuestion;
       })
-      .map((item, idx) => ({ ...item, position: idx + 1 }));
+      .map((item, idx) => {
+        let medal = '';
+        if (idx === 0) medal = '🥇';
+        else if (idx === 1) medal = '🥈';
+        else if (idx === 2) medal = '🥉';
+        return { ...item, rank: idx + 1, medal };
+      });
 
-    // Cập nhật status, endTime, và leaderboard cuối cùng
+    console.log('📊 Final leaderboard created:', {
+      count: finalLeaderboard.length,
+      students: finalLeaderboard.map(s => ({
+        rank: s.rank,
+        name: s.name,
+        score: s.score
+      }))
+    });
+
+    // Cập nhật status, endTime, và leaderboard cuối cùng trong exam_sessions
     await updateDoc(sessionRef, {
       status: 'finished',
       endTime: serverTimestamp(),
       currentLeaderboard: finalLeaderboard
     });
 
-    console.log('✅ Exam session finished:', sessionId);
+    // QUAN TRỌNG: Cập nhật finalLeaderboard vào exams collection
+    // Để FacultyExamResultsListPage có thể load được kết quả
+    const examId = sessionData.examId;
+    if (examId) {
+      const examRef = doc(db, 'exams', examId);
+      const updateResult = await updateDoc(examRef, {
+        finalLeaderboard: finalLeaderboard,
+        status: 'finished'
+      });
+      console.log('✅ Updated exams.finalLeaderboard for exam:', examId, 'with', finalLeaderboard.length, 'students');
+    }
+
+    console.log('✅ Exam session finished:', sessionId, 'with', finalLeaderboard.length, 'students');
   } catch (error) {
     console.error('❌ Error finishing exam session:', error);
     throw error;
@@ -297,12 +364,18 @@ export const subscribeToExamSession = (sessionId, callback) => {
             ...data
           });
 
+          console.log(`📋 Session subscription received:`, {
+            status: session.status,
+            hasStartTime: !!session.startTime,
+            remainingSeconds: session.getRemainingSeconds(),
+            startTime: session.startTime
+          });
+
           // Tự động kết thúc phiên thi sau 7 phút nếu vẫn chưa kết thúc
-          // Chỉ auto-finish nếu đang 'ongoing' và hết thời gian (> 7 phút)
-          if (session.status === 'ongoing' && session.getRemainingSeconds() <= 0) {
-            if (session.status !== 'finished') {
-              finishExamSession(sessionId);
-            }
+          // Chỉ auto-finish nếu đang 'ongoing' VÀ hết thời gian (> 7 phút) VÀ chưa finished
+          if (session.status === 'ongoing' && session.getRemainingSeconds() <= 0 && session.status !== 'finished') {
+            console.log('⏱️ Auto-finishing session because time is up');
+            finishExamSession(sessionId);
           }
 
           callback(session);

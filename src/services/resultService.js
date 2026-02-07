@@ -643,6 +643,7 @@ class ResultService {
         answers: khoiDongData.answers,
         timeSpent: khoiDongData.timeSpent,
         aiAnalysis: khoiDongData.aiAnalysis,
+        competencyEvaluation: khoiDongData.competencyEvaluation,
         isLocked: true,
         data: progress // Return full progress data for UI rendering
       };

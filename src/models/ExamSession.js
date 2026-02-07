@@ -94,29 +94,69 @@ export class ExamSession {
 
   // Time calculations
   getElapsedSeconds() {
-    if (!this.startTime) return 0;
+    if (!this.startTime) {
+      console.warn('⚠️ startTime is not set yet, returning 0');
+      return 0;
+    }
     
     const now = new Date();
     let startMs = 0;
     
     // Handle Firestore Timestamp objects
-    if (this.startTime.toDate) {
-      // Firestore Timestamp
-      startMs = this.startTime.toDate().getTime();
-    } else if (this.startTime.getTime) {
-      // JavaScript Date
-      startMs = this.startTime.getTime();
+    if (this.startTime && typeof this.startTime === 'object') {
+      if (this.startTime.toDate && typeof this.startTime.toDate === 'function') {
+        // Firestore Timestamp
+        try {
+          startMs = this.startTime.toDate().getTime();
+          console.log('🕐 Using Firestore Timestamp, converted to ms:', startMs);
+        } catch (e) {
+          console.error('❌ Error converting Firestore Timestamp:', e, this.startTime);
+          return 0;
+        }
+      } else if (this.startTime.getTime && typeof this.startTime.getTime === 'function') {
+        // JavaScript Date
+        startMs = this.startTime.getTime();
+        console.log('🕐 Using JavaScript Date, ms:', startMs);
+      } else {
+        console.warn('⚠️ startTime is object but not a recognized format:', this.startTime);
+        return 0;
+      }
     } else if (typeof this.startTime === 'number') {
       // Unix timestamp in milliseconds
       startMs = this.startTime;
+      console.log('🕐 Using unix timestamp (ms):', startMs);
+    } else {
+      console.warn('⚠️ startTime has unexpected type:', typeof this.startTime, this.startTime);
+      return 0;
     }
     
-    return Math.max(0, Math.floor((now.getTime() - startMs) / 1000));
+    const elapsed = Math.max(0, Math.floor((now.getTime() - startMs) / 1000));
+    console.log(`🕐 Elapsed calculation: now=${now.getTime()}, startMs=${startMs}, elapsed=${elapsed}s`);
+    return elapsed;
   }
 
   getRemainingSeconds() {
+    // If status is not 'ongoing', return 0 or duration based on status
+    if (this.status === 'waiting' || this.status === 'starting') {
+      console.log('⚠️ Session status is', this.status, '- exam has not started yet');
+      return this.duration;
+    }
+    
+    if (this.status === 'finished') {
+      console.log('⚠️ Session status is finished - time already expired');
+      return 0;
+    }
+    
+    if (!this.startTime) {
+      console.warn('⚠️ Session is ongoing but startTime is not set! This should not happen');
+      return this.duration; // Return full time if startTime not set
+    }
+    
     const elapsed = this.getElapsedSeconds();
     const remaining = Math.max(0, this.duration - elapsed);
+    
+    console.log(`📊 Timer: elapsed=${elapsed}s, duration=${this.duration}s, remaining=${remaining}s`);
+    
     return remaining;
   }
 

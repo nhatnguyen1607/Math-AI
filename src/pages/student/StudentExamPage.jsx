@@ -6,6 +6,7 @@ import examService from '../../services/examService';
 import scoringService from '../../services/scoringService';
 import geminiService from '../../services/geminiService';
 import resultService from '../../services/resultService';
+import competencyEvaluationService from '../../services/competencyEvaluationService';
 
 /**
  * StudentExamPage
@@ -146,58 +147,219 @@ const StudentExamPage = ({ user, onSignOut }) => {
     setIsSubmitting(true);
 
     try {
-      // Tính tổng điểm từ các câu đã trả lời
-      const correctAnswers = Object.values(answers).filter((a) => a.isCorrect).length;
-      const totalScore = Object.values(answers).reduce((sum, answer) => {
+      // Step 1: Use local answers state (all answers have been submitted via submitAnswer())
+      // Do NOT use session data - it has update delay
+      const answersToValidate = answers;
+      
+      console.log('🕐 BEFORE Auto-Submit Check:', {
+        localAnswersKeys: Object.keys(answersToValidate),
+        localAnswersLength: Object.keys(answersToValidate).length,
+        hasQ11Local: answersToValidate['11'] !== undefined,
+        Q11Local: answersToValidate['11'],
+        totalQuestions: questions.length
+      });
+      
+      // Step 1b: Re-validate all answers to ensure correctness is evaluated
+      // This is important for multiple choice questions which were marked as isCorrect: false
+      const validatedAnswers = {};
+      
+      // Step 1.5: Normalize answers to string keys for consistency
+      const normalizedAnswers = {};
+      Object.keys(answersToValidate).forEach(key => {
+        const numKey = String(parseInt(key));
+        normalizedAnswers[numKey] = answersToValidate[key];
+      });
+      
+      console.log('🔍 VALIDATION START - Total questions:', questions.length, 'Total answers to validate:', Object.keys(normalizedAnswers).length);
+      console.log('📋 Available answer keys:', Object.keys(normalizedAnswers).sort((a, b) => parseInt(a) - parseInt(b)));
+      console.log(`📌 Last question (index ${questions.length - 1}):`, normalizedAnswers[String(questions.length - 1)]);
+      
+      // 🔧 IMPORTANT: Iterate through ALL questions (0 to questions.length-1)
+      // NOT just answers.keys(), because some answers might be missing
+      for (let idx = 0; idx < questions.length; idx++) {
+        const idxStr = String(idx);
+        const answer = normalizedAnswers[idxStr];
+        const question = questions[idx];
+        
+        if (!question) {
+          console.warn(`⚠️ Question ${idx} not found in questions array!`);
+          continue; // Skip to next iteration
+        }
+        
+        if (!answer) {
+          console.warn(`⚠️ No answer found for question ${idx} - student may not have answered it`);
+          // Still create entry with unanswered marker
+          validatedAnswers[idxStr] = {
+            questionIndex: idx,
+            answer: null,
+            isCorrect: false,
+            points: 0,
+            timeUsed: 0
+          };
+          continue;
+        }
+
+        // Get correct answers - check both singular and plural fields
+        let correctAnswersArray = question.correctAnswers || [];
+        if (!correctAnswersArray.length && question.correctAnswer !== undefined) {
+          // If correctAnswers is empty but correctAnswer exists, use the singular form
+          correctAnswersArray = Array.isArray(question.correctAnswer) 
+            ? question.correctAnswer 
+            : [question.correctAnswer];
+        }
+        
+        const correctAnswersSet = new Set(correctAnswersArray);
+        let isCorrect = false;
+
+        if (Array.isArray(answer.answer)) {
+          // Multiple choice question
+          const selectedSet = new Set(answer.answer);
+          isCorrect = correctAnswersSet.size > 0 &&
+            correctAnswersSet.size === selectedSet.size &&
+            Array.from(correctAnswersSet).every((idx) => selectedSet.has(idx));
+          
+          if (idx === questions.length - 1) {
+            console.log(`Q${idx} [MULTI - LAST]: selected=${JSON.stringify(Array.from(selectedSet))}, correct=${JSON.stringify(Array.from(correctAnswersSet))}, isCorrect=${isCorrect}`);
+          }
+        } else {
+          // Single choice question
+          isCorrect = correctAnswersSet.has(answer.answer);
+          
+          if (idx === questions.length - 1) {
+            console.log(`Q${idx} [SINGLE - LAST]: selected=${answer.answer}, correct=${JSON.stringify(Array.from(correctAnswersSet))}, isCorrect=${isCorrect}`);
+          }
+        }
+
+        // Calculate points if not already done (for multiple choice)
+        let points = answer.points || 0;
+        if (!answer.points && isCorrect) {
+          const exerciseIndex = question.exerciseIndex || 0;
+          const scoreData = scoringService.calculateQuestionScore(
+            exerciseIndex,
+            isCorrect,
+            answer.timeUsed || 0
+          );
+          points = scoreData.totalPoints;
+        }
+
+        validatedAnswers[idxStr] = {
+          ...answer,
+          isCorrect,
+          points
+        };
+      }
+
+      // Step 2: Calculate total score and correct answers from validated data
+      const correctAnswers = Object.values(validatedAnswers).filter((a) => a.isCorrect).length;
+      const totalScore = Object.values(validatedAnswers).reduce((sum, answer) => {
         return sum + (answer.points || 0);
       }, 0);
+
+      console.log(`✅ VALIDATION COMPLETE: ${correctAnswers}/${questions.length} correct (${Math.round((correctAnswers / questions.length) * 100)}%)`);
+      console.log('📊 ValidatedAnswers summary:', {
+        answersCount: Object.keys(validatedAnswers).length,
+        answerKeys: Object.keys(validatedAnswers),
+        correctCount: correctAnswers,
+        allCorrect: Object.values(validatedAnswers).map((a, idx) => ({ idx, isCorrect: a.isCorrect }))
+      });
+      
+      // 🔧 DEBUG: Log what we're about to save
+      console.log('📤 About to save exam progress:', {
+        correctAnswers,
+        totalQuestions: questions.length,
+        percentage: Math.round((correctAnswers / questions.length) * 100),
+        answersCount: Object.keys(validatedAnswers).length,
+        answerKeys: Object.keys(validatedAnswers),
+        // 🔧 Check specifically for answer 10
+        hasAnswer10: validatedAnswers['10'] !== undefined,
+        answer10Value: validatedAnswers['10'],
+        // 🔧 Show first and last answers
+        firstAnswer: validatedAnswers['0'],
+        lastAnswer: validatedAnswers[String(questions.length - 1)],
+        allAnswerCount: Object.values(validatedAnswers).length
+      });
 
       // Hoàn thành exam cho học sinh
       if (user?.uid) {
         await examSessionService.completeExamForStudent(sessionId, user.uid, {
           score: totalScore,
           correctAnswers,
-          answers: answers,
+          answers: validatedAnswers,
           totalQuestions: questions.length
         });
       }
 
-      // 1. Gọi AI Đánh giá năng lực (Truyền thêm questions để lấy explanation)
-      const frameworkText = `
-        Khung đánh giá năng lực giải quyết vấn đề toán học cho học sinh lớp 5
-        
-        TC1. Nhận biết được vấn đề cần giải quyết:
-        - Cần cố gắng: Không xác định được đầy đủ cái đã cho và cái cần tìm
-        - Đạt: Xác định đầy đủ dữ kiện và yêu cầu bài toán
-        - Tốt: Xác định chính xác dữ kiện, yêu cầu bài toán và mối quan hệ giữa chúng
-        
-        TC2. Nêu được cách thức GQVĐ:
-        - Cần cố gắng: Không nhận dạng được dạng toán hoặc không áp dụng được vào bài toán
-        - Đạt: Nhận dạng được dạng toán và áp dụng vào bài toán đã cho
-        - Tốt: Nhận dạng đúng dạng toán, đề xuất được các cách giải khác nhau, trình bày theo trình tự logic hợp lý
-        
-        TC3. Trình bày được cách thức GQVĐ:
-        - Cần cố gắng: Thực hiện phép tính còn sai nhiều
-        - Đạt: Thực hiện đúng các bước giải và phép tính cơ bản
-        - Tốt: Thực hiện đúng và đầy đủ các phép tính với các cách giải khác nhau
-      `;
-
+      // 1. Gọi AI Đánh giá năng lực (Dùng evaluateCompetencyFramework - 4 TC mới)
+      let competencyEvaluation = null;
       let aiAnalysis = null;
       try {
-        // Convert answers object to array format for evaluation
-        const answersArray = Object.values(answers);
-        aiAnalysis = await geminiService.evaluateCompetence(
+        // Convert validated answers array for evaluation
+        const answersArray = Object.values(validatedAnswers);
+        
+        // Call Gemini to evaluate competency using the 4-criterion framework
+        competencyEvaluation = await geminiService.evaluateCompetencyFramework(
           answersArray,
-          questions,
-          frameworkText
+          questions
         );
-      } catch (aiError) {
-        console.error('Error in AI evaluation:', aiError);
-        // Nếu AI evaluation thất bại, vẫn tiếp tục lưu kết quả
-        aiAnalysis = null;
+        console.log('Competency evaluation result:', competencyEvaluation);
+
+        // Get question comments for student feedback
+        try {
+          const questionComments = await geminiService.evaluateQuestionComments(
+            answersArray,
+            questions
+          );
+          aiAnalysis = {
+            questionComments: questionComments
+          };
+          console.log('Question comments:', questionComments);
+        } catch (commentsError) {
+          console.error('Error getting question comments:', commentsError);
+          // Continue without question comments
+          aiAnalysis = { questionComments: [] };
+        }
+      } catch (compError) {
+        console.error('Error in competency evaluation:', compError);
+        competencyEvaluation = competencyEvaluationService.createEmptyEvaluation();
+        aiAnalysis = { questionComments: [] };
       }
 
-      // 2. Lưu vào tiến trình (Lưu vào parts.khoiDong)
+      // 2. Validate competency evaluation with percentage from actual answers
+      // Ensure consistency between overall score and competency levels
+      const percentage = questions.length > 0 ? Math.round((correctAnswers / questions.length) * 100) : 0;
+      
+      // Map percentage to level
+      let expectedLevel = 'Cần cố gắng';
+      if (percentage >= 80) {
+        expectedLevel = 'Tốt';
+      } else if (percentage >= 50) {
+        expectedLevel = 'Đạt';
+      }
+      
+      // Validate and correct competency evaluation if needed
+      if (competencyEvaluation?.overallAssessment) {
+        const evalLevel = typeof competencyEvaluation.overallAssessment === 'string' 
+          ? competencyEvaluation.overallAssessment 
+          : competencyEvaluation.overallAssessment?.level;
+        
+        // If evaluation doesn't match percentage, log warning but use it
+        if (evalLevel !== expectedLevel) {
+          console.warn(`⚠️ Competency level mismatch: Expected ${expectedLevel} (${percentage}%), got ${evalLevel}`);
+          // Force correct level based on percentage
+          if (competencyEvaluation.overallAssessment?.level !== undefined) {
+            competencyEvaluation.overallAssessment.level = expectedLevel;
+          }
+          if (competencyEvaluation.competenceAssessment) {
+            Object.keys(competencyEvaluation.competenceAssessment).forEach(key => {
+              if (competencyEvaluation.competenceAssessment[key].level) {
+                competencyEvaluation.competenceAssessment[key].level = expectedLevel;
+              }
+            });
+          }
+        }
+      }
+
+      // 3. Lưu vào tiến trình (Lưu vào parts.khoiDong)
       if (user?.uid && exam?.id) {
         await resultService.upsertExamProgress(user.uid, exam.id, {
           part: 'khoiDong',
@@ -205,8 +367,10 @@ const StudentExamPage = ({ user, onSignOut }) => {
             score: totalScore,
             correctAnswers,
             totalQuestions: questions.length,
-            answers: answers,
+            percentage: questions.length > 0 ? Math.round((correctAnswers / questions.length) * 100) : 0,
+            answers: validatedAnswers,
             aiAnalysis: aiAnalysis,
+            competencyEvaluation: competencyEvaluation,
             completedAt: new Date().toISOString()
           }
         });
@@ -227,6 +391,202 @@ const StudentExamPage = ({ user, onSignOut }) => {
       setIsSubmitting(false);
     }
   }, [answers, sessionId, user?.uid, exam?.id, isCompleted, isSubmitting, questions, navigate]);
+
+  // 🔧 NEW: Helper function that accepts answers as parameter
+  // This bypasses the closure issue when calling from setTimeout
+  const handleAutoSubmitWithAnswers = useCallback(async (answersToUse) => {
+    if (isCompleted || isSubmitting) return;
+
+    setIsSubmitting(true);
+
+    try {
+      // Use the passed-in answers instead of relying on state closure
+      console.log('🕐 AUTO-SUBMIT WITH ANSWERS:', {
+        providedAnswersKeys: Object.keys(answersToUse),
+        providedAnswersLength: Object.keys(answersToUse).length,
+        Q11Value: answersToUse['11'] || answersToUse[11],
+        totalQuestions: questions.length
+      });
+
+      const validatedAnswers = {};
+      
+      // Normalize answers to string keys for consistency
+      const normalizedAnswers = {};
+      Object.keys(answersToUse).forEach(key => {
+        const numKey = String(parseInt(key));
+        normalizedAnswers[numKey] = answersToUse[key];
+      });
+      
+      console.log('🔍 VALIDATION START - Total questions:', questions.length, 'Total answers to validate:', Object.keys(normalizedAnswers).length);
+      console.log('📋 Available answer keys:', Object.keys(normalizedAnswers).sort((a, b) => parseInt(a) - parseInt(b)));
+      console.log(`📌 Last question (index ${questions.length - 1}):`, normalizedAnswers[String(questions.length - 1)]);
+      
+      // 🔧 IMPORTANT: Iterate through ALL questions (0 to questions.length-1)
+      // NOT just answers.keys(), because some answers might be missing
+      for (let idx = 0; idx < questions.length; idx++) {
+        const idxStr = String(idx);
+        const answer = normalizedAnswers[idxStr];
+        const question = questions[idx];
+        
+        if (!question) {
+          console.warn(`⚠️ Question ${idx} not found in questions array!`);
+          continue; // Skip to next iteration
+        }
+        
+        if (!answer) {
+          console.warn(`⚠️ No answer found for question ${idx} - student may not have answered it`);
+          // Still create entry with unanswered marker
+          validatedAnswers[idxStr] = {
+            questionIndex: idx,
+            answer: null,
+            isCorrect: false,
+            points: 0,
+            timeUsed: 0
+          };
+          continue;
+        }
+
+        // Get correct answers - check both singular and plural fields
+        let correctAnswersArray = question.correctAnswers || [];
+        if (!correctAnswersArray.length && question.correctAnswer !== undefined) {
+          // If correctAnswers is empty but correctAnswer exists, use the singular form
+          correctAnswersArray = Array.isArray(question.correctAnswer) 
+            ? question.correctAnswer 
+            : [question.correctAnswer];
+        }
+        
+        const correctAnswersSet = new Set(correctAnswersArray);
+        let isCorrect = false;
+
+        if (Array.isArray(answer.answer)) {
+          // Multiple choice question
+          const selectedSet = new Set(answer.answer);
+          isCorrect = correctAnswersSet.size > 0 &&
+            correctAnswersSet.size === selectedSet.size &&
+            Array.from(correctAnswersSet).every((idx) => selectedSet.has(idx));
+          
+          if (idx === questions.length - 1) {
+            console.log(`Q${idx} [MULTI - LAST]: selected=${JSON.stringify(Array.from(selectedSet))}, correct=${JSON.stringify(Array.from(correctAnswersSet))}, isCorrect=${isCorrect}`);
+          }
+        } else {
+          // Single choice question
+          isCorrect = correctAnswersSet.has(answer.answer);
+          
+          if (idx === questions.length - 1) {
+            console.log(`Q${idx} [SINGLE - LAST]: selected=${answer.answer}, correct=${JSON.stringify(Array.from(correctAnswersSet))}, isCorrect=${isCorrect}`);
+          }
+        }
+
+        // Calculate points if not already done (for multiple choice)
+        let points = answer.points || 0;
+        if (!answer.points && isCorrect) {
+          const exerciseIndex = question.exerciseIndex || 0;
+          const scoreData = scoringService.calculateQuestionScore(
+            exerciseIndex,
+            isCorrect,
+            answer.timeUsed || 0
+          );
+          points = scoreData.totalPoints;
+        }
+
+        validatedAnswers[idxStr] = {
+          ...answer,
+          isCorrect,
+          points
+        };
+      }
+
+      // Count correct answers and calculate score
+      const correctAnswers = Object.values(validatedAnswers).filter(a => a.isCorrect).length;
+      const totalScore = Object.values(validatedAnswers).reduce((sum, a) => sum + (a.points || 0), 0);
+      const percentage = questions.length > 0 ? Math.round((correctAnswers / questions.length) * 100) : 0;
+
+      console.log(`✅ VALIDATION COMPLETE: ${correctAnswers}/${questions.length} correct (${percentage}%)`);
+      console.log('📊 All validated answers:',JSON.stringify(validatedAnswers, null, 2));
+
+      // 2. Gọi Gemini để đánh giá năng lực
+      if (!exam?.id) {
+        throw new Error('Exam ID not found');
+      }
+
+      let aiAnalysis = {};
+      let competencyEvaluation = {
+        overallAssessment: {
+          level: 'Cần cố gắng',
+          score: 0
+        },
+        competenceAssessment: {}
+      };
+
+      try {
+        console.log('🤖 Calling Gemini for AI analysis and competency evaluation...');
+        [aiAnalysis, competencyEvaluation] = await Promise.all([
+          geminiService.evaluateQuestionComments(questions, validatedAnswers, exam.name),
+          geminiService.evaluateCompetencyFramework(questions, validatedAnswers, exam.name, session?.id)
+        ]);
+
+        console.log('✅ AI Analysis complete:', aiAnalysis);
+        console.log('✅ Competency Evaluation:', competencyEvaluation);
+      } catch (err) {
+        console.error('⚠️ Error calling Gemini (will continue with empty analysis):', err);
+        aiAnalysis = {};
+        competencyEvaluation = {
+          overallAssessment: {
+            level: 'Cần cố gắng',
+            score: 0
+          },
+          competenceAssessment: {}
+        };
+      }
+
+      // 🔧 VALIDATION: Ensure competency level matches percentage score
+      // This prevents mismatches like "PASS" at top but "Cần cố gắng" in evaluation
+      const expectedLevel = percentage >= 80 ? 'Tốt' : percentage >= 50 ? 'Đạt' : 'Cần cố gắng';
+      const evalLevel = competencyEvaluation?.overallAssessment?.level;
+      if (evalLevel !== expectedLevel) {
+        console.warn(`⚠️ LEVEL MISMATCH: AI returned "${evalLevel}" but percentage ${percentage}% expects "${expectedLevel}" - FORCING OVERRIDE`);
+        competencyEvaluation.overallAssessment.level = expectedLevel;
+      }
+      if (competencyEvaluation.competenceAssessment) {
+        Object.keys(competencyEvaluation.competenceAssessment).forEach(key => {
+          if (competencyEvaluation.competenceAssessment[key].level) {
+            competencyEvaluation.competenceAssessment[key].level = expectedLevel;
+          }
+        });
+      }
+
+      // 3. Lưu vào tiến trình (Lưu vào parts.khoiDong)
+      if (user?.uid && exam?.id) {
+        await resultService.upsertExamProgress(user.uid, exam.id, {
+          part: 'khoiDong',
+          data: {
+            score: totalScore,
+            correctAnswers,
+            totalQuestions: questions.length,
+            percentage: questions.length > 0 ? Math.round((correctAnswers / questions.length) * 100) : 0,
+            answers: validatedAnswers,
+            aiAnalysis: aiAnalysis,
+            competencyEvaluation: competencyEvaluation,
+            completedAt: new Date().toISOString()
+          }
+        });
+      }
+
+      setIsCompleted(true);
+
+      // 3. Chuyển sang trang kết quả (với flag fromExam để hiển thị lời chúc mừng)
+      setTimeout(() => {
+        navigate(`/student/exam-result/${sessionId}`, {
+          state: { fromExam: true, examId: exam?.id }
+        });
+      }, 2000);
+    } catch (err) {
+      console.error('Error submitting exam:', err);
+      setError('Lỗi khi nộp bài');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [sessionId, user?.uid, exam?.id, isCompleted, isSubmitting, questions, navigate, exam?.name, session?.id]);
 
   // Handler: Câu hỏi tiếp theo
   const handleNextQuestion = () => {
@@ -289,14 +649,39 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
   // Timer (đồng bộ từ server startTime)
   useEffect(() => {
-    if (!session || !session.startTime || isCompleted || session.status !== 'ongoing') {
+    if (!session || isCompleted) {
       return;
+    }
+
+    // Check if session is ready for timer
+    if (session.status !== 'ongoing') {
+      console.log('⏳ Session status is', session.status, '- timer not active yet');
+      return;
+    }
+
+    if (!session.startTime) {
+      console.warn('⚠️ Session is ongoing but startTime is not set! This is an error state');
+      console.warn('⚠️ Session data:', JSON.stringify({
+        id: session.id,
+        status: session.status,
+        startTime: session.startTime,
+        duration: session.duration
+      }, null, 2));
+      // Wait for startTime to be set - don't give up
+      // Start a retry timer to check again in 1 second
+      const retryTimer = setTimeout(() => {
+        console.log('🔄 Retrying timer check after 1 second...');
+      }, 1000);
+      return () => clearTimeout(retryTimer);
     }
 
     const updateTimer = () => {
       const remaining = session.getRemainingSeconds();
 
+      console.log(`⏱️ Timer update: remaining=${remaining}s, status=${session.status}`);
+
       if (remaining <= 0) {
+        console.log('❌ Time is up! Auto-submitting exam');
         setTimeRemaining(0);
         if (!isCompleted) {
           handleAutoSubmit();
@@ -306,6 +691,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
       }
     };
 
+    // Initial update
     updateTimer();
 
     timerRef.current = setInterval(updateTimer, 1000);
@@ -392,8 +778,14 @@ const StudentExamPage = ({ user, onSignOut }) => {
       setSelectedAnswer(optionIndex);
       setIsAnswered(true);
 
-      // Check if correct
-      const isCorrect = (currentQuestion.correctAnswers || []).includes(optionIndex);
+      // Check if correct - handle both correctAnswers (plural) and correctAnswer (singular)
+      let correctAnswersArray = currentQuestion.correctAnswers || [];
+      if (!correctAnswersArray.length && currentQuestion.correctAnswer !== undefined) {
+        correctAnswersArray = Array.isArray(currentQuestion.correctAnswer)
+          ? currentQuestion.correctAnswer
+          : [currentQuestion.correctAnswer];
+      }
+      const isCorrect = correctAnswersArray.includes(optionIndex);
       const exerciseIndex = currentQuestion.exerciseIndex || 0;
 
       // Tính điểm
@@ -420,6 +812,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
       console.log(`✏️ Answer saved to state for question ${currentQuestionIndex}:`, newAnswers[currentQuestionIndex]);
 
       // Cập nhật lên Firestore
+      let submitPromise = Promise.resolve(); // Default resolved promise
       if (user?.uid) {
         const answerDataToSubmit = {
           questionId: currentQuestion.id,
@@ -433,19 +826,44 @@ const StudentExamPage = ({ user, onSignOut }) => {
           timeUsed: 420 - timeRemaining
         };
         console.log(`📤 Submitting answer for question ${currentQuestionIndex}:`, answerDataToSubmit);
-        examSessionService
+        
+        submitPromise = examSessionService
           .submitAnswer(sessionId, user.uid, answerDataToSubmit)
-          .catch((err) => console.error('Error submitting answer:', err));
+          .then(() => {
+            console.log(`✅ Answer ${currentQuestionIndex} successfully submitted to Firestore`);
+          })
+          .catch((err) => {
+            console.error(`❌ Error submitting answer ${currentQuestionIndex}:`, err);
+            throw err;
+          });
       }
 
-      // Auto next sau 1 giây
-      setTimeout(() => {
-        if (currentQuestionIndex < questions.length - 1) {
+      // Auto next sau đó - NHƯNG nếu là câu cuối, đợi submitAnswer hoàn thành rồi submit exam
+      const isLastQuestion = currentQuestionIndex === questions.length - 1;
+      console.log(`🔍 Question ${currentQuestionIndex}/${questions.length - 1}, isLastQuestion: ${isLastQuestion}`);
+      
+      if (isLastQuestion) {
+        // Câu cuối: đợi submit lên Firestore xong, rồi submit exam
+        console.log('🕐 Last question - waiting for answer to be submitted...');
+        
+        submitPromise
+          .then(() => {
+            console.log(`✅ Last question submitted to Firestore, proceeding to auto-submit exam`);
+            // 🔧 FIX: Pass newAnswers directly instead of relying on state closure
+            // This ensures the last answer (Q11) is included
+            setTimeout(() => handleAutoSubmitWithAnswers(newAnswers), 500);
+          })
+          .catch((err) => {
+            console.error(`❌ Error submitting last question: ${err.message}, but will proceed anyway`);
+            // Vẫn tiếp tục submit exam ngay cả nếu có lỗi
+            setTimeout(() => handleAutoSubmitWithAnswers(newAnswers), 500);
+          });
+      } else {
+        // Câu không phải cuối: chuyển sang câu tiếp theo
+        setTimeout(() => {
           handleNextQuestion();
-        } else {
-          handleAutoSubmit();
-        }
-      }, 1500);
+        }, 1500);
+      }
     }
   };
 
@@ -457,8 +875,16 @@ const StudentExamPage = ({ user, onSignOut }) => {
     const selectedAnswers = Array.isArray(selectedAnswer) ? selectedAnswer : [];
     const exerciseIndex = currentQuestion.exerciseIndex || 0;
 
+    // Get correct answers - handle both correctAnswers (plural) and correctAnswer (singular)
+    let correctAnswersArray = currentQuestion.correctAnswers || [];
+    if (!correctAnswersArray.length && currentQuestion.correctAnswer !== undefined) {
+      correctAnswersArray = Array.isArray(currentQuestion.correctAnswer)
+        ? currentQuestion.correctAnswer
+        : [currentQuestion.correctAnswer];
+    }
+
     // Recompute isCorrect từ dữ liệu thực tế
-    const correctAnswersSet = new Set(currentQuestion.correctAnswers || []);
+    const correctAnswersSet = new Set(correctAnswersArray);
     const selectedSet = new Set(selectedAnswers);
     const isCorrect =
       correctAnswersSet.size > 0 &&
@@ -513,7 +939,8 @@ const StudentExamPage = ({ user, onSignOut }) => {
       if (currentQuestionIndex < questions.length - 1) {
         handleNextQuestion();
       } else {
-        handleAutoSubmit();
+        // Last question of multiple choice - pass the updated answers
+        handleAutoSubmitWithAnswers(newAnswers);
       }
     }, 1500);
   };
@@ -720,22 +1147,32 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
         {/* Header Bar with Timer */}
         <div className="bg-white rounded-max shadow-lg p-6 mb-8 flex items-center justify-between gap-6 flex-wrap md:flex-nowrap game-card">
-          {/* Timer */}
-          <div
-            className={`flex items-center gap-3 px-6 py-3 rounded-max font-bold text-lg transition-all ${
-              isTimeRunningOut
-                ? 'bg-red-200 text-red-700 animate-pulse'
-                : isTimeWarning
-                ? 'bg-yellow-200 text-yellow-700'
-                : 'bg-blue-200 text-blue-700'
-            }`}
-          >
-            <span className="text-3xl">⏱️</span>
-            <div className="font-quicksand">
-              <div className="text-2xl">{timeText}</div>
-              <div className="text-xs opacity-75">Thời gian còn lại</div>
+          {/* Timer or Loading State */}
+          {isSubmitting ? (
+            <div className="flex items-center gap-3 px-6 py-3 rounded-max font-bold text-lg bg-blue-200 text-blue-700">
+              <span className="text-3xl animate-spin">⏳</span>
+              <div className="font-quicksand">
+                <div className="text-2xl">Đang nộp bài...</div>
+                <div className="text-xs opacity-75">Vui lòng chờ</div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div
+              className={`flex items-center gap-3 px-6 py-3 rounded-max font-bold text-lg transition-all ${
+                isTimeRunningOut
+                  ? 'bg-red-200 text-red-700 animate-pulse'
+                  : isTimeWarning
+                  ? 'bg-yellow-200 text-yellow-700'
+                  : 'bg-blue-200 text-blue-700'
+              }`}
+            >
+              <span className="text-3xl">⏱️</span>
+              <div className="font-quicksand">
+                <div className="text-2xl">{timeText}</div>
+                <div className="text-xs opacity-75">Thời gian còn lại</div>
+              </div>
+            </div>
+          )}
 
           {/* Stats */}
           <div className="flex gap-6">

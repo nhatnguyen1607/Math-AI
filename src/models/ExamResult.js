@@ -28,6 +28,36 @@ export class ExamResult {
     
     // Ranking
     this.rank = data.rank || 0;
+    
+    // Competency evaluation (for game-based problem solving)
+    this.competencyEvaluation = data.competencyEvaluation || {
+      // TC1: Nhận biết được vấn đề cần giải quyết
+      TC1: {
+        level: null, // 'need_effort', 'achieved', 'good'
+        score: 0, // 0-2 points
+        comment: ''
+      },
+      // TC2: Nêu được cách thức GQVĐ
+      TC2: {
+        level: null,
+        score: 0, // 0-2 points
+        comment: ''
+      },
+      // TC3: Trình bày được cách thức GQVĐ
+      TC3: {
+        level: null,
+        score: 0, // 0-2 points
+        comment: ''
+      },
+      // TC4: Kiểm tra được giải pháp đã thực hiện
+      TC4: {
+        level: null,
+        score: 0, // 0-2 points
+        comment: ''
+      },
+      // Total competency score (0-8 points)
+      totalCompetencyScore: 0 // Sum of TC1, TC2, TC3, TC4 scores
+    };
   }
 
   isCompleted() {
@@ -68,7 +98,8 @@ export class ExamResult {
       totalQuestions: this.totalQuestions,
       timeTaken: this.timeTaken,
       status: this.status,
-      rank: this.rank
+      rank: this.rank,
+      competencyEvaluation: this.competencyEvaluation
     };
   }
 

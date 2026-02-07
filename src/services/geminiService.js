@@ -346,7 +346,14 @@ Chỉ gợi ý hướng suy nghĩ hoặc 1 câu hỏi dẫn dắt ngắn gọn.`
    * Input: studentAnswers, questions (với explanation), frameworkText (nội dung khung đánh giá)
    * Output: JSON với per-question comments và competence assessment (TC1, TC2, TC3)
    */
-  async evaluateCompetence(studentAnswers, questions, frameworkText) {
+  /**
+   * Evaluate question comments only (for displaying feedback to student)
+   * Lightweight version - no competence assessment
+   * @param {Array} studentAnswers - Array of answers
+   * @param {Array} questions - Array of question objects
+   * @returns {Object} - { questionComments: [...] }
+   */
+  async evaluateQuestionComments(studentAnswers, questions) {
     try {
       const model = geminiModelManager.getModel();
 
@@ -357,88 +364,29 @@ Chỉ gợi ý hướng suy nghĩ hoặc 1 câu hỏi dẫn dắt ngắn gọn.`
         options: q.options || [],
         studentAnswerIndex: studentAnswers[idx]?.answer,
         isCorrect: studentAnswers[idx]?.isCorrect,
-        correctAnswerIndex: q.correctAnswerIndex,
         explanation: q.explanation || 'Không có giải thích'
       }));
 
-      const prompt = `You are an expert mathematics educator evaluating a 5th-grade student's exam performance.
-
-## Competence Assessment Framework (Vietnamese):
-${frameworkText}
+      const prompt = `You are a math educator providing brief feedback on each answer.
 
 ## Student's Answers:
 ${JSON.stringify(questionsContext, null, 2)}
 
-## CRITICAL Evaluation Criteria:
-
-### For each competence level:
-
-**TỐT (Good/Excellent)** - Assign when:
-- Student answers 80%+ of questions CORRECTLY
-- Demonstrates clear understanding of concepts
-- Shows logical problem-solving approach
-- Answers are well-reasoned and complete
-
-**ĐẠT (Pass/Basic)** - Assign when:
-- Student answers 50-79% correctly
-- Shows partial understanding
-- Some reasoning is present but may have gaps
-- Makes occasional mistakes
-
-**CẦN CỐ GẮNG (Needs Effort)** - Assign when:
-- Student answers less than 50% correctly
-- Shows limited understanding
-- Lacks clear reasoning
-- Many fundamental errors
-
 ## Task:
-1. For EACH question: Analyze what the student chose, compare with correct answer, and based on the explanation, write ONE meaningful comment about what they did right/wrong. Store this as a comment for that question.
-
-2. Calculate accuracy rate: (correct answers / total questions) × 100
-   - If accuracy ≥ 80%: Strongly consider "Tốt" for that competence
-   - If accuracy 50-79%: Consider "Đạt"
-   - If accuracy < 50%: Consider "Cần cố gắng"
-
-3. Assess the student's competence across three dimensions (TC1, TC2, TC3) using the accuracy rate as PRIMARY indicator.
-
-4. Provide an overall assessment with specific strengths, areas to improve, and recommendations.
+For EACH question: Write ONE meaningful comment about what the student did right/wrong.
 
 ## IMPORTANT: Vietnamese Language Rules:
-- ALWAYS use "bạn" instead of "học sinh" or "em"
-- ALWAYS use "mình" instead of "em"
-- Example: "Bạn xác định được..." NOT "Học sinh xác định được..."
-- Example: "Bạn còn cần cải thiện..." NOT "Em còn cần cải thiện..."
-- Example: "Mình thấy bạn..." NOT "Em..."
+- ALWAYS use "bạn" or "mình" instead of "em" or "học sinh"
+- Example: "Bạn xác định được..." NOT "Em..."
 
-## Response Format (JSON - ALL text MUST be in Vietnamese using "bạn/mình" pronouns):
+## Response Format (JSON ONLY):
 {
   "questionComments": [
     {
       "questionNum": 1,
-      "comment": "Nhận xét chi tiết về câu trả lời này (what they did right/wrong, dựa trên explanation) - dùng 'bạn/mình' không dùng 'em/học sinh'"
+      "comment": "Brief feedback using bạn/mình (30-50 words)"
     }
-  ],
-  "competenceAssessment": {
-    "TC1": {
-      "level": "Tốt|Đạt|Cần cố gắng",
-      "reason": "Lý do đánh giá mức này dựa trên tỷ lệ câu trả lời chính xác và mức độ hiểu biết của bạn - dùng 'bạn/mình' không dùng 'em/học sinh'"
-    },
-    "TC2": {
-      "level": "Tốt|Đạt|Cần cố gắng",
-      "reason": "Lý do đánh giá mức này dựa trên tỷ lệ câu trả lời chính xác và mức độ hiểu biết của bạn - dùng 'bạn/mình' không dùng 'em/học sinh'"
-    },
-    "TC3": {
-      "level": "Tốt|Đạt|Cần cố gắng",
-      "reason": "Lý do đánh giá mức này dựa trên tỷ lệ câu trả lời chính xác và mức độ hiểu biết của bạn - dùng 'bạn/mình' không dùng 'em/học sinh'"
-    }
-  },
-  "overallAssessment": {
-    "level": "Tốt|Đạt|Cần cố gắng",
-    "summary": "Tóm tắt mức năng lực chung của bạn (2-3 câu). Nếu tỷ lệ câu đúng ≥80% thì xứng đáng 'Tốt'. LUÔN dùng 'bạn' hoặc 'mình', KHÔNG dùng 'em' hoặc 'học sinh'",
-    "strengths": ["Điểm mạnh 1", "Điểm mạnh 2"],
-    "areasToImprove": ["Cần cải thiện 1", "Cần cải thiện 2"],
-    "recommendations": "Lời khuyên cụ thể để bạn cải thiện (2-3 câu) - Dùng 'bạn/mình' không dùng 'em/học sinh'"
-  }
+  ]
 }`;
 
       const result = await model.generateContent(prompt);
@@ -451,10 +399,116 @@ ${JSON.stringify(questionsContext, null, 2)}
       }
 
       const assessment = JSON.parse(jsonMatch[0]);
-      return assessment;
+      return assessment.questionComments || [];
     } catch (error) {
-      console.error('Error evaluating competence:', error);
-      throw error;
+      console.error('Error evaluating question comments:', error);
+      return []; // Return empty array on error
+    }
+  }
+
+  /**
+   * Evaluate competency using structured rubric (4 criteria: TC1-TC4)
+   * @param {Array} studentAnswers - Array of answers
+   * @param {Array} questions - Array of question objects
+   * @returns {Object} - Competency evaluation with TC1-TC4 scores
+   */
+  async evaluateCompetencyFramework(studentAnswers, questions) {
+    try {
+      // Import here to avoid circular dependency
+      const competencyEvaluationService = (await import('./competencyEvaluationService.js')).default;
+      
+      // Build problem statement from questions and context
+      let problemStatement = '';
+      if (questions && questions.length > 0) {
+        // Get the exercise context if available
+        const firstQuestion = questions[0];
+        if (firstQuestion.exerciseContext) {
+          problemStatement += `BÀI TOÁN:\n${firstQuestion.exerciseContext}\n\n`;
+        }
+        
+        // Add all questions
+        problemStatement += 'CÁC CÂU HỎI:\n';
+        questions.forEach((q, idx) => {
+          problemStatement += `${idx + 1}. ${q.text || q.question || 'Câu hỏi không rõ'}\n`;
+          if (q.options && q.options.length > 0) {
+            q.options.forEach((opt, optIdx) => {
+              problemStatement += `   ${String.fromCharCode(65 + optIdx)}. ${opt}\n`;
+            });
+          }
+        });
+      } else {
+        problemStatement = 'Không có thông tin bài toán';
+      }
+
+      // Build student responses from answers
+      const studentResponses = studentAnswers.map((answer, idx) => {
+        const question = questions[idx];
+        if (!question) return `Câu ${idx + 1}: Không có thông tin`;
+        
+        const questionText = question.text || question.question || 'Câu hỏi không rõ';
+        
+        if (!answer) {
+          return `Câu ${idx + 1} (${questionText}): Không trả lời`;
+        }
+        
+        let responseText = `Câu ${idx + 1} (${questionText}): `;
+        
+        if (Array.isArray(answer.answer)) {
+          // Multiple choice answers
+          const optionLetters = answer.answer.map(o => String.fromCharCode(65 + o));
+          responseText += optionLetters.join(', ');
+          if (question.options && answer.answer.length > 0) {
+            const selectedOptions = answer.answer.map(o => question.options[o]);
+            responseText += ` (${selectedOptions.join(', ')})`;
+          }
+        } else if (answer.answer !== null && answer.answer !== undefined) {
+          // Single choice answer
+          const optionLetter = String.fromCharCode(65 + answer.answer);
+          const optionText = question.options?.[answer.answer] || 'Lựa chọn không xác định';
+          responseText += `${optionLetter} (${optionText})`;
+        } else {
+          responseText += 'Không trả lời';
+        }
+        
+        // Add correctness info if available
+        if (answer.isCorrect !== undefined) {
+          responseText += answer.isCorrect ? ' ✓ [Đúng]' : ' ✗ [Sai]';
+        }
+        
+        return responseText;
+      });
+
+      console.log('🎯 Competency Evaluation Input:', {
+        studentResponsesCount: studentResponses.length,
+        problemStatementLength: problemStatement.length,
+        firstResponse: studentResponses[0],
+        problemStart: problemStatement.substring(0, 200)
+      });
+
+      // Generate the prompt for competency evaluation
+      const prompt = competencyEvaluationService.generateCompetencyEvaluationPrompt(
+        studentResponses,
+        problemStatement
+      );
+
+      console.log('📝 Generated prompt (first 500 chars):', prompt.substring(0, 500));
+
+      // Call Gemini API
+      const model = geminiModelManager.getModel();
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text();
+
+      console.log('Competency evaluation response:', responseText);
+
+      // Parse the JSON response and translate to Vietnamese
+      const competencyEvaluation = competencyEvaluationService.parseCompetencyEvaluation(responseText);
+      
+      return competencyEvaluation;
+    } catch (error) {
+      console.error('❌ Error evaluating competency framework:', error);
+      // Return empty evaluation on error so as not to block submission
+      const competencyEvaluationService = (await import('./competencyEvaluationService.js')).default;
+      return competencyEvaluationService.createEmptyEvaluation();
     }
   }
 }

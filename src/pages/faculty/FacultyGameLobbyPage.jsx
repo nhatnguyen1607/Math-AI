@@ -14,12 +14,7 @@ const FacultyGameLobbyPage = () => {
   const [unsubscribe, setUnsubscribe] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
   const [gameStarted, setGameStarted] = useState(false);
-  
-  // Countdown and awarding states
   const [timeRemaining, setTimeRemaining] = useState(420); // 7 minutes in seconds
-  const [isAwarding, setIsAwarding] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const confettiScriptRef = useRef(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -91,23 +86,43 @@ const FacultyGameLobbyPage = () => {
     };
   }, [unsubscribe]);
 
-  // Countdown timer effect
+  // Countdown timer effect - calculate from exam.endTime
   useEffect(() => {
-    if (!gameStarted) return;
+    if (!gameStarted || !exam?.endTime) return;
 
     const interval = setInterval(() => {
-      setTimeRemaining(prev => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setIsAwarding(true);
-          return 0;
-        }
-        return prev - 1;
-      });
+      const now = new Date().getTime();
+      const endTime = new Date(exam.endTime).getTime();
+      const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+
+      setTimeRemaining(remaining);
+
+      // If time is up, auto-lock exam
+      if (remaining === 0) {
+        clearInterval(interval);
+        // Auto-lock without asking confirmation
+        const finalBoard = leaderboard.map((s, idx) => ({
+          ...s,
+          rank: idx + 1,
+          medal: idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null
+        }));
+
+        facultyService.updateExam(examId, {
+          isLocked: true,
+          finalLeaderboard: finalBoard,
+          status: 'finished'
+        }).then(() => {
+          alert('⏰ Hết giờ! Trò chơi đã kết thúc và khóa.');
+          navigate('/faculty/exam-management');
+        }).catch((error) => {
+          console.error('Error auto-locking exam:', error);
+          alert('Lỗi khi kết thúc trò chơi tự động');
+        });
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [gameStarted]);
+  }, [gameStarted, exam?.endTime, leaderboard, examId, navigate]);
 
   // Countdown timer moved to FacultyExamLiveSessionPage
 
@@ -170,64 +185,6 @@ const FacultyGameLobbyPage = () => {
     }
   };
 
-  const handleAward = async () => {
-    try {
-      // Load and trigger confetti
-      if (!confetti && confettiScriptRef.current === null) {
-        confettiScriptRef.current = true;
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js';
-        script.onload = () => {
-          setShowConfetti(true);
-          // Trigger confetti
-          if (window.confetti) {
-            window.confetti({
-              particleCount: 100,
-              spread: 70,
-              origin: { y: 0.6 },
-              duration: 3000
-            });
-          }
-        };
-        document.body.appendChild(script);
-      } else if (window.confetti) {
-        setShowConfetti(true);
-        window.confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-          duration: 3000
-        });
-      }
-      
-      // Save Final Leaderboard and lock exam
-      const finalBoard = [...leaderboard].map((s, idx) => ({
-        ...s,
-        rank: idx + 1,
-        medal: idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null
-      }));
-
-      await facultyService.updateExam(examId, {
-        isLocked: true,
-        finalLeaderboard: finalBoard,
-        status: 'finished'
-      });
-
-      // Show confetti for 3 seconds
-      setTimeout(() => {
-        setShowConfetti(false);
-      }, 3000);
-
-      setTimeout(() => {
-        alert('🏆 Trao giải hoàn tất! Đề thi đã được khóa.');
-        navigate('/faculty/exam-management');
-      }, 3500);
-    } catch (error) {
-      console.error('Error awarding:', error);
-      alert('Lỗi khi trao giải');
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
@@ -270,7 +227,7 @@ const FacultyGameLobbyPage = () => {
       <div className="max-w-7xl mx-auto px-4 lg:px-5 py-6 lg:py-8">
         {/* Game Controls */}
         <div className="mb-6 lg:mb-8 flex justify-center lg:justify-end gap-3 flex-wrap">
-          {!gameStarted && (
+        {!gameStarted && (
             <button 
               className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:shadow-soft-lg transition-all border-2 border-indigo-600"
               onClick={handleStartGame}
@@ -279,7 +236,7 @@ const FacultyGameLobbyPage = () => {
               🚀 Bắt đầu
             </button>
           )}
-          {gameStarted && !isAwarding && (
+          {gameStarted && (
             <button 
               className="px-6 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all shadow-soft"
               onClick={handleEndGame}
@@ -287,18 +244,10 @@ const FacultyGameLobbyPage = () => {
               ⏹️ Kết thúc
             </button>
           )}
-          {isAwarding && (
-            <button 
-              className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-xl font-bold hover:shadow-soft-lg transition-all animate-pulse"
-              onClick={handleAward}
-            >
-              🏆 Công bố Kết quả
-            </button>
-          )}
         </div>
 
         {/* Countdown Timer with Circular Progress */}
-        {gameStarted && !isAwarding && (
+        {gameStarted && (
           <div className="mb-6 lg:mb-8 flex justify-center">
             <div className="relative w-48 h-48 flex items-center justify-center">
               {/* Circular Stats */}

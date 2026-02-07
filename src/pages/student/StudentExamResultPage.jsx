@@ -7,7 +7,7 @@ import resultService from '../../services/resultService';
 
 /**
  * StudentExamResultPage
- * Trang quản lý tiến trình học sinh với 3 phần:
+ * Trang quản lý tiến trình học sinh với 2 phần:
  * - Khởi động (mới hoàn thành)
  * - Luyện tập (phát triển sau)
  * - Vận dụng (phát triển sau)
@@ -140,6 +140,23 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
   const participantData = isLockedExam 
     ? examProgress?.parts?.khoiDong 
     : session?.participants?.[user?.uid];
+  
+  // 🔧 DEBUG: Log participantData structure
+  console.log('🔍 StudentExamResultPage - participantData structure:', {
+    isLockedExam,
+    hasParticipantData: !!participantData,
+    answersType: Array.isArray(participantData?.answers) ? 'array' : 'object',
+    answersLength: Array.isArray(participantData?.answers) ? participantData.answers.length : Object.keys(participantData?.answers || {}).length,
+    answerKeys: !Array.isArray(participantData?.answers) ? Object.keys(participantData?.answers || {}) : 'N/A',
+    correctAnswers: participantData?.correctAnswers,
+    percentage: participantData?.percentage,
+    totalQuestions: participantData?.totalQuestions,
+    // 🔧 ADD: Check specifically for answer 10
+    hasAnswer10: participantData?.answers?.[10] !== undefined || participantData?.answers?.['10'] !== undefined,
+    answer10Value: participantData?.answers?.[10] || participantData?.answers?.['10'],
+    // 🔧 ADD: Show all keys/indices
+    allAnswerData: !Array.isArray(participantData?.answers) ? participantData?.answers : participantData?.answers?.map((a, idx) => `[${idx}]`)
+  });
     
   if (!participantData) {
     return (
@@ -263,83 +280,10 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
             </div>
           </div>
 
-          {/* AI Analysis from evaluateCompetence */}
-          {examProgress?.parts?.khoiDong?.aiAnalysis && (
-            <div className="border-t-4 border-gray-200 p-8">
-              <h3 className="text-2xl font-bold text-gray-800 mb-6 font-quicksand">📊 Đánh giá năng lực</h3>
-              
-              {/* Competence Assessment */}
-              {examProgress.parts.khoiDong.aiAnalysis.competenceAssessment && (
-                <div>
-                  <h4 className="text-lg font-bold text-gray-700 mb-4 font-quicksand">Đánh giá năng lực (TC1-TC3):</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {['TC1', 'TC2', 'TC3'].map((tc) => {
-                      const assessment = examProgress.parts.khoiDong.aiAnalysis.competenceAssessment[tc];
-                      const levelColor = assessment?.level === 'Tốt' ? 'bg-green-100 border-green-500' : assessment?.level === 'Đạt' ? 'bg-yellow-100 border-yellow-500' : 'bg-red-100 border-red-500';
-                      const levelTextColor = assessment?.level === 'Tốt' ? 'text-green-700' : assessment?.level === 'Đạt' ? 'text-yellow-700' : 'text-red-700';
-                      
-                      return (
-                        <div key={tc} className={`p-4 rounded-max border-2 ${levelColor}`}>
-                          <p className="font-bold text-gray-800 mb-2 font-quicksand">{tc}</p>
-                          <p className={`font-bold text-lg mb-2 font-quicksand ${levelTextColor}`}>{assessment?.level}</p>
-                          <p className="text-gray-700 text-sm">{assessment?.reason}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+          {/* Competency Evaluation - HIDDEN FOR STUDENTS - Only for Faculty 
+              This is now displayed through CompetencyEvaluationDisplay in FacultyStudentExamResultPage */}
 
-              {/* Overall Assessment */}
-              {examProgress.parts.khoiDong.aiAnalysis.overallAssessment && (
-                <div className="mt-8 space-y-4 bg-gradient-to-br from-purple-50 to-blue-50 p-6 rounded-max border-2 border-purple-300">
-                  <div>
-                    <p className="font-bold text-lg text-gray-800 mb-2 font-quicksand">
-                      🎯 Mức năng lực chung: <span className={`${
-                        examProgress.parts.khoiDong.aiAnalysis.overallAssessment.level === 'Tốt' ? 'text-green-600' :
-                        examProgress.parts.khoiDong.aiAnalysis.overallAssessment.level === 'Đạt' ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {examProgress.parts.khoiDong.aiAnalysis.overallAssessment.level}
-                      </span></p>
-                    <p className="text-gray-700">{examProgress.parts.khoiDong.aiAnalysis.overallAssessment.summary}</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {examProgress.parts.khoiDong.aiAnalysis.overallAssessment.strengths && (
-                      <div className="p-4 bg-green-100 rounded-max border-l-4 border-green-600">
-                        <p className="font-bold text-green-800 mb-2 font-quicksand">💪 Điểm mạnh:</p>
-                        <ul className="text-sm text-green-700 space-y-1">
-                          {examProgress.parts.khoiDong.aiAnalysis.overallAssessment.strengths.map((strength, idx) => (
-                            <li key={idx}>• {strength}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    
-                    {examProgress.parts.khoiDong.aiAnalysis.overallAssessment.areasToImprove && (
-                      <div className="p-4 bg-orange-100 rounded-max border-l-4 border-orange-600">
-                        <p className="font-bold text-orange-800 mb-2 font-quicksand">🎯 Cần cải thiện:</p>
-                        <ul className="text-sm text-orange-700 space-y-1">
-                          {examProgress.parts.khoiDong.aiAnalysis.overallAssessment.areasToImprove.map((area, idx) => (
-                            <li key={idx}>• {area}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-
-                  {examProgress.parts.khoiDong.aiAnalysis.overallAssessment.recommendations && (
-                    <div className="p-4 bg-blue-100 rounded-max border-l-4 border-blue-600">
-                      <p className="font-bold text-blue-800 mb-2 font-quicksand">💡 Lời khuyên:</p>
-                      <p className="text-sm text-blue-700">{examProgress.parts.khoiDong.aiAnalysis.overallAssessment.recommendations}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Show Details Section - Chia 3 phần BT */}
+          {/* Show Details Section - Chia 2 phần BT */}
           <div className="border-t-4 border-gray-200">
             <button
               onClick={() => setShowDetails(!showDetails)}
@@ -357,7 +301,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                       {/* Exercise Header */}
                       <div className="mb-6 pb-4 border-b-3 border-blue-300">
                         <h4 className="text-2xl font-bold text-gray-800 font-quicksand mb-2">
-                          {exerciseIdx === 0 ? '📝 Bài tập 1' : exerciseIdx === 1 ? '📚 Bài tập 2' : '🎯 Bài tập 3'}
+                          {exerciseIdx === 0 ? '📝 Bài tập 1' : '📚 Bài tập 2'}
                         </h4>
                         {exercise.context && (
                           <div className="p-4 bg-blue-50 rounded-max border-l-4 border-blue-500 text-gray-700">
@@ -378,32 +322,40 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                             }
                             globalQuestionIndex += questionIdx;
 
-                            // Handle both array and object formats of answers
-                            let answerData;
+                            // Get answer data from participantData
+                            let answerData = null;
+                            
                             if (Array.isArray(participantData.answers)) {
                               // Array format - find by questionIndex or use index directly
                               answerData = participantData.answers.find(a => a.questionIndex === globalQuestionIndex) || participantData.answers[globalQuestionIndex];
                             } else {
-                              // Object format - use key directly
-                              answerData = participantData.answers?.[globalQuestionIndex];
+                              // Object format - try both string and number keys
+                              answerData = participantData.answers?.[globalQuestionIndex] || participantData.answers?.[String(globalQuestionIndex)];
                             }
                             
                             if (!answerData) {
-                              console.warn(`No answer data for question ${globalQuestionIndex}`);
+                              console.warn(`⚠️ No answer data for question ${globalQuestionIndex}`, {
+                                globalQuestionIndex,
+                                answersType: Array.isArray(participantData.answers) ? 'array' : 'object',
+                                answersKeys: !Array.isArray(participantData.answers) ? Object.keys(participantData.answers || {}) : `array[${participantData.answers?.length || 0}]`,
+                                // 🔧 Check what we tried to access
+                                tryingKey: globalQuestionIndex,
+                                tryingStringKey: String(globalQuestionIndex),
+                                valueAtIndex: participantData.answers?.[globalQuestionIndex],
+                                valueAtStringKey: participantData.answers?.[String(globalQuestionIndex)],
+                                allAnswers: JSON.stringify(participantData.answers).substring(0, 500) // First 500 chars
+                              });
                               return null;
                             }
 
-                            // Debug log for this question
-                            if (globalQuestionIndex === 0 || globalQuestionIndex === 7) {
-                              console.log(`Q${globalQuestionIndex}:`, {
-                                answer: answerData.answer,
-                                isCorrect: answerData.isCorrect,
-                                correctAnswerIndex: question.correctAnswerIndex,
-                                type: typeof answerData.answer
-                              });
-                            }
+                            // Debug log for all questions
+                            console.log(`✅ Found answer for Q${globalQuestionIndex}:`, {
+                              answer: answerData.answer,
+                              isCorrect: answerData.isCorrect,
+                              type: typeof answerData.answer
+                            });
 
-                            // Auto-expand BT Cơ bản (first exercise)
+                            // Auto-expand first exercise
                             const isExpanded = exerciseIdx === 0 || expandedQuestions[globalQuestionIndex];
 
                             return (

@@ -36,26 +36,13 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
         const classes = await classService.getClassesByStudent(user.uid);
         console.log('Student classes loaded:', classes);
         setStudentClasses(classes || []);
-        
-        // If classId is in URL, load that specific class
-        if (classId) {
-          const selectedCls = classes?.find(c => c.id === classId);
-          if (selectedCls) {
-            console.log('Class found in URL:', selectedCls);
-            setSelectedClass(selectedCls);
-          }
-        } else if (!selectedClass && classes && classes.length > 0) {
-          // If no classId in URL and no selected class yet, set first class
-          console.log('Setting first class as default:', classes[0]);
-          setSelectedClass(classes[0]);
-        }
       } catch (error) {
         console.error('Error loading student classes:', error);
       }
     };
     
     loadStudentClasses();
-  }, [user?.uid, classId, selectedClass]);
+  }, [user?.uid]);
 
   const loadClassData = useCallback(async (userId) => {
     if (!userId) {
@@ -105,12 +92,20 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
     if (classId && studentClasses.length > 0) {
       // Load class from studentClasses list
       const cls = studentClasses.find(c => c.id === classId);
-      if (cls && cls.id !== selectedClass?.id) {
+      if (cls) {
         console.log('Setting class from URL param:', cls);
         setSelectedClass(cls);
       }
     }
-  }, [classId, studentClasses, selectedClass]);
+  }, [classId, studentClasses]);
+
+  // Set first class as default if no classId in URL and no class selected yet
+  useEffect(() => {
+    if (!classId && !selectedClass && studentClasses.length > 0) {
+      console.log('Setting first class as default:', studentClasses[0]);
+      setSelectedClass(studentClasses[0]);
+    }
+  }, [studentClasses]);
 
   // Load selected topic when topicId URL param changes
   useEffect(() => {

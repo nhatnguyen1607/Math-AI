@@ -4,6 +4,7 @@ import authService from '../../services/authService';
 import resultService from '../../services/resultService';
 import facultyService from '../../services/faculty/facultyService';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
+import CompetencyEvaluationDisplay from '../../components/CompetencyEvaluationDisplay';
 
 const FacultyStudentExamResultPage = () => {
   const navigate = useNavigate();
@@ -55,10 +56,36 @@ const FacultyStudentExamResultPage = () => {
         
         setStudentResult(result);
 
-        // Get student info from finalLeaderboard
-        const studentData = examData.finalLeaderboard?.find(s => s.uid === userId);
-        if (studentData) {
-          setStudent(studentData);
+        // Get student info from updated leaderboard (from student_exam_progress)
+        try {
+          const leaderboard = await facultyService.getExamStudentResults(examId);
+          const studentData = leaderboard?.find(s => s.uid === userId);
+          if (studentData) {
+            console.log('✅ Loaded student data from leaderboard:', {
+              uid: studentData.uid,
+              name: studentData.name,
+              rank: studentData.rank,
+              score: studentData.score
+            });
+            setStudent(studentData);
+          } else {
+            // Fallback: create minimal student data
+            console.warn('⚠️ Student not found in leaderboard, using minimal data');
+            setStudent({
+              uid: userId,
+              name: result.data?.studentName || `Student ${userId.substring(0, 8)}`,
+              rank: '?',
+              score: result.score || 0
+            });
+          }
+        } catch (leaderboardError) {
+          console.warn('⚠️ Error loading leaderboard, using student result data:', leaderboardError);
+          setStudent({
+            uid: userId,
+            name: result.data?.studentName || `Student ${userId.substring(0, 8)}`,
+            rank: '?',
+            score: result.score || 0
+          });
         }
       } catch (error) {
         console.error('Error loading student results:', error);
@@ -180,11 +207,26 @@ const FacultyStudentExamResultPage = () => {
           </div>
 
           {/* Status Card */}
-          <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-300 rounded-3xl p-6 lg:p-8 flex flex-col items-center justify-center shadow-soft hover:shadow-soft-lg transition-shadow">
-            <div className="text-5xl lg:text-6xl font-bold text-purple-600 mb-2">✓</div>
-            <div className="text-xl lg:text-2xl font-bold text-purple-600">PASS</div>
-            <p className="text-xs text-gray-600 mt-2">Đạt yêu cầu</p>
-          </div>
+          {(() => {
+            const isPassed = (studentResult?.percentage || 0) >= 50;
+            return (
+              <div className={`rounded-3xl p-6 lg:p-8 flex flex-col items-center justify-center shadow-soft hover:shadow-soft-lg transition-shadow border-2 ${
+                isPassed
+                  ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300'
+                  : 'bg-gradient-to-br from-red-50 to-orange-50 border-red-300'
+              }`}>
+                <div className={`text-5xl lg:text-6xl font-bold mb-2 ${isPassed ? 'text-green-600' : 'text-red-600'}`}>
+                  {isPassed ? '✓' : '✗'}
+                </div>
+                <div className={`text-xl lg:text-2xl font-bold ${isPassed ? 'text-green-600' : 'text-red-600'}`}>
+                  {isPassed ? 'PASS' : 'FAIL'}
+                </div>
+                <p className="text-xs text-gray-600 mt-2">
+                  {isPassed ? 'Đạt yêu cầu' : 'Chưa đạt yêu cầu'}
+                </p>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Tabs */}
@@ -209,15 +251,20 @@ const FacultyStudentExamResultPage = () => {
         {/* Content */}
         {activeTab === 'khoiDong' && (
           <div className="space-y-8">
+            {/* New Competency Evaluation Section */}
+            {studentResult.competencyEvaluation && (
+              <CompetencyEvaluationDisplay evaluation={studentResult.competencyEvaluation} showDetails={true} />
+            )}
+
             {/* AI Analysis Section */}
             {studentResult.data?.parts?.khoiDong?.aiAnalysis && (
               <div className="bg-white rounded-3xl shadow-soft-lg p-6 lg:p-8 border-t-4 border-indigo-300">
                 <h3 className="text-xl lg:text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                  <span>📊</span> Đánh giá năng lực (TC1-TC3)
+                  <span>📊</span> Đánh giá chi tiết
                 </h3>
                 
-                {/* Competence Assessment Cards with Details */}
-                {studentResult.data.parts.khoiDong.aiAnalysis.competenceAssessment && (
+                {/* Competence Assessment Cards - Old Version (Hidden, replaced by new component) */}
+                {/* {studentResult.data.parts.khoiDong.aiAnalysis.competenceAssessment && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     {Object.entries(studentResult.data.parts.khoiDong.aiAnalysis.competenceAssessment).map(([comp, data]) => {
                       const levelText = typeof data === 'string' ? data : data?.level || JSON.stringify(data);
@@ -239,7 +286,7 @@ const FacultyStudentExamResultPage = () => {
                       );
                     })}
                   </div>
-                )}
+                )} */}
 
                 {/* Overall Assessment */}
                 {studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment && (
@@ -312,7 +359,7 @@ const FacultyStudentExamResultPage = () => {
                       {/* Exercise Header */}
                       <div className="mb-6 pb-4 border-b-3 border-indigo-300">
                         <h4 className="text-2xl font-bold text-gray-800 mb-2">
-                          {exerciseIdx === 0 ? '📝 Bài tập 1' : exerciseIdx === 1 ? '📚 Bài tập 2' : '🎯 Bài tập 3'}
+                          {exerciseIdx === 0 ? '📝 Bài tập 1' : '📚 Bài tập 2'}
                         </h4>
                         {exercise.context && (
                           <div className="p-4 bg-indigo-50 rounded-2xl border-l-4 border-indigo-500 text-gray-700 mt-3">

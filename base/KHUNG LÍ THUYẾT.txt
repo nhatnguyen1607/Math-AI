@@ -1,0 +1,74 @@
+﻿Khung đánh giá năng lực giải quyết vấn đề toán học cho học sinh lớp 5 - TRÒ CHƠI
+SỬ DỤNG Ở TRÒ CHƠI 
+Sau khi HS hoàn thành, tổng điểm của cả 4 tiêu chí: 
+0-3 điểm: Cần cố gắng
+4-6 điểm: Đạt
+7 - 8 điểm: Tốt
+Tối đa 4 tiêu chí là 8 điểm
+-> Đưa ra mức điểm rồi đưa ra lời nhận xét.
+
+
+Tiêu chí đánh giá
+	Mức độ
+	Cần cố gắng 
+	Đạt 
+	Tốt
+	TC1. Nhận biết được vấn đề cần giải quyết
+	- Không xác định được đầy đủ cái đã cho và cái cần tìm ( 0 điểm)
+
+
+
+
+	- Xác định đầy đủ dữ kiện và yêu cầu bài toán   (1 điểm)
+
+
+
+
+
+
+
+
+
+
+
+
+	- Xác định chính xác dữ kiện, yêu cầu bài toán và mối quan hệ giữa chúng.  (2 điểm)
+
+
+	TC2. Nêu được cách thức GQVĐ
+	- Không nhận dạng được dạng toán đã học, hoặc nhận dạng được nhưng không áp dụng được vào bài toán.   (0 điểm)
+- Không đưa ra được cách giải phù hợp với bài toán (0 điểm)
+
+
+ - Không lựa chọn được các phép toán/công thức phù hợp với bài toán  (0 điểm)
+	- Nhận dạng được dạng toán đã học và áp dụng  vào bài toán đã cho.   (0,3 điểm)
+
+
+- Đưa ra được một cách giải phù hợp  (0,3 điểm)
+
+
+- Lựa chọn được phép toán/công thức cơ bản phù hợp với bài toán (0,4  điểm)
+	-  Nhận dạng đúng được dạng toán đã học và áp dụng được vào các bài toán tương tự.  (0,6 điểm)
+- Đề xuất được các cách giải khác nhau  (0,7 điểm)
+
+
+- Lựa chọn chiến lược giải quyết vấn đề tối ưu.  (0,7 điểm)
+	TC3. Trình bày được cách thức GQVĐ
+	- Thực hiện sai toàn bộ phép tính  (0 điểm)
+
+
+
+
+
+
+
+
+	- Thực hiện đúng các bước giải và phép tính cơ bản.  (1 điểm)
+	- Thực hiện đúng và đầy đủ các phép tính với các cách giải khác nhau.  (2 điểm)
+	TC4. Kiểm tra được giải pháp đã thực hiện 
+	- Không kiểm tra lại kết quả hoặc không biết điều chỉnh. ( 0 điểm)
+- Không vận dụng được vào các bài toán tương tự ( 0 điểm) 
+	-Kiểm tra lại kết quả và điều chỉnh đúng. ( 0,5  điểm)
+- Vận dụng được vào bài toán tương tự. (0,5 điểm)
+	- Kiểm tra lại kết quả bằng các cách khác nhau. (1 điểm)
+- Vận dụng được vào bài toán ở mức độ mở rộng và nâng cao hơn.  (1 điểm)

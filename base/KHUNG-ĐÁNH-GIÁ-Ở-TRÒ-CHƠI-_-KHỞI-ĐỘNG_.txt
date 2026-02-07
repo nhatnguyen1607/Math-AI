@@ -1,28 +1,0 @@
-                  Khung đánh giá năng lực giải quyết vấn đề toán học cho học sinh lớp 5 - TRÒ CHƠI
-
-
-   Tiêu chí đánh giá                                             Mức độ
-
-                                  Cần cố gắng                      Đạt                          Tốt
-
-TC1. Nhận biết được - Không xác định được đầy đủ cái - Xác định đầy đủ dữ - Xác định chính xác dữ kiện, yêu
-vấn đề cần giải quyết
-                      đã cho và cái cần tìm          kiện và yêu cầu bài toán cầu bài toán và mối quan hệ giữa
-                                                                                 chúng.
-TC2. Nêu được cách - Không nhận dạng được dạng toán - Nhận dạng được dạng - Nhận dạng đúng được dạng toán
-thức GQVĐ
-                   đã học, hoặc nhân dạng được toán đã học và áp dụng đã học và áp dụng được vào các bài
-                      nhưng không áp dụng được vào bài vào bài toán đã cho.        toán tương tự.
-                      toán.
-                      - Không đưa ra được cách giải phù - Đưa ra được một cách - Đề xuất được các cách giải khác
-                      hợp với bài toán hoặc đưa ra được giải phù hợp và trình nhau và trình bày được các bước
-                      cách giải nhưng trình tự các bước bày được các bước giải giải theo trình tự logic, hợp lý.
-                      giải chưa hợp lý.                  theo trình tự hợp lí.
-                       - Không lựa chọn được các phép - Lựa chọn được phép - Lựa chọn chiến lược giải quyết
-                      toán/công thức phù hợp với bài toán/công thức cơ bản vấn đề tối ưu. ( HS làm trong thời
-                      toán                               phù hợp với bài toán      gian ngắn)
-TC3. Trình bày được - Thực hiện phép tình còn sai - Thực hiện đúng các - Thực hiện đúng và đầy đủ các
-cách thức GQVĐ
-                    nhiều.                        bước giải và phép tính phép tính với các cách giải khác
-                                                     cơ bản.               nhau.
-

@@ -4,8 +4,8 @@
  * Status: 'draft' | 'active' | 'in_progress' | 'closed' | 'finished'
  * 
  * Cấu trúc:
- * - 3 bài tập: BT cơ bản (90s), BT vận dụng (120s), BT GQVĐ (210s)
- * - Tổng: 7 phút
+ * - 2 bài tập: BT vận dụng, ứng dụng (120s), BT GQVĐ (300s)
+ * - Tổng: 7 phút (420s)
  * - Hệ thống điểm dựa trên tính đúng/sai và tốc độ
  */
 
@@ -24,14 +24,13 @@ export class Exam {
     
     // Exam details
     this.duration = data.duration || 420; // 7 minutes in seconds
-    this.totalQuestions = data.totalQuestions || 3;
+    this.totalQuestions = data.totalQuestions || 2;
     this.status = data.status || 'draft'; // 'draft', 'active', 'in_progress', 'closed', 'finished'
     
-    // 3 bài tập trong exam (exercises)
+    // 2 bài tập trong exam (exercises)
     this.exercises = data.exercises || []; // Array of exercise objects
-    // exercises[0]: { name, duration: 90, questions: [...], scoring: { correct, incorrect, bonus } }
-    // exercises[1]: { name, duration: 120, questions: [...], scoring: { correct, incorrect, bonus } }
-    // exercises[2]: { name, duration: 210, questions: [...], scoring: { correct, incorrect, bonus } }
+    // exercises[0]: { name, duration: 120, questions: [...], scoring: { correct: 12, incorrect: 2, bonus: 4 } }
+    // exercises[1]: { name, duration: 300, questions: [...], scoring: { correct: 12, incorrect: 2, bonus: 4 } }
     
     // Timing
     this.startTime = data.startTime || null;

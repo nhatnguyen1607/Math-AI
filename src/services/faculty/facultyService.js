@@ -546,8 +546,8 @@ class FacultyService {
 
   async updateExamExercises(examId, exercises) {
     try {
-      if (!exercises || exercises.length !== 3) {
-        throw new Error('Must have exactly 3 exercises');
+      if (!exercises || exercises.length !== 2) {
+        throw new Error('Must have exactly 2 exercises');
       }
 
       const totalQuestions = exercises.reduce((sum, ex) => sum + (ex.questions?.length || 0), 0);
@@ -646,6 +646,120 @@ class FacultyService {
 
   /**
    * Lấy bảng xếp hạng của exam (sắp xếp theo điểm giảm dần)
+   */
+  /**
+   * Lấy kết quả hoàn thành của tất cả học sinh cho một đề thi từ student_exam_progress
+   * Đây là nguồn dữ liệu chính xác hơn finalLeaderboard vì nó có tất cả học sinh đã làm
+   * @param {string} examId - ID của đề thi
+   * @returns {Promise<Array>} - Mảng học sinh với điểm số, sắp xếp theo rank
+   */
+  async getExamStudentResults(examId) {
+    try {
+      // Load exam data để lấy student names
+      const exam = await this.getExamById(examId);
+      const completedStudentsMap = {};
+      
+      // Build map {uid -> name} từ exam.completedStudents hoặc finalLeaderboard
+      if (exam?.completedStudents) {
+        exam.completedStudents.forEach(s => {
+          completedStudentsMap[s.uid] = s.name;
+        });
+      }
+      if (exam?.finalLeaderboard) {
+        exam.finalLeaderboard.forEach(s => {
+          completedStudentsMap[s.uid] = s.name;
+        });
+      }
+
+      const q = query(
+        collection(db, 'student_exam_progress'),
+        where('examId', '==', examId)
+      );
+
+      const snapshot = await getDocs(q);
+      const results = [];
+
+      // Lặp qua tất cả student_exam_progress documents
+      for (const docSnapshot of snapshot.docs) {
+        const data = docSnapshot.data();
+        const userId = data.userId;
+
+        // Lấy tên từ map, nếu không có thì query từ users collection
+        let studentName = completedStudentsMap[userId];
+        
+        if (!studentName) {
+          try {
+            const userRef = doc(db, 'users', userId);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+              studentName = userSnap.data().displayName || userSnap.data().name || `Student ${userId.substring(0, 8)}`;
+              console.log(`📝 Loaded name for user ${userId.substring(0, 8)}: ${studentName}`);
+            } else {
+              console.warn(`⚠️ User document not found for ${userId}`);
+              studentName = `Student ${userId.substring(0, 8)}`;
+            }
+          } catch (e) {
+            console.warn(`❌ Could not load name for user ${userId}:`, e);
+            studentName = `Student ${userId.substring(0, 8)}`;
+          }
+        }
+
+        // Lấy điểm từ phần khoiDong (Khởi động) - phần chính của exam
+        const khoiDongData = data.parts?.khoiDong;
+        
+        if (khoiDongData && khoiDongData.completedAt) {
+          results.push({
+            uid: userId,
+            name: studentName,
+            score: khoiDongData.score || 0,
+            correctAnswers: khoiDongData.correctAnswers || 0,
+            totalQuestions: khoiDongData.totalQuestions || 0,
+            percentage: khoiDongData.percentage || 0,
+            completedAt: khoiDongData.completedAt,
+            timeSpent: khoiDongData.timeSpent || 0
+          });
+        }
+      }
+
+      console.log('📊 Loaded results from student_exam_progress:', {
+        examId,
+        totalFound: snapshot.docs.length,
+        completedCount: results.length,
+        completedStudentsMapSize: Object.keys(completedStudentsMap).length
+      });
+
+      // Sắp xếp theo điểm giảm dần
+      results.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.totalQuestions === b.totalQuestions ? 0 : b.totalQuestions - a.totalQuestions;
+      });
+
+      // Thêm rank vào
+      const leaderboard = results.map((student, idx) => ({
+        ...student,
+        rank: idx + 1,
+        medal: idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : ''
+      }));
+
+      console.log('✅ Final leaderboard:', {
+        examId,
+        totalStudents: leaderboard.length,
+        leaderboard: leaderboard.map(s => ({
+          rank: s.rank,
+          name: s.name,
+          score: s.score
+        }))
+      });
+
+      return leaderboard;
+    } catch (error) {
+      console.error('❌ Error getting exam student results:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy kết quả hoàn thành từ finalLeaderboard (backup nếu student_exam_progress không đầy đủ)
    */
   async getExamLeaderboardByStatus(examId) {
     try {

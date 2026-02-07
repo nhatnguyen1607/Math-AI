@@ -32,7 +32,7 @@ const FacultyExamResultsListPage = () => {
     const loadExamResults = async () => {
       setLoading(true);
       try {
-        // Fetch exam data
+        // Fetch exam data để lấy metadata
         const examData = await facultyService.getExamById(examId);
         if (!examData) {
           alert('Không tìm thấy đề thi');
@@ -42,11 +42,20 @@ const FacultyExamResultsListPage = () => {
         
         setExam(examData);
         
-        // Use finalLeaderboard from exam if available
-        if (examData.finalLeaderboard && examData.finalLeaderboard.length > 0) {
-          setLeaderboard(examData.finalLeaderboard);
+        // Load leaderboard từ student_exam_progress (source chính xác)
+        const studentResults = await facultyService.getExamStudentResults(examId);
+        
+        if (studentResults && studentResults.length > 0) {
+          console.log('✅ Loaded', studentResults.length, 'students from student_exam_progress');
+          setLeaderboard(studentResults);
         } else {
-          setLeaderboard([]);
+          // Fallback: dùng finalLeaderboard từ exam nếu student_exam_progress trống
+          console.log('⚠️ No results from student_exam_progress, using finalLeaderboard');
+          if (examData.finalLeaderboard && examData.finalLeaderboard.length > 0) {
+            setLeaderboard(examData.finalLeaderboard);
+          } else {
+            setLeaderboard([]);
+          }
         }
       } catch (error) {
         console.error('Error loading exam results:', error);

@@ -6,16 +6,16 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 // Danh sách các model với thứ tự ưu tiên
 const MODELS = [
   {
-    name: "gemini-2.5-flash-lite",
-    displayName: "Gemini 2.5 Flash Lite",
-    rpdLimit: 20,
-    type: "text"
-  },
-  {
     name: "gemini-2.5-flash",
     displayName: "Gemini 2.5 Flash TTS",
     rpdLimit: 10,
     type: "multimodal"
+  },
+    {
+    name: "gemini-2.5-flash-lite",
+    displayName: "Gemini 2.5 Flash Lite",
+    rpdLimit: 20,
+    type: "text"
   },
   {
     name: "gemini-2.5-flash",

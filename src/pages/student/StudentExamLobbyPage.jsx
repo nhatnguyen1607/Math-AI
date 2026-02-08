@@ -51,7 +51,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
           
           // Check if session is finished
           if (session.status === 'finished') {
-            setError('Phiên thi đã kết thúc. Vui lòng chờ giảng viên bắt đầu phiên thi mới.');
+            setError('Phiên thi đã kết thúc. Vui lòng chờ giáo viên bắt đầu phiên thi mới.');
             setLoading(false);
           } else {
             // Use the active session
@@ -59,7 +59,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
             navigate(`/student/exam-lobby/${actualExamId}?sessionId=${activeSessionId}`, { replace: true });
           }
         } else {
-          setError('Chưa có phiên thi nào được bắt đầu cho đề thi này. Vui lòng chờ giảng viên kích hoạt phiên thi.');
+          setError('Chưa có phiên thi nào được bắt đầu cho đề thi này. Vui lòng chờ giáo viên kích hoạt phiên thi.');
           setLoading(false);
         }
       } catch (err) {
@@ -405,14 +405,14 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
         {!joined && session.status !== 'finished' && (
           <div className="flex items-center gap-3 bg-blue-400 text-white px-6 py-4 rounded-max shadow-lg mb-8 font-quicksand">
             <span className="text-2xl">ℹ️</span>
-            <span>Hãy nhấn "Tham gia" để sẵn sàng. Chờ giảng viên bắt đầu khi tất cả đã sẵn sàng.</span>
+            <span>Hãy nhấn "Tham gia" để sẵn sàng. Chờ giáo viên bắt đầu khi tất cả đã sẵn sàng.</span>
           </div>
         )}
 
         {joined && session.status === 'waiting' && (
           <div className="flex items-center gap-3 bg-green-400 text-white px-6 py-4 rounded-max shadow-lg mb-8 font-quicksand">
             <span className="text-2xl">✅</span>
-            <span>Bạn đã tham gia thành công. Chờ giảng viên bắt đầu...</span>
+            <span>Bạn đã tham gia thành công. Chờ giáo viên bắt đầu...</span>
           </div>
         )}
 

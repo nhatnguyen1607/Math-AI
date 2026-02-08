@@ -124,9 +124,15 @@ export class Exam {
 
   static fromFirestore(data, id) {
     const examData = { ...data, id };
-    console.log(`🔄 Exam.fromFirestore - Raw: id=${id}, title="${data.title}", rawIsLocked=${data.isLocked} (type: ${typeof data.isLocked})`);
-    const exam = new Exam(examData);
-    console.log(`🔄 Exam.fromFirestore - After constructor: id=${exam.id}, title="${exam.title}", finalIsLocked=${exam.isLocked} (type: ${typeof exam.isLocked})`);
-    return exam;
+    
+    // Convert Firebase Timestamp to Date if needed
+    if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+      examData.createdAt = data.createdAt.toDate();
+    }
+    if (data.updatedAt && typeof data.updatedAt.toDate === 'function') {
+      examData.updatedAt = data.updatedAt.toDate();
+    }
+    
+    return new Exam(examData);
   }
 }

@@ -521,7 +521,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
       try {
         console.log('🤖 Calling Gemini for AI analysis and competency evaluation...');
         [aiAnalysis, competencyEvaluation] = await Promise.all([
-          geminiService.evaluateQuestionComments(questions, validatedAnswers, exam.name),
+          geminiService.evaluateQuestionComments(validatedAnswers, questions),
           geminiService.evaluateCompetencyFramework(questions, validatedAnswers, exam.name, session?.id)
         ]);
 

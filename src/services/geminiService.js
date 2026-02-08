@@ -75,11 +75,16 @@ export class GeminiService {
         const initialPrompt = `Đây là bài toán mà bạn cần giải: ${problemText}
 
 Hãy bắt đầu BƯỚC 1: HIỂU BÀI TOÁN
-Đặt 1 câu hỏi gợi mở để giúp bạn xác định:
-- Thông tin đã cho trong bài toán là gì?
-- Yêu cầu của bài toán là gì?
 
-Câu hỏi phải thân thiện, không quá phức tạp, giúp bạn suy nghĩ về những gì bài toán đang hỏi.`;
+Yêu cầu:
+- Đặt CHỈ 1 câu hỏi gợi mở DUY NHẤT (không phải 2-3 câu)
+- Câu hỏi phải ngắn gọn, thân thiện, giúp học sinh suy nghĩ về:
+  + Thông tin đã cho là gì?
+  + Yêu cầu/mục tiêu của bài toán là gì?
+
+Ví dụ:
+❌ SAI: "Bạn Lan đã mua những gì?...", "Mỗi món đồ đó giá bao nhiêu?...", "Chúng ta cần tìm gì?..." (3 câu)
+✅ ĐÚNG: "Acorn Bạn Lan cần mua những gì và giá cả của chúng là bao nhiêu, rồi chúng ta sẽ tính được điều gì?" (1 câu)`;
 
         // Sử dụng generateContent() để có dual-level retry (tries all models, then rotates key)
         const initialResponse = await geminiModelManager.generateContent(initialPrompt);
@@ -271,6 +276,20 @@ Câu hỏi phải thân thiện, không quá phức tạp, giúp bạn suy nghĩ
     return 'pass'; // Mặc định
   }
 
+  // Tính mức độ chung (mucDoChinh) dựa trên tổng điểm
+  _calculateMucDoChinh(totalScore) {
+    // 0-3 điểm: Cần cố gắng
+    // 4-6 điểm: Đạt
+    // 7-8 điểm: Tốt
+    if (totalScore <= 3) {
+      return 'Cần cố gắng';
+    } else if (totalScore <= 6) {
+      return 'Đạt';
+    } else {
+      return 'Tốt';
+    }
+  }
+
   // Gửi câu trả lời của bạn (giữ để tương thích)
   async sendStudentResponse(studentAnswer) {
     return this.processStudentResponse(studentAnswer);
@@ -278,76 +297,133 @@ Câu hỏi phải thân thiện, không quá phức tạp, giúp bạn suy nghĩ
 
   // Xây dựng prompt theo từng bước
   _buildContextPrompt(studentAnswer) {
-    let prompt = `Câu trả lời của bạn: "${studentAnswer}"\n\n`;
+    // Build conversation history context for AI to see all previous responses
+    let conversationContext = '';
+    if (this.studentResponses && this.studentResponses.length > 0) {
+      conversationContext = 'LỊCH SỬ CÁC CÂU TRẢ LỜI CỦA HỌC SINH:\n';
+      this.studentResponses.forEach((response, idx) => {
+        conversationContext += `${idx + 1}. "${response.answer}"\n`;
+      });
+      conversationContext += '\n';
+    }
+
+    let prompt = `BÀI TOÁN GỐC:
+${this.currentProblem}
+
+${conversationContext}CÂU TRẢ LỜI HIỆN TẠI:
+"${studentAnswer}"\n\n`;
 
     switch (this.currentStep) {
       case 1: // Hiểu bài toán
         prompt += `BƯỚC 1: HIỂU BÀI TOÁN
-Phân tích câu trả lời:
-- Bạn đã xác định đúng những thông tin chưa? (Dữ kiện: chiều dài, chiều rộng, yêu cầu)
-- Bạn hiểu đúng bài toán đang yêu cầu gì không?
+Tiêu chí xem câu trả lời "đủ" ở bước 1:
+✅ ĐỦ nếu: Bạn đã nêu rõ cả hai điều này (CÓ THỂ NÊUỞ CÁC CÂU TRẢ LỜI KHÁC NHAU, KHÔNG NHẤT THIẾT PHẢI TRONG MỘT CÂU):
+   1. Dữ kiện (thông tin đã cho): Tất cả các số liệu, sự kiện được nêu trong bài toán - PHẢI KHỚP ĐÚNG BÀI TOÁN
+   2. Yêu cầu (cần tìm cái gì): Cái mà bài toán yêu cầu tính hoặc tìm
+   
+   LƯU Ý: Nếu học sinh đã nêu một phần dữ kiện ở câu trả lời trước và phần còn lại ở câu này → VẪN ĐƯỢC TÍNH LÀ ĐỦ
+
+❌ CHƯA ĐỦ nếu: 
+   - Toàn bộ lịch sử các câu trả lời vẫn thiếu dữ kiện hoặc yêu cầu
+   - Hoặc dữ kiện bạn nêu KHÔNG KHỚP với bài toán gốc (sai con số, sai thông tin)
 
 HÀNH ĐỘNG:
-- Nếu câu trả lời chưa đủ hoặc chưa rõ: Đặt 1 câu hỏi gợi ý để bạn tự phát hiện ra điều còn thiếu
-- Nếu câu trả lời đủ và đúng:
-  * Khen ngợi bạn cụ thể (ví dụ: "Tuyệt! Em đã xác định đúng dữ kiện và yêu cầu")
-  * QUAN TRỌNG: Phải viết rõ ràng: "Bây giờ chúng mình sang **BƯỚC 2: LẬP KẾ HOẠCH GIẢI** nhé!"
-  * Đặt 1 câu hỏi đầu tiên cho bước 2
+- Nếu TẤT CẢ CÁC DỮ KIỆN ĐÚNG và KHỚP BÀI TOÁN (có thể nêu rải rác qua nhiều câu) VÀ YÊUBCẦU ĐÃ XÁC ĐỊNH:
+  * Khen ngợi cụ thể: "Tuyệt! Em đã xác định đúng dữ kiện"
+  * Nhắc lại yêu cầu: "Và bài toán yêu cầu chúng ta [YÊU CẦU TỪ BÀI TOÁN]"
+  * QUAN TRỌNG: PHẢI VIẾT: "Bây giờ chúng mình chuyển sang **BƯỚC 2: LẬP KẾ HOẠCH GIẢI** nhé!"
+  * Nêu 1 câu hỏi đầu tiên của Bước 2
 
-NHẮC NHỞ: CHỈ HỎI 1 CÂU. Câu hỏi phải gợi mở, không kiểm tra "em đúng không".`;
+- Nếu DỮ KIỆN KHÔNG KHỚP hoặc SAI (không khớp bài toán gốc):
+  * Gently point out: "Hình như em đọc lại bài toán một chút xem sao! Con số '...' không khớp với bài toán gốc."
+  * Đặt 1 câu hỏi: "Em thử đọc lại bài toán gốc và bổ sung/sửa lại dữ kiện nhé?"
+
+- Nếu toàn bộ các câu trả lời CHƯA CHỨA ĐỦ DỮ KIỆN hoặc CHƯA CÓ YÊU CẦU:
+  * Đặt 1 câu hỏi gợi ý để bạn phát hiện điều còn thiếu
+  * KHÔNG nêu ví dụ cụ thể, chỉ dẫn dắt: "Em thấy bài toán đã cho những thông tin nào? Và bài toán yêu cầu chúng ta tìm cái gì?"
+
+NHẮC NHỨ: CHỈ HỎI 1 CÂU DUY NHẤT!`;
         break;
 
       case 2: // Lập kế hoạch
         prompt += `BƯỚC 2: LẬP KẾ HOẠCH GIẢI
-Phân tích:
-- Bạn nêu được phải làm gì (phép tính nào) không? (Ví dụ: nhân chiều dài với chiều rộng)
-- Bước giải có đầy đủ, đúng logic không?
-- QUAN TRỌNG: Bạn CHỈ nêu kế hoạch, CHƯA tính cụ thể số phải chứ?
+Tiêu chí xem câu trả lời "đủ" ở bước 2:
+✅ ĐỦ nếu: Bạn đã nêu ĐỦ phép tính/chiến lược cần làm:
+   - Bạn nêu rõ phép toán cần sử dụng (cộng, trừ, nhân, chia) và các con số liên quan
+   - Bạn giải thích tại sao phải dùng phép tính đó
+
+❌ CHƯA ĐỦ nếu: 
+   - Bạn chưa nêu rõ phép tính cần làm
+   - Hoặc bạn đã tính toán cụ thể rồi (đó là Bước 3, chưa phải Bước 2)
 
 HÀNH ĐỘNG:
-- Nếu chưa có kế hoạch rõ ràng: Đặt 1 câu hỏi gợi ý (ví dụ: "Vậy để tính diện tích, em cần làm phép tính nào?")
-- Nếu kế hoạch đã đầy đủ:
-  * Khen ngợi: "Rất tốt! Em đã nêu đúng kế hoạch"
-  * QUAN TRỌNG: Phải viết rõ ràng: "Tuyệt! Bây giờ chúng mình sang **BƯỚC 3: THỰC HIỆN KẾ HOẠCH** nhé!"
-  * Yêu cầu bạn thực hiện phép tính đầu tiên
+- Nếu câu trả lời CÓ CHỨA KẾ HOẠCH RÕ (phép tính/chiến lược rõ ràng):
+  * Khen ngợi: "Rất tốt! Em đã xác định đúng kế hoạch"
+  * QUAN TRỌNG: PHẢI VIẾT: "Tuyệt vời! Bây giờ chúng mình chuyển sang **BƯỚC 3: THỰC HIỆN KẾ HOẠCH** nhé!"
+  * Yêu cầu bạn thực hiện: "Vậy em hãy tính kết quả nhé!"
 
-NHẮC NHỐ: CHỈ HỎI 1 CÂU. Không cho bạn tính cụ thể ở bước này!`;
+- Nếu câu trả lời CHƯA CHỨA KẾ HOẠCH RÕ:
+  * Đặt 1 câu hỏi gợi ý để bạn tự nêu phép tính
+  * Hỏi: "Để giải quyết bài toán này, em cần dùng phép tính nào?"
+
+NHẮC NHỨ: CHỈ HỎI 1 CÂU DUY NHẤT! Đừng tính hộ!`;
         break;
 
       case 3: // Thực hiện kế hoạch
         prompt += `BƯỚC 3: THỰC HIỆN KẾ HOẠCH
-Phân tích:
-- Phép tính có đúng không?
-- Cách tính với số thập phân có chính xác không?
-- Trình bày từng bước có rõ ràng không?
+Tiêu chí xem câu trả lời "đủ" ở bước 3:
+✅ ĐỦ nếu: Bạn đã tính toàn bộ ĐÚNG:
+   - Kết quả cuối cùng đúng (có hoặc không có đơn vị)
+   - Trình bày phép tính rõ ràng (từng bước nếu có nhiều phép tính)
+   - QUAN TRỌNG: Toàn bộ các phép tính của bài toán đã xong (nếu có nhiều phép tính khác nhau)
+
+❌ CHƯA ĐỦ nếu: 
+   - Bạn chỉ tính được một phần (còn phép tính khác chưa tính, hoặc chưa hoàn thành toàn bộ)
+   - Kết quả tính có sai lầm
 
 HÀNH ĐỘNG:
-- Nếu câu trả lời cho thấy sai sót:
-  * KHÔNG đưa ra đáp án đúng
-  * Chỉ ra dấu hiệu sai ("Kết quả này có vẻ lớn quá..." hoặc "Hãy kiểm tra lại phép tính...")
-  * Đặt 1 câu hỏi để bạn tự kiểm tra: "Em thử tính lại xem sao?"
-- Nếu tính toán đúng:
+- Nếu tính toàn bộ ĐÚNG và ĐÃ HOÀN THÀNH tất cả phép tính của bài toán:
   * Khen ngợi: "Chính xác rồi!"
-  * Nếu còn phép tính khác, hỏi bạn tiếp: "Vậy tiếp theo..."
-  * Nếu hoàn tất hết: QUAN TRỌNG: Phải viết rõ ràng: "Tuyệt vời! Bây giờ chúng mình sang **BƯỚC 4: KIỂM TRA & MỞ RỘNG** nhé!"
+  * QUAN TRỌNG: PHẢI VIẾT: "Tuyệt vời! Bây giờ chúng mình chuyển sang **BƯỚC 4: KIỂM TRA & MỞ RỘNG** nhé!"
+  * Đặt 1 câu hỏi cho Bước 4
 
-NHẮC NHỐ: CHỈ HỎI 1 CÂU. Không tính hộ hoặc gợi ý cách tính!`;
+- Nếu tính đúng NHƯNG còn phép tính khác trong bài toán:
+  * Khen ngợi: "Chính xác rồi!"
+  * KHÔNG chuyển Bước 4 ngay
+  * Thay vào đó, hỏi CỤ THỂ về phép tính tiếp theo:
+    - Nếu thấy nhiều giá tiền riêng lẻ → "Vậy bây giờ em cần cộng tất cả các khoản này lại để được tổng chi phí, phép cộng sẽ là gì?"
+    - Nếu thấy cần so sánh → "Vậy em cần so sánh hai khoản tiền này để biết cái nào rẻ hơn, em sẽ làm phép tính nào?"
+    - Hoặc hỏi chung theo bài toán → "Bây giờ để hoàn thành bài toán, em còn cần tính gì tiếp theo để tìm ra [YÊU CẦU TỪ BÀI TOÁN]?"
+
+- Nếu có SAI hoặc CHƯA HOÀN THÀNH:
+  * KHÔNG nói đáp án đúng
+  * Nhắc nhở: "Kết quả này có vẻ chưa chính xác"
+  * Đặt 1 câu hỏi gợi ý: "Em thử tính lại xem sao?"
+
+NHẮC NHỨ: CHỈ HỎI 1 CÂU DUY NHẤT! Không tính hộ!`;
         break;
 
       case 4: // Kiểm tra & mở rộng
         prompt += `BƯỚC 4: KIỂM TRA & MỞ RỘNG
-Hỏi bạn:
-- Kết quả có hợp lý không? (Ví dụ: diện tích của khu vườn, có lớn hợp lý không?)
-- Có cách nào giải khác không?
+Tiêu chí xem câu trả lời "đủ" ở bước 4:
+✅ ĐỦ nếu: Bạn đã trả lời 1 trong 2 câu hỏi:
+   - Kiểm tra: Bạn giải thích tại sao kết quả hợp lý với dữ kiện bài toán
+   - Hoặc Mở rộng: Bạn nêu được cách giải khác hoặc bài toán tương tự
+
+❌CHƯA ĐỦ nếu: Bạn chưa trả lời hoặc trả lời không rõ ràng
 
 HÀNH ĐỘNG:
-- Đặt 1 câu hỏi về việc kiểm tra hoặc mở rộng
-- Sau khi bạn trả lời:
-  * Đánh giá tổng thể 4 bước (Cần cố gắng/Đạt/Tốt)
-  * Khen ngợi và động viên
-  * QUAN TRỌNG: Phải viết rõ ràng: "Chúc mừng bạn đã **HOÀN THÀNH BÀI TOÁN**! 🎉"
+- Nếu bạn CHƯA TRẢ LỜI hoặc trả lời không rõ:
+  * Đặt 1 câu hỏi gợi ý cho Bước 4
+  * Ví dụ: "Hãy kiểm tra xem kết quả của em có hợp lý không?"
+  * Hoặc: "Em có cách nào khác để giải bài toán này không?"
 
-NHẮC NHỐ: CHỈ HỎI 1 CÂU.`;
+- Nếu bạn TRẢ LỜI ĐÚNG:
+  * Khen ngợi: "Tuyệt vời! Em đã hoàn thành đầy đủ 4 bước"
+  * Đánh giá tổng thể (Cần cố gắng/Đạt/Tốt)
+  * QUAN TRỌNG: PHẢI VIẾT RÕNG: "Chúc mừng bạn đã **HOÀN THÀNH BÀI TOÁN**! 🎉"
+
+NHẮC NHỨ: CHỈ HỎI 1 CÂU! Khi bạn hoàn thành bước 4 → bài tập kết thúc.`;
         break;
 
       default:
@@ -632,60 +708,134 @@ For EACH question: Write ONE meaningful comment about what the student did right
       
       let referenceProblem = '';
       let difficultyGuidance = '';
+      let topicFocus = '';
       
       if (problemNumber === 1) {
         referenceProblem = startupProblem1;
         difficultyGuidance = `
 MỨC ĐỘ CỦA BÀI 1 LUYỆN TẬP:
 - Phải là MỨC ĐỘ DỄ, ĐƠN GIẢN, CHỈ CẦN 1-2 PHÉP TÍNH
-- Ít dữ kiện, không có khuyến mãi phức tạp hay điều kiện rắc rối
-- Ví dụ mức độ: "Cô giáo cần mua vải để may khăn quàng cho 19 bạn, mỗi khăn 0,75 m vải. Hỏi tổng số mét vải cần mua?"
+- Ít dữ kiện, bối cảnh đơn giản không có điều kiện phức tạp
+- Số lượng dữ kiện tương tự bài khởi động nhưng con số nhỏ hơn để dễ tính
 - Đây là bài để học sinh luyện tập đầu tiên, phải cơ bản và dễ hiểu`;
       } else if (problemNumber === 2) {
         referenceProblem = startupProblem2;
         difficultyGuidance = `
 MỨC ĐỘ CỦA BÀI 2 LUYỆN TẬP:
 - Phải có độ khó TƯƠNG ĐƯƠNG với bài 2 khởi động
-- Có nhiều dữ kiện, có thể có khuyến mãi, điều kiện phức tạp hơn
+- Có cùng số lượng dữ kiện và điều kiện giống bài khởi động
 - Cùng số lượng phép tính và cấp độ suy luận với bài 2 khởi động
-- Đây là bài để học sinh luyện tập sau khi hoàn thành bài 1`;
+- Bài này giúp học sinh luyện tập sau khi đã hoàn thành bài 1 dễ`;
       }
       
-      const prompt = `Bạn là giáo viên toán lớp 5 chuyên tạo bài tập luyện tập.
+      // Nếu có context (chủ đề), sử dụng để nhấn mạnh
+      if (context) {
+        topicFocus = `
+**NHẤN MẠNH CHỦ ĐỀ CHÍNH "${context}":
+- Bài toán PHẢI tập trung vào "${context}" là nội dung chính
+- Không được để "${context}" chỉ là chi tiết phụ
+- Ví dụ: Nếu chủ đề "Nhân số thập phân", bài toán PHẢI CÓ NHIỀU phép nhân số thập phân làm nội dung chính`;
+      }
+      
+      const prompt = `Bạn là giáo viên toán lớp 5 chuyên tạo bài tập luyện tập có chất lượng cao.
 
-BÀI KHỞI ĐỘNG (mẫu):
+BÀI KHỞI ĐỘNG (MẪU):
 ${referenceProblem}
 
-${context ? `CHỦ ĐỀ/DẠNG TOÁN:
+${context ? `CHỦ ĐỀ BÀI TẬP:
 ${context}
-
 ` : ''}
 
 NHIỆM VỤ:
 Tạo BÀI ${problemNumber} LUYỆN TẬP dựa vào bài khởi động trên:
 ${difficultyGuidance}
+${topicFocus}
 
 YÊU CẦU TỐI QUAN TRỌNG:
-1. ✅ KIỂM TRA KỸ NĂNG TOÁN HỌC: 
-   - Nếu bài khởi động dùng số thập phân → bài luyện tập PHẢI có số thập phân
-   - Nếu bài khởi động là phép nhân/chia/cộng/trừ → bài luyện tập PHẢI có cùng phép tính đó
-   - Nếu bài khởi động so sánh giá cả/chọn cửa hàng → bài luyện tập PHẢI là so sánh tương tự
 
-2. ✅ CHỈ MỘT CÂU HỎI CUỐI (không phải 2-3 câu):
+1. ✅ PHẢI SỬ DỤNG KỸ NĂNG TOÁN HỌC CỦA CHỦ ĐỀ:
+   - Bài toán PHẢI chứa kỹ năng chính của chủ đề, không phải chỉ số tự nhiên đơn giản
+   - Nếu chủ đề "Nhân số thập phân" → PHẢI có phép NHÂN với số thập phân (0,5 | 1,2 | 2,5 | v.v.)
+   - Nếu chủ đề "Chia số thập phân" → PHẢI có phép CHIA liên quan số thập phân
+   - Nếu chủ đề "Cộng/Trừ số thập phân" → PHẢI có CỘNG/TRỪ số thập phân
+   - Nếu chủ đề "Phân số" → PHẢI có phép tính với phân số
+   - Nếu chủ đề "Độ dài/Khối lượng" → PHẢI có phép tính so sánh, cộng trừ các đơn vị này
+   
+   ❌ SAI VÍ DỤ: Chủ đề "Nhân số thập phân" nhưng bài là "Bạn An có 4 hộp bút, mỗi hộp 6 cây" (chỉ 4 × 6 = số tự nhiên)
+   ✅ ĐÚNG VÍ DỤ: Chủ đề "Nhân số thập phân" và bài là "Bạn An mua 2,5 m vải, giá 42 nghìn/m" (có 2,5 × 42)
+
+2. ✅ TẬP TRUNG VÀO CHỦ ĐỀ CHÍNH:
+   - Bài toán phải xoay quanh "${context || 'kỹ năng chính của bài khởi động'}" - đó phải là phần khó và quan trọng
+   - KHÔNG để chủ đề chính chỉ là chi tiết phụ
+
+3. ✅ LOẠI BỎ HOÀN TOÀN PHẦN TRĂM (%):
+   - KHÔNG được dùng phần trăm (học sinh lớp 5 chưa học)
+   - KHÔNG dùng "giảm 20%", "tăng 15%", "được hưởng 10%"
+   - KHÔNG dùng khái niệm phức tạp: lợi nhuận, lãi suất, tỉ lệ, tỷ số
+
+4. ✅ ĐỘ KHÓ PHẢI VỪA PHẢI CHO LỚP 5:
+   - Sử dụng số tự nhiên hoặc số thập phân đơn giản (max 2 chữ số thập phân)
+   - Tất cả phép tính phải là: cộng, trừ, nhân, chia cơ bản
+   - KHÔNG có khái niệm nâng cao hay phức tạp
+   - Con số nên hợp lý với thực tế lớp 5
+
+5. ✅ CHỈ MỘT CÂU HỎI CUỐI:
+   - Bài toán kết thúc bằng 1 câu hỏi duy nhất
    - ĐÚNG: "Tổng số mét vải cần mua là bao nhiêu?"
-   - ĐÚNG: "Mua ở cửa hàng nào sẽ tiết kiệm hơn?"
-   - SAI: "Nội dung nào mô tả đúng bài toán? Để giải cần phép tính nào?"
-   - SAI: "Mua ở đâu tiết kiệm? Tại sao? Chênh lệch bao nhiêu?"
+   - SAI: "Vậy tổng tiền là bao nhiêu? Còn lại bao nhiêu tiền?"
 
-3. ✅ THAY ĐỔI BỐI CẢNH: Tên nhân vật khác, tình huống khác, nhưng cấu trúc giữ nguyên
+6. ✅ THAY ĐỔI BỐI CẢNH:
+   - Tên nhân vật khác, tình huống khác
+   - Nhưng cấu trúc, phép tính, SỐ THẬP PHÂN và cấp độ khó GIỮA NGUYÊN
 
-4. ✅ NỘI DUNG THỰC TẾ: Bài toán phải sống động, dễ hình dung, liên quan đến cuộc sống học sinh
+7. ✅ ĐỀ SÁNG TẠO NHƯNG RÕ RÀNG:
+   - Bài toán nên dựa trên tình huống thực tế quen thuộc của học sinh lớp 5
+   - Viết dưới dạng câu chuyện bình thường, dễ tưởng tượng, dài 2-4 dòng
+   - Không có cụm từ phức tạp hay khó hiểu
 
-HƯỚNG DẪN:
+VÍ DỤ THAM KHẢO:
+
+NHÂN SỐ THẬP PHÂN:
+- Bài khởi động: "Mẹ mua 3 m vải, mỗi m giá 12,5 nghìn đồng. Hỏi mẹ phải trả bao nhiêu tiền?"
+- BÀI LUYỆN TẬP (Bài 1 - dễ): "Bạn Hân mua 2 cuốn sách, mỗi cuốn giá 35,5 nghìn đồng. Hỏi Hân phải trả bao nhiêu tiền?"
+  → ĐÚNG: 2 × 35,5 = 71 (có số thập phân + phép nhân)
+- BÀI LUYỆN TẬP (Bài 2 - vừa): "Mẹ mua 2,5 kg táo giá 42 nghìn đồng/kg. Hỏi mẹ phải trả bao nhiêu tiền?"
+  → ĐÚNG: 2,5 × 42 = 105 (có số thập phân + phép nhân)
+
+CHIA SỐ THẬP PHÂN:
+- Bài khởi động: "Có 10 lít nước chia đều vào 4 chai. Hỏi mỗi chai có bao nhiêu lít?"
+- BÀI LUYỆN TẬP (Bài 1 - dễ): "Có 9 lít nước chia đều vào 4 chai. Hỏi mỗi chai có bao nhiêu lít?"
+  → ĐÚNG: 9 ÷ 4 = 2,25 lít (kết quả là số thập phân)
+- BÀI LUYỆN TẬP (Bài 2 - vừa): "Có 12,5 kg gạo chia đều cho 5 gia đình. Hỏi mỗi gia đình được bao nhiêu kg?"
+  → ĐÚNG: 12,5 ÷ 5 = 2,5 kg (có số thập phân + phép chia)
+
+PHÂN SỐ:
+- Bài khởi động: "Mẹ có 3/4 lít sữa, chia đều cho 2 con. Hỏi mỗi con được bao nhiêu lít?"
+- BÀI LUYỆN TẬP (Bài 1 - dễ): "Bạn Hà có 1/2 kg kẹo, chia đều cho 3 bạn. Hỏi mỗi bạn được bao nhiêu kg?"
+  → ĐÚNG: 1/2 ÷ 3 hoặc so sánh phân số (có phân số)
+- BÀI LUYỆN TẬP (Bài 2 - vừa): "Bạn Minh tiêu 2/5 tiền tiết kiệm, còn 3/5 để mua sách. Nếu tiêu thêm 1/5 nữa, còn bao nhiêu?"
+  → ĐÚNG: 3/5 - 1/5 (có phép cộng/trừ phân số)
+
+ĐO LƯỜNG (Độ dài, Khối lượng, Dung tích):
+- Bài khởi động: "Bạn An có 2,5 m vải, bạn Bình có 1,5 m. Hỏi cả hai có tất cả bao nhiêu m vải?"
+- BÀI LUYỆN TẬP (Bài 1 - dễ): "Cái túi nặng 0,5 kg, quyển sách nặng 1,2 kg. Hỏi cả hai nặng bao nhiêu kg?"
+  → ĐÚNG: 0,5 + 1,2 (có đơn vị đo + phép tính)
+- BÀI LUYỆN TẬP (Bài 2 - vừa): "Thùng A chứa 5,5 lít nước, thùng B chứa 3,2 lít. Hỏi thùng A chứa nhiều hơn B bao nhiêu lít?"
+  → ĐÚNG: 5,5 - 3,2 (có đơn vị + phép tính so sánh)
+
+HƯỚNG DẪN TRẢ LỜI:
 - CHỈ trả về nội dung bài toán (không có "Bài toán mới:", không có lời giải)
 - Bài toán phải là một đoạn văn liền mạch, tự nhiên
 
-Bài toán mới:`;
+⚠️ KIỂM TRA CUỐI CÙNG:
+- Bài toán có sử dụng KỸ NĂNG của chủ đề không?
+- Ví dụ:
+  • Chủ đề "Nhân số thập phân" mà bài chỉ có 4 × 6 → SAI (không có số thập phân)
+  • Chủ đề "Phân số" mà bài chỉ có 4 + 3 → SAI (không có phân số)
+  • Chủ đề "Đo lường" mà bài chỉ có 2 + 3 → SAI (không có đơn vị đo)
+- Nếu bài toán không sử dụng kỹ năng chủ đề → BÀI SAI, phải viết lại
+
+Bài toán luyện tập:`;
 
       // Sử dụng generateContent từ geminiModelManager (hỗ trợ auto-rotate key)
       const result = await geminiModelManager.generateContent(prompt);
@@ -740,7 +890,7 @@ Tạo 1 BÀI TOÁN VẬN DỤNG (Real-world Application Problem) phù hợp vớ
 **QUAN TRỌNG NHẤT: Bài toán PHẢI TẬP TRUNG VÀO CHỦĐỀ CHÍNH "${topicName}" - đó phải là phần chính và khó nhất của bài toán, không phải chỉ là phần phụ.**
 
 YÊU CẦU TỐI QUAN TRỌNG:
-1. ✅ MỨC ĐỘ PHẢI DỄ VÀ PHÁT TRIỂN CHỦĐỀ:
+1. ✅ MỨC ĐỘ PHẢI DỄ VÀ PHÁT TRIỂN CHỦ ĐỀ:
    - Bài toán nên dựa trên một tình huống thực tế quen thuộc của học sinh lớp 5 (gia đình, nhà trường, chợ, cửa hàng, dã ngoại...)
    - KHÔNG dùng phần trăm (%), vì em chưa được học
    - KHÔNG dùng khái niệm phức tạp (lợi nhuận, lãi suất, tỉ lệ, tỷ số...)
@@ -756,7 +906,7 @@ YÊU CẦU TỐI QUAN TRỌNG:
 
 4. ✅ ĐỂ ĐỌC DỄ HIỂU: Viết dưới dạng câu chuyện bình thường, dễ tưởng tượng
 
-VÍ DỤ CHO CHỦĐỀ "NHÂN SỐ THẬP PHÂN":
+VÍ DỤ CHO CHỦ ĐỀ "NHÂN SỐ THẬP PHÂN":
 "Gia đình bạn An đi siêu thị chuẩn bị cho buổi dã ngoại. Bố mua 3 kg táo, mỗi kilogam giá 35.500 đồng. Mẹ mua 2,5 lít nước cam ép, mỗi lít giá 18.000 đồng. An còn xin mua thêm 4 gói bánh quy, mỗi gói giá 12.750 đồng. Hỏi nếu bố An mang theo 220.000 đồng, thì gia đình còn lại bao nhiêu tiền sau khi mua sắm?"
 
 VÍ DỤ CHO CHỦĐỀ "CHIA SỐ THẬP PHÂN":
@@ -882,7 +1032,8 @@ FORMAT JSON (PHẢI ĐÚNG):
         TC4: evaluation.TC4 || { nhanXet: 'Chưa đánh giá', diem: 0 },
         tongNhanXet: evaluation.tongNhanXet || 'Lỗi khi đánh giá',
         tongDiem: evaluation.tongDiem || 0,
-        mucDoChinh: evaluation.mucDoChinh || 'Cần cố gắng'
+        // Tính mucDoChinh từ tongDiem thay vì lấy từ Gemini response
+        mucDoChinh: this._calculateMucDoChinh(evaluation.tongDiem || 0)
       };
       
       return validatedEval;

@@ -334,7 +334,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
                 )}
 
                 {/* Navigation Button */}
-                {vanDungData?.status === 'completed' && (
+                {/* {vanDungData?.status === 'completed' && (
                   <div className="mt-4">
                     <button
                       onClick={() => navigate(`/student/exam-result/${examId}`)}
@@ -343,7 +343,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
                       ✅ Xem kết quả toàn diện →
                     </button>
                   </div>
-                )}
+                )} */}
               </>
             ) : (
               <div className="bg-white rounded-max shadow-lg p-8 flex items-center justify-center">

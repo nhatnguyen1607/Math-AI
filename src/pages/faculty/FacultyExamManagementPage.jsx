@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import authService from '../../services/authService';
 import facultyService from '../../services/faculty/facultyService';
 import classService from '../../services/classService';
+import { parseExamFile } from '../../services/fileParserService';
 import ExamCard from '../../components/cards/ExamCard';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 
@@ -67,6 +68,12 @@ const FacultyExamManagementPage = () => {
   
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  
+  // File upload and preview states
+  const [parsedExercises, setParsedExercises] = useState(null);
+  const [parseError, setParseError] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
   
   const navigate = useNavigate();
   const authCheckedRef = useRef(false);
@@ -169,6 +176,54 @@ const FacultyExamManagementPage = () => {
     if (currentQuestionIndex >= updatedExercises[currentExerciseIndex].questions.length) {
       setCurrentQuestionIndex(Math.max(0, updatedExercises[currentExerciseIndex].questions.length - 1));
     }
+  };
+
+  // Handle file upload and parsing
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setParseError(null);
+    setParsedExercises(null);
+
+    try {
+      // Parse file using JavaScript libraries (no server needed!)
+      const result = await parseExamFile(file);
+      
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      setParsedExercises(result.exercises);
+      setParseError(null);
+    } catch (error) {
+      setParseError(`❌ Lỗi: ${error.message}`);
+      setParsedExercises(null);
+    } finally {
+      setUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Apply parsed exercises to form
+  const handleApplyParsedExercises = () => {
+    if (!parsedExercises) return;
+    
+    // Replace current exercises with parsed ones
+    setExercises(parsedExercises);
+    setParsedExercises(null);
+    setCurrentExerciseIndex(0);
+    setCurrentQuestionIndex(0);
+  };
+
+  // Discard parsed exercises
+  const handleDiscardParsedExercises = () => {
+    setParsedExercises(null);
+    setParseError(null);
   };
 
   const handleCreateExam = async (e) => {
@@ -493,6 +548,93 @@ const FacultyExamManagementPage = () => {
                       <div className="text-xs mt-1">⏱️ {exercise.duration}s · {exercise.questions.length} câu</div>
                     </button>
                   ))}
+                </div>
+
+                {/* Upload File Section */}
+                <div className="mb-6 p-5 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-2xl">📄</span>
+                    <h5 className="font-semibold text-gray-800">Tải nhanh từ File Word (.docx)</h5>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Tải file Word (.docx) để tự động trích xuất câu hỏi và đáp án. Hỗ trợ định dạng: 1. Câu hỏi | A. Đáp án | B. Đáp án | ...
+                  </p>
+                  
+                  <div className="flex gap-3 items-center">
+                    <div className="relative flex-1">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".docx"
+                        onChange={handleFileUpload}
+                        disabled={uploading}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        className="w-full px-4 py-3 bg-white border-2 border-blue-300 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                      >
+                        <span>{uploading ? '⏳ Đang xử lí...' : '📁 Chọn File Word (.docx)'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Error message */}
+                  {parseError && (
+                    <div className="mt-3 p-3 bg-red-100 border-l-4 border-red-500 text-red-700 rounded">
+                      {parseError}
+                    </div>
+                  )}
+
+                  {/* Preview parsed data */}
+                  {parsedExercises && (
+                    <div className="mt-4 p-4 bg-white border-2 border-green-200 rounded-lg">
+                      <h6 className="font-semibold text-green-700 mb-3">✅ Dữ liệu được trích xuất:</h6>
+                      
+                      {parsedExercises.map((exercise, exIdx) => (
+                        <div key={exIdx} className="mb-3 p-3 bg-gray-50 rounded border border-gray-200">
+                          <div className="font-semibold text-gray-700 mb-2">{exercise.name}</div>
+                          <div className="text-sm text-gray-600 mb-2">
+                            📝 {exercise.questions.length} câu | ⏱️ {exercise.duration}s
+                          </div>
+                          
+                          {exercise.questions.slice(0, 3).map((q, qIdx) => (
+                            <div key={qIdx} className="pl-4 py-2 border-l-2 border-blue-300 text-sm text-gray-700 mb-2">
+                              <div className="font-semibold truncate">{qIdx + 1}. {q.question}</div>
+                              <div className="text-xs text-gray-500 ml-2">
+                                {q.options.length} đáp án
+                              </div>
+                            </div>
+                          ))}
+                          
+                          {exercise.questions.length > 3 && (
+                            <div className="text-xs text-gray-500 italic ml-4">
+                              ... và {exercise.questions.length - 3} câu hỏi khác
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      <div className="flex gap-2 mt-4 justify-end">
+                        <button
+                          type="button"
+                          onClick={handleDiscardParsedExercises}
+                          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                        >
+                          ❌ Hủy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleApplyParsedExercises}
+                          className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                        >
+                          ✅ Áp dụng dữ liệu này
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Exercise Content */}

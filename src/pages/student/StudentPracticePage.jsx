@@ -49,10 +49,12 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         // Tạo context từ các bài tập gốc để Gemini hiểu chủ đề
         const exercise1 = examData.exercises[0];
         const exercise2 = examData.exercises[1];
+        const topicName = examData.title || ''; // Lấy chủ đề từ title của exam
 
         // Xây dựng context từ các câu hỏi trong bài tập
         const buildExerciseContext = (exercise) => {
-          let context = `Bài tập: ${exercise.name || 'Bài tập'}\n\n`;
+          let context = `Chủ đề bài thi: ${topicName}\n\n`;
+          context += `Bài tập: ${exercise.name || 'Bài tập'}\n\n`;
           
           if (exercise.questions && exercise.questions.length > 0) {
             // Lấy 1-2 câu hỏi đầu tiên để cung cấp context về chủ đề

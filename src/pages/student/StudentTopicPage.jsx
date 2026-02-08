@@ -168,8 +168,8 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
 
             {/* Exams Section */}
             <div className="space-y-6">
-              {exams.filter(exam => exam.topicId === topicId).length > 0 ? (
-                exams.filter(exam => exam.topicId === topicId).map((exam, idx) => {
+              {exams.filter(exam => exam.topicId === topicId && exam.status !== 'draft').length > 0 ? (
+                exams.filter(exam => exam.topicId === topicId && exam.status !== 'draft').map((exam, idx) => {
                   console.log(`🎯 RENDERING EXAM in StudentTopicPage: title="${exam.title}", isLocked=${exam.isLocked}`);
                   return (
                   <div 

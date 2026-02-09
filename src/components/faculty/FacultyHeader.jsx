@@ -27,7 +27,7 @@ const FacultyHeader = ({ user, onLogout, onBack, navItems = [], breadcrumbs = []
         {/* Logo và Title bên trái */}
         <div className="flex items-center cursor-pointer transition-all duration-300 hover:scale-105" onClick={() => navigate('/faculty')}>
           <span className="text-2xl lg:text-3xl animate-float">📐</span>
-          <span className="text-xl lg:text-2xl font-bold text-white drop-shadow-lg tracking-wide ml-3 hidden sm:inline">MathAI</span>
+          <span className="text-xl lg:text-2xl font-bold text-white drop-shadow-lg tracking-wide ml-3 hidden sm:inline">Trợ lí học tập ảo</span>
         </div>
 
         {/* User Info và Logout bên phải */}

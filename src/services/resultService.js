@@ -709,7 +709,7 @@ class ResultService {
           deBai: selectedProblems[1] || '',
           originalContext: '',
           chatHistory: [],
-          status: 'locked', // in_progress | completed | locked
+          status: 'in_progress', // in_progress | completed | locked - changed to in_progress to allow students to work on both exercises
           evaluation: {
             nhanXet: '',
             diemTC: { tc1: 0, tc2: 0, tc3: 0, tc4: 0 },

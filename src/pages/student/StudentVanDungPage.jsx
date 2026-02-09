@@ -179,8 +179,21 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
       setVanDungData(updatedData);
       setSubmitting(false);
     } catch (err) {
-      console.error('Error submitting van dung:', err);
-      setError('Lỗi khi nộp bài. Vui lòng thử lại.');
+      console.error('❌ Chi tiết lỗi khi nộp bài:', {
+        message: err.message,
+        status: err.status,
+        errorCode: err.code,
+        fullError: err
+      });
+      
+      // Hiển thị lỗi chi tiết hơn
+      if (!process.env.REACT_APP_GEMINI_API_KEY_1) {
+        setError('⚠️ Chưa cấu hình API Key. Thêm REACT_APP_GEMINI_API_KEY_1 vào file .env');
+      } else if (err.message?.includes('429') || err.message?.includes('quota')) {
+        setError('⏳ Đã vượt quota API. Vui lòng thử lại sau');
+      } else {
+        setError(`Lỗi khi nộp bài: ${err.message || 'Không rõ nguyên nhân'}`);
+      }
       setSubmitting(false);
     }
   };
@@ -273,9 +286,8 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
                  vanDungData?.status === 'completed' ? 'Đã hoàn thành' :
                  'Chưa mở'}
               </p>
-              {vanDungData?.status === 'completed' && vanDungData?.evaluation && (
+              {/* {vanDungData?.status === 'completed' && vanDungData?.evaluation && (
                 <div className="bg-orange-50 p-3 rounded text-xs space-y-2">
-                  <p className="font-bold text-orange-700">Điểm: {vanDungData.evaluation.tongDiem}/8</p>
                   <p className={`font-bold ${
                     vanDungData.evaluation.mucDoChinh === 'Tốt' ? 'text-green-600' :
                     vanDungData.evaluation.mucDoChinh === 'Đạt' ? 'text-blue-600' :
@@ -290,7 +302,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
                     <p>TC4: {vanDungData.evaluation.TC4?.diem}/2</p>
                   </div>
                 </div>
-              )}
+              )} */}
             </div>
 
             {/* Tips */}
@@ -320,9 +332,9 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
                   }}
                 />
 
-                {/* Submit Button */}
-                {vanDungData?.status === 'in_progress' && vanDungData?.chatHistory?.length > 0 && (
-                  <div className="mt-4">
+                {/* Submit Button - Luôn hiển thị khi đang tiến hành */}
+                {vanDungData?.status === 'in_progress' && (
+                  <div className="mt-4 space-y-3">
                     <button
                       onClick={handleSubmitVanDung}
                       disabled={submitting}
@@ -330,6 +342,11 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
                     >
                       {submitting ? '⏳ Đang chấm điểm...' : '✓ Nộp bài & Chấm điểm'}
                     </button>
+                    {vanDungData?.chatHistory?.length === 0 && (
+                      <p className="text-center text-sm text-gray-500 font-quicksand">
+                        💡 Hãy tương tác với AI trước khi nộp bài
+                      </p>
+                    )}
                   </div>
                 )}
 

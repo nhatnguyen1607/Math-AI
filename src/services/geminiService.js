@@ -6,31 +6,28 @@ import competencyEvaluationService from "./competencyEvaluationService";
 // System prompt cho AI trợ lý học toán
 const SYSTEM_PROMPT = `Mình là trợ lý học tập ảo thân thiện, hỗ trợ bạn lớp 5 giải toán theo 4 bước Polya.
 
-NGUYÊN TẮC QUAN TRỌNG:
+HƯỚNG TRONG NỘI BỘ (Không ghi ra cho bạn thấy):
+4 BƯỚC POLYA:
+1. HIỂU BÀI TOÁN: Giúp bạn xác định dữ kiện đã cho và yêu cầu bài toán
+2. LẬP KẾ HOẠCH: Hỏi bạn nên làm gì, cần phép tính nào (KHÔNG tính cụ thể)
+3. THỰC HIỆN: Hỏi bạn tính toán từng bước, kiểm tra lỗi tính toán nếu có
+4. KIỂM TRA & MỞ RỘNG: Hỏi bạn liệu kết quả có hợp lý, có cách giải nào khác không
+
+NGUYÊN TẮC GIAO TIẾP VỚI BẠN:
 - KHÔNG BAO GIỜ giải bài toán thay bạn
 - KHÔNG đưa ra đáp án dù bạn làm sai
 - CHỈ đặt câu hỏi gợi mở, định hướng để bạn tự suy nghĩ
 - MỖI LẦN CHỈ HỎI 1 CÂU duy nhất
 - Phát hiện lỗi sai của bạn và gợi ý để bạn tự sửa
 - Ngôn ngữ thân thiện, dễ thương như người bạn của bạn
-- Khi bạn trả lời đúng, khen ngợi cụ thể và chuyển bước tiếp theo
-
-4 BƯỚC GIẢI TOÁN:
-1. HIỂU BÀI TOÁN: Giúp bạn xác định dữ kiện đã cho và yêu cầu bài toán
-2. LẬP KẾ HOẠCH: Hỏi bạn nên làm gì, cần phép tính nào (KHÔNG tính cụ thể)
-3. THỰC HIỆN: Hỏi bạn tính toán từng bước, kiểm tra lỗi tính toán nếu có
-4. KIỂM TRA & MỞ RỘNG: Hỏi bạn liệu kết quả có hợp lý, có cách giải nào khác không
-
-CÁC LOẠI CÂU HỎI GỢI MỞ:
-- Để HIỂU BÀI: "Em thấy bài toán đang yêu cầu gì?"
-- Để LẬP KẾ HOẠCH: "Để tìm ..., em cần làm phép tính nào?"
-- Để THỰC HIỆN: "Em thử tính ... và xem kết quả nhé"
-- Để KIỂM TRA: "Kết quả này có hợp lý không? Vì sao?"
+- Khi bạn trả lời đúng, khen ngợi cụ thể và hỏi câu tiếp theo
+- KHÔNG ghi "BƯỚC 1:", "BƯỚC 2:", v.v. vào câu chat - chỉ đặt câu hỏi một cách tự nhiên
 
 NHỮNG GÌ KHÔNG NÊN LÀM:
-- Không hỏi "em làm đúng không?" → hỏi "vậy tiếp theo là gì?"
+- Không hỏi "bạn làm đúng không?" → hỏi "vậy tiếp theo là gì?"
 - Không nói "sai" trực tiếp → nói "hãy xem lại..."
-- Không giải hoặc cho đáp án → chỉ hỏi câu để em suy nghĩ lại
+- Không giải hoặc cho đáp án → chỉ hỏi câu để bạn suy nghĩ lại
+- **LUÔN XƯNG HÔ LÀ "BẠN" - KHÔNG ĐƯỢC XƯNG "EM"** ← Điều này bắt buộc phải tuân thủ
 
 ĐÁNH GIÁ MỨC ĐỘ:
 - Cần cố gắng: Chưa hiểu rõ, nhiều sai sót
@@ -43,6 +40,7 @@ export class GeminiService {
     this.currentStep = 1;
     this.currentProblem = "";
     this.studentResponses = [];
+    this.isSessionComplete = false;
     this.stepEvaluations = {
       step1: null, // Hiểu bài toán
       step2: null, // Lập kế hoạch
@@ -55,6 +53,7 @@ export class GeminiService {
   async startNewProblem(problemText) {
     this.currentProblem = problemText;
     this.currentStep = 1;
+    this.isSessionComplete = false;
     this.studentResponses = [];
     this.stepEvaluations = {
       step1: null,
@@ -72,23 +71,19 @@ export class GeminiService {
       
       try {
         // Gửi đề bài và bắt đầu bước 1 - dùng generateContent() có dual-level retry
-        const initialPrompt = `Đây là bài toán mà bạn cần giải: ${problemText}
+        const initialPrompt = `Đây là bài toán: ${problemText}
 
-Hãy bắt đầu BƯỚC 1: HIỂU BÀI TOÁN
-
-Yêu cầu:
-- Đặt CHỈ 1 câu hỏi gợi mở DUY NHẤT (không phải 2-3 câu)
-- Câu hỏi phải ngắn gọn, thân thiện, giúp học sinh suy nghĩ về:
-  + Thông tin đã cho là gì?
-  + Yêu cầu/mục tiêu của bài toán là gì?
-
-Ví dụ:
-❌ SAI: "Bạn Lan đã mua những gì?...", "Mỗi món đồ đó giá bao nhiêu?...", "Chúng ta cần tìm gì?..." (3 câu)
-✅ ĐÚNG: "Acorn Bạn Lan cần mua những gì và giá cả của chúng là bao nhiêu, rồi chúng ta sẽ tính được điều gì?" (1 câu)`;
+Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài toán này. Câu hỏi nên giúp mình suy nghĩ về dữ kiện đã cho và mục tiêu cần tìm. ĐỂ CÓ SỰ NHẤT QUÁN, CHỈ RETURN DUY NHẤT 1 CÂU HỎI, KHÔNG PHẢI NHIỀU LỰA CHỌN.`;
 
         // Sử dụng generateContent() để có dual-level retry (tries all models, then rotates key)
         const initialResponse = await geminiModelManager.generateContent(initialPrompt);
-        const response = initialResponse.response.text();
+        let response = initialResponse.response.text();
+        
+        // Nếu có nhiều câu hỏi, chỉ lấy cái đầu tiên
+        if (response.includes('\n\n**"') || response.includes('\n\nCâu hỏi')) {
+          const lines = response.split('\n');
+          response = lines[0]; // Lấy dòng đầu
+        }
 
         // Khởi tạo chat mới với key/model đang work
         const model = geminiModelManager.getModel();
@@ -100,7 +95,7 @@ Ví dụ:
             },
             {
               role: "model",
-              parts: [{ text: "Chào bạn! 👋 Mình là trợ lý học toán của bạn. Hôm nay chúng ta sẽ giải toán theo 4 bước Polya nhé! Mình sẽ không giải hộ bạn, mà sẽ hỏi các câu gợi ý để bạn tự suy nghĩ và tìm ra cách giải. Bạn sẵn sàng chưa? 😊" }],
+              parts: [{ text: "Chào bạn! 👋 Mình là trợ lý học toán của bạn. Mình sẽ không giải hộ bạn, mà sẽ hỏi các câu gợi ý để bạn tự suy nghĩ và tìm ra cách giải. Bạn sẵn sàng chưa? 😊" }],
             },
             {
               role: "user",
@@ -126,7 +121,17 @@ Ví dụ:
         };
       } catch (error) {
         lastError = error;
-        console.error(`Error in startNewProblem (attempt ${attemptCount}/${maxRetries}):`, error);
+        console.error(`❌ Lỗi khi khởi tạo bài toán (lần ${attemptCount}/${maxRetries}):`, {
+          message: error.message,
+          status: error.status,
+          code: error.code,
+          fullError: error
+        });
+        
+        // Kiểm tra nếu API Key bị invalid hoặc missing
+        if (!process.env.REACT_APP_GEMINI_API_KEY_1) {
+          throw new Error("❌ Chưa cấu hình REACT_APP_GEMINI_API_KEY_1 trong file .env");
+        }
         
         // Kiểm tra nếu là lỗi 429 (quota exceeded)
         const isQuotaError = error.message?.includes("429") || 
@@ -139,8 +144,8 @@ Ví dụ:
           continue;
         } else if (isQuotaError && attemptCount >= maxRetries) {
           const totalKeys = apiKeyManager.keyConfigs.length;
-          console.error(`❌ All ${totalKeys} API keys are exhausted or hit quota limits`);
-          throw new Error(`Tất cả ${totalKeys} API keys đã hết quota free tier. Vui lòng chờ cho đến hôm sau hoặc nâng cấp tài khoản Google Cloud.`);
+          console.error(`❌ Tất cả ${totalKeys} API keys đã hết quota`);
+          throw new Error(`❌ Tất cả ${totalKeys} API keys đã hết quota free tier. Vui lòng chờ cho đến hôm sau hoặc nâng cấp tài khoản Google Cloud.`);
         } else {
           // Lỗi khác - không retry, throw ngay
           throw error;
@@ -155,6 +160,18 @@ Ví dụ:
 
   // Xử lý phản hồi của bạn
   async processStudentResponse(studentAnswer) {
+    // Check if session is already complete
+    if (this.isSessionComplete) {
+      return {
+        message: "Bài toán đã hoàn thành! Vui lòng bắt đầu một bài toán mới.",
+        step: this.currentStep,
+        stepName: this._getStepName(this.currentStep),
+        nextStep: null,
+        evaluation: null,
+        isSessionComplete: true
+      };
+    }
+
     if (!this.chat) {
       throw new Error("Chưa khởi tạo bài toán. Vui lòng gọi startNewProblem() trước.");
     }
@@ -172,7 +189,18 @@ Ví dụ:
     try {
       result = await this.chat.sendMessage(contextPrompt);
     } catch (error) {
-      console.error("Error in chat.sendMessage, attempting recovery:", error);
+      console.error("❌ Chi tiết lỗi khi gửi message:", {
+        message: error.message,
+        status: error.status,
+        code: error.code,
+        errorCode: error.errorCode,
+        fullError: error
+      });
+      
+      // Kiểm tra nếu API Key bị invalid hoặc missing
+      if (!process.env.REACT_APP_GEMINI_API_KEY_1) {
+        throw new Error("❌ Chưa cấu hình REACT_APP_GEMINI_API_KEY_1 trong file .env");
+      }
       
       // Kiểm tra nếu là lỗi 429 (quota exceeded)
       const isQuotaError = error.message?.includes("429") || 
@@ -185,8 +213,10 @@ Ví dụ:
         const hasRotated = apiKeyManager.rotateToNextKey();
         
         if (!hasRotated) {
-          throw new Error("Tất cả API keys đã hết quota");
+          throw new Error("❌ Tất cả API keys đã hết quota. Vui lòng thử lại sau.");
         }
+        
+        console.warn("🔄 Đã rotate tới API key khác, retry...");
         
         // Recreate chat với key mới
         const newGeminiInstance = new GoogleGenerativeAI(apiKeyManager.getCurrentKey());
@@ -243,16 +273,23 @@ Ví dụ:
       evaluation = this._extractEvaluation(response);
       this.evaluateStep(2, evaluation || 'pass');
       this.currentStep = 3;
-    } else if ((lowerResponse.includes("bước 4") || lowerResponse.includes("kiểm tra & mở rộng")) && this.currentStep === 3) {
+    } else if ((lowerResponse.includes("bước 4") || lowerResponse.includes("kiểm tra & mở rộng") || 
+               (lowerResponse.includes("kiểm tra") && this.currentStep === 3) ||
+               (lowerResponse.includes("mở rộng") && this.currentStep === 3) ||
+               (lowerResponse.includes("cách khác") && this.currentStep === 3) ||
+               (lowerResponse.includes("hợp lý") && this.currentStep === 3)) && this.currentStep === 3) {
       nextStep = 4;
       evaluation = this._extractEvaluation(response);
       this.evaluateStep(3, evaluation || 'pass');
       this.currentStep = 4;
-    } else if ((lowerResponse.includes("hoàn thành bài toán") || lowerResponse.includes("hoàn tất bài toán") || lowerResponse.includes("🎉")) && this.currentStep === 4) {
+    } else if ((lowerResponse.includes("hoàn thành") || lowerResponse.includes("hoàn tất") || 
+               lowerResponse.includes("🎉") || lowerResponse.includes("chúc mừng") ||
+               (lowerResponse.includes("giỏi") && lowerResponse.includes("đầy đủ 4 bước")) ||
+               lowerResponse.includes("tuyệt vời") || lowerResponse.includes("chính xác")) && this.currentStep === 4) {
       nextStep = 5; // Đã hoàn thành bước 4, bài toán xong
       evaluation = this._extractEvaluation(response);
       this.evaluateStep(4, evaluation || 'pass');
-
+      this.isSessionComplete = true; // Mark session as complete
     }
 
     return {
@@ -260,7 +297,8 @@ Ví dụ:
       step: this.currentStep,
       stepName: this._getStepName(this.currentStep),
       nextStep: nextStep,
-      evaluation: evaluation
+      evaluation: evaluation,
+      isSessionComplete: this.isSessionComplete
     };
   }
 
@@ -329,18 +367,18 @@ Tiêu chí xem câu trả lời "đủ" ở bước 1:
 
 HÀNH ĐỘNG:
 - Nếu TẤT CẢ CÁC DỮ KIỆN ĐÚNG và KHỚP BÀI TOÁN (có thể nêu rải rác qua nhiều câu) VÀ YÊUBCẦU ĐÃ XÁC ĐỊNH:
-  * Khen ngợi cụ thể: "Tuyệt! Em đã xác định đúng dữ kiện"
+  * Khen ngợi cụ thể: "Tuyệt! Bạn đã xác định đúng dữ kiện"
   * Nhắc lại yêu cầu: "Và bài toán yêu cầu chúng ta [YÊU CẦU TỪ BÀI TOÁN]"
-  * QUAN TRỌNG: PHẢI VIẾT: "Bây giờ chúng mình chuyển sang **BƯỚC 2: LẬP KẾ HOẠCH GIẢI** nhé!"
-  * Nêu 1 câu hỏi đầu tiên của Bước 2
+  * Tự nhiên chuyển sang câu hỏi tiếp theo (KHÔNG cần nêu "BƯỚC 2"):
+  * Nêu 1 câu hỏi về kế hoạch giải (ví dụ: "Vậy để giải quyết bài toán này, bạn cần dùng phép tính nào?")
 
 - Nếu DỮ KIỆN KHÔNG KHỚP hoặc SAI (không khớp bài toán gốc):
-  * Gently point out: "Hình như em đọc lại bài toán một chút xem sao! Con số '...' không khớp với bài toán gốc."
-  * Đặt 1 câu hỏi: "Em thử đọc lại bài toán gốc và bổ sung/sửa lại dữ kiện nhé?"
+  * Gently point out: "Hình như bạn đọc lại bài toán một chút xem sao! Con số '...' không khớp với bài toán gốc."
+  * Đặt 1 câu hỏi: "Bạn thử đọc lại bài toán gốc và bổ sung/sửa lại dữ kiện nhé?"
 
 - Nếu toàn bộ các câu trả lời CHƯA CHỨA ĐỦ DỮ KIỆN hoặc CHƯA CÓ YÊU CẦU:
   * Đặt 1 câu hỏi gợi ý để bạn phát hiện điều còn thiếu
-  * KHÔNG nêu ví dụ cụ thể, chỉ dẫn dắt: "Em thấy bài toán đã cho những thông tin nào? Và bài toán yêu cầu chúng ta tìm cái gì?"
+  * KHÔNG nêu ví dụ cụ thể, chỉ dẫn dắt: "Bạn thấy bài toán đã cho những thông tin nào? Và bài toán yêu cầu chúng ta tìm cái gì?"
 
 NHẮC NHỨ: CHỈ HỎI 1 CÂU DUY NHẤT!`;
         break;
@@ -358,13 +396,13 @@ Tiêu chí xem câu trả lời "đủ" ở bước 2:
 
 HÀNH ĐỘNG:
 - Nếu câu trả lời CÓ CHỨA KẾ HOẠCH RÕ (phép tính/chiến lược rõ ràng):
-  * Khen ngợi: "Rất tốt! Em đã xác định đúng kế hoạch"
-  * QUAN TRỌNG: PHẢI VIẾT: "Tuyệt vời! Bây giờ chúng mình chuyển sang **BƯỚC 3: THỰC HIỆN KẾ HOẠCH** nhé!"
-  * Yêu cầu bạn thực hiện: "Vậy em hãy tính kết quả nhé!"
+  * Khen ngợi: "Rất tốt! Bạn đã xác định đúng kế hoạch"
+  * Tự nhiên chuyển sang câu hỏi tiếp theo (KHÔNG cần nêu "BƯỚC 3"):
+  * Yêu cầu bạn thực hiện: "Vậy bạn hãy tính kết quả nhé!"
 
 - Nếu câu trả lời CHƯA CHỨA KẾ HOẠCH RÕ:
   * Đặt 1 câu hỏi gợi ý để bạn tự nêu phép tính
-  * Hỏi: "Để giải quyết bài toán này, em cần dùng phép tính nào?"
+  * Hỏi: "Để giải quyết bài toán này, bạn cần dùng phép tính nào?"
 
 NHẮC NHỨ: CHỈ HỎI 1 CÂU DUY NHẤT! Đừng tính hộ!`;
         break;
@@ -384,46 +422,53 @@ Tiêu chí xem câu trả lời "đủ" ở bước 3:
 HÀNH ĐỘNG:
 - Nếu tính toàn bộ ĐÚNG và ĐÃ HOÀN THÀNH tất cả phép tính của bài toán:
   * Khen ngợi: "Chính xác rồi!"
-  * QUAN TRỌNG: PHẢI VIẾT: "Tuyệt vời! Bây giờ chúng mình chuyển sang **BƯỚC 4: KIỂM TRA & MỞ RỘNG** nhé!"
-  * Đặt 1 câu hỏi cho Bước 4
+  * BẮTBUỘC: PHẢI ĐẶT NGAY 1 CÂU HỎI KIỂM TRA HOẶC MỞ RỘNG (ví dụ: "Hãy kiểm tra xem kết quả của bạn có hợp lý không?" hoặc "Bạn có thể giải bài toán này bằng cách khác không?")
+  * KHÔNG được kết thúc response mà không có câu hỏi
 
 - Nếu tính đúng NHƯNG còn phép tính khác trong bài toán:
   * Khen ngợi: "Chính xác rồi!"
   * KHÔNG chuyển Bước 4 ngay
   * Thay vào đó, hỏi CỤ THỂ về phép tính tiếp theo:
-    - Nếu thấy nhiều giá tiền riêng lẻ → "Vậy bây giờ em cần cộng tất cả các khoản này lại để được tổng chi phí, phép cộng sẽ là gì?"
-    - Nếu thấy cần so sánh → "Vậy em cần so sánh hai khoản tiền này để biết cái nào rẻ hơn, em sẽ làm phép tính nào?"
-    - Hoặc hỏi chung theo bài toán → "Bây giờ để hoàn thành bài toán, em còn cần tính gì tiếp theo để tìm ra [YÊU CẦU TỪ BÀI TOÁN]?"
+    - Nếu thấy nhiều giá tiền riêng lẻ → "Vậy bây giờ bạn cần cộng tất cả các khoản này lại để được tổng chi phí, phép cộng sẽ là gì?"
+    - Nếu thấy cần so sánh → "Vậy bạn cần so sánh hai khoản tiền này để biết cái nào rẻ hơn, bạn sẽ làm phép tính nào?"
+    - Hoặc hỏi chung theo bài toán → "Bây giờ để hoàn thành bài toán, bạn còn cần tính gì tiếp theo để tìm ra [YÊU CẦU TỪ BÀI TOÁN]?"
 
 - Nếu có SAI hoặc CHƯA HOÀN THÀNH:
   * KHÔNG nói đáp án đúng
   * Nhắc nhở: "Kết quả này có vẻ chưa chính xác"
-  * Đặt 1 câu hỏi gợi ý: "Em thử tính lại xem sao?"
+  * Đặt 1 câu hỏi gợi ý: "Bạn thử tính lại xem sao?"
 
-NHẮC NHỨ: CHỈ HỎI 1 CÂU DUY NHẤT! Không tính hộ!`;
+NHẮC NHỞ: CHỈ HỎI 1 CÂU DUY NHẤT! Không tính hộ!`;
         break;
 
       case 4: // Kiểm tra & mở rộng
-        prompt += `BƯỚC 4: KIỂM TRA & MỞ RỘNG
+        prompt += `BƯỚC 4: KIỂM TRA & MỞ RỘNG - **BỘC CUỐI CÙNG**
 Tiêu chí xem câu trả lời "đủ" ở bước 4:
 ✅ ĐỦ nếu: Bạn đã trả lời 1 trong 2 câu hỏi:
-   - Kiểm tra: Bạn giải thích tại sao kết quả hợp lý với dữ kiện bài toán
+   - Kiểm tra: Bạn giải thích tại sao kết quả hợp lý với dữ kiện bài toán, hoặc xác nhận kết quả là đúng
    - Hoặc Mở rộng: Bạn nêu được cách giải khác hoặc bài toán tương tự
 
 ❌CHƯA ĐỦ nếu: Bạn chưa trả lời hoặc trả lời không rõ ràng
 
-HÀNH ĐỘNG:
+**HÀNH ĐỘNG BẮTBUỘC:**
 - Nếu bạn CHƯA TRẢ LỜI hoặc trả lời không rõ:
-  * Đặt 1 câu hỏi gợi ý cho Bước 4
-  * Ví dụ: "Hãy kiểm tra xem kết quả của em có hợp lý không?"
-  * Hoặc: "Em có cách nào khác để giải bài toán này không?"
+  * Đặt đúng 1 CÂU HỎI gợi ý cho Bước 4
+  * Ví dụ: "Hãy kiểm tra xem kết quả của bạn có hợp lý không?"
+  * Hoặc: "Bạn có cách nào khác để giải bài toán này không?"
+  * ⚠️ KHÔNG được hỏi thêm, KHÔNG được tính toán, KHÔNG được đề cập bài khác
 
-- Nếu bạn TRẢ LỜI ĐÚNG:
-  * Khen ngợi: "Tuyệt vời! Em đã hoàn thành đầy đủ 4 bước"
-  * Đánh giá tổng thể (Cần cố gắng/Đạt/Tốt)
-  * QUAN TRỌNG: PHẢI VIẾT RÕNG: "Chúc mừng bạn đã **HOÀN THÀNH BÀI TOÁN**! 🎉"
+- Nếu bạn TRẢ LỜI ĐÚNG (nhất là có từ "đúng rồi", "hợp lý", "chính xác", "khớp", "đồng ý", v.v.):
+  * BẮTBUỘC PHẢI VIẾT ĐÚNG DÒng sau:
+  * "Tuyệt vời! Bạn đã hoàn thành đầy đủ 4 bước"
+  * Nêu 1 đánh giá tổng thể (Cần cố gắng / Đạt / Tốt) 
+  * **VIẾT CHÍNH XÁC MESSAGE NÀY: "Chúc mừng bạn đã **HOÀN THÀNH BÀI TOÁN**! 🎉"**
+  * ⚠️ **TẠM BIỆT NGAY - KHÔNG HỎI NÀO THÊM - KHÔNG ĐỀ NGHỊ BÀI KHÁC - BÀI TẬP KẾT THÚC**
 
-NHẮC NHỨ: CHỈ HỎI 1 CÂU! Khi bạn hoàn thành bước 4 → bài tập kết thúc.`;
+**CẢO BÁO QUAN TRỌNG:**
+- BỰC 4 LÀ BỰC CUỐI CÙNG - Khi bạn hoàn thành, bài tập PHẢI KẾT THÚC NGAY
+- KHÔNG ĐƯỢC hỏi "Bạn còn muốn...", "Làm bài khác không?", hoặc bất kỳ câu hỏi nào sau completion
+- CHỈ CÓ 2 TRƯỜNG HỢP: Hoặc hỏi câu kiểm tra (nếu chưa hoàn) hoặc kết thúc bài (nếu hoàn)
+- Nếu bạn viết bất kỳ điều gì sau MESSAGE HOÀN THÀNH, bạn đang vi phạm quy tắc`;
         break;
 
       default:
@@ -892,7 +937,7 @@ Tạo 1 BÀI TOÁN VẬN DỤNG (Real-world Application Problem) phù hợp vớ
 YÊU CẦU TỐI QUAN TRỌNG:
 1. ✅ MỨC ĐỘ PHẢI DỄ VÀ PHÁT TRIỂN CHỦ ĐỀ:
    - Bài toán nên dựa trên một tình huống thực tế quen thuộc của học sinh lớp 5 (gia đình, nhà trường, chợ, cửa hàng, dã ngoại...)
-   - KHÔNG dùng phần trăm (%), vì em chưa được học
+   - KHÔNG dùng phần trăm (%), vì bạn chưa được học
    - KHÔNG dùng khái niệm phức tạp (lợi nhuận, lãi suất, tỉ lệ, tỷ số...)
    - Bài toán nên CÓ 2-3 dữ kiện để cần phân tích, nhưng không quá nhiều
    - Phép tính cơ bản như: cộng, trừ, nhân, chia, số thập phân đơn giản
@@ -961,26 +1006,26 @@ NHIỆM VỤ: Dựa trên lịch sử hội thoại trên, hãy đánh giá họ
 
 **TC1. NHẬN BIẾT ĐƯỢC VẤN ĐỀ CẦN GIẢI QUYẾT (Max 2 điểm)**
 Mục tiêu: Đánh giá xem học sinh đã xác định đầy đủ dữ kiện và yêu cầu bài toán chưa?
-- 0 điểm: Không xác định được đầy đủ cái đã cho và cái cần tìm, cần nhiều hỗ trợ từ AI
-- 1 điểm: Xác định đầy đủ dữ kiện và yêu cầu bài toán với gợi ý từ AI
+- 0 điểm: Không xác định được đầy đủ cái đã cho và cái cần tìm, cần nhiều hỗ trợ từ trợ lí AI
+- 1 điểm: Xác định đầy đủ dữ kiện và yêu cầu bài toán với gợi ý từ trợ lí AI
 - 2 điểm: Xác định chính xác dữ kiện, yêu cầu bài toán và mối quan hệ giữa chúng
 
 **TC2. NÊU ĐƯỢC CÁCH THỨC GIẢI QUYẾT VẤN ĐỀ (Max 2 điểm)**
 Mục tiêu: Đánh giá xem học sinh đã nhận dạng dạng toán và chọn được phép toán phù hợp chưa?
 - 0 điểm: Không nhận dạng được dạng toán, hoặc không chọn được phép toán phù hợp
-- 1 điểm: Nhận dạng được dạng toán và chọn được phép toán cơ bản phù hợp với gợi ý từ AI
+- 1 điểm: Nhận dạng được dạng toán và chọn được phép toán cơ bản phù hợp với gợi ý từ trợ lí AI
 - 2 điểm: Nhận dạng đúng dạng toán, đề xuất được cách giải hợp lý, chọn phép toán/chiến lược tối ưu
 
 **TC3. TRÌNH BÀY ĐƯỢC CÁCH THỨC GIẢI QUYẾT (Max 2 điểm)**
 Mục tiêu: Đánh giá xem học sinh đã thực hiện đúng các phép tính và lời giải chưa?
 - 0 điểm: Thực hiện phép tính còn sai nhiều, lời giải không đầy đủ/thiếu logic
-- 1 điểm: Thực hiện đúng các bước giải và phép tính cơ bản, trình bày lời giải đầy đủ từ phản hồi của AI
+- 1 điểm: Thực hiện đúng các bước giải và phép tính cơ bản, trình bày lời giải đầy đủ với sự hỗ trợ từ trợ lí AI
 - 2 điểm: Thực hiện đúng đầy đủ các phép tính, trình bày lời giải rõ ràng mạch lạc
 
 **TC4. KIỂM TRA ĐƯỢC GIẢI PHÁP ĐÃ THỰC HIỆN (Max 2 điểm)**
 Mục tiêu: Đánh giá xem học sinh đã kiểm tra lại kết quả và vận dụng được chưa?
 - 0 điểm: Không kiểm tra lại kết quả, không điều chỉnh hoặc không vận dụng vào bài toán tương tự
-- 1 điểm: Kiểm tra lại kết quả, điều chỉnh đúng khi có gợi ý từ AI
+- 1 điểm: Kiểm tra lại kết quả, điều chỉnh đúng khi có gợi ý từ trợ lí AI
 - 2 điểm: Kiểm tra lại bằng các cách khác nhau, vận dụng vào bài toán mở rộng/nâng cao
 
 HƯỚNG DẪN TRẢ LỜI:

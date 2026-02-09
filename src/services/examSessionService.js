@@ -61,6 +61,44 @@ export const createExamSession = async (examId, facultyId, classId, totalQuestio
 };
 
 /**
+ * Lấy session đang active cho một exam (chưa kết thúc)
+ * @param {string} examId - ID của bộ đề thi
+ * @returns {Promise<string|null>} - ID của session đang active hoặc null
+ */
+export const getActiveExamSession = async (examId) => {
+  try {
+    const q = query(
+      collection(db, 'exam_sessions'),
+      where('examId', '==', examId),
+      where('status', 'in', ['waiting', 'starting', 'ongoing'])
+    );
+
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      return null; // Không có session active
+    }
+
+    // Nếu có nhiều session, lấy session được tạo gần nhất
+    const sessions = snapshot.docs.map(doc => ({
+      id: doc.id,
+      createdAt: doc.data().createdAt
+    }));
+
+    sessions.sort((a, b) => {
+      const timeA = a.createdAt?.toMillis?.() || 0;
+      const timeB = b.createdAt?.toMillis?.() || 0;
+      return timeB - timeA; // Sắp xếp mới nhất trước
+    });
+
+    return sessions[0].id;
+  } catch (error) {
+    console.error('❌ Error getting active exam session:', error);
+    return null; // Return null thay vì throw error
+  }
+};
+
+/**
  * Khởi động phiên thi (Faculty bấm Start)
  * Chuyển từ 'waiting' -> 'starting' -> 'ongoing' với serverTimestamp
  * @param {string} sessionId - ID của phiên thi
@@ -123,7 +161,18 @@ export const finishExamSession = async (sessionId) => {
     // Sắp xếp lại leaderboard
     const participants = sessionData.participants || {};
 
-    const finalLeaderboard = Object.entries(participants)
+    // 🔧 AUTO-SUBMIT: Đánh dấu tất cả học sinh đã hoàn thành
+    const updatedParticipants = Object.entries(participants).reduce((acc, [uid, data]) => {
+      acc[uid] = {
+        ...data,
+        submitted: true,  // 🔧 Mark as submitted
+        submittedAt: new Date(), // 🔧 Mark submission time
+        lastUpdated: new Date()
+      };
+      return acc;
+    }, {});
+
+    const finalLeaderboard = Object.entries(updatedParticipants)
       .map(([uid, data]) => ({
         uid,
         name: data.name,
@@ -148,6 +197,7 @@ export const finishExamSession = async (sessionId) => {
     await updateDoc(sessionRef, {
       status: 'finished',
       endTime: serverTimestamp(),
+      participants: updatedParticipants,  // 🔧 Update all participants
       currentLeaderboard: finalLeaderboard
     });
 
@@ -158,10 +208,12 @@ export const finishExamSession = async (sessionId) => {
       const examRef = doc(db, 'exams', examId);
       await updateDoc(examRef, {
         finalLeaderboard: finalLeaderboard,
-        status: 'finished'
+        status: 'finished',
+        isLocked: true  // 🔧 Lock exam when session finishes
       });
     }
 
+    console.log('✅ Session finished and all students auto-submitted');
     } catch (error) {
     console.error('❌ Error finishing exam session:', error);
     throw error;
@@ -259,6 +311,27 @@ export const submitAnswer = async (sessionId, uid, answerData) => {
   } catch (error) {
     console.error('❌ Error submitting answer:', error);
     throw error;
+  }
+};
+
+/**
+ * 🔧 Cập nhật câu hỏi hiện tại (khi học sinh navigate)
+ * @param {string} sessionId - ID của phiên thi
+ * @param {string} uid - ID của học sinh
+ * @param {number} questionIndex - Index của câu hỏi hiện tại
+ * @returns {Promise<void>}
+ */
+export const updateCurrentQuestion = async (sessionId, uid, questionIndex) => {
+  try {
+    const sessionRef = doc(db, 'exam_sessions', sessionId);
+    await updateDoc(sessionRef, {
+      [`participants.${uid}.currentQuestion`]: questionIndex,
+      [`participants.${uid}.lastUpdated`]: serverTimestamp()
+    });
+    console.log(`✅ Updated currentQuestion to ${questionIndex} for user ${uid}`);
+  } catch (error) {
+    console.error('❌ Error updating current question:', error);
+    // Not throwing error - this is not critical
   }
 };
 
@@ -545,6 +618,7 @@ const examSessionService = {
   // Student
   joinExamSession,
   submitAnswer,
+  updateCurrentQuestion,
   completeExamForStudent,
 
   // Subscriptions

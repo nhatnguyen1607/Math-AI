@@ -44,7 +44,7 @@ const ExamCard = ({ exam, onEdit, onDelete, onActivate, onStart, onViewResults, 
         textColor: 'text-white',
         borderColor: 'border-gray-500'
       },
-      active: {
+      open: {
         label: 'Sẵn sàng',
         icon: '✅',
         bgColor: 'bg-green-500',
@@ -150,14 +150,14 @@ const ExamCard = ({ exam, onEdit, onDelete, onActivate, onStart, onViewResults, 
             </button>
           )}
 
-          {exam.isLocked !== true && exam.status === 'in_progress' && onViewResults && (
+          {/* {exam.isLocked !== true && exam.status === 'in_progress' && onViewResults && (
             <button 
               className="flex-1 min-h-10 px-2 lg:px-3 py-2.5 border-none rounded-xl text-xs lg:text-sm font-semibold cursor-pointer transition-all duration-300 whitespace-nowrap text-center flex items-center justify-center bg-gradient-to-r from-green-500 to-green-600 text-white hover:-translate-y-1 hover:shadow-soft-lg shadow-soft" 
               onClick={() => onViewResults(exam.id)}
             >
               📊 <span className="hidden sm:inline ml-1">Bảng xếp hạng</span>
             </button>
-          )}
+          )} */}
         </div>
 
         {/* Join button - Responsive */}

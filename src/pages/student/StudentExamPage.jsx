@@ -78,6 +78,12 @@ const StudentExamPage = ({ user, onSignOut }) => {
                   console.log('✅ Restored answers from session:', answersMap);
                   console.log('Total answers restored:', Object.keys(answersMap).length);
                 }
+
+                // 🔧 Khôi phục currentQuestionIndex từ session
+                if (participantData.currentQuestion !== undefined) {
+                  setCurrentQuestionIndex(participantData.currentQuestion);
+                  console.log(`✅ Restored currentQuestion: ${participantData.currentQuestion}`);
+                }
               }
 
               // Lấy dữ liệu đề thi nếu chưa có
@@ -593,6 +599,10 @@ const StudentExamPage = ({ user, onSignOut }) => {
     if (currentQuestionIndex < questions.length - 1) {
       const nextIdx = currentQuestionIndex + 1;
       setCurrentQuestionIndex(nextIdx);
+      // 🔧 Save currentQuestion to session
+      examSessionService.updateCurrentQuestion(sessionId, user?.uid, nextIdx).catch(err => {
+        console.error('Failed to update current question:', err);
+      });
       // Load câu trả lời cũ nếu có
       const nextAnswer = answers[nextIdx];
       if (nextAnswer) {
@@ -610,6 +620,10 @@ const StudentExamPage = ({ user, onSignOut }) => {
     if (currentQuestionIndex > 0) {
       const prevIdx = currentQuestionIndex - 1;
       setCurrentQuestionIndex(prevIdx);
+      // 🔧 Save currentQuestion to session
+      examSessionService.updateCurrentQuestion(sessionId, user?.uid, prevIdx).catch(err => {
+        console.error('Failed to update current question:', err);
+      });
       // Load câu trả lời cũ nếu có
       const prevAnswer = answers[prevIdx];
       if (prevAnswer) {
@@ -1215,9 +1229,11 @@ const StudentExamPage = ({ user, onSignOut }) => {
                   <button
                     key={idx}
                     onClick={() => {
-                      if (!isAnswered) {
-                        setCurrentQuestionIndex(idx);
-                      }
+                      setCurrentQuestionIndex(idx);
+                      // 🔧 Save currentQuestion to session
+                      examSessionService.updateCurrentQuestion(sessionId, user?.uid, idx).catch(err => {
+                        console.error('Failed to update current question:', err);
+                      });
                     }}
                     disabled={isAnswered}
                     title={`Câu ${idx + 1}${isAnswered ? ' (Đã trả lời)' : ''}`}

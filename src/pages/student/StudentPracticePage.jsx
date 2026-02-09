@@ -282,7 +282,6 @@ const StudentPracticePage = ({ user, onSignOut }) => {
                   </p>
                   {baiData.status === 'completed' && baiData.evaluation && (
                     <div className="bg-blue-50 p-2 rounded text-xs">
-                      <p className="font-bold text-blue-700">Điểm: {baiData.evaluation.tongDiem}/8</p>
                       <p className={`font-bold ${
                         baiData.evaluation.mucDoChinh === 'Tốt' ? 'text-green-600' :
                         baiData.evaluation.mucDoChinh === 'Đạt' ? 'text-blue-600' :

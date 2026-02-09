@@ -42,16 +42,24 @@ const PracticeChat = ({
   }, [baiNumber, userId, examId]);
 
   // Reset state khi baiNumber thay đổi (chuyển từ bài 1 → bài 2)
+  // VÀ sync messages từ chatHistory nếu có
   useEffect(() => {
-    setMessages([]);
-    setError(null);
-  }, [baiNumber]);
+    if (chatHistory && chatHistory.length > 0) {
+      // Có dữ liệu lịch sử → load lại
+      setMessages(chatHistory);
+      setIsInitializing(false);
+    } else {
+      // Không có dữ liệu lịch sử → reset và chuẩn bị khởi tạo
+      setMessages([]);
+      setError(null);
+    }
+  }, [baiNumber, chatHistory]);
 
   // Khởi tạo geminiService khi bài mới (chỉ nếu chatHistory rỗng)
   useEffect(() => {
     const initializeProblem = async () => {
       try {
-        setIsInitializing(true); // Bắt đầu khởi tạo
+        setIsInitializing(true);
         setError(null);
         geminiServiceRef.current = new geminiService.constructor();
         const response = await geminiServiceRef.current.startNewProblem(deBai);
@@ -71,15 +79,16 @@ const PracticeChat = ({
       } catch (err) {
         setError('Lỗi khi khởi tạo bài toán: ' + err.message);
       } finally {
-        setIsInitializing(false); // Hoàn thành khởi tạo
+        setIsInitializing(false);
       }
     };
 
-    // Chỉ khởi tạo nếu: có bài toán, messages rỗng, chatHistory rỗng, chưa hoàn thành
-    if (deBai && messages.length === 0 && chatHistory.length === 0 && !isCompleted) {
+    // Chỉ khởi tạo nếu: có bài toán, messages rỗng, và chưa hoàn thành
+    // Không cần check chatHistory vì đã được sync ở useEffect trước
+    if (deBai && messages.length === 0 && !isCompleted) {
       initializeProblem();
     }
-  }, [deBai, messages, chatHistory, isCompleted, userId, examId, baiNumber, onChatUpdate, saveChatMessage]);
+  }, [deBai, isCompleted, userId, examId, baiNumber, onChatUpdate, saveChatMessage, messages]);
 
   // Auto scroll to bottom
   const scrollToBottom = () => {
@@ -92,14 +101,6 @@ const PracticeChat = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  // Sync chat history from props (chỉ khi có dữ liệu thực tế, không override initialization)
-  useEffect(() => {
-    // Chỉ sync nếu chatHistory có nội dung hoặc các messages chưa được khởi tạo
-    if (chatHistory && chatHistory.length > 0) {
-      setMessages(chatHistory);
-    }
-  }, [chatHistory]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -149,7 +150,25 @@ const PracticeChat = ({
       }
 
     } catch (err) {
-      setError('Lỗi khi gửi tin nhắn. Vui lòng thử lại.');
+      console.error('❌ Chi tiết lỗi khi gửi tin nhắn:', {
+        message: err.message,
+        status: err.status,
+        errorCode: err.code,
+        fullError: err
+      });
+      
+      // Kiểm tra nguyên nhân lỗi cụ thể
+      if (!process.env.REACT_APP_GEMINI_API_KEY_1) {
+        setError('⚠️ Chưa cấu hình API Key Gemini. Vui lòng thêm REACT_APP_GEMINI_API_KEY_1 vào file .env');
+      } else if (err.status === 401 || err.message?.includes('401')) {
+        setError('❌ API Key không hợp lệ. Vui lòng kiểm tra lại Gemini API Key');
+      } else if (err.message?.includes('429') || err.message?.includes('quota')) {
+        setError('⏳ Đã vượt quota API. Vui lòng thử lại sau hoặc sử dụng API Key khác');
+      } else if (err.message?.includes('INVALID_ARGUMENT')) {
+        setError('❌ Tham số không hợp lệ. Kiểm tra cấu hình API');
+      } else {
+        setError(`Lỗi khi gửi tin nhắn: ${err.message || 'Không rõ nguyên nhân'}`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -238,6 +257,19 @@ const PracticeChat = ({
             </button>
           </div>
         </form>
+      )}
+
+      {/* Evaluation Display - Hiển thị kết quả khi hoàn thành */}
+      {isCompleted && (
+        <div className="border-t border-gray-300 bg-white rounded-b-lg p-4">
+          <div className="space-y-4">
+            <div className="text-center">
+              <p className="text-lg font-bold text-green-600 font-quicksand mb-3">
+                ✅ Bài tập đã hoàn thành!
+              </p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

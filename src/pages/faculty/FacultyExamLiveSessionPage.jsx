@@ -119,7 +119,7 @@ const FacultyExamLiveSessionPage = () => {
         // Auto-finish exam without asking
         examSessionService.finishExamSession(sessionId)
           .then(() => {
-            alert('⏰ Hết giờ! Phiên thi đã kết thúc và khóa.');
+            alert('⏰ Hết giờ! Phiên thi đã kết thúc và khóa. Bài làm của tất cả học sinh đã được nộp tự động.');
             navigate('/faculty/exam-management');
           })
           .catch((error) => {
@@ -133,18 +133,12 @@ const FacultyExamLiveSessionPage = () => {
   }, [sessionId, session, navigate]);
 
   const handleEndExam = async () => {
-    if (window.confirm('Bạn có chắc chắn muốn kết thúc phiên thi?')) {
+    if (window.confirm('Bạn có chắc chắn muốn kết thúc phiên thi? Bài làm của tất cả học sinh sẽ được nộp tự động.')) {
       try {
-        // Finish exam session
+        // 🔧 Finish exam session (auto-submits all students & locks exam)
         await examSessionService.finishExamSession(sessionId);
         
-        // Lock the exam by setting isLocked to true
-        if (exam?.id) {
-          await facultyService.updateExam(exam.id, { isLocked: true });
-          console.log('✅ Exam locked:', exam.id);
-        }
-        
-        alert('Phiên thi đã kết thúc!');
+        alert('✅ Phiên thi đã kết thúc! Bài làm của tất cả học sinh đã được nộp tự động.');
         navigate('/faculty/exam-management');
       } catch (error) {
         console.error('Error ending exam:', error);
@@ -260,13 +254,13 @@ const FacultyExamLiveSessionPage = () => {
             </div>
           </div>
 
-          <div className="stat-card">
+          {/* <div className="stat-card">
             <div className="stat-icon">⏱️</div>
             <div className="stat-info">
               <div className="stat-value">{exam.duration}</div>
               <div className="stat-label">Phút còn lại</div>
             </div>
-          </div>
+          </div> */}
 
           <div className="stat-card">
             <div className="stat-icon">🎯</div>

@@ -57,7 +57,7 @@ const StudentHeader = ({ user, onLogout, onBack, navItems = [] }) => {
         <div className="flex items-center">
           <div className="flex items-center gap-3 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
             <span className="text-2xl animate-float">📐</span>
-            <span className="text-2xl font-bold text-white drop-shadow-lg tracking-wide">MathAI</span>
+            <span className="text-2xl font-bold text-white drop-shadow-lg tracking-wide">Trợ lí học tập ảo</span>
           </div>
         </div>
 

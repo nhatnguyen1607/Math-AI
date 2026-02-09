@@ -276,14 +276,14 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
               </div>
             </div>
 
-            <div className="flex flex-col items-center gap-3 p-6 bg-yellow-100 rounded-max">
+            {/* <div className="flex flex-col items-center gap-3 p-6 bg-yellow-100 rounded-max">
               <div className={`text-5xl font-bold font-quicksand ${isPassed ? 'text-green-600' : 'text-orange-600'}`}>
                 {isPassed ? '✓' : '✗'}
               </div>
               <div className={`text-2xl font-bold font-quicksand ${isPassed ? 'text-green-600' : 'text-orange-600'}`}>
                 {isPassed ? 'PASS' : 'FAIL'}
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Competency Evaluation - HIDDEN FOR STUDENTS - Only for Faculty 
@@ -668,7 +668,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
             </button>
           </div>
         ) : (
-          // Đang làm Vận dụng
+          // Đang làm Vận pass
           <div className="p-12 text-center">
             <div className="text-6xl mb-6 animate-pulse">⏳</div>
             <h3 className="text-3xl font-bold text-orange-600 mb-4 font-quicksand">Bạn đang làm Vận dụng</h3>

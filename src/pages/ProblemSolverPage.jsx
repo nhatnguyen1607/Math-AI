@@ -20,6 +20,8 @@ function ProblemSolverPage({ user, onBack, problem }) {
   const [isComplete, setIsComplete] = useState(false);
   const messagesEndRef = useRef(null);
   const [userInput, setUserInput] = useState("");
+  const hasInitializedRef = useRef(false);
+  const [initError, setInitError] = useState(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -107,6 +109,49 @@ function ProblemSolverPage({ user, onBack, problem }) {
     }
   };
 
+  // Nộp bài để chuyển sang bước tiếp theo
+  const handleSubmitStep = async () => {
+    if (currentStep < 4) {
+      // Chuyển sang bước tiếp theo
+      setCurrentStep(currentStep + 1);
+      setUserInput('');
+    } else if (currentStep === 4) {
+      // Hoàn thành bài toán
+      setIsComplete(true);
+      await saveSession();
+    }
+  };
+
+  // Thử lại khởi tạo bài toán
+  const handleRetryInit = async () => {
+    hasInitializedRef.current = false;
+    setInitError(null);
+    setMessages([]);
+    
+    if (problem) {
+      setIsLoading(true);
+      try {
+        const response = await geminiService.startNewProblem(problem.content || problem.title || '');
+        setMessages([{
+          type: 'ai',
+          content: response.message,
+          timestamp: new Date()
+        }]);
+        setCurrentStep(1);
+      } catch (error) {
+        console.error('Retry initialization error:', error);
+        setInitError(error.message || 'Có lỗi xảy ra khi khởi tạo bài toán!');
+        setMessages([{
+          type: 'ai',
+          content: `❌ Lỗi: ${error.message || 'Không thể khởi tạo bài toán'}. Vui lòng nhấp nút "Thử lại" để tiếp tục.`,
+          timestamp: new Date()
+        }]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
   // Lưu phiên làm bài
   const saveSession = async () => {
     try {
@@ -158,9 +203,11 @@ function ProblemSolverPage({ user, onBack, problem }) {
 
   // Khi vào giải bài toán đã chọn, luôn gửi đề bài cho AI để nhận câu hỏi đầu tiên
   useEffect(() => {
-    if (problem && messages.length === 0 && !isLoading) {
+    if (problem && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
       (async () => {
         setIsLoading(true);
+        setInitError(null);
         try {
           const response = await geminiService.startNewProblem(problem.content || problem.title || '');
           setMessages([{
@@ -170,14 +217,20 @@ function ProblemSolverPage({ user, onBack, problem }) {
           }]);
           setCurrentStep(1);
         } catch (error) {
-          alert('Có lỗi xảy ra khi khởi tạo bài toán!');
+          console.error('Initialization error:', error);
+          setInitError(error.message || 'Có lỗi xảy ra khi khởi tạo bài toán!');
+          setMessages([{
+            type: 'ai',
+            content: `❌ Lỗi: ${error.message || 'Không thể khởi tạo bài toán'}. Vui lòng nhấp nút "Thử lại" để tiếp tục.`,
+            timestamp: new Date()
+          }]);
         } finally {
           setIsLoading(false);
         }
       })();
     }
     // eslint-disable-next-line
-  }, [problemText]);
+  }, [problem]);
 
   // Màn hình nhập đề bài
   if (currentStep === 0 && !problem) {
@@ -326,30 +379,56 @@ function ProblemSolverPage({ user, onBack, problem }) {
 
         {!isComplete && (
           <div className="bg-white border-t-2 border-gray-200 px-6 py-4 flex gap-3">
-            <button 
-              className="w-12 h-12 rounded-full bg-yellow-400 hover:bg-yellow-500 text-2xl flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-              onClick={handleHint}
-              disabled={isLoading}
-              title="Nhận gợi ý"
-            >
-              💡
-            </button>
-            <input
-              type="text"
-              className="flex-1 px-5 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors disabled:bg-gray-100"
-              placeholder="Nhập câu trả lời của bạn..."
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              disabled={isLoading}
-            />
-            <button 
-              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-bold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-              onClick={handleSendMessage}
-              disabled={isLoading || !userInput.trim()}
-            >
-              Gửi 📤
-            </button>
+            {initError ? (
+              <div className="flex gap-3 w-full">
+                <div className="flex-1 text-red-600 py-3 px-4 bg-red-50 rounded-xl border-2 border-red-200">
+                  <strong>⚠️ Lỗi khởi tạo:</strong> {initError}
+                </div>
+                <button 
+                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 flex-shrink-0"
+                  onClick={handleRetryInit}
+                  disabled={isLoading}
+                >
+                  🔄 Thử lại
+                </button>
+              </div>
+            ) : (
+              <>
+                <button 
+                  className="w-12 h-12 rounded-full bg-yellow-400 hover:bg-yellow-500 text-2xl flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  onClick={handleHint}
+                  disabled={isLoading}
+                  title="Nhận gợi ý"
+                >
+                  💡
+                </button>
+                <input
+                  type="text"
+                  className="flex-1 px-5 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors disabled:bg-gray-100"
+                  placeholder="Nhập câu trả lời của bạn..."
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  disabled={isLoading}
+                />
+                <button 
+                  className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-bold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  onClick={handleSendMessage}
+                  disabled={isLoading || !userInput.trim()}
+                  title="Gửi câu trả lời (Enter)"
+                >
+                  Gửi 📤
+                </button>
+                <button 
+                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  onClick={handleSubmitStep}
+                  disabled={isLoading}
+                  title={currentStep < 4 ? "Nộp bài và chuyển sang bước tiếp theo" : "Hoàn thành bài toán"}
+                >
+                  {currentStep < 4 ? "Nộp bài →" : "Xong ✓"}
+                </button>
+              </>
+            )}
           </div>
         )}
 

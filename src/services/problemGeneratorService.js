@@ -13,7 +13,9 @@ class ProblemGeneratorService {
 
       const prompt = `Hãy tạo ${count} bài toán lớp ${gradeLevel} về chủ đề "${topicName}".
 
-Yêu cầu:
+Yêu cầu QUAN TRỌNG:
+- Bài toán PHẢI trực tiếp sử dụng hoặc áp dụng kiến thức của chủ đề "${topicName}"
+- KHÔNG tạo bài toán generic hoặc sơ cấp không liên quan tới topic
 - Độ khó: ${difficulty === 'easy' ? 'Dễ' : difficulty === 'medium' ? 'Trung bình' : 'Khó'}
 - Phù hợp với học sinh lớp ${gradeLevel}
 - Đề bài rõ ràng, có dữ kiện đầy đủ

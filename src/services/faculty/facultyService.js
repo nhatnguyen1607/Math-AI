@@ -102,12 +102,22 @@ class FacultyService {
   /**
    * Lấy tất cả chủ đề
    */
-  async getTopics() {
+  async getTopics(classId = null) {
     try {
-      const q = query(
-        collection(db, 'topics'),
-        orderBy('createdAt', 'desc')
-      );
+      // 🔧 Nếu có classId, chỉ lấy topics của lớp đó
+      let q;
+      if (classId) {
+        q = query(
+          collection(db, 'topics'),
+          where('classId', '==', classId),
+          orderBy('createdAt', 'desc')
+        );
+      } else {
+        q = query(
+          collection(db, 'topics'),
+          orderBy('createdAt', 'desc')
+        );
+      }
 
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({
@@ -368,8 +378,16 @@ class FacultyService {
    */
   async startExam(examId, facultyId, classId) {
     try {
-      // Import examSessionService để tạo session
-      const { createExamSession } = await import('../examSessionService');
+      // Import examSessionService để tạo hoặc lấy session
+      const { createExamSession, getActiveExamSession } = await import('../examSessionService');
+      
+      // 🔧 KIỂM TRA: Có session active cho exam này chưa?
+      const existingSessionId = await getActiveExamSession(examId);
+      
+      if (existingSessionId) {
+        console.log('✅ Found existing active session:', existingSessionId);
+        return existingSessionId; // Trả về session cũ thay vì tạo mới
+      }
       
       // Lấy thông tin đề thi để biết tổng số câu hỏi
       const exam = await this.getExamById(examId);
@@ -386,6 +404,7 @@ class FacultyService {
         endTime: new Date(now.getTime() + 420000) // 7 minutes
       });
 
+      console.log('✅ Created new exam session:', sessionId);
       return sessionId;
     } catch (error) {
       console.error('❌ Error starting exam:', error);

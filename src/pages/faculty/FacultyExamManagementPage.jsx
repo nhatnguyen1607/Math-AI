@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import authService from '../../services/authService';
 import facultyService from '../../services/faculty/facultyService';
+import examSessionService from '../../services/examSessionService';
 import classService from '../../services/classService';
 import { parseExamFile } from '../../services/fileParserService';
 import ExamCard from '../../components/cards/ExamCard';
@@ -103,13 +104,17 @@ const FacultyExamManagementPage = () => {
   const loadAllData = async (userId, classId, topicId) => {
     try {
       
-      // Load classes and topics in parallel
-      const [classesData, topicsData] = await Promise.all([
-        classService.getAllClasses(),
-        facultyService.getTopics()
-      ]);
-      
+      // Load classes in parallel, topics with classId filter when available
+      const classesData = await classService.getAllClasses();
       setClasses(classesData || []);
+      
+      // 🔧 Lọc topics theo classId nếu có
+      let topicsData = [];
+      if (classId) {
+        topicsData = await facultyService.getTopics(classId);
+      } else {
+        topicsData = await facultyService.getTopics();
+      }
       setTopics(topicsData || []);
       
       // Update names
@@ -143,6 +148,26 @@ const FacultyExamManagementPage = () => {
       setSearchParams({ classId: selectedClassId, topicId: selectedTopicId });
     }
   }, [selectedClassId, selectedTopicId, setSearchParams]);
+
+  // 🔧 Effect để reload topics khi selectedClassId thay đổi
+  useEffect(() => {
+    const loadTopicsForClass = async () => {
+      try {
+        if (selectedClassId) {
+          const topicsData = await facultyService.getTopics(selectedClassId);
+          setTopics(topicsData || []);
+          // Reset selectedTopicId khi class thay đổi
+          setSelectedTopicId(null);
+        }
+      } catch (error) {
+        console.error('❌ Error loading topics for class:', error);
+      }
+    };
+
+    if (selectedClassId) {
+      loadTopicsForClass();
+    }
+  }, [selectedClassId]);
 
   const handleAddQuestion = () => {
     const updatedExercises = [...exercises];
@@ -314,8 +339,19 @@ const FacultyExamManagementPage = () => {
     try {
       // startExam now returns sessionId
       const sessionId = await facultyService.startExam(examId, user?.id, selectedClassId);
-      // Navigate to the exam lobby page with sessionId
-      navigate(`/faculty/exam-lobby/${sessionId}`);
+      
+      // 🔧 Kiểm tra trạng thái phiên thi
+      const session = await examSessionService.getExamSession(sessionId);
+      
+      if (session.status === 'ongoing' || session.status === 'starting') {
+        // Phiên đã bắt đầu, chuyến tới trang exam-live
+        console.log('✅ Session already started, navigating to exam-live');
+        navigate(`/faculty/exam-live/${sessionId}`);
+      } else {
+        // Phiên vừa tạo (waiting), chuyến tới trang lobby
+        console.log('📋 Session waiting, navigating to exam-lobby');
+        navigate(`/faculty/exam-lobby/${sessionId}`);
+      }
     } catch (error) {
       console.error('Error starting exam:', error);
       alert('Lỗi khi bắt đầu đề thi: ' + error.message);

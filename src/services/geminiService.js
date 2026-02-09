@@ -607,24 +607,30 @@ Chỉ gợi ý hướng suy nghĩ hoặc 1 câu hỏi dẫn dắt ngắn gọn.`
         explanation: q.explanation || 'Không có giải thích'
       }));
 
-      const prompt = `You are a math educator providing brief feedback on each answer.
+      const prompt = `Bạn là giáo viên toán lớp 5 có kinh nghiệm trong việc cung cấp phản hồi chi tiết và khích lệ cho học sinh.
 
-## Student's Answers:
+## Dữ liệu học sinh:
 ${JSON.stringify(questionsContext, null, 2)}
 
-## Task:
-For EACH question: Write ONE meaningful comment about what the student did right/wrong.
+## Nhiệm vụ:
+Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu hỏi. Nhận xét phải:
+- Chỉ rõ học sinh làm đúng/sai điểm nào cụ thể
+- Giải thích TẠI SAO câu trả lời đó đúng hoặc sai
+- Đưa ra gợi ý xây dựng nếu học sinh trả lời sai
+- Khích lệ và chia sẻ những điểm tốt của học sinh
+- Tránh để nhận xét quá chung chung
 
-## IMPORTANT: Vietnamese Language Rules:
-- ALWAYS use "bạn" or "mình" instead of "em" or "học sinh"
-- Example: "Bạn xác định được..." NOT "Em..."
+## QUY TẮC NGÔN NGỮ TIẾNG VIỆT:
+- LƯU Ý: Dùng "bạn", "mình", hoặc tên gọi thân thiết - KHÔNG dùng "em", "học sinh"
+- Ví dụ: "Bạn trả lời rất tốt, bạn đã xác định đúng..."
+- Viết trang trọng nhưng thân thiện, gần gũi
 
-## Response Format (JSON ONLY):
+## Định dạng JSON (PHẢI ĐÚNG):
 {
   "questionComments": [
     {
       "questionNum": 1,
-      "comment": "Brief feedback using bạn/mình (30-50 words)"
+      "comment": "Nhận xét CHI TIẾT dài 5-8 câu (80-150 từ), giải thích rõ ràng vì sao đúng/sai, nêu gợi ý nếu cần"
     }
   ]
 }`;
@@ -998,60 +1004,70 @@ Bài toán vận dụng:`;
         });
       }
 
-      const evaluationPrompt = `Bạn là giáo viên toán lớp 5 chuyên về đánh giá năng lực giải quyết vấn đề toán học.
+      const evaluationPrompt = `Bạn là giáo viên toán lớp 5 có kinh nghiệm đánh giá năng lực giải quyết vấn đề toán học theo khung quy chuẩn.
 
 ${chatText}
 
-NHIỆM VỤ: Dựa trên lịch sử hội thoại trên, hãy đánh giá học sinh theo RUBRIC 4 TIÊU CHÍ:
+NHIỆM VỤ: Dựa trên lịch sử hội thoại trên, đánh giá chi tiết năng lực học sinh theo 4 TIÊU CHÍ.
 
 **TC1. NHẬN BIẾT ĐƯỢC VẤN ĐỀ CẦN GIẢI QUYẾT (Max 2 điểm)**
-Mục tiêu: Đánh giá xem học sinh đã xác định đầy đủ dữ kiện và yêu cầu bài toán chưa?
-- 0 điểm: Không xác định được đầy đủ cái đã cho và cái cần tìm, cần nhiều hỗ trợ từ trợ lí AI
-- 1 điểm: Xác định đầy đủ dữ kiện và yêu cầu bài toán với gợi ý từ trợ lí AI
-- 2 điểm: Xác định chính xác dữ kiện, yêu cầu bài toán và mối quan hệ giữa chúng
+Mục tiêu: Xác định xem học sinh đã xác định đầy đủ dữ kiện, yêu cầu bài toán và mối liên hệ chưa?
+- 0 điểm: Không xác định được đầy đủ thông tin, cần nhiều gợi ý từ trợ lí AI
+- 1 điểm: Xác định được phần lớn dữ kiện và yêu cầu, nhưng có thể bỏ sót 1-2 chi tiết, cần gợi ý
+- 2 điểm: Xác định chính xác toàn bộ dữ kiện, yêu cầu, và hiểu rõ mối quan hệ giữa chúng
 
 **TC2. NÊU ĐƯỢC CÁCH THỨC GIẢI QUYẾT VẤN ĐỀ (Max 2 điểm)**
-Mục tiêu: Đánh giá xem học sinh đã nhận dạng dạng toán và chọn được phép toán phù hợp chưa?
-- 0 điểm: Không nhận dạng được dạng toán, hoặc không chọn được phép toán phù hợp
-- 1 điểm: Nhận dạng được dạng toán và chọn được phép toán cơ bản phù hợp với gợi ý từ trợ lí AI
-- 2 điểm: Nhận dạng đúng dạng toán, đề xuất được cách giải hợp lý, chọn phép toán/chiến lược tối ưu
+Mục tiêu: Đánh giá việc nhận dạng dạng toán, đề xuất phương pháp và chọn phép toán phù hợp
+- 0 điểm: Không nhận dạng được dạng toán hoặc đề xuất phương pháp sai, không chọn được phép toán phù hợp
+- 1 điểm: Nhận dạng được dạng toán cơ bản, chọn được phép toán phù hợp nhưng cần gợi ý
+- 2 điểm: Nhận dạng đúng dạng toán, đề xuất được cách giải hợp lý, lựa chọn phép toán tối ưu
 
 **TC3. TRÌNH BÀY ĐƯỢC CÁCH THỨC GIẢI QUYẾT (Max 2 điểm)**
-Mục tiêu: Đánh giá xem học sinh đã thực hiện đúng các phép tính và lời giải chưa?
-- 0 điểm: Thực hiện phép tính còn sai nhiều, lời giải không đầy đủ/thiếu logic
-- 1 điểm: Thực hiện đúng các bước giải và phép tính cơ bản, trình bày lời giải đầy đủ với sự hỗ trợ từ trợ lí AI
-- 2 điểm: Thực hiện đúng đầy đủ các phép tính, trình bày lời giải rõ ràng mạch lạc
+Mục tiêu: Đánh giá tính chính xác của các phép tính, bước giải, và sự rõ ràng của trình bày
+- 0 điểm: Các phép tính hay bước giải còn sai, lời giải không đầy đủ hoặc không logic
+- 1 điểm: Thực hiện đúng các bước giải cơ bản, phép tính chủ yếu đúng, trình bày khá đầy đủ
+- 2 điểm: Thực hiện đúng toàn bộ phép tính, trình bày lời giải logic, rõ ràng, dễ hiểu
 
 **TC4. KIỂM TRA ĐƯỢC GIẢI PHÁP ĐÃ THỰC HIỆN (Max 2 điểm)**
-Mục tiêu: Đánh giá xem học sinh đã kiểm tra lại kết quả và vận dụng được chưa?
-- 0 điểm: Không kiểm tra lại kết quả, không điều chỉnh hoặc không vận dụng vào bài toán tương tự
-- 1 điểm: Kiểm tra lại kết quả, điều chỉnh đúng khi có gợi ý từ trợ lí AI
-- 2 điểm: Kiểm tra lại bằng các cách khác nhau, vận dụng vào bài toán mở rộng/nâng cao
+Mục tiêu: Đánh giá việc kiểm tra lại kết quả và vận dụng vào các tình huống khác
+- 0 điểm: Không kiểm tra lại kết quả, không điều chỉnh hoặc không vận dụng được
+- 1 điểm: Kiểm tra lại kết quả, có điều chỉnh khi cần nhưng còn cần gợi ý; vận dụng có hạn
+- 2 điểm: Kiểm tra lại kết quả bằng nhiều cách, vận dụng được vào bài toán tương tự hoặc nâng cao
 
-HƯỚNG DẪN TRẢ LỜI:
-- Cho MỖI tiêu chí, viết nhận xét CHI TIẾT (2-3 câu), giải thích rõ ràng tại sao học sinh được điểm đó
-- NHẤT ĐỊNH trả về JSON đúng format
-- Các comment phải cụ thể, dựa trên lịch sử hội thoại, không chung chung
+HƯỚNG DẪN VIẾT NHẬN XÉT:
+- Cho MỖI tiêu chí (TC1-4): Viết 10-12 câu nhận xét RẤT CHI TIẾT, CỤ THỂ, DÀI(cần phải chi tiết để giúp học sinh hiểu)
+  * **ĐIỂM MẠNH**: Nêu rõ và CHỈ TỊ CỤ THỂ những gì học sinh làm ĐÚNG (ghi cụ thể hành động, hiểu biết, ví dụ cụ thể từ lịch sử chat)
+  * **ĐIỂM YẾU/CÒNG HẠN**: Nêu rõ những điểm CHƯA TỐT hay SAI LẦM (nếu có) - ghi cụ thể những gì còn thiếu, chưa đầy đủ, hoặc sai lầm
+  * **GIẢI THÍCH**: Giải thích TẠI SAO điều đó đúng/sai dựa vào khung lý thuyết và lịch sử hội thoại
+  * **GỢI Ý CẢI THIỆN**: Nêu gợi ý cụ thể để cải thiện (nên làm thế nào khác, học sinh nên tập trung vào cái gì)
+  * **ĐỘNG VIÊN**: Thêm lời khích lệ phù hợp với thành quả học sinh
+  * Tránh nhận xét chung chung, phải dựa vào lịch sử hội thoại và dữ kiện cụ thể
 
-FORMAT JSON (PHẢI ĐÚNG):
+- NHẬN XÉT TỔNG THỂ (tongNhanXet): Viết 10-12 câu TỔNG HỢP (DÀI, CHI TIẾT)
+  * Nêu rõ 2-3 ĐIỂM MẠNH chính (những gì làm rất tốt, nên tiếp tục giữ)
+  * Nêu rõ 2-3 ĐIỂM YẾU CẦN CẢI THIỆN chính (những gì còn hạn chế, cần phát triển)
+  * Nêu 2-3 GỢI Ý HƯỚNG PHÁT TRIỂN cụ thể (học sinh nên tập trung vào cái gì trước, làm thế nào)
+  * Lời khích lệ, động viên, và tạo động lực cho học sinh
+
+ĐỊNH DẠNG JSON (PHẢI ĐÚNG):
 {
   "TC1": {
-    "nhanXet": "Nhận xét chi tiết cụ thể về khía cạnh nhận biết (2-3 câu giải thích)",
+    "nhanXet": "Nhận xét RẤT CHI TIẾT 10-12 câu (150-200 từ) về nhận biết vấn đề. GỒM: (1) Điểm mạnh cụ thể - học sinh xác định được cái gì (2) Điểm yếu/còn hạn - chưa xác định cái gì, thiếu cái gì (3) Tại sao điều đó quan trọng (4) Gợi ý cải thiện cụ thể (5) Lời động viên",
     "diem": 0
   },
   "TC2": {
-    "nhanXet": "Nhận xét chi tiết cụ thể về khía cạnh nêu cách giải (2-3 câu giải thích)",
+    "nhanXet": "Nhận xét RẤT CHI TIẾT 10-12 câu (150-200 từ) về cách thức giải quyết. GỒM: (1) Điểm mạnh cụ thể - chọn phép toán đúng/đề xuất cách giải tối ưu (2) Điểm yếu - không nhận dạng dạng toán/chọn sai phép toán (3) Tại sao lựa chọn đó đúng/sai (4) Gợi ý cải thiện cụ thể (5) Động viên",
     "diem": 0
   },
   "TC3": {
-    "nhanXet": "Nhận xét chi tiết cụ thể về khía cạnh trình bày giải (2-3 câu giải thích)",
+    "nhanXet": "Nhận xét RẤT CHI TIẾT 10-12 câu (150-200 từ) về trình bày giải quyết. GỒM: (1) Điểm mạnh cụ thể - bước tính đúng, trình bày rõ (2) Điểm yếu - bước tính sai, trình bày không rõ, bỏ sót bước (3) Tại sao phép tính đó đúng/sai (4) Gợi ý cải thiện cách trình bày (5) Động viên",
     "diem": 0
   },
   "TC4": {
-    "nhanXet": "Nhận xét chi tiết cụ thể về khía cạnh kiểm tra (2-3 câu giải thích)",
+    "nhanXet": "Nhận xét RẤT CHI TIẾT 10-12 câu (150-200 từ) về kiểm tra và vận dụng. GỒM: (1) Điểm mạnh cụ thể - kiểm tra được gì, vận dụng được gì (2) Điểm yếu - chưa kiểm tra/vận dụng (3) Tại sao kiểm tra/vận dụng quan trọng (4) Gợi ý cải thiện cụ thể - cách kiểm tra, vận dụng thế nào (5) Động viên",
     "diem": 0
   },
-  "tongNhanXet": "Nhận xét tổng thể 2-3 câu về bài làm của học sinh",
+  "tongNhanXet": "Nhận xét TỔNG THỂ 10-12 câu (200-250 từ) gồm: (1) 2-3 ĐIỂM MẠNH cụ thể (2) 2-3 ĐIỂM YẾU/CẦN CẢI THIỆN cụ thể (3) 2-3 GỢI Ý HƯỚNG PHÁT TRIỂN cụ thể cho từng khía cạnh (4) Lời khích lệ, động viên học sinh",
   "tongDiem": 0,
   "mucDoChinh": "Cần cố gắng"
 }`;
@@ -1093,6 +1109,66 @@ FORMAT JSON (PHẢI ĐÚNG):
         tongNhanXet: `Lỗi: ${error.message}. Vui lòng tải lại trang hoặc liên hệ hỗ trợ.`,
         tongDiem: 0,
         mucDoChinh: 'Cần cố gắng'
+      };
+    }
+  }
+
+  /**
+   * Tạo overallAssessment từ TC1-4 nhận xét
+   * @param {Object} evaluation - Evaluation object with TC1-4
+   * @returns {Object} - Overall assessment with strengths, weaknesses, areas to improve, recommendations
+   */
+  async generateOverallAssessment(evaluation) {
+    try {
+      const tc1Comment = evaluation.TC1?.nhanXet || '';
+      const tc2Comment = evaluation.TC2?.nhanXet || '';
+      const tc3Comment = evaluation.TC3?.nhanXet || '';
+      const tc4Comment = evaluation.TC4?.nhanXet || '';
+      const totalComment = evaluation.tongNhanXet || '';
+
+      const prompt = `Dựa vào nhận xét chi tiết từ 4 tiêu chí đánh giá năng lực sau:
+
+TC1 (Nhận biết vấn đề): ${tc1Comment}
+
+TC2 (Nêu cách giải): ${tc2Comment}
+
+TC3 (Trình bày giải): ${tc3Comment}
+
+TC4 (Kiểm tra và vận dụng): ${tc4Comment}
+
+NHẬN XÉT TỔNG THỂ: ${totalComment}
+
+}`;
+
+      const result = await geminiModelManager.generateContent(prompt);
+      const responseText = result.response.text().trim();
+
+      // Parse JSON
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.warn('⚠️ Could not parse overallAssessment JSON:', responseText.substring(0, 200));
+        return {
+          strengths: ['Không thể tạo đánh giá chi tiết'],
+          weaknesses: ['Vui lòng tải lại trang'],
+          recommendations: ['Liên hệ hỗ trợ'],
+          encouragement: 'Hãy cố gắng thêm, bạn sẽ thành công!'
+        };
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        strengths: parsed.strengths || [],
+        weaknesses: parsed.weaknesses || [],
+        recommendations: parsed.recommendations || [],
+        encouragement: parsed.encouragement || 'Bạn đang trên đúng con đường!'
+      };
+    } catch (error) {
+      console.error('Error generating overall assessment:', error);
+      return {
+        strengths: ['Không thể tạo đánh giá chi tiết'],
+        weaknesses: ['Vui lòng tải lại trang'],
+        recommendations: ['Liên hệ hỗ trợ'],
+        encouragement: 'Hãy cố gắng thêm, bạn sẽ thành công!'
       };
     }
   }

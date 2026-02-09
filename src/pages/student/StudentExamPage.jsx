@@ -6,7 +6,6 @@ import examService from '../../services/examService';
 import scoringService from '../../services/scoringService';
 import geminiService from '../../services/geminiService';
 import resultService from '../../services/resultService';
-import competencyEvaluationService from '../../services/competencyEvaluationService';
 
 /**
  * StudentExamPage
@@ -16,6 +15,17 @@ import competencyEvaluationService from '../../services/competencyEvaluationServ
  * - Cập nhật điểm realtime khi trả lời đúng
  * - Tự động hoàn thành khi hết giờ
  */
+
+// Helper function: Remove undefined fields từ object trước khi gửi lên Firestore
+const cleanFirebaseData = (obj) => {
+  const cleaned = {};
+  Object.entries(obj).forEach(([key, value]) => {
+    if (value !== undefined) {
+      cleaned[key] = value;
+    }
+  });
+  return cleaned;
+};
 
 const StudentExamPage = ({ user, onSignOut }) => {
   const navigate = useNavigate();
@@ -72,17 +82,13 @@ const StudentExamPage = ({ user, onSignOut }) => {
                   participantData.answers.forEach((answer, idx) => {
                     const qIndex = answer.questionIndex !== undefined ? answer.questionIndex : idx;
                     answersMap[qIndex] = answer;
-                    console.log(`📝 Answer ${qIndex}:`, answer);
                   });
                   setAnswers(answersMap);
-                  console.log('✅ Restored answers from session:', answersMap);
-                  console.log('Total answers restored:', Object.keys(answersMap).length);
                 }
 
                 // 🔧 Khôi phục currentQuestionIndex từ session
                 if (participantData.currentQuestion !== undefined) {
                   setCurrentQuestionIndex(participantData.currentQuestion);
-                  console.log(`✅ Restored currentQuestion: ${participantData.currentQuestion}`);
                 }
               }
 
@@ -90,20 +96,15 @@ const StudentExamPage = ({ user, onSignOut }) => {
               if (!exam && sessionData.examId) {
                 try {
                   const examData = await examService.getExamById(sessionData.examId);
-                  console.log('📋 Exam data fetched:', examData);
-                  console.log('📋 Exercises:', examData?.exercises);
                   setExam(examData);
 
                   // Lấy danh sách câu hỏi với context từ exercise
                   if (examData.exercises && examData.exercises.length > 0) {
                     const allQuestions = [];
                     examData.exercises.forEach((exercise, exerciseIndex) => {
-                      console.log(`📋 Processing exercise ${exerciseIndex}:`, exercise);
-                      console.log(`📋 Exercise questions:`, exercise.questions);
                       
                       if (exercise.questions && exercise.questions.length > 0) {
                         exercise.questions.forEach((question, qIdx) => {
-                          console.log(`📋 Question ${qIdx}:`, question);
                           allQuestions.push({
                             ...question,
                             exerciseContext: exercise.context || exercise.name || '',
@@ -115,7 +116,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
                         console.warn(`⚠️ Exercise ${exerciseIndex} has no questions`);
                       }
                     });
-                    console.log('📋 All questions loaded:', allQuestions);
                     setQuestions(allQuestions);
                   } else {
                     console.warn('⚠️ Exam has no exercises');
@@ -157,13 +157,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
       // Do NOT use session data - it has update delay
       const answersToValidate = answers;
       
-      console.log('🕐 BEFORE Auto-Submit Check:', {
-        localAnswersKeys: Object.keys(answersToValidate),
-        localAnswersLength: Object.keys(answersToValidate).length,
-        hasQ11Local: answersToValidate['11'] !== undefined,
-        Q11Local: answersToValidate['11'],
-        totalQuestions: questions.length
-      });
       
       // Step 1b: Re-validate all answers to ensure correctness is evaluated
       // This is important for multiple choice questions which were marked as isCorrect: false
@@ -175,11 +168,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
         const numKey = String(parseInt(key));
         normalizedAnswers[numKey] = answersToValidate[key];
       });
-      
-      console.log('🔍 VALIDATION START - Total questions:', questions.length, 'Total answers to validate:', Object.keys(normalizedAnswers).length);
-      console.log('📋 Available answer keys:', Object.keys(normalizedAnswers).sort((a, b) => parseInt(a) - parseInt(b)));
-      console.log(`📌 Last question (index ${questions.length - 1}):`, normalizedAnswers[String(questions.length - 1)]);
-      
+            
       // 🔧 IMPORTANT: Iterate through ALL questions (0 to questions.length-1)
       // NOT just answers.keys(), because some answers might be missing
       for (let idx = 0; idx < questions.length; idx++) {
@@ -188,12 +177,10 @@ const StudentExamPage = ({ user, onSignOut }) => {
         const question = questions[idx];
         
         if (!question) {
-          console.warn(`⚠️ Question ${idx} not found in questions array!`);
           continue; // Skip to next iteration
         }
         
         if (!answer) {
-          console.warn(`⚠️ No answer found for question ${idx} - student may not have answered it`);
           // Still create entry with unanswered marker
           validatedAnswers[idxStr] = {
             questionIndex: idx,
@@ -260,30 +247,8 @@ const StudentExamPage = ({ user, onSignOut }) => {
       const totalScore = Object.values(validatedAnswers).reduce((sum, answer) => {
         return sum + (answer.points || 0);
       }, 0);
-
-      console.log(`✅ VALIDATION COMPLETE: ${correctAnswers}/${questions.length} correct (${Math.round((correctAnswers / questions.length) * 100)}%)`);
-      console.log('📊 ValidatedAnswers summary:', {
-        answersCount: Object.keys(validatedAnswers).length,
-        answerKeys: Object.keys(validatedAnswers),
-        correctCount: correctAnswers,
-        allCorrect: Object.values(validatedAnswers).map((a, idx) => ({ idx, isCorrect: a.isCorrect }))
-      });
       
-      // 🔧 DEBUG: Log what we're about to save
-      console.log('📤 About to save exam progress:', {
-        correctAnswers,
-        totalQuestions: questions.length,
-        percentage: Math.round((correctAnswers / questions.length) * 100),
-        answersCount: Object.keys(validatedAnswers).length,
-        answerKeys: Object.keys(validatedAnswers),
-        // 🔧 Check specifically for answer 10
-        hasAnswer10: validatedAnswers['10'] !== undefined,
-        answer10Value: validatedAnswers['10'],
-        // 🔧 Show first and last answers
-        firstAnswer: validatedAnswers['0'],
-        lastAnswer: validatedAnswers[String(questions.length - 1)],
-        allAnswerCount: Object.values(validatedAnswers).length
-      });
+
 
       // Hoàn thành exam cho học sinh
       if (user?.uid) {
@@ -299,34 +264,46 @@ const StudentExamPage = ({ user, onSignOut }) => {
       let competencyEvaluation = null;
       let aiAnalysis = null;
       try {
-        // Convert validated answers array for evaluation
-        const answersArray = Object.values(validatedAnswers);
-        
         // Call Gemini to evaluate competency using the 4-criterion framework
-        competencyEvaluation = await geminiService.evaluateCompetencyFramework(
-          answersArray,
-          questions
-        );
-        console.log('Competency evaluation result:', competencyEvaluation);
+        const [questionComments, competencyEval] = await Promise.all([
+          geminiService.evaluateQuestionComments(validatedAnswers, questions),
+          geminiService.evaluateCompetencyFramework(Object.values(validatedAnswers), questions)
+        ]);
 
-        // Get question comments for student feedback
-        try {
-          const questionComments = await geminiService.evaluateQuestionComments(
-            answersArray,
-            questions
-          );
-          aiAnalysis = {
-            questionComments: questionComments
-          };
-          console.log('Question comments:', questionComments);
-        } catch (commentsError) {
-          console.error('Error getting question comments:', commentsError);
-          // Continue without question comments
-          aiAnalysis = { questionComments: [] };
+        // 🤖 Generate overall assessment from competency evaluation
+        const overallAssessment = await geminiService.generateOverallAssessment(competencyEval);
+        
+        // Structure aiAnalysis with questionComments and overallAssessment
+        aiAnalysis = {
+          questionComments: questionComments || [],
+          overallAssessment: overallAssessment
+        };
+
+        // Add overallAssessment to competencyEvaluation
+        competencyEvaluation = competencyEval || {
+          overallAssessment: {
+            level: 'Cần cố gắng',
+            score: 0
+          },
+          competenceAssessment: {}
+        };
+        
+        if (!competencyEvaluation.overallAssessment) {
+          competencyEvaluation.overallAssessment = {};
         }
+        competencyEvaluation.overallAssessment.strengths = overallAssessment.strengths || [];
+        competencyEvaluation.overallAssessment.weaknesses = overallAssessment.weaknesses || [];
+        competencyEvaluation.overallAssessment.recommendations = overallAssessment.recommendations || [];
+        competencyEvaluation.overallAssessment.encouragement = overallAssessment.encouragement || '';
       } catch (compError) {
         console.error('Error in competency evaluation:', compError);
-        competencyEvaluation = competencyEvaluationService.createEmptyEvaluation();
+        competencyEvaluation = {
+          overallAssessment: {
+            level: 'Cần cố gắng',
+            score: 0
+          },
+          competenceAssessment: {}
+        };
         aiAnalysis = { questionComments: [] };
       }
 
@@ -350,7 +327,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
         
         // If evaluation doesn't match percentage, log warning but use it
         if (evalLevel !== expectedLevel) {
-          console.warn(`⚠️ Competency level mismatch: Expected ${expectedLevel} (${percentage}%), got ${evalLevel}`);
           // Force correct level based on percentage
           if (competencyEvaluation.overallAssessment?.level !== undefined) {
             competencyEvaluation.overallAssessment.level = expectedLevel;
@@ -406,13 +382,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
     setIsSubmitting(true);
 
     try {
-      // Use the passed-in answers instead of relying on state closure
-      console.log('🕐 AUTO-SUBMIT WITH ANSWERS:', {
-        providedAnswersKeys: Object.keys(answersToUse),
-        providedAnswersLength: Object.keys(answersToUse).length,
-        Q11Value: answersToUse['11'] || answersToUse[11],
-        totalQuestions: questions.length
-      });
 
       const validatedAnswers = {};
       
@@ -423,9 +392,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
         normalizedAnswers[numKey] = answersToUse[key];
       });
       
-      console.log('🔍 VALIDATION START - Total questions:', questions.length, 'Total answers to validate:', Object.keys(normalizedAnswers).length);
-      console.log('📋 Available answer keys:', Object.keys(normalizedAnswers).sort((a, b) => parseInt(a) - parseInt(b)));
-      console.log(`📌 Last question (index ${questions.length - 1}):`, normalizedAnswers[String(questions.length - 1)]);
       
       // 🔧 IMPORTANT: Iterate through ALL questions (0 to questions.length-1)
       // NOT just answers.keys(), because some answers might be missing
@@ -440,7 +406,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
         }
         
         if (!answer) {
-          console.warn(`⚠️ No answer found for question ${idx} - student may not have answered it`);
           // Still create entry with unanswered marker
           validatedAnswers[idxStr] = {
             questionIndex: idx,
@@ -479,7 +444,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
           isCorrect = correctAnswersSet.has(answer.answer);
           
           if (idx === questions.length - 1) {
-            console.log(`Q${idx} [SINGLE - LAST]: selected=${answer.answer}, correct=${JSON.stringify(Array.from(correctAnswersSet))}, isCorrect=${isCorrect}`);
           }
         }
 
@@ -507,9 +471,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
       const totalScore = Object.values(validatedAnswers).reduce((sum, a) => sum + (a.points || 0), 0);
       const percentage = questions.length > 0 ? Math.round((correctAnswers / questions.length) * 100) : 0;
 
-      console.log(`✅ VALIDATION COMPLETE: ${correctAnswers}/${questions.length} correct (${percentage}%)`);
-      console.log('📊 All validated answers:',JSON.stringify(validatedAnswers, null, 2));
-
       // 2. Gọi Gemini để đánh giá năng lực
       if (!exam?.id) {
         throw new Error('Exam ID not found');
@@ -525,16 +486,37 @@ const StudentExamPage = ({ user, onSignOut }) => {
       };
 
       try {
-        console.log('🤖 Calling Gemini for AI analysis and competency evaluation...');
-        [aiAnalysis, competencyEvaluation] = await Promise.all([
+        const [questionComments, competencyEval] = await Promise.all([
           geminiService.evaluateQuestionComments(validatedAnswers, questions),
-          geminiService.evaluateCompetencyFramework(questions, validatedAnswers, exam.name, session?.id)
+          geminiService.evaluateCompetencyFramework(Object.values(validatedAnswers), questions)
         ]);
 
-        console.log('✅ AI Analysis complete:', aiAnalysis);
-        console.log('✅ Competency Evaluation:', competencyEvaluation);
+        // 🤖 Generate overall assessment from competency evaluation
+        const overallAssessment = await geminiService.generateOverallAssessment(competencyEval);
+        
+        // Structure aiAnalysis with questionComments and overallAssessment
+        aiAnalysis = {
+          questionComments: questionComments || [],
+          overallAssessment: overallAssessment
+        };
+
+        // Add overallAssessment to competencyEvaluation
+        competencyEvaluation = competencyEval || {
+          overallAssessment: {
+            level: 'Cần cố gắng',
+            score: 0
+          },
+          competenceAssessment: {}
+        };
+        
+        if (!competencyEvaluation.overallAssessment) {
+          competencyEvaluation.overallAssessment = {};
+        }
+        competencyEvaluation.overallAssessment.strengths = overallAssessment.strengths || [];
+        competencyEvaluation.overallAssessment.weaknesses = overallAssessment.weaknesses || [];
+        competencyEvaluation.overallAssessment.recommendations = overallAssessment.recommendations || [];
+        competencyEvaluation.overallAssessment.encouragement = overallAssessment.encouragement || '';
       } catch (err) {
-        console.error('⚠️ Error calling Gemini (will continue with empty analysis):', err);
         aiAnalysis = {};
         competencyEvaluation = {
           overallAssessment: {
@@ -592,7 +574,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [sessionId, user?.uid, exam?.id, isCompleted, isSubmitting, questions, navigate, exam?.name, session?.id]);
+  }, [sessionId, user?.uid, exam?.id, isCompleted, isSubmitting, questions, navigate]);
 
   // Handler: Câu hỏi tiếp theo
   const handleNextQuestion = () => {
@@ -729,17 +711,20 @@ const StudentExamPage = ({ user, onSignOut }) => {
         // Chỉ save draft nếu chưa được submit (isCorrect === false)
         if (answerData && answerData.isCorrect === false) {
           // Lưu draft vào Firestore - không ghi đè score
-          await examSessionService.submitAnswer(session.id, user.uid, {
-            questionId: currentQuestion.id,
+          const draftData = cleanFirebaseData({
+            questionId: currentQuestion?.id,
             questionIndex: currentQuestionIndex,
             answer: answerData.answer || [],
             isDraft: true, // Đánh dấu đây là draft
-            exerciseIndex: currentQuestion.exerciseIndex || 0,
+            exerciseIndex: currentQuestion?.exerciseIndex || 0,
             points: 0,
             basePoints: 0,
             bonusPoints: 0,
             timeUsed: 420 - timeRemaining
-          }).catch(err => console.warn('⚠️ Draft save failed (non-critical):', err));
+          });
+          
+          await examSessionService.submitAnswer(session.id, user.uid, draftData)
+            .catch(err => console.warn('⚠️ Draft save failed (non-critical):', err));
         }
       } catch (error) {
         console.warn('⚠️ Error auto-saving draft:', error);
@@ -828,7 +813,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
       // Cập nhật lên Firestore
       let submitPromise = Promise.resolve(); // Default resolved promise
       if (user?.uid) {
-        const answerDataToSubmit = {
+        const answerDataToSubmit = cleanFirebaseData({
           questionId: currentQuestion.id,
           questionIndex: currentQuestionIndex,
           answer: optionIndex,
@@ -838,7 +823,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
           basePoints: scoreData.basePoints,
           bonusPoints: scoreData.bonusPoints,
           timeUsed: 420 - timeRemaining
-        };
+        });
         console.log(`📤 Submitting answer for question ${currentQuestionIndex}:`, answerDataToSubmit);
         
         submitPromise = examSessionService
@@ -931,7 +916,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
     console.log(`📤 Submitting multiple choice for question ${currentQuestionIndex}, user:`, user?.uid);
     if (user?.uid) {
       examSessionService
-        .submitAnswer(sessionId, user.uid, {
+        .submitAnswer(sessionId, user.uid, cleanFirebaseData({
           questionId: currentQuestion.id,
           questionIndex: currentQuestionIndex,
           answer: selectedAnswers,
@@ -942,7 +927,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
           basePoints: scoreData.basePoints,
           bonusPoints: scoreData.bonusPoints,
           timeUsed: 420 - timeRemaining
-        })
+        }))
         .catch((err) => console.error('Error submitting answer:', err));
     } else {
       console.warn('❌ User UID not available, answer not submitted to Firestore');

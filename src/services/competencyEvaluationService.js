@@ -87,11 +87,12 @@ export const COMPETENCY_CRITERIA = {
 export const parseCompetencyEvaluation = (responseText) => {
   if (!responseText) {
     return {
-      TC1: { level: 'achieved', score: 1, comment: '' },
-      TC2: { level: 'achieved', score: 1, comment: '' },
-      TC3: { level: 'achieved', score: 1, comment: '' },
-      TC4: { level: 'achieved', score: 1, comment: '' },
-      totalCompetencyScore: 4
+      TC1: { level: 'achieved', score: 1, nhanXet: '' },
+      TC2: { level: 'achieved', score: 1, nhanXet: '' },
+      TC3: { level: 'achieved', score: 1, nhanXet: '' },
+      TC4: { level: 'achieved', score: 1, nhanXet: '' },
+      totalCompetencyScore: 4,
+      tongNhanXet: ''
     };
   }
 
@@ -115,24 +116,25 @@ export const parseCompetencyEvaluation = (responseText) => {
       TC1: {
         level: normalizeLevelName(raw.TC1?.level || 'Đạt'),
         score: tc1Score,
-        comment: raw.TC1?.comment || ''
+        nhanXet: raw.TC1?.nhanXet || raw.TC1?.comment || ''
       },
       TC2: {
         level: normalizeLevelName(raw.TC2?.level || 'Đạt'),
         score: tc2Score,
-        comment: raw.TC2?.comment || ''
+        nhanXet: raw.TC2?.nhanXet || raw.TC2?.comment || ''
       },
       TC3: {
         level: normalizeLevelName(raw.TC3?.level || 'Đạt'),
         score: tc3Score,
-        comment: raw.TC3?.comment || ''
+        nhanXet: raw.TC3?.nhanXet || raw.TC3?.comment || ''
       },
       TC4: {
         level: normalizeLevelName(raw.TC4?.level || 'Đạt'),
         score: tc4Score,
-        comment: raw.TC4?.comment || ''
+        nhanXet: raw.TC4?.nhanXet || raw.TC4?.comment || ''
       },
-      totalCompetencyScore: raw.totalScore || (tc1Score + tc2Score + tc3Score + tc4Score)
+      totalCompetencyScore: raw.totalScore || (tc1Score + tc2Score + tc3Score + tc4Score),
+      tongNhanXet: raw.tongNhanXet || ''
     };
 
     console.log('✅ Parsed competency evaluation:', {
@@ -148,11 +150,12 @@ export const parseCompetencyEvaluation = (responseText) => {
     console.error('Error parsing competency evaluation:', error);
     // Return default if parsing fails
     return {
-      TC1: { level: 'achieved', score: 1, comment: 'Không thể phân tích' },
-      TC2: { level: 'achieved', score: 1, comment: 'Không thể phân tích' },
-      TC3: { level: 'achieved', score: 1, comment: 'Không thể phân tích' },
-      TC4: { level: 'achieved', score: 1, comment: 'Không thể phân tích' },
-      totalCompetencyScore: 4
+      TC1: { level: 'achieved', score: 1, nhanXet: 'Không thể phân tích' },
+      TC2: { level: 'achieved', score: 1, nhanXet: 'Không thể phân tích' },
+      TC3: { level: 'achieved', score: 1, nhanXet: 'Không thể phân tích' },
+      TC4: { level: 'achieved', score: 1, nhanXet: 'Không thể phân tích' },
+      totalCompetencyScore: 4,
+      tongNhanXet: 'Lỗi phân tích'
     };
   }
 };
@@ -218,7 +221,7 @@ HƯỚNG DẪN ĐÁNH GIÁ:
 1. Phân tích chi tiết từng tiêu chí (TC1-4) dựa vào phản hồi của học sinh
 2. Dùng chi tiết hướng dẫn điểm số ở trên để gán điểm chính xác
 3. GHI CHÚ: TC1, TC3 là 0/1/2 đơn giản. Nhưng TC2, TC4 có thành phần nhỏ, cộng lại mới bằng 0/1/2
-4. Viết nhận xét CHI TIẾT, CÓ Ý NGHĨA, CHỈ DÙNG TIẾNG VIỆT (không tiếng Anh)
+4. Viết nhận xét RẤT CHI TIẾT, CÓ Ý NGHĨA, 10-12 CÂU (200-250 từ), CHỈ DÙNG TIẾNG VIỆT (không tiếng Anh)
 5. Tính totalScore = TC1 + TC2 + TC3 + TC4, tối đa 8 điểm
 
 ĐỊNH DẠNG JSON PHẢN HỒI (CẬP NHẬT VÀ TRẢ LỜI):
@@ -226,27 +229,28 @@ HƯỚNG DẪN ĐÁNH GIÁ:
   "TC1": {
     "level": "Cần cố gắng|Đạt|Tốt",
     "score": 0hoặc1hoặc2,
-    "comment": "Nhận xét chi tiết bằng tiếng Việt về nhận biết vấn đề (ghi những chi tiết cụ thể học sinh làm đúng/sai)"
+    "nhanXet": "Nhận xét chi tiết (10-12 câu, 200-250 từ) về nhận biết vấn đề - ghi cụ thể: dữ kiện nào xác định đúng, dữ kiện nào bỏ sót, mối quan hệ giữa các dữ kiện ra sao"
   },
   "TC2": {
     "level": "Cần cố gắng|Đạt|Tốt",
     "score": 0hoặc1hoặc2,
-    "comment": "Nhận xét chi tiết bằng tiếng Việt về cách thức giải (ghi nhận dạng, đề xuất, lựa chọn phép toán)"
+    "nhanXet": "Nhận xét chi tiết (10-12 câu, 200-250 từ) về cách thức giải - ghi cụ thể: đã nhận dạng dạng toán nào, đề xuất cách giải gì, phép toán nào được chọn"
   },
   "TC3": {
     "level": "Cần cố gắng|Đạt|Tốt",
     "score": 0hoặc1hoặc2,
-    "comment": "Nhận xét chi tiết bằng tiếng Việt về trình bày (ghi về các bước, phép tính)"
+    "nhanXet": "Nhận xét chi tiết (10-12 câu, 200-250 từ) về trình bày - ghi cụ thể: bước giải nào đúng, bước nào sai, phép tính nào chính xác, trình bày có rõ ràng không"
   },
   "TC4": {
     "level": "Cần cố gắng|Đạt|Tốt",
     "score": 0hoặc1hoặc2,
-    "comment": "Nhận xét chi tiết bằng tiếng Việt về kiểm tra (ghi về kiểm tra lại, vận dụng)"
+    "nhanXet": "Nhận xét chi tiết (10-12 câu, 200-250 từ) về kiểm tra - ghi cụ thể: đã kiểm tra lại kết quả chưa, cách kiểm tra ra sao, vận dụng vào bài toán tương tự được không"
   },
-  "totalScore": 0đếnđến8
+  "totalScore": 0đến8,
+  "tongNhanXet": "Nhận xét tổng thể ngắn gọn (3-4 câu)"
 }
 
-QUAN TRỌNG: Phải trả lời bằng JSON hợp lệ, không có comment dài quá 150 ký tự.`;
+QUAN TRỌNG: Phải trả lời bằng JSON hợp lệ, field "nhanXet" phải chi tiết 200-250 từ, không chứa ký tự đặc biệt.`;
 };
 
 

@@ -166,7 +166,7 @@ const ExamCard = ({ exam, onEdit, onDelete, onActivate, onStart, onViewResults, 
             className="w-full px-2 lg:px-3 py-2.5 border-none rounded-xl text-xs lg:text-sm font-semibold cursor-pointer transition-all duration-300 whitespace-nowrap text-center bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:-translate-y-1 hover:shadow-soft-lg shadow-soft mt-1" 
             onClick={() => onStart(exam.id)}
           >
-            🚀 <span className="hidden sm:inline ml-1">Tham gia</span>
+            🚀 <span className="hidden sm:inline ml-1">Tạo phiên thi</span>
           </button>
         )}
       </div>

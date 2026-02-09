@@ -319,47 +319,39 @@ const StudentPracticePage = ({ user, onSignOut }) => {
                 />
 
                 {/* Submit Button */}
-                {currentBai?.status === 'in_progress' && currentBai?.chatHistory?.length > 0 && (
-                  <div className="mt-4 flex gap-3">
+                <div className="mt-4 flex gap-3">
+                  <button
+                    onClick={() => handleSubmitPractice(activeTab)}
+                    disabled={submitting || currentBai?.status === 'completed'}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-max hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-quicksand"
+                  >
+                    {submitting ? '⏳ Đang chấm điểm...' : '✓ Nộp bài & Chấm điểm'}
+                  </button>
+                  {activeTab === 'bai1' && bai2?.status === 'in_progress' && (
                     <button
-                      onClick={() => handleSubmitPractice(activeTab)}
-                      disabled={submitting}
-                      className="flex-1 px-6 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-max hover:shadow-lg transition-all disabled:opacity-50 font-quicksand"
+                      onClick={() => setActiveTab('bai2')}
+                      className="px-6 py-3 bg-blue-500 text-white font-bold rounded-max hover:shadow-lg transition-all font-quicksand"
                     >
-                      {submitting ? '⏳ Đang chấm điểm...' : '✓ Nộp bài & Chấm điểm'}
+                      Sang Bài 2 →
                     </button>
-                    {activeTab === 'bai1' && bai2?.status === 'in_progress' && (
-                      <button
-                        onClick={() => setActiveTab('bai2')}
-                        className="px-6 py-3 bg-blue-500 text-white font-bold rounded-max hover:shadow-lg transition-all font-quicksand"
-                      >
-                        Sang Bài 2 →
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Navigation Buttons */}
-                {currentBai?.status === 'completed' && (
-                  <div className="mt-4 flex gap-3">
-                    {activeTab === 'bai1' && bai2?.status === 'in_progress' && (
-                      <button
-                        onClick={() => setActiveTab('bai2')}
-                        className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold rounded-max hover:shadow-lg transition-all font-quicksand"
-                      >
-                        → Sang Bài 2
-                      </button>
-                    )}
-                    {activeTab === 'bai2' && bai2?.status === 'completed' && (
-                      <button
-                        onClick={() => navigate('/student')}
-                        className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-max hover:shadow-lg transition-all font-quicksand"
-                      >
-                        ← Về Dashboard
-                      </button>
-                    )}
-                  </div>
-                )}
+                  )}
+                  {activeTab === 'bai1' && bai2?.status === 'completed' && (
+                    <button
+                      onClick={() => setActiveTab('bai2')}
+                      className="px-6 py-3 bg-blue-500 text-white font-bold rounded-max hover:shadow-lg transition-all font-quicksand"
+                    >
+                      Sang Bài 2 →
+                    </button>
+                  )}
+                  {activeTab === 'bai2' && bai2?.status === 'completed' && (
+                    <button
+                      onClick={() => navigate(-1)}
+                      className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-max hover:shadow-lg transition-all font-quicksand"
+                    >
+                      ← Quay lại
+                    </button>
+                  )}
+                </div>
               </>
             ) : (
               <div className="bg-white rounded-max shadow-lg p-8 flex items-center justify-center">

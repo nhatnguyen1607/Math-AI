@@ -20,6 +20,34 @@ class ResultService {
     this.collectionName = 'results';
   }
 
+  /**
+   * Loại bỏ undefined fields từ object một cách recursive
+   * Để tránh lỗi Firestore: "Unsupported field value: undefined"
+   */
+  cleanUndefinedFields(obj) {
+    if (obj === null || obj === undefined) {
+      return undefined; // Không trả về null, vì Firestore sẽ skip field
+    }
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.cleanUndefinedFields(item)).filter(item => item !== undefined);
+    }
+    
+    if (typeof obj !== 'object') {
+      return obj;
+    }
+    
+    const cleaned = {};
+    Object.entries(obj).forEach(([key, value]) => {
+      const cleanedValue = this.cleanUndefinedFields(value);
+      if (cleanedValue !== undefined) {
+        cleaned[key] = cleanedValue;
+      }
+    });
+    
+    return cleaned;
+  }
+
   // Lưu kết quả làm bài
   async saveResult(resultData) {
     try {
@@ -371,7 +399,10 @@ class ResultService {
         leaderboardPosition: 1
       };
       
-      await setDoc(resultRef, result);
+      // ✅ Clean undefined fields before saving to Firestore
+      const cleanedResult = this.cleanUndefinedFields(result);
+      
+      await setDoc(resultRef, cleanedResult);
       return { id: resultRef.id, ...result };
     } catch (error) {
       console.error('Error saving exam session result:', error);
@@ -562,12 +593,16 @@ class ResultService {
             luyenTap: part === 'luyenTap' ? data : null,
             vanDung: part === 'vanDung' ? data : null
           },
+          assessment: {},  // Initialize assessment object
           createdAt: serverTimestamp(),
           lastUpdatedAt: serverTimestamp()
         };
       }
 
-      await setDoc(progressRef, updateData, { merge: true });
+      // ✅ Clean undefined fields before saving to Firestore
+      const cleanedData = this.cleanUndefinedFields(updateData);
+
+      await setDoc(progressRef, cleanedData, { merge: true });
       return { id: docId, ...updateData };
     } catch (error) {
       console.error('Error upserting exam progress:', error);
@@ -764,6 +799,7 @@ class ResultService {
             luyenTap: luyenTapData,
             vanDung: null
           },
+          assessment: {},  // Initialize assessment object
           createdAt: serverTimestamp(),
           lastUpdatedAt: serverTimestamp()
         };
@@ -994,6 +1030,48 @@ class ResultService {
       return data.parts?.vanDung || null;
     } catch (error) {
       console.error('❌ Error getting van dung session:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lưu AI Progress Assessment (nhận xét chung về quá trình phát triển)
+   * - Lần đầu: tạo mới
+   * - Những lần sau: không ghi đè, chỉ load lại từ DB
+   */
+  async updateAiProgressAssessment(userId, examId, assessment) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+
+      await updateDoc(progressRef, {
+        'assessment.aiProgressAssessment': assessment,
+        'assessment.aiAssessmentGeneratedAt': serverTimestamp()
+      });
+
+      console.log('✅ AI Progress Assessment saved to DB:', docId);
+    } catch (error) {
+      console.error('❌ Error saving AI assessment to DB:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Xóa AI Progress Assessment 
+   */
+  async deleteAiProgressAssessment(userId, examId) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+
+      await updateDoc(progressRef, {
+        'assessment.aiProgressAssessment': null,
+        'assessment.aiAssessmentGeneratedAt': null
+      });
+
+      console.log('✅ AI Progress Assessment deleted from DB:', docId);
+    } catch (error) {
+      console.error('❌ Error deleting AI assessment from DB:', error);
       throw error;
     }
   }

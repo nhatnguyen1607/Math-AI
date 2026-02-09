@@ -27,10 +27,11 @@ const FacultyExamManagementPage = () => {
     return urlClassId || stateClassId || sessionClassId || null;
   });
   const [selectedTopicId, setSelectedTopicId] = useState(() => {
-    // Priority: URL params > location.state > null
+    // Priority: URL params > location.state > sessionStorage > null
     const urlTopicId = searchParams.get('topicId');
     const stateTopicId = location.state?.topicId;
-    return urlTopicId || stateTopicId || null;
+    const sessionTopicId = sessionStorage.getItem('selectedTopicId');
+    return urlTopicId || stateTopicId || sessionTopicId || null;
   });
   const [selectedClassName, setSelectedClassName] = useState('');
   const [selectedTopicName, setSelectedTopicName] = useState('');
@@ -43,15 +44,19 @@ const FacultyExamManagementPage = () => {
     const classIdFromState = location.state?.classId;
     const topicIdFromState = location.state?.topicId;
     const classIdFromSession = sessionStorage.getItem('selectedClassId');
+    const topicIdFromSession = sessionStorage.getItem('selectedTopicId');
     
     const finalClassId = classIdFromUrl || classIdFromState || classIdFromSession;
-    const finalTopicId = topicIdFromUrl || topicIdFromState;
+    const finalTopicId = topicIdFromUrl || topicIdFromState || topicIdFromSession;
         
     if (finalClassId) {
       setSelectedClassId(finalClassId);
       sessionStorage.setItem('selectedClassId', finalClassId);
     }
-    if (finalTopicId) setSelectedTopicId(finalTopicId);
+    if (finalTopicId) {
+      setSelectedTopicId(finalTopicId);
+      sessionStorage.setItem('selectedTopicId', finalTopicId);
+    }
   }, [location.state, searchParams]);
   
   // Form state
@@ -138,12 +143,11 @@ const FacultyExamManagementPage = () => {
         setExams(examsData || []);
       }
     } catch (error) {
-      console.error('❌ Error loading data:', error);
+      // Error loading data
     }
   };
 
   useEffect(() => {
-    console.log('🔄 Selection changed:', { selectedClassId, selectedTopicId });
     if (selectedClassId && selectedTopicId) {
       setSearchParams({ classId: selectedClassId, topicId: selectedTopicId });
     }
@@ -160,7 +164,7 @@ const FacultyExamManagementPage = () => {
           setSelectedTopicId(null);
         }
       } catch (error) {
-        console.error('❌ Error loading topics for class:', error);
+        // Error loading topics
       }
     };
 
@@ -282,20 +286,55 @@ const FacultyExamManagementPage = () => {
           alert(`${exercises[i].name}: Vui lòng nhập đầy đủ các đáp án cho câu ${j + 1}`);
           return;
         }
+        if (q.correctAnswers.length === 0) {
+          alert(`${exercises[i].name}: Vui lòng chọn đáp án đúng cho câu ${j + 1}`);
+          return;
+        }
       }
+    }
+
+    // Validate user and selection
+    if (!user?.id) {
+      alert('Lỗi: Không tìm thấy thông tin người dùng');
+      return;
+    }
+    if (!selectedClassId || !selectedTopicId) {
+      alert('Vui lòng chọn lớp học và chủ đề trước');
+      return;
     }
 
     setLoading(true);
     try {
+      // Sanitize exercises data - loại bỏ các field không cần thiết
+      const sanitizedExercises = exercises.map(ex => ({
+        name: String(ex.name || ''),
+        duration: Number(ex.duration) || 0,
+        context: String(ex.context || '').trim(),
+        scoring: {
+          correct: Number(ex.scoring?.correct) || 12,
+          incorrect: Number(ex.scoring?.incorrect) || 2,
+          bonus: Number(ex.scoring?.bonus) || 4,
+          bonusTimeThreshold: Number(ex.scoring?.bonusTimeThreshold) || 60
+        },
+        questions: (ex.questions || []).map(q => ({
+          question: String(q.question || '').trim(),
+          type: String(q.type || 'single'),
+          options: (q.options || []).map(o => String(o || '').trim()),
+          correctAnswers: Array.isArray(q.correctAnswers) ? q.correctAnswers.map(Number) : [],
+          explanation: String(q.explanation || '').trim()
+        }))
+      }));
+
       const examData = {
-        ...formData,
-        classId: selectedClassId,
-        topicId: selectedTopicId,
-        exercises,
+        title: String(formData.title || '').trim(),
+        description: String(formData.description || '').trim(),
+        classId: String(selectedClassId || ''),
+        topicId: String(selectedTopicId || ''),
+        exercises: sanitizedExercises,
         status: editingExam?.status || 'draft',
         ...(editingExam?.createdBy && { createdBy: editingExam.createdBy }),
         ...(editingExam?.createdByName && { createdByName: editingExam.createdByName }),
-        ...((!editingExam) && { createdBy: user?.uid, createdByName: user?.displayName }),
+        ...((!editingExam) && { createdBy: user?.id, createdByName: user?.displayName }),
       };
       
       if (editingExam) {
@@ -304,30 +343,31 @@ const FacultyExamManagementPage = () => {
         alert('Cập nhật đề thi thành công!');
       } else {
         // Create new exam
-        await facultyService.createExam(examData, user?.uid);
+        await facultyService.createExam(examData, user?.id);
         alert('Tạo đề thi thành công!');
       }
       
       resetForm();
       // Reload exams
-      if (user?.uid && selectedClassId && selectedTopicId) {
-        const examsData = await facultyService.getExamsByFaculty(user.uid, selectedClassId, selectedTopicId);
+      if (user?.id && selectedClassId && selectedTopicId) {
+        const examsData = await facultyService.getExamsByFaculty(user.id, selectedClassId, selectedTopicId);
         setExams(examsData || []);
       }
     } catch (error) {
-      alert('Lỗi khi lưu đề thi');
+      const errorMsg = error.message || 'Lỗi không xác định khi lưu đề thi';
+      alert(`Lỗi khi lưu đề thi:\n${errorMsg}`);
     } finally {
       setLoading(false);
     }
-  };;
+  }
 
   const handleActivateExam = async (examId) => {
     try {
       await facultyService.activateExam(examId);
       alert('Kích hoạt đề thi thành công!');
       // Reload exams
-      if (user?.uid && selectedClassId && selectedTopicId) {
-        const examsData = await facultyService.getExamsByFaculty(user.uid, selectedClassId, selectedTopicId);
+      if (user?.id && selectedClassId && selectedTopicId) {
+        const examsData = await facultyService.getExamsByFaculty(user.id, selectedClassId, selectedTopicId);
         setExams(examsData || []);
       }
     } catch (error) {
@@ -345,15 +385,12 @@ const FacultyExamManagementPage = () => {
       
       if (session.status === 'ongoing' || session.status === 'starting') {
         // Phiên đã bắt đầu, chuyến tới trang exam-live
-        console.log('✅ Session already started, navigating to exam-live');
         navigate(`/faculty/exam-live/${sessionId}`);
       } else {
         // Phiên vừa tạo (waiting), chuyến tới trang lobby
-        console.log('📋 Session waiting, navigating to exam-lobby');
         navigate(`/faculty/exam-lobby/${sessionId}`);
       }
     } catch (error) {
-      console.error('Error starting exam:', error);
       alert('Lỗi khi bắt đầu đề thi: ' + error.message);
     }
   };
@@ -384,12 +421,11 @@ const FacultyExamManagementPage = () => {
         await facultyService.deleteExam(examId);
         alert('Xóa đề thi thành công!');
         // Reload exams
-        if (user?.uid && selectedClassId && selectedTopicId) {
-          const examsData = await facultyService.getExamsByFaculty(user.uid, selectedClassId, selectedTopicId);
+        if (user?.id && selectedClassId && selectedTopicId) {
+          const examsData = await facultyService.getExamsByFaculty(user.id, selectedClassId, selectedTopicId);
           setExams(examsData || []);
         }
       } catch (error) {
-        console.error('Error deleting exam:', error);
         alert('Lỗi khi xóa đề thi');
       }
     }
@@ -458,7 +494,9 @@ const FacultyExamManagementPage = () => {
                   onChange={(e) => {
                     const classId = e.target.value;
                     setSelectedClassId(classId);
-                    setSearchParams({ classId: classId, topicId: selectedTopicId || '' });
+                    sessionStorage.setItem('selectedClassId', classId);
+                    sessionStorage.removeItem('selectedTopicId');
+                    setSearchParams({ classId: classId, topicId: '' });
                   }}
                   className="w-full px-4 py-3 bg-white text-gray-800 border-2 border-blue-300 rounded-lg font-semibold focus:outline-none focus:border-blue-500 transition-colors"
                 >
@@ -482,6 +520,7 @@ const FacultyExamManagementPage = () => {
                   onChange={(e) => {
                     const topicId = e.target.value;
                     setSelectedTopicId(topicId);
+                    sessionStorage.setItem('selectedTopicId', topicId);
                     setSearchParams({ classId: selectedClassId, topicId: topicId });
                   }}
                   disabled={!selectedClassId}

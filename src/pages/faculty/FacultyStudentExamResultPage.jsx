@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import authService from '../../services/authService';
 import resultService from '../../services/resultService';
 import facultyService from '../../services/faculty/facultyService';
+import geminiService from '../../services/geminiService';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 import CompetencyEvaluationDisplay from '../../components/CompetencyEvaluationDisplay';
 
@@ -18,6 +19,8 @@ const FacultyStudentExamResultPage = () => {
   const [expandedQuestions, setExpandedQuestions] = useState({});
   const [practiceData, setPracticeData] = useState(null);
   const [loadingPractice, setLoadingPractice] = useState(true);
+  const [aiAssessment, setAiAssessment] = useState(null);
+  const [loadingAiAssessment, setLoadingAiAssessment] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -57,6 +60,11 @@ const FacultyStudentExamResultPage = () => {
         }
         
         setStudentResult(result);
+        
+        // Load saved AI assessment if exists
+        if (result.data?.assessment?.aiProgressAssessment) {
+          setAiAssessment(result.data.assessment.aiProgressAssessment);
+        }
 
         // Get student info from updated leaderboard (from student_exam_progress)
         try {
@@ -122,6 +130,131 @@ const FacultyStudentExamResultPage = () => {
     loadPracticeData();
   }, [userId, examId, activeTab]);
 
+  // Check if all 3 parts are completed
+  const isCompetencyCompletionValid = useCallback(() => {
+    try {
+      // Check khởi động: has submitted answers
+      const khoiDongAnswers = studentResult?.data?.parts?.khoiDong?.answers;
+      const khoiDongCompleted = khoiDongAnswers && (
+        (Array.isArray(khoiDongAnswers) && khoiDongAnswers.length > 0) ||
+        (typeof khoiDongAnswers === 'object' && Object.keys(khoiDongAnswers).length > 0)
+      );
+
+      // Check luyện tập: both bai1 and bai2 marked as completed
+      const luyenTapCompleted = 
+        practiceData?.bai1?.status === 'completed' && 
+        practiceData?.bai2?.status === 'completed';
+
+      // Check vận dụng: marked as completed
+      const vanDungCompleted = practiceData?.vanDung?.status === 'completed';
+
+      return khoiDongCompleted && luyenTapCompleted && vanDungCompleted;
+    } catch (err) {
+      console.error('Error checking completion:', err);
+      return false;
+    }
+  }, [studentResult, practiceData]);
+
+  // Save AI Assessment to Database
+  const saveAiAssessment = useCallback(async (assessment) => {
+    try {
+      await resultService.updateAiProgressAssessment(userId, examId, assessment);
+      console.log('✅ AI assessment saved to DB');
+    } catch (err) {
+      console.error('Error saving AI assessment to DB:', err);
+    }
+  }, [userId, examId]);
+
+  // Fallback assessment when AI generation fails
+  const createFallbackAssessment = useCallback(() => {
+    const khoiDongEval = studentResult.competencyEvaluation || {};
+    const vanDungEval = practiceData?.vanDung?.evaluation || {};
+    
+    // Tính điểm khởi động
+    const khoiDongTotal = khoiDongEval.totalCompetencyScore || 0;
+    
+    // Tính điểm vận dụng (sử dụng totalCompetencyScore hoặc tongDiem)
+    const vanDungTotal = vanDungEval.totalCompetencyScore || vanDungEval.tongDiem || 0;
+    
+    const totalImprovement = vanDungTotal - khoiDongTotal;
+    let assessment = '';
+    
+    if (totalImprovement >= 4) {
+      assessment = `Học sinh có tiến bộ rõ rệt trong quá trình học tập. Điểm số tăng từ ${khoiDongTotal} lên ${vanDungTotal} (+${totalImprovement} điểm). Em đã thể hiện sức cải thiện đáng kể qua từng giai đoạn luyện tập.\n\nTiếp tục duy trì tốc độ học tập này. Em có thể thử thách các bài toán khó hơn để phát triển tư duy toán học.`;
+    } else if (totalImprovement >= 0) {
+      assessment = `Học sinh có sự ổn định trong quá trình học tập. Điểm số từ ${khoiDongTotal} sang ${vanDungTotal} (${totalImprovement >= 0 ? '+' : ''}${totalImprovement} điểm). Em cần tập trung vào các phần yếu để có thể cải thiện.\n\nXác định những tiêu chí còn yếu và luyện tập những phần đó. Nâng cao mức độ chi tiết trong các bước giải.`;
+    } else {
+      assessment = `Học sinh có xu hướng suy giảm trong quá trình học tập. Điểm số từ ${khoiDongTotal} xuống ${vanDungTotal} (${totalImprovement} điểm). Em cần xem xét lại chiến lược học tập.\n\nTìm những khó khăn cụ thể để có phương hướng cải thiện. Yêu cầu hỗ trợ thêm nếu cần thiết.`;
+    }
+    setAiAssessment(assessment);
+  }, [studentResult, practiceData]);
+
+  // AI Assessment Generation
+  const generateAiAssessment = useCallback(async () => {
+    try {
+      setLoadingAiAssessment(true);
+      
+      // Get data needed for AI prompt
+      const khoiDongEval = studentResult.competencyEvaluation || {};
+      const luyenTapBai1 = practiceData?.bai1?.evaluation || {};
+      const luyenTapBai2 = practiceData?.bai2?.evaluation || {};
+      const vanDungEval = practiceData?.vanDung?.evaluation || {};
+      
+      const khoiDongTotal = khoiDongEval.totalCompetencyScore || 0;
+      const getLuyenTapTotal = () => {
+        const bai1Total = luyenTapBai1.tongDiem || 0;
+        const bai2Total = luyenTapBai2.tongDiem || 0;
+        return Math.round((bai1Total + bai2Total) / 2);
+      };
+      const vanDungTotal = vanDungEval.totalCompetencyScore || 0;
+      
+      const luyenTapTotalScore = getLuyenTapTotal();
+      
+      const prompt = `Bạn là một giáo viên toán học. Hãy viết nhận xét ngắn gọn về tiến độ phát triển của học sinh:
+
+Học sinh: ${student?.name || 'Học sinh'}
+Điểm: ${khoiDongTotal}/8 (khởi động) → ${luyenTapTotalScore}/8 (luyện tập) → ${vanDungTotal}/8 (vận dụng)
+Thay đổi: ${vanDungTotal - khoiDongTotal >= 0 ? '+' : ''}${vanDungTotal - khoiDongTotal} điểm
+
+Hãy viết nhận xét chi tiết (5-6 câu) về:
+- Xu hướng phát triển của học sinh
+- Điều học sinh làm tốt
+- Cần cải thiện ở đâu
+
+Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
+
+      const response = await geminiService.processExamQuestion(prompt);
+      const assessment = response.message || response;
+      
+      console.log('✅ AI Assessment generated successfully');
+      
+      // Save to database
+      await saveAiAssessment(assessment);
+      
+      setAiAssessment(assessment);
+    } catch (err) {
+      console.error('❌ Error generating AI assessment:', err);
+      console.warn('⚠️ Using fallback assessment instead');
+      createFallbackAssessment();
+    } finally {
+      setLoadingAiAssessment(false);
+    }
+  }, [studentResult, practiceData, student, saveAiAssessment, createFallbackAssessment]);
+
+  // Load AI assessment when viewing the competency evaluation tab
+  useEffect(() => {
+    if (activeTab === 'danhGia' && studentResult && practiceData) {
+      // Check if already have assessment in DB
+      if (studentResult.data?.assessment?.aiProgressAssessment) {
+        setAiAssessment(studentResult.data.assessment.aiProgressAssessment);
+        setLoadingAiAssessment(false);
+      } else if (!aiAssessment && !loadingAiAssessment && isCompetencyCompletionValid()) {
+        // Only generate if not already in state and all parts are completed
+        generateAiAssessment();
+      }
+    }
+  }, [activeTab, studentResult, practiceData, aiAssessment, loadingAiAssessment, isCompetencyCompletionValid, generateAiAssessment]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
@@ -144,9 +277,10 @@ const FacultyStudentExamResultPage = () => {
   }
 
   const tabItems = [
-    { id: 'khoiDong', label: '🚀 Khởi động', icon: '🚀' },
-    { id: 'luyenTap', label: '📚 Luyện tập', icon: '📚' },
-    { id: 'vanDung', label: '⚡ Vận dụng', icon: '⚡' }
+    { id: 'khoiDong', label: '🚀 Khởi động', icon: '🚀', disabled: false },
+    { id: 'luyenTap', label: '📚 Luyện tập', icon: '📚', disabled: false },
+    { id: 'vanDung', label: '⚡ Vận dụng', icon: '⚡', disabled: false },
+    { id: 'danhGia', label: '📈 Đánh giá năng lực', icon: '📈', disabled: !isCompetencyCompletionValid() }
   ];
 
   return (
@@ -257,17 +391,26 @@ const FacultyStudentExamResultPage = () => {
         <div className="mb-8">
           <div className="flex gap-2 justify-center flex-wrap">
             {tabItems.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-3 font-semibold rounded-full transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-soft-lg hover:-translate-y-1'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 shadow-soft'
-                }`}
-              >
-                {tab.label}
-              </button>
+              <div key={tab.id} className="relative group">
+                <button
+                  onClick={() => !tab.disabled && setActiveTab(tab.id)}
+                  disabled={tab.disabled}
+                  className={`px-6 py-3 font-semibold rounded-full transition-all ${
+                    tab.disabled
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-soft opacity-60'
+                      : activeTab === tab.id
+                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-soft-lg hover:-translate-y-1'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 shadow-soft'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+                {tab.disabled && tab.id === 'danhGia' && (
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max bg-gray-800 text-white text-xs rounded px-3 py-2 hidden group-hover:block z-10 whitespace-nowrap">
+                    Hoàn thành 3 phần (🚀 🎯 ⚡) trước tiên
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>
@@ -280,98 +423,7 @@ const FacultyStudentExamResultPage = () => {
               <CompetencyEvaluationDisplay evaluation={studentResult.competencyEvaluation} showDetails={true} />
             )}
 
-            {/* AI Analysis Section */}
-            {studentResult.data?.parts?.khoiDong?.aiAnalysis && (
-              <div className="bg-white rounded-3xl shadow-soft-lg p-6 lg:p-8 border-t-4 border-indigo-300">
-                <h3 className="text-xl lg:text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                  <span>📊</span> Đánh giá chi tiết
-                </h3>
-                
-                {/* Competence Assessment Cards - Old Version (Hidden, replaced by new component) */}
-                {/* {studentResult.data.parts.khoiDong.aiAnalysis.competenceAssessment && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    {Object.entries(studentResult.data.parts.khoiDong.aiAnalysis.competenceAssessment).map(([comp, data]) => {
-                      const levelText = typeof data === 'string' ? data : data?.level || JSON.stringify(data);
-                      const reason = typeof data === 'object' && data?.reason ? data.reason : '';
-                      const levelColor = levelText.includes('Tốt') ? 'green' : levelText.includes('Đạt') ? 'yellow' : 'orange';
-                      const bgColor = levelColor === 'green' ? 'bg-green-100 border-green-400' : levelColor === 'yellow' ? 'bg-yellow-100 border-yellow-400' : 'bg-orange-100 border-orange-400';
-                      const textColor = levelColor === 'green' ? 'text-green-800' : levelColor === 'yellow' ? 'text-yellow-800' : 'text-orange-800';
-                      
-                      return (
-                        <div key={comp} className={`border-2 ${bgColor} rounded-2xl p-4 hover:shadow-soft-lg transition-shadow`}>
-                          <div className={`text-lg font-bold ${textColor} mb-3`}>{comp}</div>
-                          <div className={`text-base ${textColor} font-semibold mb-3`}>{levelText}</div>
-                          {reason && (
-                            <div className="text-sm text-gray-700 bg-white bg-opacity-60 p-3 rounded border-l-3 border-current">
-                              {reason}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )} */}
 
-                {/* Overall Assessment */}
-                {studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment && (
-                  <div className="mt-8 space-y-4 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-6 rounded-2xl border-2 border-indigo-300 shadow-soft">
-                    <div>
-                      <p className="font-bold text-lg text-gray-800 mb-2">
-                        🎯 Mức năng lực chung: <span className="text-indigo-600 font-bold">
-                          {typeof studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment === 'string' 
-                            ? studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment 
-                            : studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment?.level || 'Đạt'}
-                        </span></p>
-                      <p className="text-gray-700">
-                        {typeof studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment === 'string' 
-                          ? studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment 
-                          : studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment?.summary || ''}
-                      </p>
-                    </div>
-
-                    {/* Strengths and Areas to Improve */}
-                    {!typeof studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment !== 'string' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment?.strengths && (
-                          <div className="p-4 bg-green-100 rounded-xl border-l-4 border-green-600">
-                            <p className="font-bold text-green-800 mb-2">💪 Điểm mạnh:</p>
-                            <ul className="text-sm text-green-700 space-y-1">
-                              {(Array.isArray(studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment.strengths) 
-                                ? studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment.strengths 
-                                : [studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment.strengths]).map((strength, idx) => (
-                                <li key={idx}>• {strength}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        
-                        {studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment?.areasToImprove && (
-                          <div className="p-4 bg-orange-100 rounded-xl border-l-4 border-orange-600">
-                            <p className="font-bold text-orange-800 mb-2">🎯 Cần cải thiện:</p>
-                            <ul className="text-sm text-orange-700 space-y-1">
-                              {(Array.isArray(studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment.areasToImprove) 
-                                ? studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment.areasToImprove 
-                                : [studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment.areasToImprove]).map((area, idx) => (
-                                <li key={idx}>• {area}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment?.recommendations && (
-                      <div className="p-4 bg-indigo-100 rounded-xl border-l-4 border-indigo-600">
-                        <p className="font-bold text-indigo-800 mb-2">💡 Lời khuyên:</p>
-                        <p className="text-sm text-indigo-700">
-                          {studentResult.data.parts.khoiDong.aiAnalysis.overallAssessment.recommendations}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Xem chi tiết câu trả lời */}
             <div className="border-t-4 border-indigo-200">
@@ -857,6 +909,278 @@ const FacultyStudentExamResultPage = () => {
               </div>
               </>
             )}
+          </div>
+        )}
+
+        {/* Đánh giá Năng lực Tab */}
+        {activeTab === 'danhGia' && (
+          <div className="bg-white rounded-3xl shadow-soft-lg p-6 lg:p-8 border-t-4 border-purple-300">
+            <h3 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-8 flex items-center gap-3">
+              <span>📈</span> Đánh giá Tiến độ Phát triển Năng lực
+            </h3>
+
+            {!isCompetencyCompletionValid() ? (
+              <div className="bg-yellow-50 border-3 border-yellow-300 rounded-3xl p-8 text-center">
+                <div className="text-6xl mb-4">🔒</div>
+                <h4 className="text-2xl font-bold text-yellow-800 mb-3">Chưa có dữ liệu đánh giá</h4>
+                <p className="text-yellow-700 text-lg mb-6">
+                  Vui lòng hoàn thành đủ 3 phần (🚀 Khởi động, 📚 Luyện tập, ⚡ Vận dụng) trước khi xem đánh giá năng lực.
+                </p>
+                <div className="flex justify-center gap-4">
+                  <button
+                    onClick={() => setActiveTab('khoiDong')}
+                    className="px-6 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition"
+                  >
+                    → Phần Khởi động
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('luyenTap')}
+                    className="px-6 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition"
+                  >
+                    → Phần Luyện tập
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('vanDung')}
+                    className="px-6 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition"
+                  >
+                    → Phần Vận dụng
+                  </button>
+                </div>
+              </div>
+            ) : loadingPractice ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4 animate-bounce">📈</div>
+                <p className="text-gray-600 text-lg">Đang tải dữ liệu so sánh...</p>
+              </div>
+            ) : (() => {
+              // Extract competency data from all 3 parts
+              const khoiDongEval = studentResult.competencyEvaluation || {};
+              const luyenTapBai1 = practiceData?.bai1?.evaluation || {};
+              const luyenTapBai2 = practiceData?.bai2?.evaluation || {};
+              const vanDungEval = practiceData?.vanDung?.evaluation || {};
+
+              // Get average score for luyenTap (average of bai1 and bai2 TOTAL scores)
+              const getLuyenTapTotal = () => {
+                const bai1Total = luyenTapBai1.tongDiem || 0;
+                const bai2Total = luyenTapBai2.tongDiem || 0;
+                return Math.round((bai1Total + bai2Total) / 2);
+              };
+
+              // Get average score for individual TC
+              const getLuyenTapScore = (tc) => {
+                const bai1Score = luyenTapBai1[tc]?.diem || 0;
+                const bai2Score = luyenTapBai2[tc]?.diem || 0;
+                return Math.round((bai1Score + bai2Score) / 2);
+              };
+
+              const getLevelLabel = (score) => {
+                if (score === 2) return 'Tốt';
+                if (score === 1) return 'Đạt';
+                return 'Cần cố gắng';
+              };
+
+              const getLevelColor = (score) => {
+                if (score === 2) return 'text-green-600';
+                if (score === 1) return 'text-blue-600';
+                return 'text-orange-600';
+              };
+
+              const getBgColor = (score) => {
+                if (score === 2) return 'bg-green-50 border-green-300';
+                if (score === 1) return 'bg-blue-50 border-blue-300';
+                return 'bg-orange-50 border-orange-300';
+              };
+
+              // Calculate overall scores - LẤY ĐÚNG NƠI LƯU TRỮ
+              const khoiDongTotal = khoiDongEval.totalCompetencyScore || (khoiDongEval.TC1?.score || 0) + (khoiDongEval.TC2?.score || 0) + (khoiDongEval.TC3?.score || 0) + (khoiDongEval.TC4?.score || 0);
+              const luyenTapTotal = getLuyenTapTotal();
+              const vanDungTotal = vanDungEval.totalCompetencyScore || vanDungEval.tongDiem || (vanDungEval.TC1?.diem || 0) + (vanDungEval.TC2?.diem || 0) + (vanDungEval.TC3?.diem || 0) + (vanDungEval.TC4?.diem || 0);
+
+              // Analyze development for each TC - sử dụng đúng field names
+              const analyzeTC = (tc) => {
+                const kd = khoiDongEval[tc]?.score || 0;
+                const lt = getLuyenTapScore(tc);
+                const vd = vanDungEval[tc]?.diem || 0;
+
+                let development = [];
+                if (lt > kd) {
+                  development.push(`↑ Luyện tập: tăng từ ${getLevelLabel(kd)} lên ${getLevelLabel(lt)}`);
+                } else if (lt < kd) {
+                  development.push(`↓ Luyện tập: giảm từ ${getLevelLabel(kd)} xuống ${getLevelLabel(lt)}`);
+                } else {
+                  development.push(`→ Luyện tập: duy trì mức ${getLevelLabel(kd)}`);
+                }
+
+                if (vd > lt) {
+                  development.push(`↑ Vận dụng: nâng từ ${getLevelLabel(lt)} lên ${getLevelLabel(vd)}`);
+                } else if (vd < lt) {
+                  development.push(`↓ Vận dụng: giảm từ ${getLevelLabel(lt)} xuống ${getLevelLabel(vd)}`);
+                } else {
+                  development.push(`→ Vận dụng: duy trì mức ${getLevelLabel(lt)}`);
+                }
+
+                // Overall trend
+                if (vd > kd) {
+                  development.push(`📈 Xu hướng chung: cải thiện từ ${getLevelLabel(kd)} lên ${getLevelLabel(vd)}`);
+                } else if (vd < kd) {
+                  development.push(`📉 Xu hướng chung: suy giảm từ ${getLevelLabel(kd)} xuống ${getLevelLabel(vd)}`);
+                } else {
+                  development.push(`📊 Xu hướng chung: ổn định ở mức ${getLevelLabel(kd)}`);
+                }
+
+                return development;
+              };
+
+              const tcNames = {
+                'TC1': { name: 'Nhận biết vấn đề', description: 'Xác định dữ kiện, yêu cầu bài toán' },
+                'TC2': { name: 'Nêu cách giải', description: 'Đề xuất giải pháp, lựa chọn phép tính' },
+                'TC3': { name: 'Trình bày giải', description: 'Thực hiện các bước giải, trình bày rõ ràng' },
+                'TC4': { name: 'Kiểm tra & mở rộng', description: 'Kiểm tra lại kết quả, vận dụng mở rộng' }
+              };
+
+              return (
+                <div className="space-y-8">
+                  {/* Overall Score Comparison */}
+                  <div className="bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 rounded-3xl p-6 lg:p-8 border-3 border-purple-300 shadow-soft-lg">
+                    <h4 className="text-xl font-bold text-gray-800 mb-6">📊 So sánh tổng điểm toàn bộ 3 phần</h4>
+                    <div className="grid grid-cols-3 gap-4 lg:gap-6">
+                      {/* Khởi động */}
+                      <div className="bg-white rounded-2xl p-5 border-l-4 border-indigo-500 text-center shadow-soft hover:shadow-soft-lg transition-shadow">
+                        <div className="text-sm text-gray-600 font-semibold mb-2">🚀 Khởi động</div>
+                        <div className={`text-4xl font-bold mb-2 ${khoiDongTotal >= 7 ? 'text-green-600' : khoiDongTotal >= 4 ? 'text-blue-600' : 'text-orange-600'}`}>
+                          {khoiDongTotal}/8
+                        </div>
+                        <div className="text-xs text-gray-500">{getLevelLabel(Math.round(khoiDongTotal / 4))}</div>
+                      </div>
+
+                      {/* Luyện tập */}
+                      <div className="bg-white rounded-2xl p-5 border-l-4 border-blue-500 text-center shadow-soft hover:shadow-soft-lg transition-shadow">
+                        <div className="text-sm text-gray-600 font-semibold mb-2">📚 Luyện tập (TB)</div>
+                        <div className={`text-4xl font-bold mb-2 ${luyenTapTotal >= 7 ? 'text-green-600' : luyenTapTotal >= 4 ? 'text-blue-600' : 'text-orange-600'}`}>
+                          {luyenTapTotal}/8
+                        </div>
+                        <div className="text-xs text-gray-500">{getLevelLabel(Math.round(luyenTapTotal / 4))}</div>
+                      </div>
+
+                      {/* Vận dụng */}
+                      <div className="bg-white rounded-2xl p-5 border-l-4 border-orange-500 text-center shadow-soft hover:shadow-soft-lg transition-shadow">
+                        <div className="text-sm text-gray-600 font-semibold mb-2">⚡ Vận dụng</div>
+                        <div className={`text-4xl font-bold mb-2 ${vanDungTotal >= 7 ? 'text-green-600' : vanDungTotal >= 4 ? 'text-blue-600' : 'text-orange-600'}`}>
+                          {vanDungTotal}/8
+                        </div>
+                        <div className="text-xs text-gray-500">{getLevelLabel(Math.round(vanDungTotal / 4))}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Detailed TC1-TC4 Comparison */}
+                  <div className="space-y-6">
+                    <h4 className="text-xl font-bold text-gray-800">📋 Chi tiết từng tiêu chí</h4>
+                    
+                    {['TC1', 'TC2', 'TC3', 'TC4'].map((tc) => {
+                      const kdScore = khoiDongEval[tc]?.score || 0;
+                      const ltScore = getLuyenTapScore(tc);
+                      const vdScore = vanDungEval[tc]?.diem || 0;
+                      const development = analyzeTC(tc);
+
+                      return (
+                        <div key={tc} className="bg-white rounded-3xl p-6 lg:p-8 shadow-soft hover:shadow-soft-lg transition-shadow border border-gray-200">
+                          {/* TC Header */}
+                          <div className="mb-6 pb-4 border-b-2 border-gray-200">
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <h5 className="text-lg font-bold text-gray-800">{tc}. {tcNames[tc].name}</h5>
+                                <p className="text-sm text-gray-600 mt-1">{tcNames[tc].description}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Score Comparison Row */}
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                            {/* Khởi động */}
+                            <div className={`rounded-xl p-4 border-2 ${getBgColor(kdScore)}`}>
+                              <div className="text-xs text-gray-600 font-semibold mb-2">🚀 Khởi động</div>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className={`text-3xl font-bold ${getLevelColor(kdScore)}`}>{kdScore}</div>
+                                  <div className={`text-xs font-semibold mt-1 ${getLevelColor(kdScore)}`}>{getLevelLabel(kdScore)}</div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Luyện tập */}
+                            <div className={`rounded-xl p-4 border-2 ${getBgColor(ltScore)}`}>
+                              <div className="text-xs text-gray-600 font-semibold mb-2">📚 Luyện tập</div>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className={`text-3xl font-bold ${getLevelColor(ltScore)}`}>{ltScore}</div>
+                                  <div className={`text-xs font-semibold mt-1 ${getLevelColor(ltScore)}`}>{getLevelLabel(ltScore)}</div>
+                                </div>
+                                {ltScore > kdScore && <div className="text-2xl">📈</div>}
+                                {ltScore < kdScore && <div className="text-2xl">📉</div>}
+                                {ltScore === kdScore && <div className="text-2xl">→</div>}
+                              </div>
+                            </div>
+
+                            {/* Vận dụng */}
+                            <div className={`rounded-xl p-4 border-2 ${getBgColor(vdScore)}`}>
+                              <div className="text-xs text-gray-600 font-semibold mb-2">⚡ Vận dụng</div>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className={`text-3xl font-bold ${getLevelColor(vdScore)}`}>{vdScore}</div>
+                                  <div className={`text-xs font-semibold mt-1 ${getLevelColor(vdScore)}`}>{getLevelLabel(vdScore)}</div>
+                                </div>
+                                {vdScore > ltScore && <div className="text-2xl">📈</div>}
+                                {vdScore < ltScore && <div className="text-2xl">📉</div>}
+                                {vdScore === ltScore && <div className="text-2xl">→</div>}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Development Analysis */}
+                          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border-l-4 border-purple-500">
+                            <p className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                              <span>💡</span> Nhận xét phát triển:
+                            </p>
+                            <div className="space-y-2">
+                              {development.map((item, idx) => (
+                                <p key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                                  <span className="text-gray-400 mt-0.5">•</span>
+                                  <span>{item}</span>
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Overall Assessment */}
+                  <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white rounded-3xl p-6 lg:p-8 shadow-soft-lg">
+                    <h4 className="text-xl font-bold mb-6 flex items-center gap-3">
+                      <span>🎯</span> Đánh giá chung về quá trình phát triển
+                    </h4>
+
+                    {loadingAiAssessment ? (
+                      <div className="text-center py-8">
+                        <div className="text-4xl mb-3 animate-bounce">🤖</div>
+                        <p className="text-indigo-100">Đang phân tích phát triển của học sinh...</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {aiAssessment && (
+                          <div className="flex items-start gap-3">
+                            <span className="text-3xl flex-shrink-0">✨</span>
+                            <p className="text-lg leading-relaxed whitespace-pre-wrap text-indigo-50">{aiAssessment}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

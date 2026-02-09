@@ -55,7 +55,7 @@ const PracticeChat = ({
     }
   }, [baiNumber, chatHistory]);
 
-  // Khởi tạo geminiService khi bài mới (chỉ nếu chatHistory rỗng)
+  // Khởi tạo geminiService khi bài mới (LUÔN khởi tạo để đảm bảo chat session sẵn sàng)
   useEffect(() => {
     const initializeProblem = async () => {
       try {
@@ -68,13 +68,17 @@ const PracticeChat = ({
           role: 'model',
           parts: [{ text: response.message }]
         };
-        setMessages([aiMsg]);
         
-        // Lưu AI message từ startNewProblem vào Firestore (QUAN TRỌNG!)
-        await saveChatMessage(aiMsg);
-        
-        if (onChatUpdate) {
-          onChatUpdate([aiMsg]);
+        // Chỉ thêm tin nhắn AI nếu chưa có lịch sử (check chatHistory instead of messages)
+        if (!chatHistory || chatHistory.length === 0) {
+          setMessages([aiMsg]);
+          
+          // Lưu AI message từ startNewProblem vào Firestore
+          await saveChatMessage(aiMsg);
+          
+          if (onChatUpdate) {
+            onChatUpdate([aiMsg]);
+          }
         }
       } catch (err) {
         setError('Lỗi khi khởi tạo bài toán: ' + err.message);
@@ -83,12 +87,11 @@ const PracticeChat = ({
       }
     };
 
-    // Chỉ khởi tạo nếu: có bài toán, messages rỗng, và chưa hoàn thành
-    // Không cần check chatHistory vì đã được sync ở useEffect trước
-    if (deBai && messages.length === 0 && !isCompleted) {
+    // Khởi tạo geminiService khi bài toán hoặc bài số thay đổi
+    if (deBai && !isCompleted) {
       initializeProblem();
     }
-  }, [deBai, isCompleted, userId, examId, baiNumber, onChatUpdate, saveChatMessage, messages]);
+  }, [deBai, baiNumber, isCompleted, chatHistory, saveChatMessage, onChatUpdate]);
 
   // Auto scroll to bottom
   const scrollToBottom = () => {
@@ -97,7 +100,6 @@ const PracticeChat = ({
     }
   };
 
-  // Auto scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);

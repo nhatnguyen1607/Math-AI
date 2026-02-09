@@ -374,208 +374,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
     }
   }, [answers, sessionId, user?.uid, exam?.id, isCompleted, isSubmitting, questions, navigate]);
 
-  // 🔧 NEW: Helper function that accepts answers as parameter
-  // This bypasses the closure issue when calling from setTimeout
-  const handleAutoSubmitWithAnswers = useCallback(async (answersToUse) => {
-    if (isCompleted || isSubmitting) return;
-
-    setIsSubmitting(true);
-
-    try {
-
-      const validatedAnswers = {};
-      
-      // Normalize answers to string keys for consistency
-      const normalizedAnswers = {};
-      Object.keys(answersToUse).forEach(key => {
-        const numKey = String(parseInt(key));
-        normalizedAnswers[numKey] = answersToUse[key];
-      });
-      
-      
-      // 🔧 IMPORTANT: Iterate through ALL questions (0 to questions.length-1)
-      // NOT just answers.keys(), because some answers might be missing
-      for (let idx = 0; idx < questions.length; idx++) {
-        const idxStr = String(idx);
-        const answer = normalizedAnswers[idxStr];
-        const question = questions[idx];
-        
-        if (!question) {
-          console.warn(`⚠️ Question ${idx} not found in questions array!`);
-          continue; // Skip to next iteration
-        }
-        
-        if (!answer) {
-          // Still create entry with unanswered marker
-          validatedAnswers[idxStr] = {
-            questionIndex: idx,
-            answer: null,
-            isCorrect: false,
-            points: 0,
-            timeUsed: 0
-          };
-          continue;
-        }
-
-        // Get correct answers - check both singular and plural fields
-        let correctAnswersArray = question.correctAnswers || [];
-        if (!correctAnswersArray.length && question.correctAnswer !== undefined) {
-          // If correctAnswers is empty but correctAnswer exists, use the singular form
-          correctAnswersArray = Array.isArray(question.correctAnswer) 
-            ? question.correctAnswer 
-            : [question.correctAnswer];
-        }
-        
-        const correctAnswersSet = new Set(correctAnswersArray);
-        let isCorrect = false;
-
-        if (Array.isArray(answer.answer)) {
-          // Multiple choice question
-          const selectedSet = new Set(answer.answer);
-          isCorrect = correctAnswersSet.size > 0 &&
-            correctAnswersSet.size === selectedSet.size &&
-            Array.from(correctAnswersSet).every((idx) => selectedSet.has(idx));
-          
-          if (idx === questions.length - 1) {
-            console.log(`Q${idx} [MULTI - LAST]: selected=${JSON.stringify(Array.from(selectedSet))}, correct=${JSON.stringify(Array.from(correctAnswersSet))}, isCorrect=${isCorrect}`);
-          }
-        } else {
-          // Single choice question
-          isCorrect = correctAnswersSet.has(answer.answer);
-          
-          if (idx === questions.length - 1) {
-          }
-        }
-
-        // Calculate points if not already done (for multiple choice)
-        let points = answer.points || 0;
-        if (!answer.points && isCorrect) {
-          const exerciseIndex = question.exerciseIndex || 0;
-          const scoreData = scoringService.calculateQuestionScore(
-            exerciseIndex,
-            isCorrect,
-            answer.timeUsed || 0
-          );
-          points = scoreData.totalPoints;
-        }
-
-        validatedAnswers[idxStr] = {
-          ...answer,
-          isCorrect,
-          points
-        };
-      }
-
-      // Count correct answers and calculate score
-      const correctAnswers = Object.values(validatedAnswers).filter(a => a.isCorrect).length;
-      const totalScore = Object.values(validatedAnswers).reduce((sum, a) => sum + (a.points || 0), 0);
-      const percentage = questions.length > 0 ? Math.round((correctAnswers / questions.length) * 100) : 0;
-
-      // 2. Gọi Gemini để đánh giá năng lực
-      if (!exam?.id) {
-        throw new Error('Exam ID not found');
-      }
-
-      let aiAnalysis = {};
-      let competencyEvaluation = {
-        overallAssessment: {
-          level: 'Cần cố gắng',
-          score: 0
-        },
-        competenceAssessment: {}
-      };
-
-      try {
-        const [questionComments, competencyEval] = await Promise.all([
-          geminiService.evaluateQuestionComments(validatedAnswers, questions),
-          geminiService.evaluateCompetencyFramework(Object.values(validatedAnswers), questions)
-        ]);
-
-        // 🤖 Generate overall assessment from competency evaluation
-        const overallAssessment = await geminiService.generateOverallAssessment(competencyEval);
-        
-        // Structure aiAnalysis with questionComments and overallAssessment
-        aiAnalysis = {
-          questionComments: questionComments || [],
-          overallAssessment: overallAssessment
-        };
-
-        // Add overallAssessment to competencyEvaluation
-        competencyEvaluation = competencyEval || {
-          overallAssessment: {
-            level: 'Cần cố gắng',
-            score: 0
-          },
-          competenceAssessment: {}
-        };
-        
-        if (!competencyEvaluation.overallAssessment) {
-          competencyEvaluation.overallAssessment = {};
-        }
-        competencyEvaluation.overallAssessment.strengths = overallAssessment.strengths || [];
-        competencyEvaluation.overallAssessment.weaknesses = overallAssessment.weaknesses || [];
-        competencyEvaluation.overallAssessment.recommendations = overallAssessment.recommendations || [];
-        competencyEvaluation.overallAssessment.encouragement = overallAssessment.encouragement || '';
-      } catch (err) {
-        aiAnalysis = {};
-        competencyEvaluation = {
-          overallAssessment: {
-            level: 'Cần cố gắng',
-            score: 0
-          },
-          competenceAssessment: {}
-        };
-      }
-
-      // 🔧 VALIDATION: Ensure competency level matches percentage score
-      // This prevents mismatches like "PASS" at top but "Cần cố gắng" in evaluation
-      const expectedLevel = percentage >= 80 ? 'Tốt' : percentage >= 50 ? 'Đạt' : 'Cần cố gắng';
-      const evalLevel = competencyEvaluation?.overallAssessment?.level;
-      if (evalLevel !== expectedLevel) {
-        console.warn(`⚠️ LEVEL MISMATCH: AI returned "${evalLevel}" but percentage ${percentage}% expects "${expectedLevel}" - FORCING OVERRIDE`);
-        competencyEvaluation.overallAssessment.level = expectedLevel;
-      }
-      if (competencyEvaluation.competenceAssessment) {
-        Object.keys(competencyEvaluation.competenceAssessment).forEach(key => {
-          if (competencyEvaluation.competenceAssessment[key].level) {
-            competencyEvaluation.competenceAssessment[key].level = expectedLevel;
-          }
-        });
-      }
-
-      // 3. Lưu vào tiến trình (Lưu vào parts.khoiDong)
-      if (user?.uid && exam?.id) {
-        await resultService.upsertExamProgress(user.uid, exam.id, {
-          part: 'khoiDong',
-          data: {
-            score: totalScore,
-            correctAnswers,
-            totalQuestions: questions.length,
-            percentage: questions.length > 0 ? Math.round((correctAnswers / questions.length) * 100) : 0,
-            answers: validatedAnswers,
-            aiAnalysis: aiAnalysis,
-            competencyEvaluation: competencyEvaluation,
-            completedAt: new Date().toISOString()
-          }
-        });
-      }
-
-      setIsCompleted(true);
-
-      // 3. Chuyển sang trang kết quả (với flag fromExam để hiển thị lời chúc mừng)
-      setTimeout(() => {
-        navigate(`/student/exam-result/${sessionId}`, {
-          state: { fromExam: true, examId: exam?.id }
-        });
-      }, 2000);
-    } catch (err) {
-      console.error('Error submitting exam:', err);
-      setError('Lỗi khi nộp bài');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [sessionId, user?.uid, exam?.id, isCompleted, isSubmitting, questions, navigate]);
-
   // Handler: Câu hỏi tiếp theo
   const handleNextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
@@ -811,7 +609,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
       console.log(`✏️ Answer saved to state for question ${currentQuestionIndex}:`, newAnswers[currentQuestionIndex]);
 
       // Cập nhật lên Firestore
-      let submitPromise = Promise.resolve(); // Default resolved promise
       if (user?.uid) {
         const answerDataToSubmit = cleanFirebaseData({
           questionId: currentQuestion.id,
@@ -826,43 +623,18 @@ const StudentExamPage = ({ user, onSignOut }) => {
         });
         console.log(`📤 Submitting answer for question ${currentQuestionIndex}:`, answerDataToSubmit);
         
-        submitPromise = examSessionService
+        examSessionService
           .submitAnswer(sessionId, user.uid, answerDataToSubmit)
           .then(() => {
             console.log(`✅ Answer ${currentQuestionIndex} successfully submitted to Firestore`);
           })
           .catch((err) => {
             console.error(`❌ Error submitting answer ${currentQuestionIndex}:`, err);
-            throw err;
           });
       }
 
-      // Auto next sau đó - NHƯNG nếu là câu cuối, đợi submitAnswer hoàn thành rồi submit exam
-      const isLastQuestion = currentQuestionIndex === questions.length - 1;
-      console.log(`🔍 Question ${currentQuestionIndex}/${questions.length - 1}, isLastQuestion: ${isLastQuestion}`);
-      
-      if (isLastQuestion) {
-        // Câu cuối: đợi submit lên Firestore xong, rồi submit exam
-        console.log('🕐 Last question - waiting for answer to be submitted...');
-        
-        submitPromise
-          .then(() => {
-            console.log(`✅ Last question submitted to Firestore, proceeding to auto-submit exam`);
-            // 🔧 FIX: Pass newAnswers directly instead of relying on state closure
-            // This ensures the last answer (Q11) is included
-            setTimeout(() => handleAutoSubmitWithAnswers(newAnswers), 500);
-          })
-          .catch((err) => {
-            console.error(`❌ Error submitting last question: ${err.message}, but will proceed anyway`);
-            // Vẫn tiếp tục submit exam ngay cả nếu có lỗi
-            setTimeout(() => handleAutoSubmitWithAnswers(newAnswers), 500);
-          });
-      } else {
-        // Câu không phải cuối: chuyển sang câu tiếp theo
-        setTimeout(() => {
-          handleNextQuestion();
-        }, 1500);
-      }
+      // 🔧 NEW: No auto-advance - let student click navigation buttons
+      console.log(`✅ Answer saved for question ${currentQuestionIndex}, waiting for student to click next`);
     }
   };
 
@@ -933,15 +705,8 @@ const StudentExamPage = ({ user, onSignOut }) => {
       console.warn('❌ User UID not available, answer not submitted to Firestore');
     }
 
-    // Auto next sau 1 giây
-    setTimeout(() => {
-      if (currentQuestionIndex < questions.length - 1) {
-        handleNextQuestion();
-      } else {
-        // Last question of multiple choice - pass the updated answers
-        handleAutoSubmitWithAnswers(newAnswers);
-      }
-    }, 1500);
+    // 🔧 NEW: No auto-advance - let student click navigation buttons
+    console.log(`✅ Multiple choice answer submitted for question ${currentQuestionIndex}, waiting for student action`);
   };
 
   // Loading state

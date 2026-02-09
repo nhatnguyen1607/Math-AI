@@ -302,9 +302,9 @@ export const submitAnswer = async (sessionId, uid, answerData) => {
 
     // Sử dụng increment() để cộng điểm trực tiếp trên server (tránh race condition)
     // increment() là atomic operation - an toàn khi có nhiều request đồng thời
+    // 🔧 REMOVED: auto-increment currentQuestion - let student manually navigate
     await updateDoc(sessionRef, {
       [`participants.${uid}.score`]: increment(pointsEarned),
-      [`participants.${uid}.currentQuestion`]: increment(1),
       [`participants.${uid}.answers`]: updatedAnswers,
       [`participants.${uid}.lastUpdated`]: serverTimestamp()
     });

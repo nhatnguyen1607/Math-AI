@@ -21,7 +21,6 @@ import { Exam, ExamResult } from '../../models';
 class StudentService {
   async getAvailableExams(classId = null, type = null) {
     try {
-      console.log('🔍 getAvailableExams called with:', { classId, type });
       // Get all exams without status filter (filter in memory to avoid needing composite index)
       const q = query(
         collection(db, 'exams'),
@@ -30,38 +29,28 @@ class StudentService {
 
       const snapshot = await getDocs(q);
       let exams = snapshot.docs.map(doc => Exam.fromFirestore(doc.data(), doc.id));
-      console.log('📊 Total exams found:', exams.length);
 
       // Filter in memory for flexibility (classId, type)
       // Always show all exams regardless of status - UI layer will check isLocked to determine button
       
       // Only filter by classId if provided and valid
       if (classId && classId.trim()) {
-        console.log('🔍 Filtering by classId:', classId);
         exams = exams.filter(e => {
-          console.log('  exam.classId:', e.classId, 'match:', e.classId === classId);
           return e.classId === classId;
         });
-        console.log('📊 After classId filter:', exams.length);
       }
       // Only filter by type if provided and valid
       if (type && type.trim()) {
-        console.log('🔍 Filtering by type:', type);
         exams = exams.filter(e => e.type === type);
-        console.log('📊 After type filter:', exams.length);
       }
 
-      console.log('✅ Final exams:', exams.length);
       
       // Debug log to show isLocked status of each exam
       exams.forEach(exam => {
-        console.log(`📋 Exam details: id=${exam.id}, title="${exam.title}", isLocked=${exam.isLocked} (type: ${typeof exam.isLocked}), status=${exam.status}`);
       });
-      console.log('📋 Full exams JSON:', JSON.stringify(exams.map(e => ({id: e.id, title: e.title, isLocked: e.isLocked}))));
       
       return exams;
     } catch (error) {
-      console.error('Error getting available exams:', error);
       throw error;
     }
   }
@@ -83,7 +72,6 @@ class StudentService {
       // Sort by createdAt on client side
       return exams.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     } catch (error) {
-      console.error('Error getting exams by topic:', error);
       throw error;
     }
   }
@@ -106,7 +94,6 @@ class StudentService {
       // Sort by createdAt on client side
       return exams.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     } catch (error) {
-      console.error('Error getting exams by topic and class:', error);
       throw error;
     }
   }
@@ -124,7 +111,6 @@ class StudentService {
       }
       return null;
     } catch (error) {
-      console.error('Error getting exam:', error);
       throw error;
     }
   }
@@ -149,7 +135,6 @@ class StudentService {
         correctAnswers: null
       }));
     } catch (error) {
-      console.error('Error getting exam questions:', error);
       throw error;
     }
   }
@@ -176,7 +161,6 @@ class StudentService {
 
       return { ...examResult, id: docRef.id };
     } catch (error) {
-      console.error('Error creating exam result:', error);
       throw error;
     }
   }
@@ -201,7 +185,6 @@ class StudentService {
       }
       return null;
     } catch (error) {
-      console.error('Error getting student exam result:', error);
       throw error;
     }
   }
@@ -246,7 +229,6 @@ class StudentService {
 
       return true;
     } catch (error) {
-      console.error('Error submitting answer:', error);
       throw error;
     }
   }
@@ -278,7 +260,6 @@ class StudentService {
 
       return true;
     } catch (error) {
-      console.error('Error completing exam:', error);
       throw error;
     }
   }
@@ -300,7 +281,6 @@ class StudentService {
         ExamResult.fromFirestore(doc.data(), doc.id)
       );
     } catch (error) {
-      console.error('Error getting student exam history:', error);
       throw error;
     }
   }
@@ -378,7 +358,6 @@ class StudentService {
         totalTimeSpent: Math.round(totalTimeSpent / 60) // Tính theo phút
       };
     } catch (error) {
-      console.error('Error getting student statistics:', error);
       throw error;
     }
   }
@@ -388,7 +367,6 @@ class StudentService {
    */
   async getAvailableTopics(classId = null, type = null) {
     try {
-      console.log('getAvailableTopics called with classId:', classId, 'type:', type);
       // First, get all topics (không filter theo classId nữa vì topic không có classId)
       const q = query(collection(db, 'topics'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
@@ -396,15 +374,12 @@ class StudentService {
         id: doc.id,
         ...doc.data()
       }));
-      console.log('All topics from Firestore:', topics);
 
       // Only filter by type if provided and valid
       if (type && type.trim()) {
         topics = topics.filter(t => t.type === type);
-        console.log('After filtering by type:', type, topics);
       }
 
-      console.log('Final topics to return:', topics);
       for (let topic of topics) {
         try {
           // Load exams của topic này cho classId cụ thể
@@ -421,7 +396,6 @@ class StudentService {
 
       return topics;
     } catch (error) {
-      console.error('Error getting available topics:', error);
       throw error;
     }
   }
@@ -452,7 +426,6 @@ class StudentService {
         ranking: '-' // TODO: Lấy xếp hạng từ database
       };
     } catch (error) {
-      console.error('Error getting student stats:', error);
       return {
         completedExams: 0,
         averageScore: 0,
@@ -478,7 +451,6 @@ class StudentService {
         ...doc.data()
       }));
     } catch (error) {
-      console.error('Error getting exam participants:', error);
       return [];
     }
   }
@@ -497,7 +469,6 @@ class StudentService {
 
       return { id: docRef.id, ...result };
     } catch (error) {
-      console.error('Error submitting exam:', error);
       throw error;
     }
   }
@@ -533,7 +504,6 @@ class StudentService {
 
       return true;
     } catch (error) {
-      console.error('Error joining exam:', error);
       throw error;
     }
   }

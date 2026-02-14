@@ -114,7 +114,6 @@ const FacultyExamLiveSessionPage = () => {
 
       // When time is up, auto-lock exam
       if (remaining <= 0 && session.status === 'ongoing') {
-        console.log('❌ Time is up! Auto-finishing session');
         clearInterval(timer);
         // Auto-finish exam without asking
         examSessionService.finishExamSession(sessionId)
@@ -123,7 +122,6 @@ const FacultyExamLiveSessionPage = () => {
             navigate('/faculty/exam-management');
           })
           .catch((error) => {
-            console.error('Error auto-finishing exam:', error);
             alert('Lỗi khi kết thúc phiên thi tự động');
           });
       }

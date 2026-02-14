@@ -65,7 +65,6 @@ class GeminiModelManager {
     }
     
     // Nếu tất cả model đã vượt limit, dùng model đầu tiên (sẽ nhận lỗi từ API)
-    console.warn("Tất cả model đã vượt RPD limit!");
     return this._getGeminiInstance().getGenerativeModel({ model: MODELS[0].name });
   }
 
@@ -161,8 +160,6 @@ class GeminiModelManager {
           
         } catch (error) {
           lastError = error;
-          const keyInfo = apiKeyManager.getCurrentKeyInfo();
-          console.warn(`✗ [${keyInfo.name}] ${model.displayName} lỗi: ${error.message}`);
           
           // Kiểm tra loại lỗi
           const isQuotaError = error.message?.includes("Rate limit") || 
@@ -197,17 +194,12 @@ class GeminiModelManager {
         if (apiKeyManager.rotateToNextKey()) {
           keyAttempts++;
         } else {
-          console.error(`❌ Không có key khác khả dụng`);
           break;
         }
       } else if (modelAttempts === 0) {
         // Không thử được model nào (tất cả vượt limit hoặc hết quota)
-        console.warn(`⚠️ Không có model nào khả dụng với key hiện tại`);
         break;
       } else {
-        // Có model được thử nhưng tất cả đều lỗi - có thể là lỗi tạm thời
-        // Thử rotate key để xem có phải do API key không tốt không
-        console.warn(`⚠️ Có model bị lỗi, thử đổi key để xem có phải do API key...`);
         apiKeyManager.markKeyAsExhausted(lastError);
         
         if (apiKeyManager.rotateToNextKey()) {
@@ -216,14 +208,11 @@ class GeminiModelManager {
           // Chờ một chút trước khi retry
           await new Promise(resolve => setTimeout(resolve, 500));
         } else {
-          console.error(`❌ Không có key khác khả dụng`);
           break;
         }
       }
     }
     
-    // Nếu tất cả key đều lỗi
-    console.error('❌ All keys and models exhausted or failed');
     const availableKeys = apiKeyManager.getAvailableKeyCount();
     throw new Error(`Tất cả API keys đã hết quota hoặc bị lỗi. Keys available: ${availableKeys}/${apiKeyManager.keyConfigs.length}. Last error: ${lastError?.message}`);
   }

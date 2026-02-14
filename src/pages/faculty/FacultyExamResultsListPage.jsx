@@ -46,11 +46,9 @@ const FacultyExamResultsListPage = () => {
         const studentResults = await facultyService.getExamStudentResults(examId);
         
         if (studentResults && studentResults.length > 0) {
-          console.log('✅ Loaded', studentResults.length, 'students from student_exam_progress');
           setLeaderboard(studentResults);
         } else {
           // Fallback: dùng finalLeaderboard từ exam nếu student_exam_progress trống
-          console.log('⚠️ No results from student_exam_progress, using finalLeaderboard');
           if (examData.finalLeaderboard && examData.finalLeaderboard.length > 0) {
             setLeaderboard(examData.finalLeaderboard);
           } else {
@@ -58,7 +56,6 @@ const FacultyExamResultsListPage = () => {
           }
         }
       } catch (error) {
-        console.error('Error loading exam results:', error);
         alert('Lỗi khi tải kết quả');
         navigate('/faculty/exam-management');
       } finally {

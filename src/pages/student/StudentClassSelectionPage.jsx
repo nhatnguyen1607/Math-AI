@@ -3,7 +3,6 @@ import classService from '../../services/classService';
 import StudentHeader from '../../components/student/StudentHeader';
 
 const StudentClassSelectionPage = ({ user, onSelectClass, onSignOut }) => {
-  console.log('📥 StudentClassSelectionPage received props:', { user: user?.uid, onSelectClass: typeof onSelectClass, onSignOut: typeof onSignOut });
   
   const [joinedClasses, setJoinedClasses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,26 +22,18 @@ const StudentClassSelectionPage = ({ user, onSelectClass, onSignOut }) => {
 
   // Ensure onSelectClass is a function
   const handleSelectClassSafely = useCallback((cls) => {
-    console.log('🎓 StudentClassSelectionPage: handleSelectClassSafely called with:', cls);
-    console.log('🎓 onSelectClass type:', typeof onSelectClass);
     if (typeof onSelectClass === 'function') {
-      console.log('✅ Calling onSelectClass...');
       onSelectClass(cls);
-      console.log('✅ onSelectClass completed');
     } else {
-      console.error('❌ onSelectClass is not a function:', onSelectClass);
     }
   }, [onSelectClass]);
 
   const loadClasses = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('📥 loadClasses: fetching classes for user:', user.uid);
       const classes = await classService.getClassesByStudent(user.uid);
-      console.log('📥 loadClasses: received classes:', classes);
       setJoinedClasses(classes || []);
     } catch (err) {
-      console.error('Error loading classes:', err);
       setError('Lỗi khi tải danh sách lớp');
     } finally {
       setLoading(false);
@@ -82,7 +73,6 @@ const StudentClassSelectionPage = ({ user, onSelectClass, onSignOut }) => {
       setTimeout(() => setSuccess(null), 2000);
       await loadClasses();
     } catch (err) {
-      console.error('Error joining class:', err);
       setError('Lỗi khi tham gia lớp');
     }
   };
@@ -160,7 +150,6 @@ const StudentClassSelectionPage = ({ user, onSelectClass, onSignOut }) => {
                     key={cls.id}
                     className={`${colorScheme.bg} rounded-max p-8 cursor-pointer transition-all duration-300 transform hover:scale-110 hover:-translate-y-3 game-card shadow-lg`}
                     onClick={() => {
-                      console.log('🖱️ Class card clicked:', cls.name);
                       handleSelectClassSafely(cls);
                     }}
                   >

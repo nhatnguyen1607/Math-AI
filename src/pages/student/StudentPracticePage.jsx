@@ -125,14 +125,6 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         return;
       }
 
-      // Log for debugging - check if we have chat history
-      console.log('📝 Chat history before evaluation:', {
-        baiNumber,
-        chatHistoryLength: baiData.chatHistory?.length,
-        deBai: baiData.deBai,
-        firstMessage: baiData.chatHistory?.[0]?.parts?.[0]?.text?.substring(0, 50)
-      });
-
       // Gọi Gemini để đánh giá
       const evaluation = await geminiService.evaluatePolyaStep(
         baiData.chatHistory,
@@ -161,7 +153,6 @@ const StudentPracticePage = ({ user, onSignOut }) => {
       setPracticeData(updatedData);
       setSubmitting(false);
     } catch (err) {
-      console.error('Error submitting practice:', err);
       setError('Lỗi khi nộp bài. Vui lòng thử lại.');
       setSubmitting(false);
     }

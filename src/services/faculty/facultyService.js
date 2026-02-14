@@ -55,7 +55,6 @@ class FacultyService {
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => Topic.fromFirestore(doc.data(), doc.id));
     } catch (error) {
-      console.error('Error getting faculty topics:', error);
       throw error;
     }
   }
@@ -72,7 +71,6 @@ class FacultyService {
       });
       return true;
     } catch (error) {
-      console.error('Error updating topic:', error);
       throw error;
     }
   }
@@ -94,7 +92,6 @@ class FacultyService {
       await batch.commit();
       return true;
     } catch (error) {
-      console.error('Error deleting topic:', error);
       throw error;
     }
   }
@@ -117,7 +114,6 @@ class FacultyService {
         ...doc.data()
       }));
     } catch (error) {
-      console.error('Error getting topics:', error);
       throw error;
     }
   }
@@ -171,7 +167,6 @@ class FacultyService {
       }
       return null;
     } catch (error) {
-      console.error('Error getting exam:', error);
       throw error;
     }
   }
@@ -250,7 +245,6 @@ class FacultyService {
       });
       return true;
     } catch (error) {
-      console.error('Error updating exam:', error);
       throw error;
     }
   }
@@ -277,7 +271,6 @@ class FacultyService {
 
       return { ...question, id: docRef.id };
     } catch (error) {
-      console.error('Error adding question:', error);
       throw error;
     }
   }
@@ -331,7 +324,6 @@ class FacultyService {
 
       return true;
     } catch (error) {
-      console.error('Error deleting question:', error);
       throw error;
     }
   }
@@ -356,7 +348,6 @@ class FacultyService {
 
       return true;
     } catch (error) {
-      console.error('Error activating exam:', error);
       throw error;
     }
   }
@@ -377,7 +368,6 @@ class FacultyService {
       const existingSessionId = await getActiveExamSession(examId);
       
       if (existingSessionId) {
-        console.log('✅ Found existing active session:', existingSessionId);
         return existingSessionId; // Trả về session cũ thay vì tạo mới
       }
       
@@ -395,11 +385,8 @@ class FacultyService {
         startTime: now,
         endTime: new Date(now.getTime() + 420000) // 7 minutes
       });
-
-      console.log('✅ Created new exam session:', sessionId);
       return sessionId;
     } catch (error) {
-      console.error('❌ Error starting exam:', error);
       throw error;
     }
   }
@@ -416,7 +403,6 @@ class FacultyService {
 
       return true;
     } catch (error) {
-      console.error('Error finishing exam:', error);
       throw error;
     }
   }
@@ -436,7 +422,6 @@ class FacultyService {
 
       return true;
     } catch (error) {
-      console.error('Error adding student to waiting:', error);
       throw error;
     }
   }
@@ -489,7 +474,6 @@ class FacultyService {
         rank: index + 1
       }));
     } catch (error) {
-      console.error('Error getting leaderboard:', error);
       throw error;
     }
   }
@@ -506,7 +490,6 @@ class FacultyService {
       });
       return true;
     } catch (error) {
-      console.error('Error updating exam status:', error);
       throw error;
     }
   }
@@ -520,7 +503,6 @@ class FacultyService {
       await deleteDoc(examRef);
       return true;
     } catch (error) {
-      console.error('Error deleting exam:', error);
       throw error;
     }
   }
@@ -547,7 +529,6 @@ class FacultyService {
         ...doc.data()
       }));
     } catch (error) {
-      console.error('Error getting exam participants:', error);
       return [];
     }
   }
@@ -702,11 +683,9 @@ class FacultyService {
             if (userSnap.exists()) {
               studentName = userSnap.data().displayName || userSnap.data().name || `Student ${userId.substring(0, 8)}`;
             } else {
-              console.warn(`⚠️ User document not found for ${userId}`);
               studentName = `Student ${userId.substring(0, 8)}`;
             }
           } catch (e) {
-            console.warn(`❌ Could not load name for user ${userId}:`, e);
             studentName = `Student ${userId.substring(0, 8)}`;
           }
         }
@@ -743,7 +722,6 @@ class FacultyService {
 
       return leaderboard;
     } catch (error) {
-      console.error('❌ Error getting exam student results:', error);
       throw error;
     }
   }

@@ -38,7 +38,6 @@ class ClassService {
       const snapshot = await getDocs(q);
       return snapshot.docs.length > 0;
     } catch (error) {
-      console.error('Error checking joinId:', error);
       throw error;
     }
   }
@@ -77,7 +76,6 @@ class ClassService {
       });
       return { id: docRef.id, joinId, ...data };
     } catch (error) {
-      console.error('Error creating class:', error);
       throw error;
     }
   }
@@ -93,7 +91,6 @@ class ClassService {
         ...doc.data()
       }));
     } catch (error) {
-      console.error('Error getting all classes:', error);
       throw error;
     }
   }
@@ -113,7 +110,6 @@ class ClassService {
         ...doc.data()
       }));
     } catch (error) {
-      console.error('Error getting classes:', error);
       throw error;
     }
   }
@@ -131,7 +127,6 @@ class ClassService {
       }
       return null;
     } catch (error) {
-      console.error('Error getting class:', error);
       throw error;
     }
   }
@@ -153,7 +148,6 @@ class ClassService {
       }
       return null;
     } catch (error) {
-      console.error('Error getting class by joinId:', error);
       throw error;
     }
   }
@@ -169,7 +163,6 @@ class ClassService {
         updatedAt: new Date()
       });
     } catch (error) {
-      console.error('Error updating class:', error);
       throw error;
     }
   }
@@ -182,7 +175,6 @@ class ClassService {
       const classRef = doc(db, 'classes', classId);
       await deleteDoc(classRef);
     } catch (error) {
-      console.error('Error deleting class:', error);
       throw error;
     }
   }
@@ -198,7 +190,6 @@ class ClassService {
         updatedAt: new Date()
       });
     } catch (error) {
-      console.error('Error adding student to class:', error);
       throw error;
     }
   }
@@ -214,7 +205,6 @@ class ClassService {
         updatedAt: new Date()
       });
     } catch (error) {
-      console.error('Error removing student from class:', error);
       throw error;
     }
   }
@@ -224,21 +214,17 @@ class ClassService {
    */
   async getClassesByStudent(studentId) {
     try {
-      console.log('🔍 getClassesByStudent called with studentId:', studentId);
       const q = query(
         collection(db, 'classes'),
         where('students', 'array-contains', studentId)
       );
       const snapshot = await getDocs(q);
-      console.log('📊 Found classes:', snapshot.docs.length);
       const result = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      console.log('✅ Mapped classes:', result);
       return result;
     } catch (error) {
-      console.error('❌ Error getting student classes:', error);
       throw error;
     }
   }

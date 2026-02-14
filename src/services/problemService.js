@@ -37,7 +37,6 @@ class ProblemService {
       
       return { id: docRef.id, ...problemData };
     } catch (error) {
-      console.error("Error creating problem:", error);
       throw error;
     }
   }
@@ -57,7 +56,6 @@ class ProblemService {
       });
       return problems;
     } catch (error) {
-      console.error("Error getting problems:", error);
       throw error;
     }
   }
@@ -76,7 +74,6 @@ class ProblemService {
       });
       return problems;
     } catch (error) {
-      console.error("Error getting all problems:", error);
       throw error;
     }
   }
@@ -92,7 +89,6 @@ class ProblemService {
         throw new Error("Problem not found");
       }
     } catch (error) {
-      console.error("Error getting problem:", error);
       throw error;
     }
   }
@@ -107,7 +103,6 @@ class ProblemService {
       });
       return { id: problemId, ...updateData };
     } catch (error) {
-      console.error("Error updating problem:", error);
       throw error;
     }
   }
@@ -128,7 +123,6 @@ class ProblemService {
       
       return true;
     } catch (error) {
-      console.error("Error deleting problem:", error);
       throw error;
     }
   }
@@ -141,7 +135,6 @@ class ProblemService {
         attemptCount: (problem.attemptCount || 0) + 1
       });
     } catch (error) {
-      console.error("Error incrementing attempt count:", error);
       throw error;
     }
   }
@@ -154,7 +147,6 @@ class ProblemService {
         completionCount: (problem.completionCount || 0) + 1
       });
     } catch (error) {
-      console.error("Error incrementing completion count:", error);
       throw error;
     }
   }

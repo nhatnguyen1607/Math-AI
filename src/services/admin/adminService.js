@@ -40,7 +40,6 @@ class AdminService {
       
       return users;
     } catch (error) {
-      console.error('Error getting all users:', error);
       throw error;
     }
   }
@@ -58,7 +57,6 @@ class AdminService {
       }
       return null;
     } catch (error) {
-      console.error('Error getting user:', error);
       throw error;
     }
   }
@@ -78,7 +76,6 @@ class AdminService {
       });
       return true;
     } catch (error) {
-      console.error('Error locking user:', error);
       throw error;
     }
   }
@@ -98,7 +95,6 @@ class AdminService {
       });
       return true;
     } catch (error) {
-      console.error('Error unlocking user:', error);
       throw error;
     }
   }
@@ -115,7 +111,6 @@ class AdminService {
       });
       return true;
     } catch (error) {
-      console.error('Error assigning faculty role:', error);
       throw error;
     }
   }
@@ -132,7 +127,6 @@ class AdminService {
       });
       return true;
     } catch (error) {
-      console.error('Error removing faculty role:', error);
       throw error;
     }
   }
@@ -152,13 +146,9 @@ class AdminService {
         type: 'account_locked',
         timestamp: new Date()
       };
-
-      // TODO: Gọi Cloud Function hoặc email service
-      console.log('Email notification:', emailData);
       
       return emailData;
     } catch (error) {
-      console.error('Error sending lock notification:', error);
       throw error;
     }
   }
@@ -179,12 +169,8 @@ class AdminService {
         timestamp: new Date()
       };
 
-      // TODO: Gọi Cloud Function hoặc email service
-      console.log('Email notification:', emailData);
-      
       return emailData;
     } catch (error) {
-      console.error('Error sending unlock notification:', error);
       throw error;
     }
   }
@@ -204,13 +190,9 @@ class AdminService {
         type: 'promoted_to_faculty',
         timestamp: new Date()
       };
-
-      // TODO: Gọi Cloud Function hoặc email service
-      console.log('Email notification:', emailData);
       
       return emailData;
     } catch (error) {
-      console.error('Error sending promotion notification:', error);
       throw error;
     }
   }
@@ -231,7 +213,6 @@ class AdminService {
         lockedUsers: users.filter(u => u.isLocked).length
       };
     } catch (error) {
-      console.error('Error getting user statistics:', error);
       throw error;
     }
   }
@@ -248,7 +229,6 @@ class AdminService {
         user.displayName.toLowerCase().includes(searchTerm.toLowerCase())
       );
     } catch (error) {
-      console.error('Error searching users:', error);
       throw error;
     }
   }

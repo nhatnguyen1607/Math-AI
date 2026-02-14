@@ -55,7 +55,6 @@ export const createExamSession = async (examId, facultyId, classId, totalQuestio
     await setDoc(sessionRef, sessionData);
     return sessionRef.id;
   } catch (error) {
-    console.error('❌ Error creating exam session:', error);
     throw error;
   }
 };
@@ -93,7 +92,6 @@ export const getActiveExamSession = async (examId) => {
 
     return sessions[0].id;
   } catch (error) {
-    console.error('❌ Error getting active exam session:', error);
     return null; // Return null thay vì throw error
   }
 };
@@ -123,7 +121,6 @@ export const startExamSession = async (sessionId) => {
 
         // Ensure startTime is set - if not, set it now as fallback
         if (!currentData.startTime) {
-          console.warn('⚠️ startTime is missing! Setting it now as fallback');
           await updateDoc(sessionRef, {
             status: 'ongoing',
             startTime: serverTimestamp()
@@ -136,11 +133,9 @@ export const startExamSession = async (sessionId) => {
         }
 
       } catch (error) {
-        console.error('❌ Error transitioning to ongoing:', error);
       }
     }, 3000);
   } catch (error) {
-    console.error('❌ Error starting exam session:', error);
     throw error;
   }
 };
@@ -213,9 +208,7 @@ export const finishExamSession = async (sessionId) => {
       });
     }
 
-    console.log('✅ Session finished and all students auto-submitted');
     } catch (error) {
-    console.error('❌ Error finishing exam session:', error);
     throw error;
   }
 };
@@ -233,7 +226,6 @@ export const deleteExamSession = async (sessionId) => {
       endTime: serverTimestamp()
     });
   } catch (error) {
-    console.error('❌ Error deleting exam session:', error);
     throw error;
   }
 };
@@ -269,7 +261,6 @@ export const joinExamSession = async (sessionId, uid, name) => {
       [`participants.${uid}`]: participantData
     });
   } catch (error) {
-    console.error('❌ Error joining exam session:', error);
     throw error;
   }
 };
@@ -292,7 +283,6 @@ export const submitAnswer = async (sessionId, uid, answerData) => {
     // Ensure answers is an array
     let currentAnswers = sessionData?.participants?.[uid]?.answers;
     if (!Array.isArray(currentAnswers)) {
-      console.warn('⚠️ currentAnswers is not an array, resetting to empty array');
       currentAnswers = [];
     }
 
@@ -300,16 +290,12 @@ export const submitAnswer = async (sessionId, uid, answerData) => {
     const updatedAnswers = [...currentAnswers, answerData];
     const pointsEarned = answerData.points || 0;
 
-    // Sử dụng increment() để cộng điểm trực tiếp trên server (tránh race condition)
-    // increment() là atomic operation - an toàn khi có nhiều request đồng thời
-    // 🔧 REMOVED: auto-increment currentQuestion - let student manually navigate
     await updateDoc(sessionRef, {
       [`participants.${uid}.score`]: increment(pointsEarned),
       [`participants.${uid}.answers`]: updatedAnswers,
       [`participants.${uid}.lastUpdated`]: serverTimestamp()
     });
   } catch (error) {
-    console.error('❌ Error submitting answer:', error);
     throw error;
   }
 };
@@ -328,9 +314,7 @@ export const updateCurrentQuestion = async (sessionId, uid, questionIndex) => {
       [`participants.${uid}.currentQuestion`]: questionIndex,
       [`participants.${uid}.lastUpdated`]: serverTimestamp()
     });
-    console.log(`✅ Updated currentQuestion to ${questionIndex} for user ${uid}`);
   } catch (error) {
-    console.error('❌ Error updating current question:', error);
     // Not throwing error - this is not critical
   }
 };
@@ -360,16 +344,9 @@ export const completeExamForStudent = async (sessionId, uid, finalData) => {
       }
     });
   } catch (error) {
-    console.error('❌ Error completing exam for student:', error);
     throw error;
   }
 };
-
-/**
- * ============================================================================
- * REALTIME SUBSCRIPTION FUNCTIONS - Lắng nghe thay đổi realtime
- * ============================================================================
- */
 
 /**
  * Lắng nghe một phiên thi realtime
@@ -404,13 +381,11 @@ export const subscribeToExamSession = (sessionId, callback) => {
         }
       },
       (error) => {
-        console.error('❌ Error subscribing to session:', error);
       }
     );
 
     return unsubscribe;
   } catch (error) {
-    console.error('❌ Error in subscribeToExamSession:', error);
     throw error;
   }
 };
@@ -441,7 +416,6 @@ export const subscribeFacultyActiveSessions = (facultyId, callback) => {
 
     return unsubscribe;
   } catch (error) {
-    console.error('❌ Error subscribing to faculty sessions:', error);
     throw error;
   }
 };
@@ -472,16 +446,10 @@ export const subscribeClassActiveSessions = (classId, callback) => {
 
     return unsubscribe;
   } catch (error) {
-    console.error('❌ Error subscribing to class sessions:', error);
     throw error;
   }
 };
 
-/**
- * ============================================================================
- * UTILITY FUNCTIONS - Các hàm tiện ích
- * ============================================================================
- */
 
 /**
  * Lấy một phiên thi bằng ID (one-time fetch)
@@ -502,7 +470,6 @@ export const getExamSession = async (sessionId) => {
 
     return null;
   } catch (error) {
-    console.error('❌ Error getting exam session:', error);
     throw error;
   }
 };
@@ -546,7 +513,6 @@ export const getActiveSessionsByExamId = async (examId) => {
     }
     return [];
   } catch (error) {
-    console.error('❌ Error getting active sessions by exam id:', error);
     throw error;
   }
 };

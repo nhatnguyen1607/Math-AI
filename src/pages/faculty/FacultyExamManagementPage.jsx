@@ -76,6 +76,7 @@ const FacultyExamManagementPage = () => {
   
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [draggedQuestionIndex, setDraggedQuestionIndex] = useState(null);
   
   // File upload and preview states
   const [parsedExercises, setParsedExercises] = useState(null);
@@ -179,7 +180,6 @@ const FacultyExamManagementPage = () => {
           }
         }
       } catch (error) {
-        console.error('Error loading topics:', error);
       }
     };
 
@@ -220,6 +220,46 @@ const FacultyExamManagementPage = () => {
     if (currentQuestionIndex >= updatedExercises[currentExerciseIndex].questions.length) {
       setCurrentQuestionIndex(Math.max(0, updatedExercises[currentExerciseIndex].questions.length - 1));
     }
+  };
+
+  // Drag and drop handlers for reordering questions
+  const handleDragStart = (e, index) => {
+    setDraggedQuestionIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e, targetIndex) => {
+    e.preventDefault();
+    if (draggedQuestionIndex === null || draggedQuestionIndex === targetIndex) {
+      setDraggedQuestionIndex(null);
+      return;
+    }
+
+    const updatedExercises = [...exercises];
+    const questions = [...updatedExercises[currentExerciseIndex].questions];
+    
+    // Swap questions
+    [questions[draggedQuestionIndex], questions[targetIndex]] = [questions[targetIndex], questions[draggedQuestionIndex]];
+    
+    updatedExercises[currentExerciseIndex].questions = questions;
+    setExercises(updatedExercises);
+    
+    // Update current question index if needed
+    if (currentQuestionIndex === draggedQuestionIndex) {
+      setCurrentQuestionIndex(targetIndex);
+    }
+
+    setDraggedQuestionIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedQuestionIndex(null);
   };
 
   // Handle file upload and parsing
@@ -299,7 +339,6 @@ const FacultyExamManagementPage = () => {
       setAiExercises(generatedExercises);
       setAiError(null);
     } catch (error) {
-      console.error('❌ Error generating exam with AI:', error);
       setAiError(`❌ Lỗi: ${error.message}`);
       setAiExercises(null);
     } finally {
@@ -922,10 +961,17 @@ const FacultyExamManagementPage = () => {
                           <button
                             key={index}
                             type="button"
-                            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${
-                              currentQuestionIndex === index 
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, index)}
+                            onDragEnd={handleDragEnd}
+                            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all cursor-move ${
+                              draggedQuestionIndex === index
+                                ? 'opacity-50 bg-purple-300 border-2 border-purple-500'
+                                : currentQuestionIndex === index 
                                 ? 'bg-purple-500 text-white shadow-md' 
-                                : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-400'
+                                : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-400 hover:bg-purple-50'
                             }`}
                             onClick={() => setCurrentQuestionIndex(index)}
                           >

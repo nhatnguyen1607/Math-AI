@@ -78,9 +78,7 @@ class APIKeyManager {
       config.quotaExceeded = true;
       config.lastError = error?.message || 'Quota exceeded';
       config.lastErrorTime = new Date();
-      
-      console.warn(`⚠️ [${config.name}] Marked as exhausted. Error: ${config.lastError}`);
-      
+            
       this.keyRotationLog.push({
         timestamp: new Date().toISOString(),
         keyName: config.name,
@@ -111,13 +109,11 @@ class APIKeyManager {
     // Nếu không tìm được key có sẵn, reset một key để thử lại
     const exhaustedKey = this.keyConfigs[startIndex];
     if (exhaustedKey) {
-      console.warn(`⚠️ All keys exhausted, attempting to reset ${exhaustedKey.name}...`);
       exhaustedKey.quotaExceeded = false;
       exhaustedKey.requestCount = 0;
       return true;
     }
 
-    console.error('❌ No keys available for rotation');
     return false;
   }
 
@@ -153,7 +149,6 @@ class APIKeyManager {
         lastErrorTime: config.lastErrorTime?.toLocaleString() || null
       }));
     } catch (error) {
-      console.error('Error getting usage stats:', error);
       return [];
     }
   }

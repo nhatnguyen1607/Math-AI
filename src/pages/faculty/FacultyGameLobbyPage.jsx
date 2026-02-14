@@ -43,22 +43,11 @@ const FacultyGameLobbyPage = () => {
     try {
       setLoading(true);
       const examData = await facultyService.getExamById(examId);
-      console.log('🎮 FacultyGameLobbyPage loadExam:', {
-        status: examData.status,
-        endTime: examData.endTime,
-        activeStudents: examData.activeStudents?.length,
-        completedStudents: examData.completedStudents?.length
-      });
       setExam(examData);
       setGameStarted(examData.status === 'in_progress');
 
       // Subscribe to realtime updates
       const unsub = facultyService.subscribeToExam(examId, (updatedExam) => {
-        console.log('📡 Exam realtime update:', {
-          status: updatedExam.status,
-          endTime: updatedExam.endTime,
-          gameStarted: updatedExam.status === 'in_progress'
-        });
         setExam(updatedExam);
         setGameStarted(updatedExam.status === 'in_progress');
         
@@ -71,7 +60,6 @@ const FacultyGameLobbyPage = () => {
 
       setUnsubscribe(() => unsub);
     } catch (error) {
-      console.error('Error loading exam:', error);
       alert('Lỗi khi tải thông tin trò chơi');
       navigate('/faculty/exam-management');
     } finally {
@@ -115,7 +103,6 @@ const FacultyGameLobbyPage = () => {
           alert('⏰ Hết giờ! Trò chơi đã kết thúc và khóa.');
           navigate('/faculty/exam-management');
         }).catch((error) => {
-          console.error('Error auto-locking exam:', error);
           alert('Lỗi khi kết thúc trò chơi tự động');
         });
       }
@@ -143,7 +130,6 @@ const FacultyGameLobbyPage = () => {
       }));
 
       const endTime = new Date(Date.now() + 420000); // 7 minutes
-      console.log('🎮 handleStartGame - endTime:', endTime);
       
       await facultyService.updateExam(examId, {
         status: 'in_progress',
@@ -155,7 +141,6 @@ const FacultyGameLobbyPage = () => {
 
       alert('Trò chơi đã bắt đầu!');
     } catch (error) {
-      console.error('Error starting game:', error);
       alert('Lỗi khi bắt đầu trò chơi');
     }
   };
@@ -179,7 +164,6 @@ const FacultyGameLobbyPage = () => {
         alert('Trò chơi đã kết thúc và khóa!');
         navigate('/faculty/exam-management');
       } catch (error) {
-        console.error('Error ending game:', error);
         alert('Lỗi khi kết thúc trò chơi');
       }
     }

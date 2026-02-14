@@ -51,7 +51,6 @@ const FacultyExamLobbyPage = () => {
       }
       setLoading(false);
     } catch (error) {
-      console.error('Error loading exam:', error);
       navigate('/faculty/exam-management');
     }
   }, [sessionId, navigate]);
@@ -70,7 +69,6 @@ const FacultyExamLobbyPage = () => {
         setSession(sessionData);
       }
     } catch (error) {
-      console.error('Error loading participants:', error);
     }
   }, [sessionId]);
 
@@ -100,7 +98,6 @@ const FacultyExamLobbyPage = () => {
         navigate(`/faculty/exam-live/${sessionId}`);
       }, 1000);
     } catch (error) {
-      console.error('Error starting exam:', error);
       alert('Lỗi khi bắt đầu phiên thi');
       setStartingExam(false);
     }

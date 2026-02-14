@@ -63,7 +63,6 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
           setLoading(false);
         }
       } catch (err) {
-        console.error('Error finding active session:', err);
         setError('Lỗi khi tìm phiên thi: ' + err.message);
         setLoading(false);
       }
@@ -99,7 +98,6 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
                   const examData = await examService.getExamById(sessionData.examId);
                   setExam(examData);
                 } catch (err) {
-                  console.error('Error loading exam:', err);
                 }
               }
 
@@ -128,7 +126,6 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
           }
         );
       } catch (err) {
-        console.error('Error subscribing to session:', err);
         setError('Lỗi khi kết nối phiên thi');
         setLoading(false);
       }
@@ -200,7 +197,6 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
       setJoined(true);
       setError(null);
     } catch (err) {
-      console.error('Error joining exam:', err);
       setError('Không thể tham gia phòng thi. Vui lòng thử lại.');
     } finally {
       setJoiningLoading(false);

@@ -21,7 +21,6 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
   };
 
   const handleJoinExam = (exam) => {
-    console.log(`🎯 StudentTopicPage handleJoinExam: id=${exam.id}, title="${exam.title}", isLocked=${exam.isLocked}`);
     
     if (exam.isLocked === true) {
       // Locked exam - navigate to result page
@@ -170,7 +169,6 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
             <div className="space-y-6">
               {exams.filter(exam => exam.topicId === topicId && exam.status !== 'draft').length > 0 ? (
                 exams.filter(exam => exam.topicId === topicId && exam.status !== 'draft').map((exam, idx) => {
-                  console.log(`🎯 RENDERING EXAM in StudentTopicPage: title="${exam.title}", isLocked=${exam.isLocked}`);
                   return (
                   <div 
                     key={exam.id} 

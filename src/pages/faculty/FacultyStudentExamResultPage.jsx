@@ -112,17 +112,13 @@ const FacultyStudentExamResultPage = () => {
         }
         const practice = await resultService.getPracticeSession(userId, examId);
         const vanDung = await resultService.getVanDungSession(userId, examId);
-        
-        console.log('📚 Practice data loaded:', practice);
-        console.log('⚡ VanDung data loaded:', vanDung);
-        
+                
         setPracticeData({
           ...practice,
           vanDung
         });
         setLoadingPractice(false);
       } catch (err) {
-        console.error('Error loading practice data:', err);
         setLoadingPractice(false);
       }
     };
@@ -150,7 +146,6 @@ const FacultyStudentExamResultPage = () => {
 
       return khoiDongCompleted && luyenTapCompleted && vanDungCompleted;
     } catch (err) {
-      console.error('Error checking completion:', err);
       return false;
     }
   }, [studentResult, practiceData]);
@@ -159,9 +154,7 @@ const FacultyStudentExamResultPage = () => {
   const saveAiAssessment = useCallback(async (assessment) => {
     try {
       await resultService.updateAiProgressAssessment(userId, examId, assessment);
-      console.log('✅ AI assessment saved to DB');
     } catch (err) {
-      console.error('Error saving AI assessment to DB:', err);
     }
   }, [userId, examId]);
 
@@ -225,16 +218,10 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
 
       const response = await geminiService.processExamQuestion(prompt);
       const assessment = response.message || response;
-      
-      console.log('✅ AI Assessment generated successfully');
-      
-      // Save to database
       await saveAiAssessment(assessment);
       
       setAiAssessment(assessment);
     } catch (err) {
-      console.error('❌ Error generating AI assessment:', err);
-      console.warn('⚠️ Using fallback assessment instead');
       createFallbackAssessment();
     } finally {
       setLoadingAiAssessment(false);
@@ -773,10 +760,6 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
             ) : (
               <>
                 {(() => {
-                  console.log('🔍 vanDung data:', practiceData.vanDung);
-                  console.log('📋 chatHistory:', practiceData.vanDung?.chatHistory);
-                  console.log('📊 evaluation:', practiceData.vanDung?.evaluation);
-                  console.log('status:', practiceData.vanDung?.status);
                   return null;
                 })()}
                 <div className="bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 rounded-3xl p-6 lg:p-8 border-3 border-yellow-200">

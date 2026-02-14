@@ -31,7 +31,6 @@ export const createProblemSession = async (userId, problemText) => {
 
     return sessionRef.id;
   } catch (error) {
-    console.error("Error creating problem session:", error);
     throw error;
   }
 };
@@ -45,7 +44,6 @@ export const updateProblemSession = async (sessionId, data) => {
       updatedAt: serverTimestamp()
     });
   } catch (error) {
-    console.error("Error updating problem session:", error);
     throw error;
   }
 };
@@ -71,7 +69,6 @@ export const saveChatMessage = async (sessionId, message, isStudent) => {
       });
     }
   } catch (error) {
-    console.error("Error saving chat message:", error);
     throw error;
   }
 };
@@ -87,7 +84,6 @@ export const getProblemSession = async (sessionId) => {
     }
     return null;
   } catch (error) {
-    console.error("Error getting problem session:", error);
     throw error;
   }
 };
@@ -117,7 +113,6 @@ export const getUserProblemHistory = async (userId, limit = 10) => {
     
     return sessions.slice(0, limit);
   } catch (error) {
-    console.error("Error getting user problem history:", error);
     // Trả về mảng rỗng thay vì throw error để app vẫn chạy được
     return [];
   }
@@ -149,7 +144,6 @@ export const completeProblemSession = async (sessionId, stepEvaluations) => {
       }
     }
   } catch (error) {
-    console.error("Error completing problem session:", error);
     throw error;
   }
 };
@@ -180,7 +174,6 @@ export const saveProblemSession = async (userId, sessionData) => {
 
     return sessionRef.id;
   } catch (error) {
-    console.error("Error saving problem session:", error);
     throw error;
   }
 };

@@ -26,7 +26,6 @@ class AdminAuthService {
       const userData = User.fromFirestore(userSnap.data(), userSnap.id);
       return userData.isAdmin && userData.isActive && !userData.isLocked;
     } catch (error) {
-      console.error("Error checking admin status:", error);
       return false;
     }
   }
@@ -46,7 +45,6 @@ class AdminAuthService {
       
       return userSnap.exists() ? User.fromFirestore(userSnap.data(), userSnap.id) : null;
     } catch (error) {
-      console.error("Error getting admin user:", error);
       return null;
     }
   }
@@ -62,7 +60,6 @@ class AdminAuthService {
       
       return querySnapshot.docs.map(doc => User.fromFirestore(doc.data(), doc.id));
     } catch (error) {
-      console.error("Error getting all users:", error);
       throw error;
     }
   }
@@ -80,7 +77,6 @@ class AdminAuthService {
       
       return querySnapshot.docs.map(doc => User.fromFirestore(doc.data(), doc.id));
     } catch (error) {
-      console.error("Error getting users by role:", error);
       throw error;
     }
   }
@@ -101,7 +97,6 @@ class AdminAuthService {
         updatedAt: new Date()
       });
     } catch (error) {
-      console.error("Error locking user:", error);
       throw error;
     }
   }
@@ -121,7 +116,6 @@ class AdminAuthService {
         updatedAt: new Date()
       });
     } catch (error) {
-      console.error("Error unlocking user:", error);
       throw error;
     }
   }
@@ -139,7 +133,6 @@ class AdminAuthService {
         updatedAt: new Date()
       });
     } catch (error) {
-      console.error("Error deactivating user:", error);
       throw error;
     }
   }
@@ -157,7 +150,6 @@ class AdminAuthService {
         updatedAt: new Date()
       });
     } catch (error) {
-      console.error("Error activating user:", error);
       throw error;
     }
   }
@@ -175,7 +167,6 @@ class AdminAuthService {
         updatedAt: new Date()
       });
     } catch (error) {
-      console.error("Error promoting user to faculty:", error);
       throw error;
     }
   }
@@ -193,7 +184,6 @@ class AdminAuthService {
         updatedAt: new Date()
       });
     } catch (error) {
-      console.error("Error demoting user to student:", error);
       throw error;
     }
   }
@@ -217,7 +207,6 @@ class AdminAuthService {
         updatedAt: new Date()
       });
     } catch (error) {
-      console.error("Error updating user role:", error);
       throw error;
     }
   }

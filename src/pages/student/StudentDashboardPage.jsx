@@ -27,17 +27,13 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
   useEffect(() => {
     const loadStudentClasses = async () => {
       if (!user?.uid) {
-        console.log('User not ready yet');
         return;
       }
       
       try {
-        console.log('Loading student classes for user:', user.uid);
         const classes = await classService.getClassesByStudent(user.uid);
-        console.log('Student classes loaded:', classes);
         setStudentClasses(classes || []);
       } catch (error) {
-        console.error('Error loading student classes:', error);
       }
     };
     
@@ -50,7 +46,6 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
       return;
     }
     try {
-      console.log('Loading data for class:', selectedClass?.id, 'User:', userId, 'View:', currentView);
       
       // Load data based on current view
       const topicType = currentView === 'exam-management' ? 'worksheet' : 'startup';
@@ -66,13 +61,10 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
       
       // Debug log to show what exams were loaded with their isLocked status
       (examsData || []).forEach(e => {
-        console.log(`💾 Exam loaded: title="${e.title}", isLocked=${e.isLocked}, status=${e.status}, type=${typeof e.isLocked}`);
       });
-      console.log('💾 Full exam data:', JSON.stringify((examsData || []).map(e => ({id: e.id, title: e.title, isLocked: e.isLocked}))));
       
       setUserStats(statsData);
     } catch (error) {
-      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -93,7 +85,6 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
       // Load class from studentClasses list
       const cls = studentClasses.find(c => c.id === classId);
       if (cls) {
-        console.log('Setting class from URL param:', cls);
         setSelectedClass(cls);
       }
     }
@@ -102,7 +93,6 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
   // Set first class as default if no classId in URL and no class selected yet
   useEffect(() => {
     if (!classId && !selectedClass && studentClasses.length > 0) {
-      console.log('Setting first class as default:', studentClasses[0]);
       setSelectedClass(studentClasses[0]);
     }
   }, [classId, selectedClass, studentClasses]);
@@ -144,26 +134,14 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
 
   const handleJoinExam = async (exam) => {
     try {
-      console.log('🔍 handleJoinExam called:', { 
-        examId: exam?.id, 
-        title: exam?.title,
-        isLocked: exam?.isLocked,
-        type: typeof exam?.isLocked,
-        status: exam?.status
-      });
-
       // Check if exam is locked
       if (exam?.isLocked === true) {
-        console.log('🔐 Exam is locked, redirecting to result page');
         // For locked exams, navigate to result page by examId
         navigate(`/student/exam-result/${exam.id}`, {
           state: { fromExam: false, examId: exam.id }
         });
         return;
       }
-
-      console.log('🟢 Exam is not locked, proceeding with normal flow');
-
       // For unlocked exams, check if student has already completed
       if (user?.uid) {
         const progress = await resultService.getExamProgress(user.uid, exam.id);
@@ -180,7 +158,6 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
       // Otherwise, go to exam lobby (first time or in progress)
       window.location.href = `/student/exam-lobby/${exam.id}`;
     } catch (error) {
-      console.error('Error checking exam progress:', error);
       // If there's an error, go to exam lobby as fallback
       window.location.href = `/student/exam-lobby/${exam.id}`;
     }
@@ -410,7 +387,6 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
             <div className="space-y-6">
               {exams && exams.length > 0 ? (
                 exams.map((exam, idx) => {
-                  console.log(`🎯 RENDERING EXAM CARD ${idx}: title="${exam.title}", isLocked=${exam.isLocked}`);
                   return (
                   <div 
                     key={exam.id} 
@@ -464,7 +440,6 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
                           : 'bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600'
                       } text-white`}
                       onClick={() => {
-                        console.log('Button clicked, exam.isLocked:', exam?.isLocked);
                         handleJoinExam(exam);
                       }}
                     >

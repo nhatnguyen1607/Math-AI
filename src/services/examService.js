@@ -38,7 +38,6 @@ export const createExamSession = async (examId, facultyId, classId) => {
     await setDoc(sessionRef, sessionData);
     return sessionRef.id;
   } catch (error) {
-    console.error('Error creating exam session:', error);
     throw error;
   }
 };
@@ -57,16 +56,13 @@ export const subscribeToExamSession = (sessionId, callback) => {
       if (docSnap.exists()) {
         callback({ id: docSnap.id, ...docSnap.data() });
       } else {
-        console.log('Session not found:', sessionId);
         callback(null);
       }
     }, (error) => {
-      console.error('Error subscribing to session:', error);
     });
 
     return unsubscribe;
   } catch (error) {
-    console.error('Error in subscribeToExamSession:', error);
     throw error;
   }
 };
@@ -83,7 +79,6 @@ export const startExamSession = async (sessionId) => {
       startTime: serverTimestamp()
     });
   } catch (error) {
-    console.error('Error starting exam session:', error);
     throw error;
   }
 };
@@ -105,7 +100,6 @@ export const updateSessionScore = async (sessionId, uid, updateData) => {
       }
     });
   } catch (error) {
-    console.error('Error updating session score:', error);
     throw error;
   }
 };
@@ -127,7 +121,6 @@ export const updateParticipant = async (sessionId, uid, participantData) => {
       }
     });
   } catch (error) {
-    console.error('Error updating participant:', error);
     throw error;
   }
 };
@@ -145,7 +138,6 @@ export const updateLeaderboard = async (sessionId, leaderboard) => {
       currentLeaderboard: leaderboard
     });
   } catch (error) {
-    console.error('Error updating leaderboard:', error);
     throw error;
   }
 };
@@ -189,7 +181,6 @@ export const endExamSession = async (sessionId) => {
       });
     }
   } catch (error) {
-    console.error('Error ending exam session:', error);
     throw error;
   }
 };
@@ -209,7 +200,6 @@ export const getExamSession = async (sessionId) => {
     }
     return null;
   } catch (error) {
-    console.error('Error getting exam session:', error);
     throw error;
   }
 };
@@ -235,7 +225,6 @@ export const getActiveSessions = async (facultyId) => {
     
     return sessions;
   } catch (error) {
-    console.error('Error getting active sessions:', error);
     throw error;
   }
 };
@@ -284,7 +273,6 @@ export const getExamById = async (examId) => {
     }
     return null;
   } catch (error) {
-    console.error('Error getting exam:', error);
     throw error;
   }
 };

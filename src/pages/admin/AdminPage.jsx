@@ -58,7 +58,6 @@ function AdminPage({ onLogout }) {
       const allUsers = await adminService.getAllUsers();
       setUsers(allUsers);
     } catch (error) {
-      console.error('Error loading users:', error);
       alert('Lỗi: Không thể tải danh sách người dùng');
     } finally {
       setLoading(false);
@@ -70,7 +69,6 @@ function AdminPage({ onLogout }) {
       const stats = await adminService.getUserStatistics();
       setStatistics(stats);
     } catch (error) {
-      console.error('Error loading statistics:', error);
     }
   };
 
@@ -85,7 +83,6 @@ function AdminPage({ onLogout }) {
       setShowUserDetail(false);
       alert('Tài khoản đã bị khóa thành công');
     } catch (error) {
-      console.error('Error locking user:', error);
       alert('Lỗi: Không thể khóa tài khoản');
     } finally {
       setActionInProgress(false);
@@ -103,7 +100,6 @@ function AdminPage({ onLogout }) {
       setShowUserDetail(false);
       alert('Tài khoản đã mở khóa thành công');
     } catch (error) {
-      console.error('Error unlocking user:', error);
       alert('Lỗi: Không thể mở khóa tài khoản');
     } finally {
       setActionInProgress(false);
@@ -121,7 +117,6 @@ function AdminPage({ onLogout }) {
       setShowUserDetail(false);
       alert('Người dùng đã được nâng cấp thành Giảng viên');
     } catch (error) {
-      console.error('Error promoting user:', error);
       alert('Lỗi: Không thể nâng cấp người dùng');
     } finally {
       setActionInProgress(false);
@@ -138,7 +133,6 @@ function AdminPage({ onLogout }) {
       setShowUserDetail(false);
       alert('Người dùng đã được hạ xuống Học sinh');
     } catch (error) {
-      console.error('Error demoting user:', error);
       alert('Lỗi: Không thể hạ xuống người dùng');
     } finally {
       setActionInProgress(false);

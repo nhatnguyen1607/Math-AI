@@ -129,12 +129,6 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
         };
       } catch (error) {
         lastError = error;
-        console.error(`❌ Lỗi khi khởi tạo bài toán (lần ${attemptCount}/${maxRetries}):`, {
-          message: error.message,
-          status: error.status,
-          code: error.code,
-          fullError: error
-        });
         
         // Kiểm tra nếu API Key bị invalid hoặc missing
         if (!process.env.REACT_APP_GEMINI_API_KEY_1) {
@@ -152,7 +146,6 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
           continue;
         } else if (isQuotaError && attemptCount >= maxRetries) {
           const totalKeys = apiKeyManager.keyConfigs.length;
-          console.error(`❌ Tất cả ${totalKeys} API keys đã hết quota`);
           throw new Error(`❌ Tất cả ${totalKeys} API keys đã hết quota free tier. Vui lòng chờ cho đến hôm sau hoặc nâng cấp tài khoản Google Cloud.`);
         } else {
           // Lỗi khác - không retry, throw ngay
@@ -160,9 +153,6 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
         }
       }
     }
-
-    // Nếu vượt quá số lần retry
-    console.error(`❌ Failed after ${maxRetries} retries`);
     throw new Error(`Không thể khởi tạo bài toán sau ${maxRetries} lần thử. Error: ${lastError?.message || 'Unknown error'}`);
   }
 
@@ -197,14 +187,6 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
     try {
       result = await this.chat.sendMessage(contextPrompt);
     } catch (error) {
-      console.error("❌ Chi tiết lỗi khi gửi message:", {
-        message: error.message,
-        status: error.status,
-        code: error.code,
-        errorCode: error.errorCode,
-        fullError: error
-      });
-      
       // Kiểm tra nếu API Key bị invalid hoặc missing
       if (!process.env.REACT_APP_GEMINI_API_KEY_1) {
         throw new Error("❌ Chưa cấu hình REACT_APP_GEMINI_API_KEY_1 trong file .env");
@@ -224,7 +206,6 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
           throw new Error("❌ Tất cả API keys đã hết quota. Vui lòng thử lại sau.");
         }
         
-        console.warn("🔄 Đã rotate tới API key khác, retry...");
         
         // Recreate chat với key mới
         const newGeminiInstance = new GoogleGenerativeAI(apiKeyManager.getCurrentKey());
@@ -515,7 +496,6 @@ Chỉ gợi ý hướng suy nghĩ hoặc 1 câu hỏi dẫn dắt ngắn gọn.`
       const result = await this.chat.sendMessage(hintPrompt);
       return result.response.text();
     } catch (error) {
-      console.error("Error getting hint, attempting recovery:", error);
       
       // Kiểm tra nếu là lỗi 429 (quota exceeded)
       const isQuotaError = error.message?.includes("429") || 
@@ -669,7 +649,6 @@ Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu h
       const assessment = JSON.parse(jsonMatch[0]);
       return assessment.questionComments || [];
     } catch (error) {
-      console.error('Error evaluating question comments:', error);
       return []; // Return empty array on error
     }
   }
@@ -762,7 +741,6 @@ Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu h
       
       return competencyEvaluation;
     } catch (error) {
-      console.error('❌ Error evaluating competency framework:', error);
       // Return empty evaluation on error so as not to block submission
       return competencyEvaluationService.createEmptyEvaluation();
     }
@@ -970,7 +948,6 @@ Bài toán luyện tập:`;
       
       return similarProblem;
     } catch (error) {
-      console.error('❌ Error generating similar problem:', error);
       throw error;
     }
   }
@@ -1052,7 +1029,6 @@ Bài toán vận dụng:`;
       const applicationProblem = result.response.text().trim();
       return applicationProblem;
     } catch (error) {
-      console.error('❌ Error generating application problem:', error);
       throw error;
     }
   }
@@ -1156,7 +1132,6 @@ HƯỚNG DẪN VIẾT NHẬN XÉT:
       // Parse JSON từ response
       let jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        console.warn('⚠️ No JSON found in response. Response:', responseText.substring(0, 200));
         throw new Error('Could not parse evaluation response');
       }
       
@@ -1176,7 +1151,6 @@ HƯỚNG DẪN VIẾT NHẬN XÉT:
       
       return validatedEval;
     } catch (error) {
-      console.error('❌ Error evaluating competencies:', error.message);
       // Return default evaluation on error
       return {
         TC1: { nhanXet: 'Không thể đánh giá - Vui lòng thử lại', diem: 0 },
@@ -1223,7 +1197,6 @@ NHẬN XÉT TỔNG THỂ: ${totalComment}
       // Parse JSON
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        console.warn('⚠️ Could not parse overallAssessment JSON:', responseText.substring(0, 200));
         return {
           strengths: ['Không thể tạo đánh giá chi tiết'],
           weaknesses: ['Vui lòng tải lại trang'],
@@ -1240,7 +1213,6 @@ NHẬN XÉT TỔNG THỂ: ${totalComment}
         encouragement: parsed.encouragement || 'Bạn đang trên đúng con đường!'
       };
     } catch (error) {
-      console.error('Error generating overall assessment:', error);
       return {
         strengths: ['Không thể tạo đánh giá chi tiết'],
         weaknesses: ['Vui lòng tải lại trang'],
@@ -1456,7 +1428,6 @@ CHỈ RETURN JSON ARRAY, KHÔNG CÓ TEXT KHÁC.`;
 
       return exercises;
     } catch (error) {
-      console.error('❌ Error generating exam from sample:', error);
       throw new Error(`Không thể tạo đề từ AI: ${error.message}`);
     }
   }

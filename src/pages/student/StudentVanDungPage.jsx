@@ -112,7 +112,6 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
             topicName: exam.title || 'Bài toán'
           });
         } catch (err) {
-          console.error('Error generating application problem:', err);
           applicationProblem = 'Bài toán vận dụng. Bạn hãy giải quyết bài toán này bằng cách thực hiện đầy đủ 4 bước Polya.';
         }
 
@@ -131,7 +130,6 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
 
         setLoading(false);
       } catch (err) {
-        console.error('Error:', err);
         setError('Lỗi khi khởi tạo phiên Vận dụng. Vui lòng thử lại.');
         setLoading(false);
         initializingRef.current = false; // Reset flag nếu có lỗi
@@ -179,13 +177,6 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
       setVanDungData(updatedData);
       setSubmitting(false);
     } catch (err) {
-      console.error('❌ Chi tiết lỗi khi nộp bài:', {
-        message: err.message,
-        status: err.status,
-        errorCode: err.code,
-        fullError: err
-      });
-      
       // Hiển thị lỗi chi tiết hơn
       if (!process.env.REACT_APP_GEMINI_API_KEY_1) {
         setError('⚠️ Chưa cấu hình API Key. Thêm REACT_APP_GEMINI_API_KEY_1 vào file .env');

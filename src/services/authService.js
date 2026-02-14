@@ -17,10 +17,8 @@ provider.setCustomParameters({
 // Đăng nhập bằng Google
 export const signInWithGoogle = async () => {
   try {
-    console.log("Bắt đầu đăng nhập với Google...");
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
-    console.log("Đăng nhập thành công:", user.email);
 
     // Kiểm tra tài khoản bị khóa
     try {
@@ -39,7 +37,6 @@ export const signInWithGoogle = async () => {
       if (lockCheckError.message.includes('đã bị khóa')) {
         throw lockCheckError;
       }
-      console.error("Lỗi khi kiểm tra tài khoản:", lockCheckError);
     }
 
     // Lưu thông tin user vào Firestore
@@ -48,7 +45,6 @@ export const signInWithGoogle = async () => {
       const userSnap = await getDoc(userRef);
 
       if (!userSnap.exists()) {
-        console.log("Tạo user mới trong Firestore...");
         const newUser = new User({
           id: user.uid,
           email: user.email,
@@ -77,13 +73,11 @@ export const signInWithGoogle = async () => {
         await updateDoc(userRef, updateData);
       }
     } catch (firestoreError) {
-      console.error("Lỗi khi lưu vào Firestore:", firestoreError);
       // Không throw error để user vẫn đăng nhập được
     }
 
     return user;
   } catch (error) {
-    console.error("Chi tiết lỗi đăng nhập:", error.code, error.message);
     
     // Xử lý các lỗi cụ thể
     if (error.message && error.message.includes('đã bị khóa')) {
@@ -107,7 +101,6 @@ export const signOut = async () => {
   try {
     await firebaseSignOut(auth);
   } catch (error) {
-    console.error("Error signing out:", error);
     throw error;
   }
 };
@@ -130,7 +123,6 @@ export const getUserData = async (uid) => {
     }
     return null;
   } catch (error) {
-    console.error("Error getting user data:", error);
     throw error;
   }
 };

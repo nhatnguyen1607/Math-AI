@@ -33,7 +33,6 @@ const AdminTopicPage = ({ onLogout }) => {
       const data = await topicService.getAllTopics();
       setTopics(data);
     } catch (error) {
-      console.error('Error loading topics:', error);
       alert('Lỗi khi tải danh sách chủ đề');
     } finally {
       setLoading(false);
@@ -113,7 +112,6 @@ const AdminTopicPage = ({ onLogout }) => {
       resetForm();
       loadTopics();
     } catch (error) {
-      console.error('Error saving topic:', error);
       alert('Lỗi khi lưu chủ đề');
     } finally {
       setLoading(false);
@@ -147,7 +145,6 @@ const AdminTopicPage = ({ onLogout }) => {
         alert('Xóa chủ đề thành công!');
         loadTopics();
       } catch (error) {
-        console.error('Error deleting topic:', error);
         alert('Lỗi khi xóa chủ đề');
       }
     }

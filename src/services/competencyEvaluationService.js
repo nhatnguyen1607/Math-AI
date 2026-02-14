@@ -137,17 +137,9 @@ export const parseCompetencyEvaluation = (responseText) => {
       tongNhanXet: raw.tongNhanXet || ''
     };
 
-    console.log('✅ Parsed competency evaluation:', {
-      TC1: evaluation.TC1.score,
-      TC2: evaluation.TC2.score,
-      TC3: evaluation.TC3.score,
-      TC4: evaluation.TC4.score,
-      total: evaluation.totalCompetencyScore
-    });
 
     return evaluation;
   } catch (error) {
-    console.error('Error parsing competency evaluation:', error);
     // Return default if parsing fails
     return {
       TC1: { level: 'achieved', score: 1, nhanXet: 'Không thể phân tích' },

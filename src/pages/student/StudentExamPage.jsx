@@ -113,15 +113,12 @@ const StudentExamPage = ({ user, onSignOut }) => {
                           });
                         });
                       } else {
-                        console.warn(`⚠️ Exercise ${exerciseIndex} has no questions`);
                       }
                     });
                     setQuestions(allQuestions);
                   } else {
-                    console.warn('⚠️ Exam has no exercises');
                   }
                 } catch (err) {
-                  console.error('Error loading exam:', err);
                   setError('Không thể tải đề thi');
                 }
               }
@@ -134,7 +131,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
           }
         );
       } catch (err) {
-        console.error('Error subscribing to session:', err);
         setError('Lỗi khi kết nối phiên thi');
         setLoading(false);
       }
@@ -212,14 +208,12 @@ const StudentExamPage = ({ user, onSignOut }) => {
             Array.from(correctAnswersSet).every((idx) => selectedSet.has(idx));
           
           if (idx === questions.length - 1) {
-            console.log(`Q${idx} [MULTI - LAST]: selected=${JSON.stringify(Array.from(selectedSet))}, correct=${JSON.stringify(Array.from(correctAnswersSet))}, isCorrect=${isCorrect}`);
           }
         } else {
           // Single choice question
           isCorrect = correctAnswersSet.has(answer.answer);
           
           if (idx === questions.length - 1) {
-            console.log(`Q${idx} [SINGLE - LAST]: selected=${answer.answer}, correct=${JSON.stringify(Array.from(correctAnswersSet))}, isCorrect=${isCorrect}`);
           }
         }
 
@@ -296,7 +290,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
         competencyEvaluation.overallAssessment.recommendations = overallAssessment.recommendations || [];
         competencyEvaluation.overallAssessment.encouragement = overallAssessment.encouragement || '';
       } catch (compError) {
-        console.error('Error in competency evaluation:', compError);
         competencyEvaluation = {
           overallAssessment: {
             level: 'Cần cố gắng',
@@ -367,7 +360,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
         });
       }, 2000);
     } catch (err) {
-      console.error('Error submitting exam:', err);
       setError('Lỗi khi nộp bài');
     } finally {
       setIsSubmitting(false);
@@ -381,7 +373,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
       setCurrentQuestionIndex(nextIdx);
       // 🔧 Save currentQuestion to session
       examSessionService.updateCurrentQuestion(sessionId, user?.uid, nextIdx).catch(err => {
-        console.error('Failed to update current question:', err);
       });
       // Load câu trả lời cũ nếu có
       const nextAnswer = answers[nextIdx];
@@ -402,7 +393,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
       setCurrentQuestionIndex(prevIdx);
       // 🔧 Save currentQuestion to session
       examSessionService.updateCurrentQuestion(sessionId, user?.uid, prevIdx).catch(err => {
-        console.error('Failed to update current question:', err);
       });
       // Load câu trả lời cũ nếu có
       const prevAnswer = answers[prevIdx];
@@ -449,33 +439,20 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
     // Check if session is ready for timer
     if (session.status !== 'ongoing') {
-      console.log('⏳ Session status is', session.status, '- timer not active yet');
       return;
     }
 
     if (!session.startTime) {
-      console.warn('⚠️ Session is ongoing but startTime is not set! This is an error state');
-      console.warn('⚠️ Session data:', JSON.stringify({
-        id: session.id,
-        status: session.status,
-        startTime: session.startTime,
-        duration: session.duration
-      }, null, 2));
       // Wait for startTime to be set - don't give up
       // Start a retry timer to check again in 1 second
       const retryTimer = setTimeout(() => {
-        console.log('🔄 Retrying timer check after 1 second...');
       }, 1000);
       return () => clearTimeout(retryTimer);
     }
 
     const updateTimer = () => {
       const remaining = session.getRemainingSeconds();
-
-      console.log(`⏱️ Timer update: remaining=${remaining}s, status=${session.status}`);
-
       if (remaining <= 0) {
-        console.log('❌ Time is up! Auto-submitting exam');
         setTimeRemaining(0);
         if (!isCompleted) {
           handleAutoSubmit();
@@ -522,10 +499,8 @@ const StudentExamPage = ({ user, onSignOut }) => {
           });
           
           await examSessionService.submitAnswer(session.id, user.uid, draftData)
-            .catch(err => console.warn('⚠️ Draft save failed (non-critical):', err));
         }
       } catch (error) {
-        console.warn('⚠️ Error auto-saving draft:', error);
       }
     };
 
@@ -569,7 +544,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
         }
       };
       setAnswers(newAnswers);
-      console.log(`📝 Multiple choice updated for question ${currentQuestionIndex}:`, newAnswers[currentQuestionIndex]);
     } else {
       // For single choice: only one answer
       setSelectedAnswer(optionIndex);
@@ -606,7 +580,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
       };
 
       setAnswers(newAnswers);
-      console.log(`✏️ Answer saved to state for question ${currentQuestionIndex}:`, newAnswers[currentQuestionIndex]);
 
       // Cập nhật lên Firestore
       if (user?.uid) {
@@ -621,20 +594,14 @@ const StudentExamPage = ({ user, onSignOut }) => {
           bonusPoints: scoreData.bonusPoints,
           timeUsed: 420 - timeRemaining
         });
-        console.log(`📤 Submitting answer for question ${currentQuestionIndex}:`, answerDataToSubmit);
         
         examSessionService
           .submitAnswer(sessionId, user.uid, answerDataToSubmit)
           .then(() => {
-            console.log(`✅ Answer ${currentQuestionIndex} successfully submitted to Firestore`);
           })
           .catch((err) => {
-            console.error(`❌ Error submitting answer ${currentQuestionIndex}:`, err);
           });
       }
-
-      // 🔧 NEW: No auto-advance - let student click navigation buttons
-      console.log(`✅ Answer saved for question ${currentQuestionIndex}, waiting for student to click next`);
     }
   };
 
@@ -683,9 +650,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
     };
     setAnswers(newAnswers);
     setIsAnswered(true);
-
-    // Gửi lên Firestore
-    console.log(`📤 Submitting multiple choice for question ${currentQuestionIndex}, user:`, user?.uid);
     if (user?.uid) {
       examSessionService
         .submitAnswer(sessionId, user.uid, cleanFirebaseData({
@@ -700,13 +664,8 @@ const StudentExamPage = ({ user, onSignOut }) => {
           bonusPoints: scoreData.bonusPoints,
           timeUsed: 420 - timeRemaining
         }))
-        .catch((err) => console.error('Error submitting answer:', err));
     } else {
-      console.warn('❌ User UID not available, answer not submitted to Firestore');
     }
-
-    // 🔧 NEW: No auto-advance - let student click navigation buttons
-    console.log(`✅ Multiple choice answer submitted for question ${currentQuestionIndex}, waiting for student action`);
   };
 
   // Loading state
@@ -822,7 +781,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
   // Fallback: if no questions loaded but exam has exercises, try to extract
   let displayQuestions = questions;
   if (questions.length === 0 && exam?.exercises?.length > 0) {
-    console.warn('⚠️ No questions loaded, attempting fallback extraction from exercises');
     const fallbackQuestions = [];
     exam.exercises.forEach((exercise, exerciseIndex) => {
       if (exercise.questions && exercise.questions.length > 0) {
@@ -863,7 +821,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
   // Check if exam session already finished
   if (session?.status === 'finished') {
-    console.warn('⚠️ Exam session already finished, redirecting to result page');
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
         <div className="flex flex-col items-center gap-8 bg-white rounded-max p-12 shadow-2xl game-card">
@@ -982,7 +939,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
                       setCurrentQuestionIndex(idx);
                       // 🔧 Save currentQuestion to session
                       examSessionService.updateCurrentQuestion(sessionId, user?.uid, idx).catch(err => {
-                        console.error('Failed to update current question:', err);
                       });
                     }}
                     disabled={isAnswered}
@@ -1054,8 +1010,6 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
                 {/* Jelly Buttons - Answer Options */}
                 <div className="space-y-3 mb-10 w-full">
-                  {console.log('🎯 Current question:', currentQuestion) || null}
-                  {console.log('🎯 Options:', currentQuestion.options) || null}
                   {(currentQuestion.options || []).length === 0 ? (
                     <div className="text-center py-8 text-gray-600">
                       <p>Không có câu trả lời nào cho câu hỏi này</p>

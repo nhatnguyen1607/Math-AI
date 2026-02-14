@@ -44,7 +44,6 @@ class TopicService {
       const docRef = await addDoc(collection(db, this.collectionName), dataToSave);
       return { id: docRef.id, ...topicData };
     } catch (error) {
-      console.error("Error creating topic:", error);
       throw error;
     }
   }
@@ -63,7 +62,6 @@ class TopicService {
       });
       return topics;
     } catch (error) {
-      console.error("Error getting topics:", error);
       throw error;
     }
   }
@@ -87,7 +85,6 @@ class TopicService {
       });
       return topics;
     } catch (error) {
-      console.error("Error getting topics by class:", error);
       throw error;
     }
   }
@@ -103,7 +100,6 @@ class TopicService {
         throw new Error("Topic not found");
       }
     } catch (error) {
-      console.error("Error getting topic:", error);
       throw error;
     }
   }
@@ -132,7 +128,6 @@ class TopicService {
       });
       return { id: topicId, ...updateData };
     } catch (error) {
-      console.error("Error updating topic:", error);
       throw error;
     }
   }
@@ -144,7 +139,6 @@ class TopicService {
       await deleteDoc(docRef);
       return true;
     } catch (error) {
-      console.error("Error deleting topic:", error);
       throw error;
     }
   }
@@ -157,7 +151,6 @@ class TopicService {
         problemCount: (topic.problemCount || 0) + 1
       });
     } catch (error) {
-      console.error("Error incrementing problem count:", error);
       throw error;
     }
   }
@@ -170,7 +163,6 @@ class TopicService {
         problemCount: Math.max((topic.problemCount || 0) - 1, 0)
       });
     } catch (error) {
-      console.error("Error decrementing problem count:", error);
       throw error;
     }
   }

@@ -55,7 +55,6 @@ CHỈ trả về JSON, không thêm text khác.`;
       return data.problems || [];
       
     } catch (error) {
-      console.error("Error generating problem:", error);
       throw error;
     }
   }
@@ -69,7 +68,6 @@ CHỈ trả về JSON, không thêm text khác.`;
         gradeLevel: 5
       });
     } catch (error) {
-      console.error("Error generating multiple problems:", error);
       throw error;
     }
   }
@@ -83,7 +81,6 @@ CHỈ trả về JSON, không thêm text khác.`;
         gradeLevel: 5
       });
     } catch (error) {
-      console.error("Error generating custom problem:", error);
       throw error;
     }
   }
@@ -125,7 +122,6 @@ CHỈ trả về JSON.`;
       return data.hints || [];
       
     } catch (error) {
-      console.error("Error generating hints:", error);
       throw error;
     }
   }
@@ -168,7 +164,6 @@ CHỈ trả về JSON.`;
       return data;
       
     } catch (error) {
-      console.error("Error generating solution:", error);
       throw error;
     }
   }

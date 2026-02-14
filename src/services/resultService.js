@@ -86,7 +86,6 @@ class ResultService {
 
       return { id: docRef.id, ...resultData };
     } catch (error) {
-      console.error("Error saving result:", error);
       throw error;
     }
   }
@@ -108,7 +107,6 @@ class ResultService {
       });
       return results;
     } catch (error) {
-      console.error("Error getting user problem history:", error);
       throw error;
     }
   }
@@ -133,7 +131,6 @@ class ResultService {
       const doc = querySnapshot.docs[0];
       return { id: doc.id, ...doc.data() };
     } catch (error) {
-      console.error("Error getting user best result:", error);
       throw error;
     }
   }
@@ -152,7 +149,6 @@ class ResultService {
       const querySnapshot = await getDocs(q);
       return !querySnapshot.empty;
     } catch (error) {
-      console.error("Error checking completion:", error);
       throw error;
     }
   }
@@ -171,7 +167,6 @@ class ResultService {
       });
       return results;
     } catch (error) {
-      console.error("Error getting user results:", error);
       throw error;
     }
   }
@@ -215,7 +210,6 @@ class ResultService {
         .slice(0, limitCount);
         
     } catch (error) {
-      console.error("Error getting leaderboard:", error);
       throw error;
     }
   }
@@ -239,7 +233,6 @@ class ResultService {
       
       return Array.from(completedProblemIds);
     } catch (error) {
-      console.error("Error getting completed problems:", error);
       throw error;
     }
   }
@@ -303,7 +296,6 @@ class ResultService {
         .slice(0, limitCount);
         
     } catch (error) {
-      console.error("Error getting topic leaderboard:", error);
       throw error;
     }
   }
@@ -346,7 +338,6 @@ class ResultService {
         totalTime
       };
     } catch (error) {
-      console.error("Error getting user stats:", error);
       throw error;
     }
   }
@@ -405,7 +396,6 @@ class ResultService {
       await setDoc(resultRef, cleanedResult);
       return { id: resultRef.id, ...result };
     } catch (error) {
-      console.error('Error saving exam session result:', error);
       throw error;
     }
   }
@@ -428,7 +418,6 @@ class ResultService {
       }
       return null;
     } catch (error) {
-      console.error('Error getting exam session result:', error);
       throw error;
     }
   }
@@ -451,7 +440,6 @@ class ResultService {
       
       return results;
     } catch (error) {
-      console.error('Error getting session results:', error);
       throw error;
     }
   }
@@ -475,7 +463,6 @@ class ResultService {
       
       return results;
     } catch (error) {
-      console.error('Error getting user exam results:', error);
       throw error;
     }
   }
@@ -519,7 +506,6 @@ class ResultService {
         results
       };
     } catch (error) {
-      console.error('Error getting student exam statistics:', error);
       throw error;
     }
   }
@@ -534,7 +520,6 @@ class ResultService {
         leaderboardPosition: position
       });
     } catch (error) {
-      console.error('Error updating leaderboard position:', error);
       throw error;
     }
   }
@@ -605,7 +590,6 @@ class ResultService {
       await setDoc(progressRef, cleanedData, { merge: true });
       return { id: docId, ...updateData };
     } catch (error) {
-      console.error('Error upserting exam progress:', error);
       throw error;
     }
   }
@@ -624,7 +608,6 @@ class ResultService {
       }
       return null;
     } catch (error) {
-      console.error('Error getting exam progress:', error);
       throw error;
     }
   }
@@ -642,7 +625,6 @@ class ResultService {
         lastUpdatedAt: serverTimestamp()
       });
     } catch (error) {
-      console.error('Error updating isFirst flag:', error);
       throw error;
     }
   }
@@ -683,7 +665,6 @@ class ResultService {
         data: progress // Return full progress data for UI rendering
       };
     } catch (error) {
-      console.error('Error getting final exam results:', error);
       throw error;
     }
   }
@@ -714,7 +695,6 @@ class ResultService {
         return null;
       }
     } catch (error) {
-      console.error('Error getting practice session data:', error);
       throw error;
     }
   }
@@ -813,7 +793,6 @@ class ResultService {
         };
       }
     } catch (error) {
-      console.error('❌ Error initializing practice session:', error);
       throw error;
     }
   }
@@ -831,7 +810,6 @@ class ResultService {
       const progressDoc = await getDoc(progressRef);
 
       if (!progressDoc.exists()) {
-        console.warn('⚠️ Practice session not found');
         return null;
       }
 
@@ -839,7 +817,6 @@ class ResultService {
       // Return chỉ phần luyenTap
       return data.parts?.luyenTap || null;
     } catch (error) {
-      console.error('❌ Error getting practice session:', error);
       throw error;
     }
   }
@@ -875,7 +852,6 @@ class ResultService {
         lastUpdatedAt: serverTimestamp()
       });
     } catch (error) {
-      console.error('❌ Error updating practice chat history:', error);
       throw error;
     }
   }
@@ -909,7 +885,6 @@ class ResultService {
 
       await updateDoc(progressRef, updateData);
     } catch (error) {
-      console.error('❌ Error completing practice exercise:', error);
       throw error;
     }
   }
@@ -946,7 +921,6 @@ class ResultService {
 
       return vanDungData;
     } catch (error) {
-      console.error('❌ Error initializing van dung session:', error);
       throw error;
     }
   }
@@ -981,7 +955,6 @@ class ResultService {
         lastUpdatedAt: serverTimestamp()
       });
     } catch (error) {
-      console.error('❌ Error updating van dung chat history:', error);
       throw error;
     }
   }
@@ -1005,7 +978,6 @@ class ResultService {
         lastUpdatedAt: serverTimestamp()
       });
     } catch (error) {
-      console.error('❌ Error completing van dung exercise:', error);
       throw error;
     }
   }
@@ -1029,7 +1001,6 @@ class ResultService {
       const data = progressDoc.data();
       return data.parts?.vanDung || null;
     } catch (error) {
-      console.error('❌ Error getting van dung session:', error);
       throw error;
     }
   }
@@ -1049,9 +1020,7 @@ class ResultService {
         'assessment.aiAssessmentGeneratedAt': serverTimestamp()
       });
 
-      console.log('✅ AI Progress Assessment saved to DB:', docId);
     } catch (error) {
-      console.error('❌ Error saving AI assessment to DB:', error);
       throw error;
     }
   }
@@ -1069,9 +1038,7 @@ class ResultService {
         'assessment.aiAssessmentGeneratedAt': null
       });
 
-      console.log('✅ AI Progress Assessment deleted from DB:', docId);
     } catch (error) {
-      console.error('❌ Error deleting AI assessment from DB:', error);
       throw error;
     }
   }

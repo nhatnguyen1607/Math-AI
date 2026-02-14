@@ -114,6 +114,5 @@ export function cleanupTempFile(filePath) {
       fs.unlinkSync(filePath);
     }
   } catch (error) {
-    console.error(`Failed to cleanup temp file: ${error.message}`);
   }
 }

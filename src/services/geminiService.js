@@ -10,8 +10,15 @@ HƯỚNG TRONG NỘI BỘ (Không ghi ra cho bạn thấy):
 4 BƯỚC POLYA:
 1. HIỂU BÀI TOÁN: Giúp bạn xác định dữ kiện đã cho và yêu cầu bài toán
 2. LẬP KẾ HOẠCH: Hỏi bạn nên làm gì, cần phép tính nào (KHÔNG tính cụ thể)
-3. THỰC HIỆN: Hỏi bạn tính toán từng bước, kiểm tra lỗi tính toán nếu có
+3. THỰC HIỆN: Hỏi bạn tính toán từng bước, **KIỂM TRA CHẶT CHẼ xem phép tính có đúng không**
 4. KIỂM TRA & MỞ RỘNG: Hỏi bạn liệu kết quả có hợp lý, có cách giải nào khác không
+
+NGUYÊN TẮC KIỂM TRA PHÉP TÍNH (QUAN TRỌNG):
+- **LUÔN LUÔN xác minh kết quả tính toán của bạn trước khi khen ngợi**
+- Nếu phép tính SAI: **KHÔNG bao giờ chuyển bước, KHÔNG nói "đúng", KHÔNG khen ngợi**
+- Nếu sai: Hỏi "bạn xem lại kết quả này ... được không?", "hãy tính lại một lần nữa"
+- **CHỈ khi phép tính CHÍNH XÁC mới được chuyển sang bước 4**
+- VỊ DỤ: Nếu học sinh nói "3 × 2,5 = 7,6" → Hỏi "bạn kiểm tra lại xem: 3 × 2,5 = bao nhiêu?" (KHÔNG nói đúng, KHÔNG khen)
 
 NGUYÊN TẮC GIAO TIẾP VỚI BẠN:
 - KHÔNG BAO GIỜ giải bài toán thay bạn
@@ -28,6 +35,7 @@ NHỮNG GÌ KHÔNG NÊN LÀM:
 - Không nói "sai" trực tiếp → nói "hãy xem lại..."
 - Không giải hoặc cho đáp án → chỉ hỏi câu để bạn suy nghĩ lại
 - **LUÔN XƯNG HÔ LÀ "BẠN" - KHÔNG ĐƯỢC XƯNG "EM"** ← Điều này bắt buộc phải tuân thủ
+- **KHÔNG khen ngợi phép tính sai** - Phải chính xác mới được khen
 
 ĐÁNH GIÁ MỨC ĐỘ:
 - Cần cố gắng: Chưa hiểu rõ, nhiều sai sót
@@ -262,13 +270,19 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
     // Kiểm tra các dấu hiệu chuyển bước trong response (không phân biệt hoa thường)
     const lowerResponse = response.toLowerCase();
     
+    // ⚠️ KIỂM TRA CHẶT CHẼ: Không cho phép chuyển bước nếu AI chỉ là khen ngợi mà không kiểm tra
+    // Nếu AI nói "[sai]" hoặc "kiểm tra lại", KHÔNG chuyển bước
+    const isCorrectionNeeded = lowerResponse.includes("[sai]") || 
+                               lowerResponse.includes("kiểm tra lại") ||
+                               lowerResponse.includes("xem lại") ||
+                               lowerResponse.includes("hãy tính lại");
     
-    if ((lowerResponse.includes("bước 2") || lowerResponse.includes("lập kế hoạch")) && this.currentStep === 1) {
+    if ((lowerResponse.includes("bước 2") || lowerResponse.includes("lập kế hoạch")) && this.currentStep === 1 && !isCorrectionNeeded) {
       nextStep = 2;
       evaluation = this._extractEvaluation(response);
       this.evaluateStep(1, evaluation || 'pass');
       this.currentStep = 2;
-    } else if ((lowerResponse.includes("bước 3") || lowerResponse.includes("thực hiện kế hoạch")) && this.currentStep === 2) {
+    } else if ((lowerResponse.includes("bước 3") || lowerResponse.includes("thực hiện kế hoạch")) && this.currentStep === 2 && !isCorrectionNeeded) {
       nextStep = 3;
       evaluation = this._extractEvaluation(response);
       this.evaluateStep(2, evaluation || 'pass');
@@ -277,7 +291,7 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
                (lowerResponse.includes("kiểm tra") && this.currentStep === 3) ||
                (lowerResponse.includes("mở rộng") && this.currentStep === 3) ||
                (lowerResponse.includes("cách khác") && this.currentStep === 3) ||
-               (lowerResponse.includes("hợp lý") && this.currentStep === 3)) && this.currentStep === 3) {
+               (lowerResponse.includes("hợp lý") && this.currentStep === 3)) && this.currentStep === 3 && !isCorrectionNeeded) {
       nextStep = 4;
       evaluation = this._extractEvaluation(response);
       this.evaluateStep(3, evaluation || 'pass');
@@ -408,7 +422,7 @@ NHẮC NHỨ: CHỈ HỎI 1 CÂU DUY NHẤT! Đừng tính hộ!`;
         break;
 
       case 3: // Thực hiện kế hoạch
-        prompt += `BƯỚC 3: THỰC HIỆN KẾ HOẠCH
+        prompt += `BƯỚC 3: THỰC HIỆN KẾ HOẠCH - **KIỂM TRA TÍNH CHÍNH XÁC CẬN THẬN**
 Tiêu chí xem câu trả lời "đủ" ở bước 3:
 ✅ ĐỦ nếu: Bạn đã tính toàn bộ ĐÚNG:
    - Kết quả cuối cùng đúng (có hoặc không có đơn vị)
@@ -417,12 +431,18 @@ Tiêu chí xem câu trả lời "đủ" ở bước 3:
 
 ❌ CHƯA ĐỦ nếu: 
    - Bạn chỉ tính được một phần (còn phép tính khác chưa tính, hoặc chưa hoàn thành toàn bộ)
-   - Kết quả tính có sai lầm
+   - **Kết quả tính CÓ SAI LẦM hoặc KHÔNG CHÍNH XÁC**
+
+⚠️ **YÊU CẦU KIỂM TRA CHẶT CHẼ:**
+- **LUÔN LUÔN xác minh lại phép tính của bạn trước**
+- **Nếu phép tính SAI: KHÔNG khen ngợi, KHÔNG chuyển bước, CHỈ hỏi gợi ý để bạn sửa**
+- **KHÔNG BAO GIỜ khen ngợi hoặc chuyển bước nếu phép tính sai**
+- VÍ DỤ SAI: Học sinh nói "3 × 2,5 = 7,6" → **PHẢI hỏi "bạn kiểm tra lại: 3 × 2,5 = bao nhiêu?" (KHÔNG nói đúng, KHÔNG chuyển bước, chỉ gợi ý sửa)**
 
 HÀNH ĐỘNG:
 - Nếu tính toàn bộ ĐÚNG và ĐÃ HOÀN THÀNH tất cả phép tính của bài toán:
   * Khen ngợi: "Chính xác rồi!"
-  * BẮTBUỘC: PHẢI ĐẶT NGAY 1 CÂU HỎI KIỂM TRA HOẶC MỞ RỘNG (ví dụ: "Hãy kiểm tra xem kết quả của bạn có hợp lý không?" hoặc "Bạn có thể giải bài toán này bằng cách khác không?")
+  * **BẮTBUỘC: PHẢI ĐẶT NGAY 1 CÂU HỎI KIỂM TRA HOẶC MỞ RỘNG** (ví dụ: "Hãy kiểm tra xem kết quả của bạn có hợp lý không?" hoặc "Bạn có thể giải bài toán này bằng cách khác không?")
   * KHÔNG được kết thúc response mà không có câu hỏi
 
 - Nếu tính đúng NHƯNG còn phép tính khác trong bài toán:
@@ -433,10 +453,12 @@ HÀNH ĐỘNG:
     - Nếu thấy cần so sánh → "Vậy bạn cần so sánh hai khoản tiền này để biết cái nào rẻ hơn, bạn sẽ làm phép tính nào?"
     - Hoặc hỏi chung theo bài toán → "Bây giờ để hoàn thành bài toán, bạn còn cần tính gì tiếp theo để tìm ra [YÊU CẦU TỪ BÀI TOÁN]?"
 
-- Nếu có SAI hoặc CHƯA HOÀN THÀNH:
-  * KHÔNG nói đáp án đúng
-  * Nhắc nhở: "Kết quả này có vẻ chưa chính xác"
-  * Đặt 1 câu hỏi gợi ý: "Bạn thử tính lại xem sao?"
+- **Nếu có SAI hoặc CHƯA HOÀN THÀNH:**
+  * **KHÔNG nói đáp án đúng**
+  * **KHÔNG khen ngợi**
+  * Gợi ý nhẹ: "Kết quả này có vẻ cần kiểm tra lại xem sao"
+  * Đặt 1 câu hỏi gợi ý: "Bạn thử tính lại xem sao?" hoặc "Bạn thử kiểm tra lại phép tính của mình?"
+  * **KHÔNG chuyển bước, HÃY STẢ ở bước 3**
 
 NHẮC NHỞ: CHỈ HỎI 1 CÂU DUY NHẤT! Không tính hộ!`;
         break;
@@ -875,22 +897,77 @@ PHÂN SỐ:
   → ĐÚNG: 5,5 - 3,2 (có đơn vị + phép tính so sánh)
 
 HƯỚNG DẪN TRẢ LỜI:
-- CHỈ trả về nội dung bài toán (không có "Bài toán mới:", không có lời giải)
-- Bài toán phải là một đoạn văn liền mạch, tự nhiên
+- CHỈ trả về nội dung bài toán (không có "Bài toán mới:", "BÀI X LUYỆN TẬP:", không có lời giải)
+- KHÔNG bao gồm header "BÀI 1 LUYỆN TẬP", "BÀI 2 LUYỆN TẬP", "Chủ đề bài thi:", v.v.
+- Bài toán phải là một đoạn văn liền mạch, tự nhiên, kết thúc bằng CHÍNH XÁC 1 CÂU HỎI duy nhất
+- KHÔNG có câu hỏi phụ hay bổ sung thêm
+
+ĐỊNH DẠNG YÊU CẦU:
+[Bối cảnh/Câu chuyện 2-4 dòng]
+[Câu hỏi duy nhất]
+
+VÍ DỤ:
+SAI: "BÀI 2 LUYỆN TẬP Chủ đề bài thi: Nhân số thập phân Chị Lan... 1. Diện tích là bao nhiêu? 2. Để tính tiền, cần biết điều gì?"
+ĐÚNG: "Chị Lan đang cắt miếng gỗ có kích thước 0,75 m × 0,4 m để làm khung tấm thảm. Hỏi diện tích miếng gỗ đó là bao nhiêu mét vuông?"
 
 ⚠️ KIỂM TRA CUỐI CÙNG:
 - Bài toán có sử dụng KỸ NĂNG của chủ đề không?
+- Bài toán chỉ có ĐÚNG 1 CÂU HỎI cuối cùng không?
 - Ví dụ:
   • Chủ đề "Nhân số thập phân" mà bài chỉ có 4 × 6 → SAI (không có số thập phân)
   • Chủ đề "Phân số" mà bài chỉ có 4 + 3 → SAI (không có phân số)
   • Chủ đề "Đo lường" mà bài chỉ có 2 + 3 → SAI (không có đơn vị đo)
-- Nếu bài toán không sử dụng kỹ năng chủ đề → BÀI SAI, phải viết lại
+  • Bài có 2 câu hỏi → SAI (phải chỉ 1 câu)
+- Nếu bài toán không đạt yêu cầu → BÀI SAI, phải viết lại
 
 Bài toán luyện tập:`;
 
       // Sử dụng generateContent từ geminiModelManager (hỗ trợ auto-rotate key)
       const result = await geminiModelManager.generateContent(prompt);
-      const similarProblem = result.response.text().trim();
+      let similarProblem = result.response.text().trim();
+      
+      // 🔧 POST-PROCESSING: Loại bỏ các header không mong muốn
+      // Loại bỏ "BÀI X LUYỆN TẬP" header
+      similarProblem = similarProblem.replace(/^BÀI\s+[12]\s+LUYỆN\s*TẬP[\s\n]*/i, '');
+      
+      // Loại bỏ "Chủ đề bài thi:" lines
+      similarProblem = similarProblem.replace(/^Chủ\s+đề\s+bài\s+thi:\s*[^\n]*[\n]*/i, '');
+      
+      // 🔧 Nếu có format "1. ... 2. ..." - giữ lại từ phần text của bài toán
+      // Tìm dòng bắt đầu bằng "1. " hoặc "2. " (những câu hỏi)
+      const lines = similarProblem.split('\n');
+      let lastContentLineIndex = -1;
+      let questionCount = 0;
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        // Kiểm tra nếu dòng này là một câu hỏi (bắt đầu bằng con số là câu hỏi)
+        const isQuestionLine = /^[1-9]\.\s+/.test(line);
+        
+        if (line && !isQuestionLine) {
+          // Đây là dòng nội dung
+          lastContentLineIndex = i;
+        } else if (isQuestionLine) {
+          // Đây là dòng câu hỏi
+          questionCount++;
+          if (questionCount === 1) {
+            // Giữ lại câu hỏi đầu tiên
+            lastContentLineIndex = i;
+          }
+        }
+      }
+      
+      // Nếu có nhiều hơn 1 câu hỏi, chỉ giữ phần đến câu hỏi đầu tiên
+      if (questionCount > 1 && lastContentLineIndex >= 0) {
+        const cleanedLines = lines.slice(0, lastContentLineIndex + 1);
+        similarProblem = cleanedLines.join('\n').trim();
+      }
+      
+      // Nếu không có bất kỳ câu hỏi nào (không có số thứ tự), giữ nguyên
+      if (questionCount === 0) {
+        similarProblem = lines.join('\n').trim();
+      }
+      
       return similarProblem;
     } catch (error) {
       console.error('❌ Error generating similar problem:', error);
@@ -1170,6 +1247,217 @@ NHẬN XÉT TỔNG THỂ: ${totalComment}
         recommendations: ['Liên hệ hỗ trợ'],
         encouragement: 'Hãy cố gắng thêm, bạn sẽ thành công!'
       };
+    }
+  }
+
+  /**
+   * Tạo đề thi tương đương từ sampleExam của chủ đề
+   * @param {string} topicName - Tên chủ đề (vd: "Phép nhân số thập phân")
+   * @param {Array|Object} sampleExam - Mẫu đề (cấu trúc exercises array hoặc JSON string)
+   * @returns {Promise<Array>} - Mảng exercises tương tự với sampleExam
+   */
+  async generateExamFromSampleExam(topicName, sampleExam) {
+    try {
+      // Parse sampleExam nếu là string
+      let sampleStructure = sampleExam;
+      if (typeof sampleExam === 'string') {
+        try {
+          sampleStructure = JSON.parse(sampleExam);
+        } catch (e) {
+          throw new Error('Định dạng sampleExam không hợp lệ');
+        }
+      }
+
+      if (!Array.isArray(sampleStructure)) {
+        throw new Error('sampleExam phải là array trong cấu trúc exercises');
+      }
+
+      // Xây dựng prompt để AI tạo đề tương đương
+      const sampleSummary = sampleStructure.map((ex, idx) => `
+Bài tập ${idx + 1}: "${ex.name}"
+- Thời gian: ${ex.duration}s
+- Số câu hỏi: ${ex.questions?.length || 0}
+- Độ khó: ${ex.questions?.length > 5 ? 'Khó' : ex.questions?.length > 2 ? 'Vừa' : 'Dễ'}
+`).join('\n');
+
+      const prompt = `Bạn là chuyên gia tạo đề thi toán lớp 5. Dựa vào TEMPLATE EXAM dưới đây, hãy TẠO MỘT ĐỀ THI TƯƠNG ĐƯƠNG cho chủ đề "${topicName}".
+
+TEMPLATE EXAM (để làm mẫu):
+${sampleSummary}
+
+YÊU CẦU QUAN TRỌNG:
+1. ✅ PHẢI GIỮ NGUYÊN CẤU TRÚC:
+   - Số lượng bài tập, thời gian, số câu hỏi GIỐNG HỆT template
+   - Kiểu câu hỏi (single/multiple) giữ nguyên
+   - Số đáp án mỗi câu GIỮ NGUYÊN
+
+2. ✅ PHẢI TẠOUỘC VÀO CHỦĐỀ "${topicName}":
+   - Toàn bộ câu hỏi PHẢI liên quan đến chủ đề này
+   - Nếu chủ đề "Nhân số thập phân" → tất cả câu hỏi phải về phép nhân số thập phân
+   - Nếu chủ đề "Phân số" → tất cả câu hỏi phải liên quan phân số
+
+3. ✅ **BÀI TẬP 1 - CÂUHỎI PHẢI DÙNG DỮ KIỆN CỤ THỂ TỪ CONTEXT**:
+   - Context của bài tập 1 cũng là **BÀI TOÁN THỰC TẾ CHI TIẾT** (không đơn giản)
+   - **TẤT CẢ câu hỏi bài tập 1 PHẢI sử dụng dữ liệu CHÍNH XÁC từ context - KHÔNG thêm dữ liệu mới**
+   - KHÔNG được tạo câu hỏi kiểu: "Hãy thực hiện các phép nhân số thập phân dưới đây..." (generic)
+   - KHÔNG được: Thay đổi dữ liệu, thêm dữ liệu mới, hỏi về dữ liệu không có trong context
+   - **ĐỨ YÊU CẦU**: Nếu context nói "Anh Nam mua 3 hộp bút, mỗi hộp 2,5 tá. Hỏi tất cả bao nhiêu tá bút?"
+     → Câu hỏi PHẢI là: "Anh Nam mua 3 hộp bút, mỗi hộp có 2,5 tá. Tổng cộng bao nhiêu tá bút?", "3 × 2,5 = ?" (dùng dữ liệu từ context)
+     → KHÔNG BỎ ĐƯỢC hỏi: "Bạn Nam muốn mua mấy hộp bút màu?" (dữ liệu không có trong context)
+   - Các câu hỏi vẫn là trắc nghiệm nhưng PHẢI sử dụng CHÍNH XÁC dữ liệu từ context
+
+4. ✅ **BÀI TẬP 2 - CONTEXT PHẢI LÀ BÀI TOÁN THỰC TẾ CHI TIẾT**:
+   - Context phải là 1 **BÀI TOÁN THỰC TẾ PHỨ HỢP** (không đơn giản)
+   - Context phải nêu rõ: **Tình huống, dữ kiện cụ thể, bối cảnh thực tế**
+   - Ví dụ ĐÚNG: "Bạn Minh đi shopping cần mua vải may áo. Loại vải Minh thích giá 85.500 đồng/mét. Minh cần 2,5 mét vải để may 1 cái áo. Hỏi Minh cần bao nhiêu tiền để mua vải đủ may áo?"
+
+5. ✅ **BÀI TẬP 2 - CÂUHỎI TUÂN THEO 4 BƯỚC POLYA**:
+   - **BƯỚC 1 - HIỂU BÀI TOÁN**: Hỏi về dữ kiện, yêu cầu, xác định vấn đề
+   - **BƯỚC 2 - LẬP KẾ HOẠCH**: Hỏi về cách giải, phép tính nào để dùng
+   - **BƯỚC 3 - THỰC HIỆN**: Hỏi về các bước tính toán, kết quả
+   - **BƯỚC 4 - KIỂM TRA & MỞ RỘNG**: Hỏi về kiểm tra lại, tính hợp lý, cách khác
+   - **LƯU Ý QUAN TRỌNG**: Trong câu hỏi JSON, **KHÔNG hiển thị "[BƯỚC 1]", "[BƯỚC 2]"** - chỉ ghi câu hỏi thôi
+   - Các câu hỏi phải yêu cầu học sinh **SUYNG nghĩ sâu**, không generic
+
+6. ✅ **RANDOM VỊ TRÍ ĐÁP ÁN ĐÚNG**:
+   - KHÔNG LÚC NÀO CẢ đáp án đúng ở vị trí A (index 0)
+   - Mỗi câu hỏi phải có đáp án đúng ở các vị trí KHÁC NHAU
+
+7. ✅ KHÔNG ĐƯỢC:
+   - Dùng phần trăm (học sinh lớp 5 chưa học)
+   - Dùng khái niệm phức tạp (lợi nhuận, lãi suất, tỉ lệ)
+   - Context quá đơn giản hoặc chung chung
+
+8. ✅ THAY ĐỔI NỘI DUNG NHƯNG GIỮ NGUYÊN ĐỘ KHÓ:
+   - Tên nhân vật, con số, bối cảnh khác
+   - Nhưng khó độ và phép tính TƯƠNG ĐƯƠNG template
+
+9. ✅ ĐỊNH DẠNG JSON CHÍNH XÁC:
+   - Mỗi exercise gồm: name, duration, context, questions, scoring
+   - Mỗi question gồm: id, question, type, options (array), correctAnswers (array indices), explanation
+   - Chỉ dùng type "single" hoặc "multiple"
+   - **correctAnswers phải là array chỉ số với vị trí RANDOM**
+   - **IMPORTANT: Câu hỏi trong JSON KHÔNG được chứa "[BƯỚC X - ...]"**
+
+VÍ DỤ OUTPUT CHI TIẾT - KHÔNG HIỂN THỊ [BƯỚC X]:
+
+Bài tập 1 context: "Anh Nam mua 3 hộp bút chì, mỗi hộp có 2,5 tá bút chì. Hỏi anh Nam mua tất cả bao nhiêu tá bút chì?"
+
+Bài tập 1 câu hỏi - PHẢI DÙNG DỮ LIỆU CHÍNH XÁC TỪ CONTEXT:
+Q1: "Anh Nam mua bao nhiêu hộp bút chì?" → Đáp án: 3 hộp (dữ liệu từ context)
+Q2: "Mỗi hộp bút chì có bao nhiêu tá bút?" → Đáp án: 2,5 tá (dữ liệu từ context)
+Q3: "Anh Nam mua tổng cộng bao nhiêu tá bút chì? (3 × 2,5 = ?)" → Đáp án: 7,5 tá
+❌ SAI: Hỏi "Bạn Nam muốn mua mấy hộp bút màu?" (dữ liệu không có trong context)
+❌ SAI: Hỏi "Hộp bút giá bao nhiêu tiền?" (không có dữ liệu giá trong context)
+
+---
+
+Bài tập 2 context: "Ông Sơn làm vườn có 5 luống rau. Mỗi luống rau cần 2,5 kg phân bón để bón một lần. Ông Sơn dự định bón phân 3 lần trong mùa. Hỏi ông Sơn cần mua bao nhiêu kg phân bón để đủ cho cả vườn 3 lần bón?"
+
+Bài tập 2 câu hỏi - TUÂN THEO 4 BƯỚC POLYA, DÙNG DỮ LIỆU CHÍNH XÁC:
+Q1 (Hiểu bài): "Vườn của ông Sơn có bao nhiêu luống rau?" → Đáp án: 5 luống
+Q2 (Lập kế hoạch): "Để tính tổng phân bón cho 5 luống bón 1 lần, ta dùng phép tính nào?" → Đáp án: Nhân (5 × 2,5)
+Q3 (Thực hiện): "Tổng phân bón cho 5 luống bón 1 lần = 5 × 2,5 = ?" → Đáp án: 12,5 kg
+Q4 (Kiểm tra): "Bón 3 lần, tổng phân = 12,5 × 3 = ?" → Đáp án: 37,5 kg
+
+---
+
+JSON RETURN FORMAT (KHÔNG CÓ "[BƯỚC X]" TRONG QUESTION):
+[
+  {
+    "name": "Bài tập 1 - BT vận dụng, ứng dụng",
+    "duration": 120,
+    "context": "Anh Nam mua 3 hộp bút chì, mỗi hộp có 2,5 tá bút chì. Hỏi anh Nam mua tất cả bao nhiêu tá bút chì?",
+    "questions": [
+      {
+        "id": "q_0",
+        "question": "Anh Nam mua bao nhiêu hộp bút chì?",
+        "type": "single",
+        "options": ["2 hộp", "3 hộp", "5 hộp", "2,5 hộp"],
+        "correctAnswers": [1],
+        "explanation": "Theo dữ liệu: anh Nam mua 3 hộp bút chì"
+      },
+      {
+        "id": "q_1",
+        "question": "Mỗi hộp bút chì có bao nhiêu tá bút?",
+        "type": "single",
+        "options": ["2 tá", "2,5 tá", "3 tá", "5 tá"],
+        "correctAnswers": [1],
+        "explanation": "Theo dữ liệu: mỗi hộp có 2,5 tá bút chì"
+      }
+    ],
+    "scoring": {"correct": 12, "incorrect": 2, "bonus": 4, "bonusTimeThreshold": 60}
+  },
+  {
+    "name": "Bài tập 2 - BT GQVĐ",
+    "duration": 300,
+    "context": "Ông Sơn làm vườn có 5 luống rau. Mỗi luống rau cần 2,5 kg phân bón để bón một lần. Ông Sơn dự định bón phân 3 lần trong mùa. Hỏi ông Sơn cần mua bao nhiêu kg phân bón để đủ cho cả vườn 3 lần bón?",
+    "questions": [
+      {
+        "id": "q_0",
+        "question": "Vườn của ông Sơn có bao nhiêu luống rau?",
+        "type": "single",
+        "options": ["3 luống", "5 luống", "2,5 luống", "15 luống"],
+        "correctAnswers": [1],
+        "explanation": "Theo context: vườn có 5 luống rau"
+      },
+      {
+        "id": "q_1",
+        "question": "Mỗi luống rau cần bao nhiêu kg phân bón cho 1 lần bón?",
+        "type": "single",
+        "options": ["2 kg", "2,5 kg", "3 kg", "5 kg"],
+        "correctAnswers": [1],
+        "explanation": "Theo context: mỗi luống cần 2,5 kg phân bón/lần"
+      },
+      {
+        "id": "q_2",
+        "question": "Để tính tổng phân bón cho cả vườn bón 1 lần, ta nhân 5 × 2,5. Kết quả bằng bao nhiêu kg?",
+        "type": "single",
+        "options": ["7,5 kg", "10 kg", "12,5 kg", "15 kg"],
+        "correctAnswers": [2],
+        "explanation": "5 luống × 2,5 kg/luống = 12,5 kg"
+      },
+      {
+        "id": "q_3",
+        "question": "Ông Sơn bón 3 lần trong mùa. Vậy tổng phân bón cần mua là 12,5 × 3 = bao nhiêu kg?",
+        "type": "single",
+        "options": ["12,5 kg", "25 kg", "37,5 kg", "50 kg"],
+        "correctAnswers": [2],
+        "explanation": "12,5 kg × 3 = 37,5 kg. Kết quả hợp lý vì đủ phân cho 3 lần bón"
+      }
+    ],
+    "scoring": {"correct": 12, "incorrect": 2, "bonus": 4, "bonusTimeThreshold": 240}
+  }
+]
+
+LƯU Ý QUAN TRỌNG: 
+❌ KHÔNG ĐƯỢC: "[BƯỚC 1 - HIỂU BÀI]", "[BƯỚC 2 - LẬP KẾ HOẠCH]" trong question text
+✅ NÊN: Chỉ hỏi câu hỏi đơn thuần mà không cần ghi rõ đây là bước nào
+
+CHỈ RETURN JSON ARRAY, KHÔNG CÓ TEXT KHÁC.`;
+
+      const result = await geminiModelManager.generateContent(prompt);
+      const responseText = result.response.text().trim();
+
+      // Parse JSON
+      let jsonStr = responseText;
+      if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.replace(/```json[\r\n]?/gi, '').replace(/```[\r\n]?/g, '');
+      }
+      // Xóa ký tự điều khiển
+      // eslint-disable-next-line no-control-regex
+      jsonStr = jsonStr.replace(/[\u0000-\u0019]+/g, ' ');
+
+      const exercises = JSON.parse(jsonStr);
+      
+      if (!Array.isArray(exercises)) {
+        throw new Error('Response must be an array of exercises');
+      }
+
+      return exercises;
+    } catch (error) {
+      console.error('❌ Error generating exam from sample:', error);
+      throw new Error(`Không thể tạo đề từ AI: ${error.message}`);
     }
   }
 }

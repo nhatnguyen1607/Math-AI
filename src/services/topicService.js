@@ -20,14 +20,23 @@ class TopicService {
   // Tạo chủ đề mới
   async createTopic(topicData) {
     try {
+      // Parse sampleExam if it's a JSON string
+      let sampleExamData = topicData.sampleExam || '';
+      if (typeof sampleExamData === 'string' && sampleExamData.trim().startsWith('[')) {
+        try {
+          sampleExamData = JSON.parse(sampleExamData);
+        } catch (e) {
+        }
+      }
+
       const dataToSave = {
         name: topicData.name || '',
         description: topicData.description || '',
         gradeLevel: topicData.gradeLevel || '',
-        classId: topicData.classId || '', // Class ID
         type: topicData.type || 'startup', // 'startup' or 'worksheet'
         createdBy: topicData.createdBy || '',
         createdByName: topicData.createdByName || '',
+        sampleExam: sampleExamData, // Template Exam content (can be string or structured data)
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         problemCount: 0
@@ -102,9 +111,23 @@ class TopicService {
   // Cập nhật chủ đề
   async updateTopic(topicId, updateData) {
     try {
+      // Parse sampleExam if it's a JSON string
+      const dataToUpdate = { ...updateData };
+      if (updateData.sampleExam !== undefined) {
+        let sampleExamData = updateData.sampleExam || '';
+        if (typeof sampleExamData === 'string' && sampleExamData.trim().startsWith('[')) {
+          try {
+            dataToUpdate.sampleExam = JSON.parse(sampleExamData);
+          } catch (e) {
+            // If not valid JSON, keep as string
+            dataToUpdate.sampleExam = sampleExamData;
+          }
+        }
+      }
+
       const docRef = doc(db, this.collectionName, topicId);
       await updateDoc(docRef, {
-        ...updateData,
+        ...dataToUpdate,
         updatedAt: serverTimestamp()
       });
       return { id: topicId, ...updateData };

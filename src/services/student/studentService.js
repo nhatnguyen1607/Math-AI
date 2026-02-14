@@ -89,6 +89,29 @@ class StudentService {
   }
 
   /**
+   * Lấy đề thi theo topic AND classId (cho học sinh load đề thi của lớp)
+   */
+  async getExamsByTopicAndClass(topicId, classId) {
+    try {
+      const q = query(
+        collection(db, 'exams'),
+        where('topicId', '==', topicId),
+        where('classId', '==', classId),
+        where('status', 'in', ['open', 'started', 'closed'])
+      );
+
+      const snapshot = await getDocs(q);
+      const exams = snapshot.docs.map(doc => Exam.fromFirestore(doc.data(), doc.id));
+      
+      // Sort by createdAt on client side
+      return exams.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    } catch (error) {
+      console.error('Error getting exams by topic and class:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Lấy thông tin đề thi
    */
   async getExamById(examId) {
@@ -366,7 +389,7 @@ class StudentService {
   async getAvailableTopics(classId = null, type = null) {
     try {
       console.log('getAvailableTopics called with classId:', classId, 'type:', type);
-      // First, get all topics
+      // First, get all topics (không filter theo classId nữa vì topic không có classId)
       const q = query(collection(db, 'topics'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
       let topics = snapshot.docs.map(doc => ({
@@ -375,12 +398,6 @@ class StudentService {
       }));
       console.log('All topics from Firestore:', topics);
 
-      // Then filter them in memory for flexibility
-      // Only filter by classId if provided and valid
-      if (classId && classId.trim()) {
-        topics = topics.filter(t => t.classId === classId);
-        console.log('After filtering by classId:', classId, topics);
-      }
       // Only filter by type if provided and valid
       if (type && type.trim()) {
         topics = topics.filter(t => t.type === type);
@@ -390,7 +407,10 @@ class StudentService {
       console.log('Final topics to return:', topics);
       for (let topic of topics) {
         try {
-          const exams = await this.getExamsByTopic(topic.id);
+          // Load exams của topic này cho classId cụ thể
+          const exams = classId 
+            ? await this.getExamsByTopicAndClass(topic.id, classId)
+            : await this.getExamsByTopic(topic.id);
           topic.exams = exams;
           topic.examsCount = exams.length;
         } catch (e) {

@@ -7,6 +7,7 @@ import adminAuthService from './services/admin/adminAuthService';
 import LoginPage from './pages/LoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminPage from './pages/admin/AdminPage';
+import AdminTopicPage from './pages/admin/AdminTopicPage';
 import StudentDashboardPage from './pages/student/StudentDashboardPage';
 import StudentExamLobbyPage from './pages/student/StudentExamLobbyPage';
 import StudentExamPage from './pages/student/StudentExamPage';
@@ -104,6 +105,7 @@ function App() {
       <Routes>
         {/* Admin routes */}
         <Route path="/admin" element={!isAdminAuthenticated ? <AdminLoginPage onLoginSuccess={handleAdminLoginSuccess} /> : <AdminPage onLogout={handleAdminLogout} />} />
+        <Route path="/admin/topic-management" element={!isAdminAuthenticated ? <AdminLoginPage onLoginSuccess={handleAdminLoginSuccess} /> : <AdminTopicPage onLogout={handleAdminLogout} />} />
         
         {/* Login route */}
         <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={userData && userData.isFaculty() ? '/faculty' : '/student'} replace />} />

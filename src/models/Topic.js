@@ -10,11 +10,11 @@ export class Topic {
     this.description = data.description || '';
     this.icon = data.icon || '';
     this.color = data.color || '#8B5CF6';
-    this.classId = data.classId || ''; // Class that this topic belongs to
     this.type = data.type || 'startup'; // 'startup' or 'worksheet'
     this.createdBy = data.createdBy || '';
     this.createdByName = data.createdByName || '';
     this.gradeLevel = data.gradeLevel || '';
+    this.sampleExam = data.sampleExam || ''; // Template Exam content (Admin only)
     this.createdAt = data.createdAt || new Date();
     this.updatedAt = data.updatedAt || new Date();
     this.examCount = data.examCount || 0;
@@ -28,11 +28,11 @@ export class Topic {
       description: this.description,
       icon: this.icon,
       color: this.color,
-      classId: this.classId,
       type: this.type,
       createdBy: this.createdBy,
       createdByName: this.createdByName,
       gradeLevel: this.gradeLevel,
+      sampleExam: this.sampleExam,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       examCount: this.examCount,

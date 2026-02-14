@@ -104,20 +104,12 @@ class FacultyService {
    */
   async getTopics(classId = null) {
     try {
-      // 🔧 Nếu có classId, chỉ lấy topics của lớp đó
-      let q;
-      if (classId) {
-        q = query(
-          collection(db, 'topics'),
-          where('classId', '==', classId),
-          orderBy('createdAt', 'desc')
-        );
-      } else {
-        q = query(
-          collection(db, 'topics'),
-          orderBy('createdAt', 'desc')
-        );
-      }
+      // Load tất cả topics (bỏ qua classId filter)
+      // vì không phải tất cả topics đều có classId
+      const q = query(
+        collection(db, 'topics'),
+        orderBy('createdAt', 'desc')
+      );
 
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({

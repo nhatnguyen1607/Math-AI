@@ -4,6 +4,8 @@ import authService from '../../services/authService';
 import facultyService from '../../services/faculty/facultyService';
 import examSessionService from '../../services/examSessionService';
 import classService from '../../services/classService';
+import topicService from '../../services/topicService';
+import geminiService from '../../services/geminiService';
 import { parseExamFile } from '../../services/fileParserService';
 import ExamCard from '../../components/cards/ExamCard';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
@@ -81,8 +83,14 @@ const FacultyExamManagementPage = () => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
   
+  // AI exam generation states
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState(null);
+  const [aiExercises, setAiExercises] = useState(null);
+  
   const navigate = useNavigate();
   const authCheckedRef = useRef(false);
+  const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
     if (authCheckedRef.current) return;
@@ -158,13 +166,20 @@ const FacultyExamManagementPage = () => {
     const loadTopicsForClass = async () => {
       try {
         if (selectedClassId) {
+          // Load topics - if classId exists, filter by it; otherwise load all
           const topicsData = await facultyService.getTopics(selectedClassId);
           setTopics(topicsData || []);
-          // Reset selectedTopicId khi class thay đổi
-          setSelectedTopicId(null);
+          
+          // Chỉ reset selectedTopicId nếu không phải lần đầu load
+          // Lần đầu load, giữ topicId từ URL
+          if (!isInitialLoadRef.current) {
+            setSelectedTopicId(null);
+          } else {
+            isInitialLoadRef.current = false;
+          }
         }
       } catch (error) {
-        // Error loading topics
+        console.error('Error loading topics:', error);
       }
     };
 
@@ -253,6 +268,63 @@ const FacultyExamManagementPage = () => {
   const handleDiscardParsedExercises = () => {
     setParsedExercises(null);
     setParseError(null);
+  };
+
+  // Handle AI exam generation
+  const handleGenerateExamWithAI = async () => {
+    // Validate topic selection
+    if (!selectedTopicId) {
+      alert('Vui lòng chọn chủ đề trước');
+      return;
+    }
+
+    setAiGenerating(true);
+    setAiError(null);
+    setAiExercises(null);
+
+    try {
+      // Load topic data to get sampleExam
+      const topic = await topicService.getTopicById(selectedTopicId);
+      
+      if (!topic.sampleExam) {
+        throw new Error('Chủ đề này chưa có đề mẫu (sampleExam). Vui lòng bổ sung đề mẫu cho chủ đề trước.');
+      }
+
+      // Call AI to generate exam based on sampleExam
+      const generatedExercises = await geminiService.generateExamFromSampleExam(
+        topic.name,
+        topic.sampleExam
+      );
+
+      setAiExercises(generatedExercises);
+      setAiError(null);
+    } catch (error) {
+      console.error('❌ Error generating exam with AI:', error);
+      setAiError(`❌ Lỗi: ${error.message}`);
+      setAiExercises(null);
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  // Apply AI-generated exercises
+  const handleApplyAIExercises = () => {
+    if (!aiExercises) return;
+    
+    setExercises(aiExercises);
+    setAiExercises(null);
+    setCurrentExerciseIndex(0);
+    setCurrentQuestionIndex(0);
+    setFormData({
+      ...formData,
+      title: `[AI] ${formData.title || 'Đề thi (tạo bởi AI)'}` 
+    });
+  };
+
+  // Discard AI-generated exercises
+  const handleDiscardAIExercises = () => {
+    setAiExercises(null);
+    setAiError(null);
   };
 
   const handleCreateExam = async (e) => {
@@ -706,6 +778,91 @@ const FacultyExamManagementPage = () => {
                           className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors"
                         >
                           ✅ Áp dụng dữ liệu này
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* AI Exam Generation Section */}
+                <div className="mb-6 p-5 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-2xl">✨</span>
+                    <h5 className="font-semibold text-gray-800">Tạo đề tương đương với AI</h5>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Tạo đề thi tương đương dựa trên đề mẫu của chủ đề. AI sẽ tạo câu hỏi mới phù hợp với cùng mức độ khó.
+                  </p>
+                  
+                  <button
+                    type="button"
+                    onClick={handleGenerateExamWithAI}
+                    disabled={aiGenerating || !selectedTopicId}
+                    className="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>{aiGenerating ? '⏳ Đang tạo đề...' : '🤖 Tạo đề với AI'}</span>
+                  </button>
+
+                  {!selectedTopicId && (
+                    <p className="text-xs text-gray-500 mt-2">⚠️ Vui lòng chọn chủ đề trước</p>
+                  )}
+
+                  {/* AI Error message */}
+                  {aiError && (
+                    <div className="mt-3 p-3 bg-red-100 border-l-4 border-red-500 text-red-700 rounded">
+                      {aiError}
+                    </div>
+                  )}
+
+                  {/* AI Preview data */}
+                  {aiExercises && (
+                    <div className="mt-4 p-4 bg-white border-2 border-purple-200 rounded-lg">
+                      <h6 className="font-semibold text-purple-700 mb-3">✅ Đề được tạo bởi AI:</h6>
+                      
+                      {aiExercises.map((exercise, exIdx) => (
+                        <div key={exIdx} className="mb-3 p-3 bg-gray-50 rounded border border-gray-200">
+                          <div className="font-semibold text-gray-700 mb-2">{exercise.name}</div>
+                          <div className="text-sm text-gray-600 mb-2">
+                            📝 {exercise.questions?.length || 0} câu | ⏱️ {exercise.duration}s
+                          </div>
+                          
+                          {exercise.context && (
+                            <div className="text-xs text-gray-600 mb-2 italic p-2 bg-yellow-50 rounded border-l-2 border-yellow-300">
+                              <strong>Bối cảnh:</strong> {exercise.context.substring(0, 100)}...
+                            </div>
+                          )}
+                          
+                          {exercise.questions?.slice(0, 2).map((q, qIdx) => (
+                            <div key={qIdx} className="pl-4 py-2 border-l-2 border-purple-300 text-sm text-gray-700 mb-2">
+                              <div className="font-semibold truncate">{qIdx + 1}. {q.question}</div>
+                              <div className="text-xs text-gray-500 ml-2">
+                                {q.options?.length || 0} đáp án
+                              </div>
+                            </div>
+                          ))}
+                          
+                          {exercise.questions && exercise.questions.length > 2 && (
+                            <div className="text-xs text-gray-500 italic ml-4">
+                              ... và {exercise.questions.length - 2} câu hỏi khác
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      <div className="flex gap-2 mt-4 justify-end">
+                        <button
+                          type="button"
+                          onClick={handleDiscardAIExercises}
+                          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                        >
+                          ❌ Hủy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleApplyAIExercises}
+                          className="px-4 py-2 bg-purple-500 text-white rounded-lg font-semibold hover:bg-purple-600 transition-colors"
+                        >
+                          ✅ Áp dụng đề này
                         </button>
                       </div>
                     </div>

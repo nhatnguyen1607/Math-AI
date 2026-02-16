@@ -312,6 +312,12 @@ const FacultyExamManagementPage = () => {
 
   // Handle AI exam generation
   const handleGenerateExamWithAI = async () => {
+    // Validate title first
+    if (!formData.title.trim()) {
+      alert('Vui lòng nhập tiêu đề đề thi trước');
+      return;
+    }
+
     // Validate topic selection
     if (!selectedTopicId) {
       alert('Vui lòng chọn chủ đề trước');
@@ -323,17 +329,18 @@ const FacultyExamManagementPage = () => {
     setAiExercises(null);
 
     try {
-      // Load topic data to get sampleExam
+      // Load topic data to get sampleExams
       const topic = await topicService.getTopicById(selectedTopicId);
       
-      if (!topic.sampleExam) {
-        throw new Error('Chủ đề này chưa có đề mẫu (sampleExam). Vui lòng bổ sung đề mẫu cho chủ đề trước.');
+      if (!topic.sampleExams || topic.sampleExams.length === 0) {
+        throw new Error('Chủ đề này chưa có đề mẫu. Vui lòng bổ sung đề mẫu cho chủ đề trước.');
       }
 
-      // Call AI to generate exam based on sampleExam
+      // Call AI to generate exam based on sampleExams - use form title as lesson name
       const generatedExercises = await geminiService.generateExamFromSampleExam(
         topic.name,
-        topic.sampleExam
+        formData.title, // Pass the exam title as lesson name
+        topic.sampleExams
       );
 
       setAiExercises(generatedExercises);
@@ -573,25 +580,31 @@ const FacultyExamManagementPage = () => {
   // ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <FacultyHeader user={user} onLogout={() => navigate('/login')} />
-      
-      {/* Back Button */}
-      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 px-8 lg:px-12 py-3 shadow-soft-md">
-        <button
-          onClick={() => navigate('/faculty/class-management')}
-          className="px-4 lg:px-6 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold rounded-lg transition-all duration-300 flex items-center gap-2"
-        >
-          ← Quay lại
-        </button>
+
+      {/* Header Section with Background */}
+      <div className="bg-gradient-to-r from-purple-100 to-blue-100 border-b-2 border-purple-200 px-8 lg:px-12 py-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-gray-800">📝 Quản lí Đề Thi</h1>
+            <button
+              onClick={() => navigate('/faculty/learning-pathway/exam')}
+              className="px-4 py-2 hover:bg-purple-200 hover:text-purple-700 rounded-lg transition-all duration-300 text-gray-700 flex items-center gap-2 font-semibold"
+            >
+              <span className="text-lg">←</span> Quay lại
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-5 py-8">
-        {/* Class & Topic Selection */}
+      <div className="max-w-7xl mx-auto px-8 lg:px-12 py-8">
+
+       {/* Class & Topic Selection */}
         {!selectedClassId || !selectedTopicId ? (
-          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-3xl shadow-soft-lg p-6 lg:p-8 mb-8">
-            <h3 className="text-3xl font-bold mb-6 flex items-center gap-3">
+          <div className="bg-blue-900/40 rounded-xl backdrop-blur-md border border-blue-300/30 text-blue-50 p-6 lg:p-8 mb-8 shadow-lg">
+            <h3 className="text-2xl font-bold mb-6 flex items-center gap-3 text-white">
               <span>🎯</span>
               Chọn Lớp Học và Chủ Đề
             </h3>
@@ -599,7 +612,7 @@ const FacultyExamManagementPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Class Selection */}
               <div>
-                <label className="block text-lg font-semibold text-white mb-3">📚 Lớp Học</label>
+                <label className="block text-lg font-semibold text-blue-100 mb-3">📚 Lớp Học</label>
                 <select
                   value={selectedClassId || ''}
                   onChange={(e) => {
@@ -609,7 +622,7 @@ const FacultyExamManagementPage = () => {
                     sessionStorage.removeItem('selectedTopicId');
                     setSearchParams({ classId: classId, topicId: '' });
                   }}
-                  className="w-full px-4 py-3 bg-white text-gray-800 border-2 border-blue-300 rounded-lg font-semibold focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full px-4 py-3 bg-white text-blue-900 border-2 border-blue-300 rounded-lg font-semibold focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-sm"
                 >
                   <option value="">-- Chọn lớp học --</option>
                   {classes.map(cls => (
@@ -619,13 +632,13 @@ const FacultyExamManagementPage = () => {
                   ))}
                 </select>
                 {classes.length === 0 && (
-                  <p className="text-yellow-200 mt-2">⚠️ Chưa có lớp học nào</p>
+                  <p className="text-amber-300 mt-2 text-sm font-medium">⚠️ Chưa có lớp học nào</p>
                 )}
               </div>
 
               {/* Topic Selection */}
               <div>
-                <label className="block text-lg font-semibold text-white mb-3">📖 Chủ Đề</label>
+                <label className="block text-lg font-semibold text-blue-100 mb-3">📖 Chủ Đề</label>
                 <select
                   value={selectedTopicId || ''}
                   onChange={(e) => {
@@ -635,7 +648,7 @@ const FacultyExamManagementPage = () => {
                     setSearchParams({ classId: selectedClassId, topicId: topicId });
                   }}
                   disabled={!selectedClassId}
-                  className="w-full px-4 py-3 bg-white text-gray-800 border-2 border-purple-300 rounded-lg font-semibold focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 bg-white text-blue-900 border-2 border-blue-300 rounded-lg font-semibold focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all disabled:opacity-60 disabled:bg-gray-100 disabled:cursor-not-allowed shadow-sm"
                 >
                   <option value="">-- Chọn chủ đề --</option>
                   {topics.map(topic => (
@@ -645,30 +658,32 @@ const FacultyExamManagementPage = () => {
                   ))}
                 </select>
                 {!selectedClassId && (
-                  <p className="text-yellow-200 mt-2">⚠️ Vui lòng chọn lớp học trước</p>
+                  <p className="text-amber-300 mt-2 text-sm font-medium">⚠️ Vui lòng chọn lớp học trước</p>
                 )}
               </div>
             </div>
 
             {selectedClassId && selectedTopicId && (
-              <div className="mt-6 p-4 bg-white bg-opacity-20 border-2 border-white rounded-lg">
-                <p className="text-white font-semibold">
-                  ✅ Đã chọn: <span className="font-bold">{classes.find(c => c.id === selectedClassId)?.name}</span> - <span className="font-bold">{topics.find(t => t.id === selectedTopicId)?.name}</span>
+              <div className="mt-6 p-4 bg-blue-800/50 border-2 border-blue-400/50 rounded-lg shadow-inner">
+                <p className="text-blue-50 font-medium">
+                  ✅ Đã chọn: <span className="font-bold text-white">{classes.find(c => c.id === selectedClassId)?.name}</span> - <span className="font-bold text-white">{topics.find(t => t.id === selectedTopicId)?.name}</span>
                 </p>
               </div>
             )}
           </div>
         ) : (
-          <div className="mb-8 p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl">
-            <p className="text-purple-700 font-semibold">
-              📚 {selectedClassName} • 📖 {selectedTopicName}
+          <div className="mb-8 p-4 bg-blue-900/40 backdrop-blur-md border-l-4 border-blue-400 text-blue-50 rounded-r-lg shadow-md transition-all hover:bg-blue-900/50">
+            <p className="font-semibold flex items-center gap-2">
+              <span className="text-xl">📚</span> {selectedClassName} 
+              <span className="text-blue-300 mx-2">•</span> 
+              <span className="text-xl">📖</span> {selectedTopicName}
             </p>
           </div>
         )}
 
         {/* Create/Edit Form */}
         {showForm && (
-          <div className="bg-white rounded-3xl shadow-soft-lg p-6 lg:p-8 mb-8 border-2 border-indigo-100">
+          <div className="bg-white rounded-xl shadow-lg p-6 lg:p-8 mb-8 border border-purple-200">
             <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
               <span>{editingExam ? '📝' : '✨'}</span>
               {editingExam ? `Sửa đề thi: ${editingExam.title}` : 'Tạo đề thi mới (7 phút)'}
@@ -678,9 +693,9 @@ const FacultyExamManagementPage = () => {
               <div className="mb-8">
                 <h4 className="text-lg font-semibold text-gray-700 mb-4">📋 Thông tin cơ bản</h4>
                 
-                <div className="mb-5 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                  <p className="text-blue-800 font-semibold mb-2">📚 Lớp học: {selectedClassName}</p>
-                  <p className="text-blue-800 font-semibold">📖 Chủ đề: {selectedTopicName}</p>
+                <div className="mb-5 p-4 bg-purple-50 border-l-4 border-purple-500 rounded-lg">
+                  <p className="text-purple-800 font-semibold mb-2">📚 Lớp học: {selectedClassName}</p>
+                  <p className="text-purple-800 font-semibold">📖 Chủ đề: {selectedTopicName}</p>
                 </div>
                 
                 <div className="mb-5">
@@ -737,7 +752,7 @@ const FacultyExamManagementPage = () => {
                 </div>
 
                 {/* Upload File Section */}
-                <div className="mb-6 p-5 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-lg">
+                <div className="mb-6 p-5 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-lg">
                   <div className="flex items-center gap-3 mb-3">
                     <span className="text-2xl">📄</span>
                     <h5 className="font-semibold text-gray-800">Tải nhanh từ File Word (.docx)</h5>
@@ -836,11 +851,15 @@ const FacultyExamManagementPage = () => {
                   <button
                     type="button"
                     onClick={handleGenerateExamWithAI}
-                    disabled={aiGenerating || !selectedTopicId}
+                    disabled={aiGenerating || !selectedTopicId || !formData.title.trim()}
                     className="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                   >
                     <span>{aiGenerating ? '⏳ Đang tạo đề...' : '🤖 Tạo đề với AI'}</span>
                   </button>
+
+                  {!formData.title.trim() && (
+                    <p className="text-xs text-gray-500 mt-2">⚠️ Vui lòng nhập tiêu đề đề thi trước</p>
+                  )}
 
                   {!selectedTopicId && (
                     <p className="text-xs text-gray-500 mt-2">⚠️ Vui lòng chọn chủ đề trước</p>

@@ -277,6 +277,57 @@ export const getExamById = async (examId) => {
   }
 };
 
+/**
+ * Lấy danh sách đề thi theo topicId và classId (optional)
+ * @param {string} topicId - ID của chủ đề
+ * @param {string} classId - ID của lớp học (optional, để lọc exams của lớp)
+ * @returns {Promise<array>} - Danh sách đề thi
+ */
+export const getExamsByTopic = async (topicId, classId = null) => {
+  try {
+    let q;
+    
+    // If topicId is null, get all exams (useful for counting exams per topic)
+    if (!topicId) {
+      if (classId) {
+        q = query(
+          collection(db, 'exams'),
+          where('classId', '==', classId)
+        );
+      } else {
+        q = query(collection(db, 'exams'));
+      }
+    } else if (classId) {
+      // Query exams by topicId AND classId
+      q = query(
+        collection(db, 'exams'),
+        where('topicId', '==', topicId),
+        where('classId', '==', classId)
+      );
+    } else {
+      // Query exams by topicId only
+      q = query(
+        collection(db, 'exams'),
+        where('topicId', '==', topicId)
+      );
+    }
+    
+    const querySnapshot = await getDocs(q);
+    const exams = [];
+    
+    querySnapshot.forEach((docSnap) => {
+      exams.push({
+        id: docSnap.id,
+        ...docSnap.data()
+      });
+    });
+    
+    return exams;
+  } catch (error) {
+    throw error;
+  }
+};
+
 const examService = {
   createExamSession,
   subscribeToExamSession,
@@ -290,7 +341,8 @@ const examService = {
   getActiveSessions,
   calculateTimeRemaining,
   formatTimeRemaining,
-  getExamById
+  getExamById,
+  getExamsByTopic
 };
 
 export default examService;

@@ -44,82 +44,90 @@ const FacultyPage = ({ user, userData, onSignOut }) => {
   // ];
 
   return (
-    <div className="faculty-page min-h-screen bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600">
+    <div className="faculty-page min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <FacultyHeader user={user} onLogout={onSignOut} />
-      
-  
-      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 px-8 lg:px-12 py-3 shadow-soft-md">
-        <button
-          onClick={handleBackToClasses}
-          className="px-4 lg:px-6 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold rounded-lg transition-all duration-300 flex items-center gap-2"
-        >
-          ← Quay lại
-        </button>
-      </div>
-      
-      <div className="px-12 py-8 max-w-6xl mx-auto w-full">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Chào mừng, {user?.displayName || 'Giáo viên'}! 👋</h1>
-          <p className="text-white text-opacity-80">Lớp: <span className="font-bold text-lg">{selectedClass.name}</span></p>
-        </div>
 
-        {/* Stats Section */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white bg-opacity-95 rounded-lg p-4 text-center shadow-lg">
-            <div className="text-3xl font-bold text-purple-600">{selectedClass.students?.length || 0}</div>
-            <div className="text-gray-600 text-sm mt-2">Học sinh</div>
-          </div>
-          <div className="bg-white bg-opacity-95 rounded-lg p-4 text-center shadow-lg">
-            <div className="text-3xl font-bold text-blue-600">0</div>
-            <div className="text-gray-600 text-sm mt-2">Chủ đề</div>
-          </div>
-          <div className="bg-white bg-opacity-95 rounded-lg p-4 text-center shadow-lg">
-            <div className="text-3xl font-bold text-green-600">0</div>
-            <div className="text-gray-600 text-sm mt-2">Đề thi</div>
-          </div>
-          <div className="bg-white bg-opacity-95 rounded-lg p-4 text-center shadow-lg">
-            <div className="text-3xl font-bold text-orange-600">0</div>
-            <div className="text-gray-600 text-sm mt-2">Phiên học</div>
-          </div>
-        </div>
-
-        {/* Main Actions */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white mb-4">Quản lí lớp học</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="option-card startup-card bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer p-8" onClick={() => handleNavigate('/faculty/topic-management', { type: 'startup' })}>
-              <div className="option-icon text-5xl mb-4">🚀</div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Trò chơi</h2>
-              <p className="text-gray-600 mb-6">Tạo chủ đề mới và đề thi cho lớp học</p>
-              <button className="option-btn btn-startup w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 border-none cursor-pointer">Bắt đầu</button>
+      {/* Welcome Section */}
+      <div className="px-8 lg:px-12 py-8">
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-800 mb-2">Chào mừng, {user?.displayName || 'Giáo viên'}! 👋</h1>
+              <p className="text-gray-700 text-lg">Lớp: <span className="font-bold text-xl bg-purple-100 text-purple-700 px-3 py-1 rounded-lg">{selectedClass.name}</span></p>
             </div>
+            <button
+              onClick={handleBackToClasses}
+              className="px-4 py-2 hover:bg-purple-100 hover:text-purple-700 rounded-lg transition-all duration-300 text-gray-700 flex items-center gap-2 font-semibold"
+            >
+              <span className="text-lg">←</span> Quay lại
+            </button>
+          </div>
 
-            <div className="option-card worksheet-card bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer p-8" onClick={() => handleNavigate('/faculty/exam-management', { type: 'worksheet' })}>
-              <div className="option-icon text-5xl mb-4">📋</div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Phiếu bài tập</h2>
-              <p className="text-gray-600 mb-6">Quản lý đề thi, kích hoạt phiên học, xem kết quả</p>
-              <button className="option-btn btn-worksheet w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 border-none cursor-pointer">Quản lý</button>
+          {/* Stats Section */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-purple-500">
+              <div className="text-3xl font-bold text-purple-600 mb-2">{selectedClass.students?.length || 0}</div>
+              <div className="text-gray-700 font-semibold">Học sinh</div>
+              <p className="text-gray-500 text-sm mt-1">trong lớp này</p>
+            </div>
+            <div className="bg-white bg-opacity-95 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="text-3xl font-bold text-blue-600 mb-2">0</div>
+              <div className="text-gray-700 font-semibold">Chủ đề</div>
+              <p className="text-gray-500 text-sm mt-1">được tạo</p>
+            </div>
+            <div className="bg-white bg-opacity-95 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="text-3xl font-bold text-green-600 mb-2">0</div>
+              <div className="text-gray-700 font-semibold">Đề thi</div>
+              <p className="text-gray-500 text-sm mt-1">đã tạo</p>
+            </div>
+            <div className="bg-white bg-opacity-95 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="text-3xl font-bold text-orange-600 mb-2">0</div>
+              <div className="text-gray-700 font-semibold">Phiên học</div>
+              <p className="text-gray-500 text-sm mt-1">đang hoạt động</p>
             </div>
           </div>
-        </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white bg-opacity-95 rounded-xl p-6 shadow-lg">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Hành động nhanh</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="p-4 bg-gradient-to-r from-purple-100 to-purple-50 hover:from-purple-200 hover:to-purple-100 rounded-lg transition-all duration-300 text-center font-semibold text-purple-700" onClick={() => handleNavigate('/faculty/topic-management')}>
-              ➕ Thêm chủ đề
-            </button>
-            <button className="p-4 bg-gradient-to-r from-blue-100 to-blue-50 hover:from-blue-200 hover:to-blue-100 rounded-lg transition-all duration-300 text-center font-semibold text-blue-700" onClick={() => handleNavigate('/faculty/exam-management')}>
-              ➕ Tạo đề thi
-            </button>
-            <button className="p-4 bg-gradient-to-r from-green-100 to-green-50 hover:from-green-200 hover:to-green-100 rounded-lg transition-all duration-300 text-center font-semibold text-green-700">
-              👥 Danh sách HS
-            </button>
-            <button className="p-4 bg-gradient-to-r from-orange-100 to-orange-50 hover:from-orange-200 hover:to-orange-100 rounded-lg transition-all duration-300 text-center font-semibold text-orange-700">
-              📊 Báo cáo
-            </button>
+          {/* Main Actions */}
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-gray-800 mb-6">Quản lí lớp học</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer p-8" onClick={() => handleNavigate('/faculty/learning-pathway/game', { type: 'startup' })}>
+                <div className="text-6xl mb-4">🚀</div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">Trò chơi</h3>
+                <p className="text-gray-600 mb-6">Tạo trò chơi giáo dục để giúp học sinh học tập theo cách vui vẻ và tương tác</p>
+                <button className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                  Bắt đầu →
+                </button>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer p-8" onClick={() => handleNavigate('/faculty/learning-pathway/exam', { type: 'worksheet' })}>
+                <div className="text-6xl mb-4">📋</div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">Phiếu bài tập</h3>
+                <p className="text-gray-600 mb-6">Tạo và quản lý đề thi, kích hoạt phiên học trực tiếp, và xem kết quả chi tiết</p>
+                <button className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                  Quản lý →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white bg-opacity-95 rounded-2xl p-8 shadow-xl">
+            <h3 className="text-2xl font-bold text-gray-800 mb-6">🚀 Hành động nhanh</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <button className="p-4 bg-gradient-to-br from-purple-100 to-purple-50 hover:from-purple-200 hover:to-purple-100 rounded-xl transition-all duration-300 text-center font-semibold text-purple-700 hover:shadow-lg" onClick={() => handleNavigate('/faculty/learning-pathway/exam')}>
+                ➕ Thêm chủ đề
+              </button>
+              <button className="p-4 bg-gradient-to-br from-blue-100 to-blue-50 hover:from-blue-200 hover:to-blue-100 rounded-xl transition-all duration-300 text-center font-semibold text-blue-700 hover:shadow-lg" onClick={() => handleNavigate('/faculty/learning-pathway/exam')}>
+                ➕ Tạo đề thi
+              </button>
+              <button className="p-4 bg-gradient-to-br from-green-100 to-green-50 hover:from-green-200 hover:to-green-100 rounded-xl transition-all duration-300 text-center font-semibold text-green-700 hover:shadow-lg">
+                👥 Danh sách HS
+              </button>
+              <button className="p-4 bg-gradient-to-br from-orange-100 to-orange-50 hover:from-orange-200 hover:to-orange-100 rounded-xl transition-all duration-300 text-center font-semibold text-orange-700 hover:shadow-lg">
+                📊 Báo cáo
+              </button>
+            </div>
           </div>
         </div>
       </div>

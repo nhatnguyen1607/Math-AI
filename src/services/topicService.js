@@ -20,26 +20,19 @@ class TopicService {
   // Tạo chủ đề mới
   async createTopic(topicData) {
     try {
-      // Parse sampleExam if it's a JSON string
-      let sampleExamData = topicData.sampleExam || '';
-      if (typeof sampleExamData === 'string' && sampleExamData.trim().startsWith('[')) {
-        try {
-          sampleExamData = JSON.parse(sampleExamData);
-        } catch (e) {
-        }
-      }
-
       const dataToSave = {
         name: topicData.name || '',
         description: topicData.description || '',
         gradeLevel: topicData.gradeLevel || '',
-        type: topicData.type || 'startup', // 'startup' or 'worksheet'
+        type: topicData.type || 'startup',
         createdBy: topicData.createdBy || '',
         createdByName: topicData.createdByName || '',
-        sampleExam: sampleExamData, // Template Exam content (can be string or structured data)
+        sampleExams: topicData.sampleExams || [], // Array of sample exams
+        learningPathway: topicData.learningPathway || 'algebra',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        problemCount: 0
+        examCount: 0,
+        isActive: true
       };
       const docRef = await addDoc(collection(db, this.collectionName), dataToSave);
       return { id: docRef.id, ...topicData };
@@ -58,7 +51,12 @@ class TopicService {
       const querySnapshot = await getDocs(q);
       const topics = [];
       querySnapshot.forEach((doc) => {
-        topics.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        // Backward compatibility: convert old sampleExam to sampleExams
+        if (data.sampleExam && !data.sampleExams) {
+          data.sampleExams = [];
+        }
+        topics.push({ id: doc.id, ...data });
       });
       return topics;
     } catch (error) {
@@ -69,7 +67,6 @@ class TopicService {
   // Lấy chủ đề theo classId
   async getTopicsByClass(classId) {
     try {
-      // Lấy tất cả topics rồi filter phía client để tránh vấn đề composite index
       const q = query(
         collection(db, this.collectionName),
         orderBy('createdAt', 'desc')
@@ -78,7 +75,6 @@ class TopicService {
       const topics = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        // Filter theo classId phía client
         if (data.classId === classId) {
           topics.push({ id: doc.id, ...data });
         }
@@ -95,7 +91,12 @@ class TopicService {
       const docRef = doc(db, this.collectionName, topicId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() };
+        const data = docSnap.data();
+        // Backward compatibility
+        if (data.sampleExam && !data.sampleExams) {
+          data.sampleExams = [];
+        }
+        return { id: docSnap.id, ...data };
       } else {
         throw new Error("Topic not found");
       }
@@ -107,20 +108,8 @@ class TopicService {
   // Cập nhật chủ đề
   async updateTopic(topicId, updateData) {
     try {
-      // Parse sampleExam if it's a JSON string
       const dataToUpdate = { ...updateData };
-      if (updateData.sampleExam !== undefined) {
-        let sampleExamData = updateData.sampleExam || '';
-        if (typeof sampleExamData === 'string' && sampleExamData.trim().startsWith('[')) {
-          try {
-            dataToUpdate.sampleExam = JSON.parse(sampleExamData);
-          } catch (e) {
-            // If not valid JSON, keep as string
-            dataToUpdate.sampleExam = sampleExamData;
-          }
-        }
-      }
-
+      
       const docRef = doc(db, this.collectionName, topicId);
       await updateDoc(docRef, {
         ...dataToUpdate,
@@ -143,12 +132,89 @@ class TopicService {
     }
   }
 
+  // ===== Sample Exam Management =====
+  
+  // Thêm đề mẫu vào chủ đề
+  async addSampleExam(topicId, sampleExam) {
+    try {
+      const topic = await this.getTopicById(topicId);
+      const sampleExams = topic.sampleExams || [];
+      const newSampleExam = {
+        id: `sample_${Date.now()}`,
+        lessonName: sampleExam.lessonName || '',
+        content: sampleExam.content || {},
+        format: sampleExam.format || 'standard',
+        uploadedAt: new Date()
+      };
+      
+      sampleExams.push(newSampleExam);
+      
+      const docRef = doc(db, this.collectionName, topicId);
+      await updateDoc(docRef, {
+        sampleExams: sampleExams,
+        updatedAt: serverTimestamp()
+      });
+      
+      return newSampleExam;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Xóa đề mẫu khỏi chủ đề
+  async removeSampleExam(topicId, sampleExamId) {
+    try {
+      const topic = await this.getTopicById(topicId);
+      const sampleExams = (topic.sampleExams || []).filter(s => s.id !== sampleExamId);
+      
+      const docRef = doc(db, this.collectionName, topicId);
+      await updateDoc(docRef, {
+        sampleExams: sampleExams,
+        updatedAt: serverTimestamp()
+      });
+      
+      return true;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Cập nhật đề mẫu
+  async updateSampleExam(topicId, sampleExamId, updateData) {
+    try {
+      const topic = await this.getTopicById(topicId);
+      const sampleExams = (topic.sampleExams || []).map(s => 
+        s.id === sampleExamId ? { ...s, ...updateData } : s
+      );
+      
+      const docRef = doc(db, this.collectionName, topicId);
+      await updateDoc(docRef, {
+        sampleExams: sampleExams,
+        updatedAt: serverTimestamp()
+      });
+      
+      return true;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Lấy tất cả đề mẫu của một chủ đề
+  async getSampleExams(topicId) {
+    try {
+      const topic = await this.getTopicById(topicId);
+      return topic.sampleExams || [];
+    } catch (error) {
+      throw error;
+    }
+  }
+
   // Tăng số lượng bài toán trong chủ đề
-  async incrementProblemCount(topicId) {
+  async incrementExamCount(topicId) {
     try {
       const topic = await this.getTopicById(topicId);
       await this.updateTopic(topicId, {
-        problemCount: (topic.problemCount || 0) + 1
+        examCount: (topic.examCount || 0) + 1
       });
     } catch (error) {
       throw error;
@@ -156,11 +222,11 @@ class TopicService {
   }
 
   // Giảm số lượng bài toán trong chủ đề
-  async decrementProblemCount(topicId) {
+  async decrementExamCount(topicId) {
     try {
       const topic = await this.getTopicById(topicId);
       await this.updateTopic(topicId, {
-        problemCount: Math.max((topic.problemCount || 0) - 1, 0)
+        examCount: Math.max((topic.examCount || 0) - 1, 0)
       });
     } catch (error) {
       throw error;

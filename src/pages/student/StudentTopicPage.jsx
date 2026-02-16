@@ -1,9 +1,13 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import StudentHeader from '../../components/student/StudentHeader';
+import topicService from '../../services/topicService';
+import examService from '../../services/examService';
+import resultService from '../../services/resultService';
 
-const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selectedTopic, setSelectedTopic, topicId }) => {
+const StudentTopicPage = ({ user, onSignOut, selectedClass, topics: propTopics, exams: propExams, selectedTopic: propSelectedTopic, setSelectedTopic: setPropsSelectedTopic, topicId }) => {
   const navigate = useNavigate();
+  const { learningPathway, mode } = useParams();
 
   // Island mascots and colors for adventure map
   const islandThemes = [
@@ -15,24 +19,112 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
     { emoji: '🌋', color: 'from-red-400 to-orange-400', name: 'Volcano' },
   ];
 
+  // State for pathway-based flow
+  const [topics, setTopics] = useState([]);
+  const [exams, setExams] = useState([]);
+  const [selectedTopic, setSelectedTopic] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const classId = sessionStorage.getItem('selectedClassId') || null;
+
+  // Determine if using pathway-based flow (new) or class-based flow (old)
+  const isPathwayMode = !!learningPathway;
+
+  const loadTopicsForPathway = useCallback(async () => {
+    try {
+      setLoading(true);
+      const allTopics = await topicService.getAllTopics();
+      const filteredTopics = allTopics.filter(t => t.learningPathway === learningPathway);
+      setTopics(filteredTopics);
+      
+      // Load exams for all topics to get exam counts
+      const allExams = await examService.getExamsByTopic(null, classId) || [];
+      setExams(allExams);
+      setError(null);
+    } catch (err) {
+      setError('Lỗi khi tải danh sách chủ đề');
+    } finally {
+      setLoading(false);
+    }
+  }, [learningPathway, classId]);
+
+  // Load topics when pathway is selected
+  useEffect(() => {
+    if (isPathwayMode) {
+      loadTopicsForPathway();
+    }
+  }, [isPathwayMode, loadTopicsForPathway]);
+
+  const loadExamsForTopic = useCallback(async (topicId) => {
+    try {
+      setLoading(true);
+      const topicExams = await examService.getExamsByTopic(topicId, classId);
+      setExams(topicExams || []);
+      setError(null);
+    } catch (err) {
+      setError('Lỗi khi tải danh sách đề thi');
+    } finally {
+      setLoading(false);
+    }
+  }, [classId]);
+
   const handleSelectTopic = (topic) => {
-    setSelectedTopic(topic);
-    navigate(`/student/${selectedClass.id}/topic-management/${topic.id}`);
+    if (isPathwayMode) {
+      setSelectedTopic(topic);
+      loadExamsForTopic(topic.id);
+    } else {
+      // Old workflow
+      setPropsSelectedTopic?.(topic);
+      navigate(`/student/${selectedClass.id}/topic-management/${topic.id}`);
+    }
   };
 
-  const handleJoinExam = (exam) => {
-    
-    if (exam.isLocked === true) {
-      // Locked exam - navigate to result page
-      navigate(`/student/exam-result/${exam.id}`, { state: { fromExam: false, examId: exam.id } });
-    } else {
-      // Unlocked exam - navigate to exam lobby
-      window.location.href = `/student/exam-lobby/${exam.id}`;
+  const handleJoinExam = async (exam) => {
+    try {
+      if (exam?.isLocked === true) {
+        navigate(`/student/exam-result/${exam.id}`, { state: { fromExam: false, examId: exam.id } });
+        return;
+      }
+
+      if (user?.uid && !isPathwayMode) {
+        const progress = await resultService.getExamProgress(user.uid, exam.id);
+        if (progress && progress.isFirst === false) {
+          navigate(`/student/exam-result/${progress.sessionId || exam.id}`, {
+            state: { fromExam: false, examId: exam.id }
+          });
+          return;
+        }
+      }
+
+      if (mode === 'exam') {
+        window.location.href = `/student/exam-lobby/${exam.id}`;
+      } else if (mode === 'practice') {
+        navigate(`/student/practice/${exam.id}`);
+      } else {
+        window.location.href = `/student/exam-lobby/${exam.id}`;
+      }
+    } catch (error) {
+      if (mode === 'exam') {
+        window.location.href = `/student/exam-lobby/${exam.id}`;
+      } else if (mode === 'practice') {
+        navigate(`/student/practice/${exam.id}`);
+      } else {
+        window.location.href = `/student/exam-lobby/${exam.id}`;
+      }
     }
   };
 
   const handleBack = () => {
-    navigate(-1);
+    if (isPathwayMode) {
+      if (selectedTopic) {
+        setSelectedTopic(null);
+        setExams([]);
+      } else {
+        navigate(-1);
+      }
+    } else {
+      navigate(-1);
+    }
   };
 
   // Render star badges based on completion
@@ -48,8 +140,13 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
     );
   };
 
+  // Use pathway-loaded topics if available, otherwise use prop topics
+  const displayTopics = isPathwayMode ? topics : (propTopics || []);
+  const displayExams = isPathwayMode ? exams : (propExams || []);
+  const displaySelectedTopic = isPathwayMode ? selectedTopic : propSelectedTopic;
+
   // Danh sách chủ đề - Adventure Map View
-  if (!topicId) {
+  if (!topicId && !displaySelectedTopic) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
@@ -66,7 +163,16 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
               </button>
             </div>
 
-            {topics.length === 0 ? (
+            {isPathwayMode && loading ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin text-4xl">⏳</div>
+                <p className="mt-4 text-gray-600">Đang tải chủ đề...</p>
+              </div>
+            ) : isPathwayMode && error ? (
+              <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                {error}
+              </div>
+            ) : displayTopics.length === 0 ? (
               <div className="bg-white rounded-max shadow-lg p-16 text-center game-card">
                 <p className="text-6xl mb-4">🗺️</p>
                 <p className="text-gray-600 text-xl font-quicksand">
@@ -75,18 +181,22 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
               </div>
             ) : (
               <div>
-                <h2 className="text-4xl font-bold text-gray-800 mb-3 font-quicksand">
-                  🗺️ Bản đồ hành trình học tập
-                </h2>
-                <p className="text-lg text-gray-600 mb-10 font-quicksand">
-                  Khám phá các hòn đảo bí ẩn và trở thành Bậc thầy toán học!
-                </p>
+                {isPathwayMode && (
+                  <>
+                    <h2 className="text-4xl font-bold text-gray-800 mb-3 font-quicksand">
+                      🗺️ Bản đồ hành trình học tập
+                    </h2>
+                    <p className="text-lg text-gray-600 mb-10 font-quicksand">
+                      Khám phá các hòn đảo bí ẩn và trở thành Bậc thầy toán học!
+                    </p>
+                  </>
+                )}
 
                 {/* Adventure Map - Grid Layout */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 auto-rows-fr">
-                  {topics.map((topic, index) => {
+                  {displayTopics.map((topic, index) => {
                     const theme = islandThemes[index % islandThemes.length];
-                    const examCount = exams.filter(exam => exam.topicId === topic.id).length;
+                    const examCount = displayExams.filter(exam => exam.topicId === topic.id).length;
                     
                     return (
                       <div
@@ -113,7 +223,7 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
 
                         {/* Stars Achievement */}
                         <div className="flex justify-center mb-4">
-                          {renderStarBadges(index, topics.length)}
+                          {renderStarBadges(index, displayTopics.length)}
                         </div>
 
                         {/* Exam Count & Explore */}
@@ -138,7 +248,7 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
   }
 
   // Chi tiết chủ đề và danh sách đề thi của topic
-  if (topicId && selectedTopic) {
+  if ((topicId || displaySelectedTopic) && displaySelectedTopic) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
@@ -154,32 +264,42 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
                 ← Quay lại
               </button>
               <h2 className="text-4xl font-bold text-gray-800 font-quicksand">
-                {selectedTopic.name}
+                {displaySelectedTopic.name}
               </h2>
             </div>
 
             {/* Description Card */}
-            {selectedTopic.description && (
+            {displaySelectedTopic.description && (
               <div className="bg-gradient-to-r from-blue-400 to-purple-400 rounded-max p-6 text-white mb-10 shadow-lg game-card font-quicksand">
-                <p className="text-lg drop-shadow-md">{selectedTopic.description}</p>
+                <p className="text-lg drop-shadow-md">{displaySelectedTopic.description}</p>
               </div>
             )}
 
             {/* Exams Section */}
             <div className="space-y-6">
-              {exams.filter(exam => exam.topicId === topicId && exam.status !== 'draft').length > 0 ? (
-                exams.filter(exam => exam.topicId === topicId && exam.status !== 'draft').map((exam, idx) => {
+              {isPathwayMode && loading ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin text-4xl">⏳</div>
+                  <p className="mt-4 text-gray-600">Đang tải danh sách đề thi...</p>
+                </div>
+              ) : isPathwayMode && error ? (
+                <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                  {error}
+                </div>
+              ) : displayExams.filter(exam => !topicId ? exam.topicId === displaySelectedTopic.id : exam.topicId === topicId && exam.status !== 'draft').length > 0 ? (
+                displayExams.filter(exam => !topicId ? exam.topicId === displaySelectedTopic.id : exam.topicId === topicId && exam.status !== 'draft').map((exam, idx) => {
                   return (
-                  <div 
+                  <button
                     key={exam.id} 
-                    className="bg-white rounded-max shadow-lg hover:shadow-2xl p-8 transition-all duration-300 transform hover:-translate-y-2 game-card border-l-8 border-purple-500"
+                    onClick={() => handleJoinExam(exam)}
+                    className="w-full bg-white rounded-max shadow-lg hover:shadow-2xl p-8 transition-all duration-300 transform hover:-translate-y-2 game-card border-l-8 border-purple-500 text-left"
                   >
                     {/* Exam Title with Icon */}
                     <div className="flex items-center gap-4 mb-4">
                       <span className="text-4xl">🎯</span>
                       <div className="flex-1">
                         <h3 className="text-2xl font-bold text-gray-800 font-quicksand">
-                          {exam.title}
+                          {exam.name || exam.title}
                         </h3>
                       </div>
                       <span className="text-2xl">{idx + 1}</span>
@@ -195,13 +315,13 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
                       </div>
                       <div className="text-center">
                         <div className="text-3xl font-bold text-green-600 font-quicksand">
-                          {exam.duration}
+                          {exam.duration || '?'}
                         </div>
                         <div className="text-sm text-gray-600 font-quicksand">giây</div>
                       </div>
                       <div className="text-center">
                         <div className="text-3xl font-bold text-yellow-600 font-quicksand">
-                          {exam.passingScore}%
+                          {exam.passingScore || '?'}%
                         </div>
                         <div className="text-sm text-gray-600 font-quicksand">điểm đạt</div>
                       </div>
@@ -215,24 +335,21 @@ const StudentTopicPage = ({ user, onSignOut, selectedClass, topics, exams, selec
                     )}
 
                     {/* Join Button */}
-                    <button
-                      className={`btn-3d w-full font-bold py-4 px-6 rounded-max transition-all duration-300 font-quicksand text-lg text-white ${
-                        exam.isLocked === true
-                          ? 'bg-gradient-to-r from-purple-400 to-indigo-500 hover:from-purple-500 hover:to-indigo-600'
-                          : 'bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600'
-                      }`}
-                      onClick={() => handleJoinExam(exam)}
-                    >
-                      {exam.isLocked === true ? '📊 Xem kết quả' : '🚀 Bắt đầu thi'}
-                    </button>
-                  </div>
+                    <div className={`btn-3d w-full font-bold py-4 px-6 rounded-max transition-all duration-300 font-quicksand text-lg text-white ${
+                      exam.isLocked === true
+                        ? 'bg-gradient-to-r from-purple-400 to-indigo-500 hover:from-purple-500 hover:to-indigo-600'
+                        : 'bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600'
+                    }`}>
+                      {exam.isLocked === true ? '📊 Xem kết quả' : '🚀 Bắt đầu ' + (mode === 'exam' ? 'thi' : 'luyện tập')}
+                    </div>
+                  </button>
                 );
                 })
               ) : (
                 <div className="bg-white rounded-max shadow-lg p-16 text-center game-card">
                   <p className="text-5xl mb-4">📝</p>
                   <p className="text-gray-600 text-lg font-quicksand">
-                    Chủ đề này chưa có đề thi nào.
+                    Chủ đề này chưa có {mode === 'exam' ? 'đề thi' : 'bài luyện tập'} nào.
                   </p>
                 </div>
               )}

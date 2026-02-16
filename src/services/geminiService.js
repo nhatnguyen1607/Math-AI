@@ -1228,13 +1228,20 @@ NHẬN XÉT TỔNG THỂ: ${totalComment}
    * @param {Array|Object} sampleExam - Mẫu đề (cấu trúc exercises array hoặc JSON string)
    * @returns {Promise<Array>} - Mảng exercises tương tự với sampleExam
    */
-  async generateExamFromSampleExam(topicName, sampleExam) {
+  async generateExamFromSampleExam(topicName, lessonName, sampleExams) {
     try {
+      // Handle sampleExams - could be array of objects or a single object
+      let sampleStructure = sampleExams;
+      
+      // If it's a single SampleExam object with content, use the content
+      if (sampleExams && !Array.isArray(sampleExams) && sampleExams.content) {
+        sampleStructure = sampleExams.content;
+      }
+      
       // Parse sampleExam nếu là string
-      let sampleStructure = sampleExam;
-      if (typeof sampleExam === 'string') {
+      if (typeof sampleStructure === 'string') {
         try {
-          sampleStructure = JSON.parse(sampleExam);
+          sampleStructure = JSON.parse(sampleStructure);
         } catch (e) {
           throw new Error('Định dạng sampleExam không hợp lệ');
         }
@@ -1252,159 +1259,175 @@ Bài tập ${idx + 1}: "${ex.name}"
 - Độ khó: ${ex.questions?.length > 5 ? 'Khó' : ex.questions?.length > 2 ? 'Vừa' : 'Dễ'}
 `).join('\n');
 
-      const prompt = `Bạn là chuyên gia tạo đề thi toán lớp 5. Dựa vào TEMPLATE EXAM dưới đây, hãy TẠO MỘT ĐỀ THI TƯƠNG ĐƯƠNG cho chủ đề "${topicName}".
+      // Xác định loại chủ đề để áp dụng prompt cụ thể
+      const topicNameLower = topicName.toLowerCase();
+      let topicSpecificGuide = '';
+
+      if (topicNameLower.includes('tỉ số') && topicNameLower.includes('bài toán')) {
+        // Chủ đề: Tỉ số và các bài toán liên quan
+        topicSpecificGuide = `
+**HƯỚNG DẪN ĐẶC THỨ CHO CHỦĐỀ: TỈ SỐ VÀ CÁC BÀI TOÁN LIÊN QUAN**
+
+✅ LOẠI BÀI TOÁN:
+- Dạng 1: Tỉ số, tỉ số phần trăm cơ bản (không có % ký hiệu)
+- Dạng 2: Tìm hai số khi biết Tổng và Tỉ số
+- Dạng 3: Tìm hai số khi biết Hiệu và Tỉ số
+- Dạng 4: Tỉ lệ bản đồ
+
+✅ BÀI TẬP 1 - TỐI ĐA 5 CÂUHỎI, DÙNG TỈ SỐ (KHÔNG %):
+- Context: Bài toán có 2 đại lượng, tỉ số giữa chúng (ví dụ: A = 2/4 B)
+- VÍ DỤ: "Lớp 5C có 72 cuốn sách từ hai nhóm. Số sách nhóm A bằng 2/4 số sách nhóm B."
+- Câu hỏi:
+  * Xác định dạng bài toán (là dạng "Tổng và Tỉ")
+  * Xác định tổng số phần bằng nhau
+  * Tìm số lượng mỗi phần
+  * Tìm mỗi số
+  * Kiểm tra lại (tổng/hiệu có hợp lý)
+- **QUAN TRỌNG**: KHÔNG có ký hiệu %, không hỏi phần trăm
+
+✅ BÀI TẬP 2 - 4-6 CÂU HỎI, TUÂN THEO 4 BƯỚC POLYA:
+Context: Bài toán phức tạp với tình huống thực tế
+- BƯỚC 1 (Hiểu): Hỏi xác định dữ kiện, tỉ số, yêu cầu
+- BƯỚC 2 (Kế hoạch): Hỏi cách giải, số phần bằng nhau, phép tính
+- BƯỚC 3 (Thực hiện): Hỏi các bước tính toán chi tiết
+- BƯỚC 4 (Kiểm tra): Hỏi kiểm tra, so sánh, kết luận
+- **KHÔNG hiển thị "[BƯỚC X]" trong questions**
+- **SỬ DỤNG DỮ LIỆU CHÍNH XÁC TỪ CONTEXT**
+
+✅ VÍ DỤ CONTEXT BÀI TẬP 2:
+"Khối 5 có 96 học sinh. Số HS đội trang trí bằng 5/3 số HS đội dọn dẹp. Sau khi chuyển 6 bạn từ đội trang trí sang dọn dẹp, hỏi phương án nào có sự chênh lệch ít hơn?"
+
+✅ VÍ DỤ CÂU HỎI BÀI TẬP 2 (KHÔNG "[BƯỚC X]"):
+Q1: "Tổng số phần bằng nhau là bao nhiêu?" → 5 + 3 = 8
+Q2: "Số HS đội trang trí là bao nhiêu?" → 96 : 8 × 5 = 60
+Q3: "Số HS đội dọn dẹp là bao nhiêu?" → 96 : 8 × 3 = 36
+Q4: "Sau khi chuyển 6 bạn, đội trang trí còn bao nhiêu?" → 60 - 6 = 54
+Q5: "Sau chuyển, đội dọn dẹp có bao nhiêu?" → 36 + 6 = 42
+Q6: "Chênh lệch hiện tại là bao nhiêu?" → 54 - 42 = 12
+`;
+      } else if (topicNameLower.includes('thể tích') && topicNameLower.includes('đơn vị')) {
+        // Chủ đề: Thể tích. Đơn vị đo thể tích
+        topicSpecificGuide = `
+**HƯỚNG DẪN ĐẶC THỨ CHO CHỦĐỀ: THỂ TÍCH - ĐƠN VỊ ĐO THỂ TÍCH**
+
+✅ NỘI DUNG:
+- Tính thể tích hình hộp chữ nhật: V = dài × rộng × cao
+- Tính thể tích hình lập phương: V = cạnh × cạnh × cạnh
+- Chuyển đổi đơn vị: cm³, dm³, m³ (1 m³ = 1000 dm³, 1 dm³ = 1000 cm³)
+- So sánh thể tích của các hộp, bể nước
+
+✅ BÀI TẬP 1 - 5 CÂU HỎI (TỐI ĐA):
+Context: Bài toán yêu cầu tính thể tích hoặc so sánh
+- VÍ DỤ: "Bể nước dài 40 cm, rộng 25 cm, cao 15 cm. Xe bồn chở 2,4 m³ nước. Bể có dung tích 2500 dm³. Hỏi xe có đủ nước?"
+- Câu hỏi:
+  * Xác định dạng bài (tính thể tích, so sánh hay chuyển đơn vị)
+  * Chuyển đổi đơn vị nếu cần
+  * Áp dụng công thức thích hợp
+  * Tính toán
+  * Kết luận hợp lý
+- **KHÔNG có phần trăm (%)**
+- **KHÔNG nhầm lẫn giữa cm³ với cm, dm³ với dm**
+
+✅ BÀI TẬP 2 - 4-5 CÂU HỎI, TUÂN THEO 4 BƯỚC POLYA:
+Context: Bài toán thực tế phức tạp (ví dụ: 3 hộp xếp chồng, bể nước dâng, v.v.)
+- BƯỚC 1: Xác định kích thước, công thức cần dùng
+- BƯỚC 2: Lập kế hoạch (chọn công thức, tính toán gì trước)
+- BƯỚC 3: Thực hiện tính (bước tính chi tiết)
+- BƯỚC 4: Kiểm tra kết quả (hợp lý không, có cách nào khác)
+- **KHÔNG hiển thị "[BƯỚC X]" trong questions**
+
+✅ VÍ DỤ BÀI TẬP 2:
+Context: "3 hộp lập phương cạnh 10 cm được xếp chồng thành hình hộp chữ nhật. Hỏi tiết kiệm bao nhiêu cm² giấy gói?"
+Q1: "Diện tích toàn phần 1 hộp là bao nhiêu cm²?" → 10 × 10 × 6 = 600
+Q2: "Gói riêng 3 hộp cần bao nhiêu cm² giấy?" → 600 × 3 = 1800
+Q3: "Khi xếp chồng, khối mới có kích thước nào?" → 10 × 10 × 30 cm
+Q4: "Diện tích toàn phần khối mới?" → (10×10)×2 + (10×30)×4 = 1400
+Q5: "Tiết kiệm được bao nhiêu cm²?" → 1800 - 1400 = 400
+`;
+      } else if ((topicNameLower.includes('diện tích') && topicNameLower.includes('thể tích')) || 
+                 (topicNameLower.includes('hình khối'))) {
+        // Chủ đề: Diện tích và Thể tích của một số hình khối
+        topicSpecificGuide = `
+**HƯỚNG DẪN ĐẶC THỨ CHO CHỦĐỀ: DIỆN TÍCH VÀ THỂ TÍCH CỦA HỈ HÌNH KHỐI**
+
+✅ NỘI DUNG:
+- Diện tích xung quanh hình hộp chữ nhật: (dài + rộng) × 2 × cao
+- Diện tích toàn phần hình hộp: diện tích xung quanh + 2 × (dài × rộng)
+- Diện tích xung quanh hình lập phương: cạnh × cạnh × 4
+- Diện tích toàn phần hình lập phương: cạnh × cạnh × 6
+- Thể tích hình hộp chữ nhật: dài × rộng × cao
+- Thể tích hình lập phương: cạnh × cạnh × cạnh
+
+✅ BÀI TẬP 1 - 5 CÂU HỎI:
+Context: Bài toán yêu cầu tính diện tích xung quanh hoặc toàn phần
+- VÍ DỤ: "Hộp quà hình lập phương cạnh 10 cm. Cần bao nhiêu cm² giấy để bọc kín?"
+- Câu hỏi:
+  * Xác định loại diện tích (xung quanh hay toàn phần)
+  * Chọn công thức đúng
+  * Tính diện tích 1 mặt hoặc xung quanh
+  * Tính diện tích toàn phần
+  * Kiểm tra: 1 hộp = 6 mặt, hình lập phương mặt vuông bằng nhau
+- **PHẢI phân biệt rõ giữa diện tích (cm²) và thể tích (cm³)**
+- **KHÔNG nhầm lẫn xung quanh với toàn phần**
+
+✅ BÀI TẬP 2 - 4-6 CÂU HỎI, TUÂN THEO 4 BƯỚC POLYA:
+Context: Bài toán kết hợp cả diện tích và thể tích hoặc so sánh
+- BƯỚC 1: Xác định hình dạng, kích thước, cái cần tìm
+- BƯỚC 2: Lập kế hoạch (diện tích hay thể tích, công thức nào)
+- BƯỚC 3: Thực hiện tính từng bước
+- BƯỚC 4: Kiểm tra kết quả, ý nghĩa thực tiễn
+- **KHÔNG hiển thị "[BƯỚC X]" trong questions**
+
+✅ VÍ DỤ BÀI TẬP 2:
+Context: "Minh làm 3 hộp lập phương cạnh 10 cm. Để gói riêng, cần 1800 cm² giấy. Nếu gói chung (xếp chồng), cần 1400 cm² giấy. Hỏi tiết kiệm bao nhiêu?"
+Q1: "Hình gói riêng: mỗi hộp là hình gì?" → Lập phương
+Q2: "Diện tích toàn phần 1 hộp = 10×10×6 = bao nhiêu?" → 600 cm²
+Q3: "Gói riêng 3 hộp = 600 × 3 = bao nhiêu?" → 1800 cm²
+Q4: "Hình gói chung: 3 hộp xếp chồng tạo thành hình gì?" → Hộp chữ nhật (10×10×30 cm)
+Q5: "Diện tích toàn phần khối mới?" → 1400 cm²
+Q6: "Tiết kiệm được bao nhiêu cm²?" → 1800 - 1400 = 400 cm²
+`;
+      }
+
+      const prompt = `Bạn là chuyên gia tạo đề thi toán lớp 5. Dựa vào TEMPLATE EXAM dưới đây, hãy TẠO MỘT ĐỀ THI TƯƠNG ĐƯƠNG cho chủ đề "${topicName}", tiêu đề "${lessonName}".
 
 TEMPLATE EXAM (để làm mẫu):
 ${sampleSummary}
 
-YÊU CẦU QUAN TRỌNG:
-1. ✅ PHẢI GIỮ NGUYÊN CẤU TRÚC:
+${topicSpecificGuide}
+
+YÊU CẦU CHUNG CHO TẤT CẢ CHỦĐỀ:
+1. ✅ GIỮ NGUYÊN CẤU TRÚC TEMPLATE:
    - Số lượng bài tập, thời gian, số câu hỏi GIỐNG HỆT template
    - Kiểu câu hỏi (single/multiple) giữ nguyên
    - Số đáp án mỗi câu GIỮ NGUYÊN
 
-2. ✅ PHẢI TẠOUỘC VÀO CHỦĐỀ "${topicName}":
-   - Toàn bộ câu hỏi PHẢI liên quan đến chủ đề này
-   - Nếu chủ đề "Nhân số thập phân" → tất cả câu hỏi phải về phép nhân số thập phân
-   - Nếu chủ đề "Phân số" → tất cả câu hỏi phải liên quan phân số
+2. ✅ TẠO NỘI DUNG LIÊN QUAN ĐẾN CHỦĐỀ "${topicName}":
+   - Toàn bộ câu hỏi PHẢI liên quan trực tiếp đến chủ đề này
+   - Sử dụng tình huống thực tế phù hợp với bối cảnh tiểu học
 
-3. ✅ **BÀI TẬP 1 - CÂUHỎI PHẢI DÙNG DỮ KIỆN CỤ THỂ TỪ CONTEXT**:
-   - Context của bài tập 1 cũng là **BÀI TOÁN THỰC TẾ CHI TIẾT** (không đơn giản)
-   - **TẤT CẢ câu hỏi bài tập 1 PHẢI sử dụng dữ liệu CHÍNH XÁC từ context - KHÔNG thêm dữ liệu mới**
-   - KHÔNG được tạo câu hỏi kiểu: "Hãy thực hiện các phép nhân số thập phân dưới đây..." (generic)
-   - KHÔNG được: Thay đổi dữ liệu, thêm dữ liệu mới, hỏi về dữ liệu không có trong context
-   - **ĐỨ YÊU CẦU**: Nếu context nói "Anh Nam mua 3 hộp bút, mỗi hộp 2,5 tá. Hỏi tất cả bao nhiêu tá bút?"
-     → Câu hỏi PHẢI là: "Anh Nam mua 3 hộp bút, mỗi hộp có 2,5 tá. Tổng cộng bao nhiêu tá bút?", "3 × 2,5 = ?" (dùng dữ liệu từ context)
-     → KHÔNG BỎ ĐƯỢC hỏi: "Bạn Nam muốn mua mấy hộp bút màu?" (dữ liệu không có trong context)
-   - Các câu hỏi vẫn là trắc nghiệm nhưng PHẢI sử dụng CHÍNH XÁC dữ liệu từ context
+3. ✅ BÀI TẬP 1 - CÂU HỎI DÙNG DỮ KIỆN CỤ THỂ TỪ CONTEXT:
+   - Context phải là bài toán thực tế cụ thể (không chung chung)
+   - TẤT CẢ câu hỏi phải sử dụng dữ liệu CHÍNH XÁC từ context
+   - Không thêm dữ liệu mới, không làm thay đổi dữ kiện
 
-4. ✅ **BÀI TẬP 2 - CONTEXT PHẢI LÀ BÀI TOÁN THỰC TẾ CHI TIẾT**:
-   - Context phải là 1 **BÀI TOÁN THỰC TẾ PHỨ HỢP** (không đơn giản)
-   - Context phải nêu rõ: **Tình huống, dữ kiện cụ thể, bối cảnh thực tế**
-   - Ví dụ ĐÚNG: "Bạn Minh đi shopping cần mua vải may áo. Loại vải Minh thích giá 85.500 đồng/mét. Minh cần 2,5 mét vải để may 1 cái áo. Hỏi Minh cần bao nhiêu tiền để mua vải đủ may áo?"
+4. ✅ BÀI TẬP 2 - TUÂN THEO 4 BƯỚC POLYA:
+   - BƯỚC 1: Hỏi hiểu dữ kiện, yêu cầu
+   - BƯỚC 2: Hỏi cách giải, phép tính cần dùng
+   - BƯỚC 3: Hỏi các bước tính toán, kết quả
+   - BƯỚC 4: Hỏi kiểm tra kết quả, tính hợp lý
+   - **KHÔNG hiển thị "[BƯỚC X]" trong câu hỏi JSON**
 
-5. ✅ **BÀI TẬP 2 - CÂUHỎI TUÂN THEO 4 BƯỚC POLYA**:
-   - **BƯỚC 1 - HIỂU BÀI TOÁN**: Hỏi về dữ kiện, yêu cầu, xác định vấn đề
-   - **BƯỚC 2 - LẬP KẾ HOẠCH**: Hỏi về cách giải, phép tính nào để dùng
-   - **BƯỚC 3 - THỰC HIỆN**: Hỏi về các bước tính toán, kết quả
-   - **BƯỚC 4 - KIỂM TRA & MỞ RỘNG**: Hỏi về kiểm tra lại, tính hợp lý, cách khác
-   - **LƯU Ý QUAN TRỌNG**: Trong câu hỏi JSON, **KHÔNG hiển thị "[BƯỚC 1]", "[BƯỚC 2]"** - chỉ ghi câu hỏi thôi
-   - Các câu hỏi phải yêu cầu học sinh **SUYNG nghĩ sâu**, không generic
+5. ✅ RANDOM VỊ TRÍ ĐÁP ÁN ĐÚNG:
+   - Đáp án đúng KHÔNG phải lúc nào cũng ở vị trí A
+   - Phân bố đáp án đúng ở các vị trí khác nhau
 
-6. ✅ **RANDOM VỊ TRÍ ĐÁP ÁN ĐÚNG**:
-   - KHÔNG LÚC NÀO CẢ đáp án đúng ở vị trí A (index 0)
-   - Mỗi câu hỏi phải có đáp án đúng ở các vị trí KHÁC NHAU
-
-7. ✅ KHÔNG ĐƯỢC:
-   - Dùng phần trăm (học sinh lớp 5 chưa học)
-   - Dùng khái niệm phức tạp (lợi nhuận, lãi suất, tỉ lệ)
-   - Context quá đơn giản hoặc chung chung
-
-8. ✅ THAY ĐỔI NỘI DUNG NHƯNG GIỮ NGUYÊN ĐỘ KHÓ:
-   - Tên nhân vật, con số, bối cảnh khác
-   - Nhưng khó độ và phép tính TƯƠNG ĐƯƠNG template
-
-9. ✅ ĐỊNH DẠNG JSON CHÍNH XÁC:
-   - Mỗi exercise gồm: name, duration, context, questions, scoring
-   - Mỗi question gồm: id, question, type, options (array), correctAnswers (array indices), explanation
-   - Chỉ dùng type "single" hoặc "multiple"
-   - **correctAnswers phải là array chỉ số với vị trí RANDOM**
-   - **IMPORTANT: Câu hỏi trong JSON KHÔNG được chứa "[BƯỚC X - ...]"**
-
-VÍ DỤ OUTPUT CHI TIẾT - KHÔNG HIỂN THỊ [BƯỚC X]:
-
-Bài tập 1 context: "Anh Nam mua 3 hộp bút chì, mỗi hộp có 2,5 tá bút chì. Hỏi anh Nam mua tất cả bao nhiêu tá bút chì?"
-
-Bài tập 1 câu hỏi - PHẢI DÙNG DỮ LIỆU CHÍNH XÁC TỪ CONTEXT:
-Q1: "Anh Nam mua bao nhiêu hộp bút chì?" → Đáp án: 3 hộp (dữ liệu từ context)
-Q2: "Mỗi hộp bút chì có bao nhiêu tá bút?" → Đáp án: 2,5 tá (dữ liệu từ context)
-Q3: "Anh Nam mua tổng cộng bao nhiêu tá bút chì? (3 × 2,5 = ?)" → Đáp án: 7,5 tá
-❌ SAI: Hỏi "Bạn Nam muốn mua mấy hộp bút màu?" (dữ liệu không có trong context)
-❌ SAI: Hỏi "Hộp bút giá bao nhiêu tiền?" (không có dữ liệu giá trong context)
-
----
-
-Bài tập 2 context: "Ông Sơn làm vườn có 5 luống rau. Mỗi luống rau cần 2,5 kg phân bón để bón một lần. Ông Sơn dự định bón phân 3 lần trong mùa. Hỏi ông Sơn cần mua bao nhiêu kg phân bón để đủ cho cả vườn 3 lần bón?"
-
-Bài tập 2 câu hỏi - TUÂN THEO 4 BƯỚC POLYA, DÙNG DỮ LIỆU CHÍNH XÁC:
-Q1 (Hiểu bài): "Vườn của ông Sơn có bao nhiêu luống rau?" → Đáp án: 5 luống
-Q2 (Lập kế hoạch): "Để tính tổng phân bón cho 5 luống bón 1 lần, ta dùng phép tính nào?" → Đáp án: Nhân (5 × 2,5)
-Q3 (Thực hiện): "Tổng phân bón cho 5 luống bón 1 lần = 5 × 2,5 = ?" → Đáp án: 12,5 kg
-Q4 (Kiểm tra): "Bón 3 lần, tổng phân = 12,5 × 3 = ?" → Đáp án: 37,5 kg
-
----
-
-JSON RETURN FORMAT (KHÔNG CÓ "[BƯỚC X]" TRONG QUESTION):
-[
-  {
-    "name": "Bài tập 1 - BT vận dụng, ứng dụng",
-    "duration": 120,
-    "context": "Anh Nam mua 3 hộp bút chì, mỗi hộp có 2,5 tá bút chì. Hỏi anh Nam mua tất cả bao nhiêu tá bút chì?",
-    "questions": [
-      {
-        "id": "q_0",
-        "question": "Anh Nam mua bao nhiêu hộp bút chì?",
-        "type": "single",
-        "options": ["2 hộp", "3 hộp", "5 hộp", "2,5 hộp"],
-        "correctAnswers": [1],
-        "explanation": "Theo dữ liệu: anh Nam mua 3 hộp bút chì"
-      },
-      {
-        "id": "q_1",
-        "question": "Mỗi hộp bút chì có bao nhiêu tá bút?",
-        "type": "single",
-        "options": ["2 tá", "2,5 tá", "3 tá", "5 tá"],
-        "correctAnswers": [1],
-        "explanation": "Theo dữ liệu: mỗi hộp có 2,5 tá bút chì"
-      }
-    ],
-    "scoring": {"correct": 12, "incorrect": 2, "bonus": 4, "bonusTimeThreshold": 60}
-  },
-  {
-    "name": "Bài tập 2 - BT GQVĐ",
-    "duration": 300,
-    "context": "Ông Sơn làm vườn có 5 luống rau. Mỗi luống rau cần 2,5 kg phân bón để bón một lần. Ông Sơn dự định bón phân 3 lần trong mùa. Hỏi ông Sơn cần mua bao nhiêu kg phân bón để đủ cho cả vườn 3 lần bón?",
-    "questions": [
-      {
-        "id": "q_0",
-        "question": "Vườn của ông Sơn có bao nhiêu luống rau?",
-        "type": "single",
-        "options": ["3 luống", "5 luống", "2,5 luống", "15 luống"],
-        "correctAnswers": [1],
-        "explanation": "Theo context: vườn có 5 luống rau"
-      },
-      {
-        "id": "q_1",
-        "question": "Mỗi luống rau cần bao nhiêu kg phân bón cho 1 lần bón?",
-        "type": "single",
-        "options": ["2 kg", "2,5 kg", "3 kg", "5 kg"],
-        "correctAnswers": [1],
-        "explanation": "Theo context: mỗi luống cần 2,5 kg phân bón/lần"
-      },
-      {
-        "id": "q_2",
-        "question": "Để tính tổng phân bón cho cả vườn bón 1 lần, ta nhân 5 × 2,5. Kết quả bằng bao nhiêu kg?",
-        "type": "single",
-        "options": ["7,5 kg", "10 kg", "12,5 kg", "15 kg"],
-        "correctAnswers": [2],
-        "explanation": "5 luống × 2,5 kg/luống = 12,5 kg"
-      },
-      {
-        "id": "q_3",
-        "question": "Ông Sơn bón 3 lần trong mùa. Vậy tổng phân bón cần mua là 12,5 × 3 = bao nhiêu kg?",
-        "type": "single",
-        "options": ["12,5 kg", "25 kg", "37,5 kg", "50 kg"],
-        "correctAnswers": [2],
-        "explanation": "12,5 kg × 3 = 37,5 kg. Kết quả hợp lý vì đủ phân cho 3 lần bón"
-      }
-    ],
-    "scoring": {"correct": 12, "incorrect": 2, "bonus": 4, "bonusTimeThreshold": 240}
-  }
-]
-
-LƯU Ý QUAN TRỌNG: 
-❌ KHÔNG ĐƯỢC: "[BƯỚC 1 - HIỂU BÀI]", "[BƯỚC 2 - LẬP KẾ HOẠCH]" trong question text
-✅ NÊN: Chỉ hỏi câu hỏi đơn thuần mà không cần ghi rõ đây là bước nào
+6. ✅ ĐỊNH DẠNG JSON CHÍNH XÁC:
+   - Mỗi exercise: name, duration, context, questions, scoring
+   - Mỗi question: id, question, type, options, correctAnswers (array indices), explanation
+   - Type: "single" hoặc "multiple"
+   - correctAnswers: array chỉ số (ví dụ: [1], [0, 2])
+   - **KHÔNG CÓ "[BƯỚC X - ...]" TRONG QUESTIONs**
 
 CHỈ RETURN JSON ARRAY, KHÔNG CÓ TEXT KHÁC.`;
 

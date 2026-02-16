@@ -113,6 +113,8 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
     setSelectedClass(cls);
     setSelectedTopic(null);
     setShowClassSelector(false);
+    // Save classId to sessionStorage for use in other pages like LearningPathwayPage
+    sessionStorage.setItem('selectedClassId', cls.id);
     navigate(`/student/${cls.id}`);
   }, [navigate]);
 
@@ -121,16 +123,12 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
   };
 
   const handleStartupClick = useCallback(() => {
-    if (selectedClass) {
-      navigate(`/student/${selectedClass.id}/topic-management`);
-    }
-  }, [navigate, selectedClass]);
+    navigate(`/student/learning-pathway/exam`);
+  }, [navigate]);
 
   const handleWorksheetClick = useCallback(() => {
-    if (selectedClass) {
-      navigate(`/student/${selectedClass.id}/exam-management`);
-    }
-  }, [navigate, selectedClass]);
+    navigate(`/student/learning-pathway/practice`);
+  }, [navigate]);
 
   const handleJoinExam = async (exam) => {
     try {

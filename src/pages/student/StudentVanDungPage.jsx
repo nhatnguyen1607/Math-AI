@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import StudentHeader from '../../components/student/StudentHeader';
 import PracticeChat from '../../components/PracticeChat';
+import RobotCompanion from '../../components/common/RobotCompanion';
 import geminiService from '../../services/geminiService';
 import resultService from '../../services/resultService';
 import examService from '../../services/examService';
@@ -19,6 +20,10 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const initializingRef = useRef(false); // Để track xem đã khởi tạo chưa
+
+  // robot companion state
+  const [robotStatus, setRobotStatus] = useState('idle');
+  const [robotMessage, setRobotMessage] = useState('');
 
   // Khởi tạo phiên Vận dụng
   useEffect(() => {
@@ -260,7 +265,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Progress Sidebar */}
           <aside className="lg:col-span-1 bg-white rounded-max shadow-lg p-6 game-card">
             <h3 className="text-lg font-bold text-gray-800 mb-4 font-quicksand">📊 Tiến độ</h3>
@@ -277,23 +282,6 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
                  vanDungData?.status === 'completed' ? 'Đã hoàn thành' :
                  'Chưa mở'}
               </p>
-              {/* {vanDungData?.status === 'completed' && vanDungData?.evaluation && (
-                <div className="bg-orange-50 p-3 rounded text-xs space-y-2">
-                  <p className={`font-bold ${
-                    vanDungData.evaluation.mucDoChinh === 'Tốt' ? 'text-green-600' :
-                    vanDungData.evaluation.mucDoChinh === 'Đạt' ? 'text-blue-600' :
-                    'text-orange-600'
-                  }`}>
-                    {vanDungData.evaluation.mucDoChinh}
-                  </p>
-                  <div className="space-y-1 text-xs text-gray-700">
-                    <p>TC1: {vanDungData.evaluation.TC1?.diem}/2</p>
-                    <p>TC2: {vanDungData.evaluation.TC2?.diem}/2</p>
-                    <p>TC3: {vanDungData.evaluation.TC3?.diem}/2</p>
-                    <p>TC4: {vanDungData.evaluation.TC4?.diem}/2</p>
-                  </div>
-                </div>
-              )} */}
             </div>
 
             {/* Tips */}
@@ -320,6 +308,10 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
                   onCompleted={() => {
                     // Khi bài hoàn thành, tự động gọi submit
                     handleSubmitVanDung();
+                  }}
+                  onRobotStateChange={(status, msg) => {
+                    setRobotStatus(status);
+                    setRobotMessage(msg);
                   }}
                 />
 
@@ -359,6 +351,13 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
               </div>
             )}
           </main>
+
+          {/* Robot Sidebar */}
+          <aside className="lg:col-span-1 flex justify-center">
+            <div className="sticky top-20 w-full max-w-[400px]">
+              <RobotCompanion status={robotStatus} message={robotMessage} />
+            </div>
+          </aside>
         </div>
 
         {/* Error Message */}

@@ -1,0 +1,343 @@
+/* Robot Companion Styling and Animations */
+
+.robot-companion-container {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  height: 400px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Loading Placeholder */
+.robot-loading-placeholder {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  z-index: 0;
+}
+
+.placeholder-skeleton {
+  width: 80%;
+  height: 80%;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  animation: skeleton-pulse 2s infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Spline Wrapper */
+.robot-spline-wrapper {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 20px;
+  overflow: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.robot-spline-wrapper.visible {
+  opacity: 1;
+  visibility: visible;
+  z-index: 2;
+}
+
+.robot-spline-wrapper.hidden {
+  opacity: 0;
+  visibility: hidden;
+  z-index: 0;
+}
+
+.robot-spline-wrapper canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* GIF Fallback */
+.robot-gif-fallback {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 20px;
+  z-index: 1;
+}
+
+/* Chat Bubble */
+.robot-chat-bubble {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  color: #333;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border-bottom-left-radius: 4px;
+  max-width: 85%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  font-size: 13px;
+  line-height: 1.4;
+  z-index: 10;
+  animation: bubble-appear 0.4s ease;
+  transition: all 0.3s ease;
+}
+
+.robot-chat-bubble.thinking-mode {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes bubble-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.robot-message {
+  margin: 0;
+  font-weight: 500;
+  word-wrap: break-word;
+}
+
+/* Typing Indicator */
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+}
+
+.typing-indicator .dot {
+  width: 6px;
+  height: 6px;
+  background-color: #667eea;
+  border-radius: 50%;
+  display: inline-block;
+  animation: bounce 1.4s infinite;
+}
+
+.typing-indicator .dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.typing-indicator .dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.typing-indicator .dot:nth-child(3) {
+  animation-delay: 0s;
+}
+
+@keyframes bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  30% {
+    transform: translateY(-8px);
+    opacity: 1;
+  }
+}
+
+/* Shake Animation (Wrong Answer) */
+.robot-shake {
+  animation: shake 0.6s ease;
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+/* Responsive Design adjustments have been removed: robot layout is now identical across all screen sizes
+   (container width/height stays constant; no emoji overlay). */
+
+/* Fade In/Out Animation */
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+  10% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  85% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+}
+
+.animate-fadeInOut {
+  animation: fadeInOut 4s ease-in-out;
+}
+
+/* Overlay Animations */
+@keyframes float {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-60px) translateX(10px);
+    opacity: 0;
+  }
+}
+
+.math-symbol {
+  position: absolute;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes rain {
+  0% {
+    top: -10%;
+    opacity: 1;
+  }
+  100% {
+    top: 110%;
+    opacity: 0;
+  }
+}
+
+.rain-drop {
+  position: absolute;
+  width: 2px;
+  height: 12px;
+  background: rgba(255,0,0,0.4);
+  animation: rain 1s linear infinite;
+}
+
+/* Glow around container when correct */
+.shadow-glow {
+  box-shadow: 0 0 20px 5px gold;
+}
+
+/* Variant-specific utilities */
+.bg-yellow-radial {
+  background: radial-gradient(circle, rgba(255,238,0,0.4) 0%, rgba(255,204,0,0.2) 70%);
+}
+
+/* bouncing text for golden correct variant */
+@keyframes bounce-text {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  80% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-bounce-text {
+  animation: bounce-text 1s ease forwards;
+}
+
+/* radar ripple for thinking variant */
+@keyframes ripple {
+  0% { transform: scale(0); opacity: 0.5; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+.ripple-circle {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  border: 2px solid rgba(66, 153, 225, 0.7);
+  border-radius: 50%;
+  animation: ripple 2s ease-out infinite;
+}
+
+/* floating bubbles for correct variant 2 */
+@keyframes float-up {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-120%); opacity: 0; }
+}
+
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #a2d5f2, #0e8ac8);
+  animation: float-up 3s ease-in forwards;
+}
+
+/* thunder flash for wrong variant1 */
+@keyframes flash {
+  0%, 100% { opacity: 0; }
+  20%, 60% { opacity: 0.8; }
+}
+
+.thunder-flash {
+  position: absolute;
+  inset: 0;
+  background: white;
+  animation: flash 0.4s ease 0s 2;
+  pointer-events: none;
+}
+
+/* sad cloud for wrong variant2 */
+@keyframes cloud-fall {
+  0% { transform: translateY(-20%); opacity: 1; }
+  100% { transform: translateY(120%); opacity: 0; }
+}
+
+.cloud-icon {
+  position: absolute;
+  font-size: 3rem;
+  animation: cloud-fall 2s ease-in forwards;
+}
+
+/* heavier shake for thunder variant */
+@keyframes heavy-shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+  20%, 40%, 60%, 80% { transform: translateX(10px); }
+}
+
+.animate-heavy-shake {
+  animation: heavy-shake 0.8s ease;
+}
+
+/* question marks for thinking variant 2 */
+.question-mark {
+  position: absolute;
+  animation: fadeInOut 4s ease-in-out infinite;
+  color: #fff;
+}
+

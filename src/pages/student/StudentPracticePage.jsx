@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import StudentHeader from '../../components/student/StudentHeader';
 import PracticeChat from '../../components/PracticeChat';
+import RobotCompanion from '../../components/common/RobotCompanion';
+import MobileRobotAvatar from '../../components/common/MobileRobotAvatar';
 import geminiService from '../../services/geminiService';
 import resultService from '../../services/resultService';
 import examService from '../../services/examService';
@@ -19,6 +21,9 @@ const StudentPracticePage = ({ user, onSignOut }) => {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('bai1');
+  const [robotStatus, setRobotStatus] = useState('idle');
+  const [robotMessage, setRobotMessage] = useState('');
+  const leftColRef = useRef(null);
 
   // Khởi tạo dữ liệu luyện tập
   useEffect(() => {
@@ -71,19 +76,26 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         const context1 = buildExerciseContext(exercise1);
         const context2 = buildExerciseContext(exercise2);
 
-        // Gọi Gemini để tạo bài toán tương tự - TUẦN TỰ (không song song) để tránh quota limit
+        // Gọi Gemini để tạo bài toán tương tự - TUẦN TỰ với throttle delay để tránh quota limit
         let similarProblem1, similarProblem2;
         const gService = new geminiService.constructor();
         
+        // Helper: delay function
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+        
         try {
           similarProblem1 = await gService.generateSimilarProblem(exercise1.name, exercise2.name, context1, 1);
+          // Throttle: wait 2 seconds before next API call
+          await delay(2000);
         } catch (err1) {
+          console.warn('Failed to generate problem 1, using fallback:', err1.message);
           similarProblem1 = exercise1.name || 'Bài tập 1';
         }
 
         try {
           similarProblem2 = await gService.generateSimilarProblem(exercise1.name, exercise2.name, context2, 2);
         } catch (err2) {
+          console.warn('Failed to generate problem 2, using fallback:', err2.message);
           similarProblem2 = exercise2.name || 'Bài tập 2';
         }
 
@@ -114,6 +126,9 @@ const StudentPracticePage = ({ user, onSignOut }) => {
   const handleSubmitPractice = async (baiNumber) => {
     try {
       setSubmitting(true);
+      // update robot to thinking state
+      setRobotStatus('thinking');
+      setRobotMessage('AI đang chấm điểm...');
       // Fetch the latest practice data from Firestore to ensure we have the complete chat history
       const latestPracticeSession = await resultService.getPracticeSession(user.uid, examId);
       
@@ -130,6 +145,21 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         baiData.chatHistory,
         baiData.deBai
       );
+
+      // update robot status based on evaluation
+      const passed = evaluation.mucDoChinh === 'Tốt' || evaluation.mucDoChinh === 'Đạt';
+      if (passed) {
+        setRobotStatus('correct');
+        setRobotMessage('🎉 Bạn đã làm tốt!');
+      } else {
+        setRobotStatus('wrong');
+        setRobotMessage('😓 Cố gắng hơn nhé.');
+      }
+      // reset to idle after 5 seconds
+      setTimeout(() => {
+        setRobotStatus('idle');
+        setRobotMessage('');
+      }, 5000);
 
       // Lưu kết quả đánh giá vào Firestore
       await resultService.completePracticeExercise(
@@ -203,163 +233,140 @@ const StudentPracticePage = ({ user, onSignOut }) => {
   const currentBai = activeTab === 'bai1' ? bai1 : bai2;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
+    <div className="min-h-screen bg-gray-50">
       <StudentHeader user={user} onLogout={onSignOut} />
 
-      <div className="max-w-6xl mx-auto px-5 py-8">
-        {/* Header */}
-        <div className="bg-white rounded-max shadow-lg p-6 mb-8 game-card">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-gray-800 font-quicksand">
-              📖 Luyện tập 
-            </h1>
+      {/* Compact Sticky Header with Title & Progress */}
+      <div className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-2xl font-bold text-gray-800 font-quicksand">📖 Luyện tập</h1>
             <button
               onClick={() => navigate(-1)}
-              className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-max transition-all font-quicksand"
+              className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-lg transition-all font-quicksand text-sm"
             >
               ← Quay lại
             </button>
           </div>
-          <p className="text-gray-600 font-quicksand">
-            Giải quyết các bài toán cùng trợ lý AI 
-          </p>
-        </div>
-
-        {/* Tabs Navigation */}
-        <div className="flex gap-3 mb-6 flex-wrap">
-          {['bai1', 'bai2'].map((bai, idx) => (
-            <button
-              key={bai}
-              onClick={() => setActiveTab(bai)}
-              disabled={!practiceData.luyenTap || practiceData.luyenTap[bai]?.status === 'locked'}
-              className={`px-6 py-3 rounded-max font-bold font-quicksand transition-all ${
-                activeTab === bai
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
-                  : !practiceData.luyenTap || practiceData.luyenTap[bai]?.status === 'locked'
-                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                  : 'bg-white text-gray-700 border-2 border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              <span className="mr-2">
-                {practiceData.luyenTap?.[bai]?.status === 'completed' ? '✅' : '📝'}
-              </span>
-              Bài {idx + 1}
-            </button>
-          ))}
-        </div>
-
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Progress Sidebar */}
-          <aside className="lg:col-span-1 bg-white rounded-max shadow-lg p-6 game-card">
-            <h3 className="text-lg font-bold text-gray-800 mb-4 font-quicksand">📊 Tiến độ</h3>
-            
+          {/* Progress Steps - Horizontal & Compact */}
+          <div className="flex items-center justify-start space-x-3">
             {['bai1', 'bai2'].map((bai, idx) => {
               const baiData = practiceData.luyenTap?.[bai];
-              if (!baiData) return null;
+              const status = baiData?.status;
+              const icon = status === 'completed' ? '✅' : status === 'in_progress' ? '⏳' : '🔒';
               return (
-                <div key={bai} className="mb-4 pb-4 border-b border-gray-200 last:border-b-0 last:mb-0 last:pb-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xl">
-                      {baiData.status === 'completed' ? '✅' : 
-                       baiData.status === 'locked' ? '🔒' : '⏳'}
-                    </span>
-                    <span className="font-bold text-sm font-quicksand">Bài {idx + 1}</span>
-                  </div>
-                  <p className="text-xs text-gray-600 font-quicksand mb-2">
-                    {baiData.status === 'in_progress' ? 'Đang tiến hành' :
-                     baiData.status === 'completed' ? 'Đã hoàn thành' :
-                     'Chưa mở'}
-                  </p>
-                  {baiData.status === 'completed' && baiData.evaluation && (
-                    <div className="bg-blue-50 p-2 rounded text-xs">
-                      <p className={`font-bold ${
-                        baiData.evaluation.mucDoChinh === 'Tốt' ? 'text-green-600' :
-                        baiData.evaluation.mucDoChinh === 'Đạt' ? 'text-blue-600' :
-                        'text-orange-600'
-                      }`}>
-                        {baiData.evaluation.mucDoChinh}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                <React.Fragment key={bai}>
+                  <button
+                    onClick={() => setActiveTab(bai)}
+                    disabled={!practiceData.luyenTap || status === 'locked'}
+                    className={`flex items-center px-3 py-1 rounded-full font-bold font-quicksand transition-all text-sm ${
+                      activeTab === bai
+                        ? 'bg-blue-500 text-white shadow-md'
+                        : status === 'locked'
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="mr-1">{icon}</span>
+                    Bài {idx + 1}
+                  </button>
+                  {idx < 1 && <span className="text-gray-400">→</span>}
+                </React.Fragment>
               );
             })}
-          </aside>
+          </div>
+        </div>
+      </div>
 
-          {/* Chat Area */}
-          <main className="lg:col-span-3">
-            {currentBai ? (
-              <>
+      {/* Main Content Grid with Natural Scroll */}
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 px-4 py-6 pb-20">
+        {/* Main Content Column - Flex and grow */}
+        <main className="flex flex-col gap-6">
+          {currentBai ? (
+            <>
+              {/* STICKY PROBLEM STATEMENT */}
+              <div className="sticky top-[70px] z-30 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 p-4 rounded-xl shadow-sm">
+                <h3 className="text-sm font-bold text-blue-900 font-quicksand mb-2">📝 Đề Bài</h3>
+                <p className="text-base text-blue-800 font-quicksand leading-relaxed">{currentBai.deBai}</p>
+              </div>
+
+              {/* SCROLLABLE CHAT */}
+              <div className="flex-1">
                 <PracticeChat
                   userId={user?.uid}
                   examId={examId}
                   baiNumber={activeTab}
                   deBai={currentBai.deBai}
                   chatHistory={currentBai.chatHistory}
+                  scrollContainerRef={leftColRef}
                   isCompleted={currentBai.status === 'completed'}
                   evaluation={currentBai.evaluation}
                   onCompleted={() => {
-                    // Khi bài hoàn thành, tự động gọi submit
                     if (activeTab === 'bai1') {
                       handleSubmitPractice('bai1');
                     } else if (activeTab === 'bai2') {
                       handleSubmitPractice('bai2');
                     }
                   }}
+                  onRobotStateChange={(status, msg) => {
+                    setRobotStatus(status);
+                    setRobotMessage(msg);
+                  }}
                 />
-
-                {/* Submit Button */}
-                <div className="mt-4 flex gap-3">
-                  <button
-                    onClick={() => handleSubmitPractice(activeTab)}
-                    disabled={submitting || currentBai?.status === 'completed'}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-max hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-quicksand"
-                  >
-                    {submitting ? '⏳ Đang chấm điểm...' : '✓ Nộp bài & Chấm điểm'}
-                  </button>
-                  {activeTab === 'bai1' && bai2?.status === 'in_progress' && (
-                    <button
-                      onClick={() => setActiveTab('bai2')}
-                      className="px-6 py-3 bg-blue-500 text-white font-bold rounded-max hover:shadow-lg transition-all font-quicksand"
-                    >
-                      Sang Bài 2 →
-                    </button>
-                  )}
-                  {activeTab === 'bai1' && bai2?.status === 'completed' && (
-                    <button
-                      onClick={() => setActiveTab('bai2')}
-                      className="px-6 py-3 bg-blue-500 text-white font-bold rounded-max hover:shadow-lg transition-all font-quicksand"
-                    >
-                      Sang Bài 2 →
-                    </button>
-                  )}
-                  {activeTab === 'bai2' && bai2?.status === 'completed' && (
-                    <button
-                      onClick={() => navigate(-1)}
-                      className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-max hover:shadow-lg transition-all font-quicksand"
-                    >
-                      ← Quay lại
-                    </button>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="bg-white rounded-max shadow-lg p-8 flex items-center justify-center">
-                <p className="text-gray-600 font-quicksand">Đang tải bài tập...</p>
               </div>
-            )}
-          </main>
-        </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="fixed bottom-6 right-6 bg-red-500 text-white px-6 py-4 rounded-max shadow-lg flex items-center gap-3 max-w-xs font-quicksand">
-            <span>⚠️ {error}</span>
-            <button onClick={() => setError(null)} className="text-2xl font-bold">✕</button>
+              {/* Submit Button */}
+              <div className="flex gap-3 flex-wrap">
+                <button
+                  onClick={() => handleSubmitPractice(activeTab)}
+                  disabled={submitting || currentBai?.status === 'completed'}
+                  className="flex-1 min-w-[200px] px-6 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-quicksand"
+                >
+                  {submitting ? '⏳ Đang chấm điểm...' : '✓ Nộp bài & Chấm điểm'}
+                </button>
+                {activeTab === 'bai1' && (bai2?.status === 'in_progress' || bai2?.status === 'completed') && (
+                  <button
+                    onClick={() => setActiveTab('bai2')}
+                    className="px-6 py-3 bg-blue-500 text-white font-bold rounded-lg hover:shadow-lg transition-all font-quicksand"
+                  >
+                    Sang Bài 2 →
+                  </button>
+                )}
+                {activeTab === 'bai2' && bai2?.status === 'completed' && (
+                  <button
+                    onClick={() => navigate(-1)}
+                    className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg hover:shadow-lg transition-all font-quicksand"
+                  >
+                    ← Hoàn thành
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm p-8 flex items-center justify-center">
+              <p className="text-gray-600 font-quicksand">Đang tải bài tập...</p>
+            </div>
+          )}
+        </main>
+
+        {/* Sticky Robot Sidebar - Fixed 350px width, no shrink */}
+        <aside className="hidden lg:flex lg:flex-col lg:w-[350px] lg:flex-none">
+          <div className="sticky top-[70px] h-fit bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+            <RobotCompanion status={robotStatus} message={robotMessage} />
           </div>
-        )}
+        </aside>
       </div>
+
+      {/* Mobile Robot Avatar */}
+      <MobileRobotAvatar status={robotStatus} />
+
+      {/* Error Message */}
+      {error && (
+        <div className="fixed bottom-6 right-6 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 max-w-xs font-quicksand z-50">
+          <span>⚠️ {error}</span>
+          <button onClick={() => setError(null)} className="text-2xl font-bold">✕</button>
+        </div>
+      )}
     </div>
   );
 };

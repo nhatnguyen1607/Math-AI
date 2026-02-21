@@ -1,5 +1,6 @@
 import { 
-  signInWithPopup, 
+  signInWithPopup,
+  browserPopupRedirectResolver,
   GoogleAuthProvider, 
   signOut as firebaseSignOut,
   onAuthStateChanged 
@@ -17,7 +18,7 @@ provider.setCustomParameters({
 // Đăng nhập bằng Google
 export const signInWithGoogle = async () => {
   try {
-    const result = await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
     const user = result.user;
 
     // Kiểm tra tài khoản bị khóa

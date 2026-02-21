@@ -27,6 +27,10 @@ class GeminiModelManager {
     MODELS.forEach(model => {
       this.modelUsageCount[model.name] = 0;
     });
+
+    // Queue promise used to serialize calls and avoid rate limit bursts
+    // Always resolved by default so first call proceeds immediately.
+    this._queue = Promise.resolve();
   }
 
   /**
@@ -125,96 +129,124 @@ class GeminiModelManager {
 
   // Gọi model với tự động fallback nếu hết RPD
   // Logic: Thử tất cả models trước, chỉ đổi key khi tất cả models đã hết quota
+  // Hỗ trợ hàng đợi để tránh gửi nhiều request cùng lúc (đã gây lỗi 429)
   async generateContent(prompt) {
-    let lastError = null;
-    let maxKeyAttempts = apiKeyManager.keyConfigs.length; // Số key khả dụng
-    let keyAttempts = 0;
+    // ---------- queueing/throttling logic ----------
+    // Wait for any previous request to complete (including post-delay)
+    await this._queue;
 
-    while (keyAttempts < maxKeyAttempts) {
-      const modelsNotAvailableForThisKey = new Set(); // Track models hết quota/404 với key hiện tại
-      let modelAttempts = 0;
+    // Prepare a new queue promise that will be resolved after this call finishes
+    let resolveQueue;
+    const queuePromise = new Promise(res => {
+      resolveQueue = res;
+    });
+    // set _queue to the new placeholder so calls coming after will await it
+    this._queue = queuePromise;
 
-      // Thử các model theo thứ tự ưu tiên với key hiện tại
-      for (let i = 0; i < MODELS.length; i++) {
-        const model = MODELS[i];
-        
-        // Bỏ qua model đã vượt limit (toàn cục) hoặc đã không khả dụng với key này
-        if (this.modelUsageCount[model.name] >= model.rpdLimit || 
-            modelsNotAvailableForThisKey.has(model.name)) {
-          continue;
-        }
+    try {
+      // Add a small inter-request delay to avoid burst limit
+      await this._delay(500);
 
-        modelAttempts++;
-        
-        try {
-          const geminiInstance = this._getGeminiInstance();
-          const currentModel = geminiInstance.getGenerativeModel({ model: model.name });
-          const result = await currentModel.generateContent(prompt);
+      // ---------- original generateContent body ----------
+      let lastError = null;
+      let maxKeyAttempts = apiKeyManager.keyConfigs.length; // Số key khả dụng
+      let keyAttempts = 0;
+
+      while (keyAttempts < maxKeyAttempts) {
+        const modelsNotAvailableForThisKey = new Set(); // Track models hết quota/404 với key hiện tại
+        let modelAttempts = 0;
+
+        // Thử các model theo thứ tự ưu tiên với key hiện tại
+        for (let i = 0; i < MODELS.length; i++) {
+          const model = MODELS[i];
           
-          // Tăng bộ đếm khi thành công
-          this.modelUsageCount[model.name]++;
-          apiKeyManager.incrementRequestCount();
-          this.currentModelIndex = i;
-          
-          return result;
-          
-        } catch (error) {
-          lastError = error;
-          
-          // Kiểm tra loại lỗi
-          const isQuotaError = error.message?.includes("Rate limit") || 
-                                error.message?.includes("quota") ||
-                                error.message?.includes("429") ||
-                                error.status === 429;
-          
-          const isNotFoundError = error.message?.includes("404") || 
-                                   error.message?.includes("not found") ||
-                                   error.status === 404;
-          
-          // Cả quota error lẫn not found error đều đánh dấu model không khả dụng
-          if (isQuotaError) {
-            modelsNotAvailableForThisKey.add(model.name);
-          } else if (isNotFoundError) {
-            modelsNotAvailableForThisKey.add(model.name);
+          // Bỏ qua model đã vượt limit (toàn cục) hoặc đã không khả dụng với key này
+          if (this.modelUsageCount[model.name] >= model.rpdLimit || 
+              modelsNotAvailableForThisKey.has(model.name)) {
+            continue;
           }
-          // Các lỗi khác không đánh dấu, chỉ bỏ qua model này lần này
-        }
-      }
 
-      // Kiểm tra nếu tất cả models đã không khả dụng với key hiện tại
-      const allModelsUnavailableOrOverLimit = MODELS.every(model => 
-        this.modelUsageCount[model.name] >= model.rpdLimit || 
-        modelsNotAvailableForThisKey.has(model.name)
-      );
-
-      if (allModelsUnavailableOrOverLimit) {
-        apiKeyManager.markKeyAsExhausted(lastError);
-        
-        // Thử rotate sang key khác
-        if (apiKeyManager.rotateToNextKey()) {
-          keyAttempts++;
-        } else {
-          break;
-        }
-      } else if (modelAttempts === 0) {
-        // Không thử được model nào (tất cả vượt limit hoặc hết quota)
-        break;
-      } else {
-        apiKeyManager.markKeyAsExhausted(lastError);
-        
-        if (apiKeyManager.rotateToNextKey()) {
-          keyAttempts++;
+          modelAttempts++;
           
-          // Chờ một chút trước khi retry
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } else {
+          try {
+            const geminiInstance = this._getGeminiInstance();
+            const currentModel = geminiInstance.getGenerativeModel({ model: model.name });
+            const result = await currentModel.generateContent(prompt);
+            
+            // Tăng bộ đếm khi thành công
+            this.modelUsageCount[model.name]++;
+            apiKeyManager.incrementRequestCount();
+            this.currentModelIndex = i;
+            
+            return result;
+            
+          } catch (error) {
+            lastError = error;
+            
+            // Kiểm tra loại lỗi
+            const isQuotaError = error.message?.includes("Rate limit") || 
+                                  error.message?.includes("quota") ||
+                                  error.message?.includes("429") ||
+                                  error.status === 429;
+            
+            const isNotFoundError = error.message?.includes("404") || 
+                                     error.message?.includes("not found") ||
+                                     error.status === 404;
+            
+            // Cả quota error lẫn not found error đều đánh dấu model không khả dụng
+            if (isQuotaError) {
+              modelsNotAvailableForThisKey.add(model.name);
+            } else if (isNotFoundError) {
+              modelsNotAvailableForThisKey.add(model.name);
+            }
+            // Các lỗi khác không đánh dấu, chỉ bỏ qua model này lần này
+          }
+        }
+
+        // Kiểm tra nếu tất cả models đã không khả dụng với key hiện tại
+        const allModelsUnavailableOrOverLimit = MODELS.every(model => 
+          this.modelUsageCount[model.name] >= model.rpdLimit || 
+          modelsNotAvailableForThisKey.has(model.name)
+        );
+
+        if (allModelsUnavailableOrOverLimit) {
+          apiKeyManager.markKeyAsExhausted(lastError);
+          
+          // Thử rotate sang key khác
+          if (apiKeyManager.rotateToNextKey()) {
+            keyAttempts++;
+          } else {
+            break;
+          }
+        } else if (modelAttempts === 0) {
+          // Không thử được model nào (tất cả vượt limit hoặc hết quota)
           break;
+        } else {
+          apiKeyManager.markKeyAsExhausted(lastError);
+          
+          if (apiKeyManager.rotateToNextKey()) {
+            keyAttempts++;
+            
+            // Chờ một chút trước khi retry
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } else {
+            break;
+          }
         }
       }
+      
+      const availableKeys = apiKeyManager.getAvailableKeyCount();
+      throw new Error(`Tất cả API keys đã hết quota hoặc bị lỗi. Keys available: ${availableKeys}/${apiKeyManager.keyConfigs.length}. Last error: ${lastError?.message}`);
+
+    } finally {
+      // resolve the queue after a short delay to maintain spacing
+      setTimeout(() => resolveQueue(), 0);
     }
-    
-    const availableKeys = apiKeyManager.getAvailableKeyCount();
-    throw new Error(`Tất cả API keys đã hết quota hoặc bị lỗi. Keys available: ${availableKeys}/${apiKeyManager.keyConfigs.length}. Last error: ${lastError?.message}`);
+  }
+
+  // Utility delay helper (ms)
+  _delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // Lấy log rotation API key

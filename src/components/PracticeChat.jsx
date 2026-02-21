@@ -13,9 +13,12 @@ const PracticeChat = ({
   deBai, 
   chatHistory = [], 
   onChatUpdate,
+  onRobotStateChange,
   onCompleted,
   isCompleted = false,
-  evaluation = null
+  evaluation = null,
+  // parent may provide the scroll container ref (left column of page)
+  scrollContainerRef = null
 }) => {
   const [messages, setMessages] = useState(chatHistory);
   const [inputValue, setInputValue] = useState('');
@@ -23,7 +26,6 @@ const PracticeChat = ({
   const [isInitializing, setIsInitializing] = useState(true); // Track initialization state
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
-  const chatContainerRef = useRef(null);
   const geminiServiceRef = useRef(new geminiService.constructor());
 
   // Helper function để lưu chat history vào đúng service
@@ -93,15 +95,20 @@ const PracticeChat = ({
     }
   }, [deBai, baiNumber, isCompleted, chatHistory, saveChatMessage, onChatUpdate]);
 
-  // Auto scroll to bottom
+  // Auto scroll to bottom using parent-provided scroll container if available
   const scrollToBottom = () => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    const sc = (scrollContainerRef && scrollContainerRef.current) ? scrollContainerRef.current : null;
+    if (sc) {
+      sc.scrollTop = sc.scrollHeight;
+    } else if (messagesEndRef.current && messagesEndRef.current.parentElement) {
+      // fallback: try to scroll the immediate messages wrapper
+      try { messagesEndRef.current.parentElement.scrollTop = messagesEndRef.current.parentElement.scrollHeight; } catch(e){}
     }
   };
 
   useEffect(() => {
     scrollToBottom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
   const handleSendMessage = async (e) => {
@@ -121,6 +128,14 @@ const PracticeChat = ({
       setInputValue('');
       setIsLoading(true);
 
+      // Immediate feedback: show robot thinking state
+      try {
+        if (onRobotStateChange) onRobotStateChange('thinking', 'AI đang xử lý...');
+      } catch (err) {
+        // swallow any errors from parent callback
+        console.warn('onRobotStateChange handler error:', err);
+      }
+
       // Save user message to Firestore
       await saveChatMessage(userMsg);
 
@@ -130,6 +145,10 @@ const PracticeChat = ({
 
       let aiMsg;
       
+          const aiMsg = {
+            role: 'model',
+            parts: [{ text: response.message }]
+          };
       if (isAskingForHint) {
         // 🎯 NẾU HỌC SINH YÊU CẦU GỢI Ý -> Chỉ CẤP GỢI Ý THUẦN TÚY
         try {
@@ -165,7 +184,7 @@ const PracticeChat = ({
         }
       }
 
-      setMessages(prev => [...prev, aiMsg]);
+          setMessages(prev => [...prev, aiMsg]);
 
       // Save AI response to Firestore
       await saveChatMessage(aiMsg);
@@ -173,6 +192,30 @@ const PracticeChat = ({
       // Callback to notify parent about updates
       if (onChatUpdate) {
         onChatUpdate(prev => [...prev, userMsg, aiMsg]);
+      }
+
+      // Use service-driven sentiment for robot state
+      try {
+        const status = response.robotStatus || 'idle';
+        if (onRobotStateChange) onRobotStateChange(status, response.message || '');
+
+        // Auto-reset to idle after 3s if final emotive state
+        if (status === 'correct' || status === 'wrong') {
+          setTimeout(() => {
+            try { if (onRobotStateChange) onRobotStateChange('idle', ''); } catch(e){}
+          }, 3000);
+        }
+      } catch (err) {
+        console.warn('Error applying robot state from response:', err);
+      }
+
+      // 🎯 Nếu hoàn thành bước 4 (nextStep === 5), tự động gọi callback
+      if (response.nextStep === 5) {
+        setTimeout(() => {
+          if (onCompleted) {
+            onCompleted();
+          }
+        }, 1500); // Chờ 1.5s để hiển thị kết quả hoàn thành
       }
 
     } catch (err) {
@@ -201,19 +244,16 @@ const PracticeChat = ({
   };
 
   return (
-    <div className="practice-chat flex flex-col max-h-[700px] overflow-hidden bg-white rounded-lg shadow-lg">
-      {/* Header */}
+    <div className="practice-chat flex flex-col bg-white rounded-lg shadow-sm border border-gray-200">
+      {/* Header (sticky within the left column scroll container) */}
       <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-t-lg">
-        <h3 className="text-lg font-bold font-quicksand">📝 {baiNumber.toUpperCase()}</h3>
-        <div className="mt-2 bg-white bg-opacity-20 p-4 rounded-lg">
-          <p className="text-base font-quicksand leading-relaxed">{deBai}</p>
-        </div>
+        <h3 className="text-lg font-bold font-quicksand">💬 Chat</h3>
       </div>
 
-      {/* Chat Messages */}
-      <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      {/* Chat Messages (body flows inside page left-column scroll container) */}
+      <div className="p-6 space-y-4 bg-gray-50">
         {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-500">
+          <div className="flex items-center justify-center py-12 text-gray-500">
             <p className="text-center font-quicksand">
               👋 Xin chào! Hãy nêu cách hiểu của em về bài toán này để bắt đầu.
             </p>
@@ -225,7 +265,7 @@ const PracticeChat = ({
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-xs px-4 py-3 rounded-lg font-quicksand ${
+                className={`w-fit max-w-[85%] px-4 py-3 rounded-lg font-quicksand ${
                   msg.role === 'user'
                     ? 'bg-blue-500 text-white rounded-br-none'
                     : 'bg-gray-200 text-gray-800 rounded-bl-none'
@@ -257,9 +297,9 @@ const PracticeChat = ({
         </div>
       )}
 
-      {/* Input Area */}
+      {/* Input Area (sticky at bottom of left column) */}
       {!isCompleted && (
-        <form onSubmit={handleSendMessage} className="border-t border-gray-300 p-4 bg-white rounded-b-lg">
+        <form onSubmit={handleSendMessage} className="sticky bottom-0 z-20 bg-white border-t p-4">
           {isInitializing && (
             <div className="text-center text-gray-500 py-2 text-sm font-quicksand">
               ⏳ Đang khởi tạo bài toán...

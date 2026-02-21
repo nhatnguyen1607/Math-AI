@@ -3,8 +3,26 @@ import apiKeyManager from "./apiKeyManager";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import competencyEvaluationService from "./competencyEvaluationService";
 
+// simple delay helper used by rate-limited wrapper
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // System prompt cho AI trợ lý học toán
 const SYSTEM_PROMPT = `Mình là trợ lý học tập ảo thân thiện, hỗ trợ bạn lớp 5 giải toán theo 4 bước Polya.
+
+🔴 **QUAN TRỌNG: STATUS TAG REQUIREMENT**
+BẠNPHẢI bắt đầu mỗi câu trả lời của bạn bằng một trong ba tag sau:
+- [CORRECT] - nếu câu trả lời của học sinh ĐÚNG hoặc chấp nhận được
+- [WRONG] - nếu câu trả lời của học sinh SAI hoặc cần sửa
+- [IDLE] - nếu đó là câu hỏi trung lập/gợi ý/giải thích (không phải đánh giá câu trả lời)
+
+VÍ DỤ:
+✅ [CORRECT] Tuyệt vời! Bạn đã xác định đúng dữ kiện: dữ kiện là..., yêu cầu là...
+❌ [WRONG] Hình như bạn đọc lại bài toán xem sao! Con số '...' không khớp với bài toán gốc.
+❓ [IDLE] Vậy bạn thấy bài toán đã cho những thông tin nào? Và bài toán yêu cầu chúng ta tìm cái gì?
+
+**LƯU Ý:** TAG phải ở ĐẦY DỦ mỗi response. Không tag = học sinh không biết kết quả của mình đứng ở đâu.
 
 HƯỚNG TRONG NỘI BỘ (Không ghi ra cho bạn thấy):
 4 BƯỚC POLYA:
@@ -19,6 +37,7 @@ NGUYÊN TẮC KIỂM TRA PHÉP TÍNH (QUAN TRỌNG):
 - Nếu sai: Hỏi "bạn xem lại kết quả này ... được không?", "hãy tính lại một lần nữa"
 - **CHỈ khi phép tính CHÍNH XÁC mới được chuyển sang bước 4**
 - VỊ DỤ: Nếu học sinh nói "3 × 2,5 = 7,6" → Hỏi "bạn kiểm tra lại xem: 3 × 2,5 = bao nhiêu?" (KHÔNG nói đúng, KHÔNG khen)
+- **NHẮC NHỨ: Mỗi response đều PHẢI có TAG ở đầu**
 
 NGUYÊN TẮC GIAO TIẾP VỚI BẠN:
 - KHÔNG BAO GIỜ giải bài toán thay bạn
@@ -74,6 +93,9 @@ export class GeminiService {
       step3: null, // Thực hiện
       step4: null  // Kiểm tra
     };
+
+    // queue for rate-limited generate calls
+    this._pending = Promise.resolve();
   }
 
   // Bắt đầu bài toán mới
@@ -103,7 +125,7 @@ export class GeminiService {
 Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài toán này. Câu hỏi nên giúp mình suy nghĩ về dữ kiện đã cho và mục tiêu cần tìm. ĐỂ CÓ SỰ NHẤT QUÁN, CHỈ RETURN DUY NHẤT 1 CÂU HỎI, KHÔNG PHẢI NHIỀU LỰA CHỌN.`;
 
         // Sử dụng generateContent() để có dual-level retry (tries all models, then rotates key)
-        const initialResponse = await geminiModelManager.generateContent(initialPrompt);
+        const initialResponse = await this._rateLimitedGenerate(initialPrompt);
         let response = initialResponse.response.text();
         
         // Nếu có nhiều câu hỏi, chỉ lấy cái đầu tiên
@@ -185,7 +207,8 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
         stepName: this._getStepName(this.currentStep),
         nextStep: null,
         evaluation: null,
-        isSessionComplete: true
+        isSessionComplete: true,
+        robotStatus: 'idle'
       };
     }
 
@@ -225,7 +248,6 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
           throw new Error("❌ Tất cả API keys đã hết quota. Vui lòng thử lại sau.");
         }
         
-        
         // Recreate chat với key mới
         const newGeminiInstance = new GoogleGenerativeAI(apiKeyManager.getCurrentKey());
         const newModel = newGeminiInstance.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -260,60 +282,115 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
         result = await this.chat.sendMessage(contextPrompt);
       }
     }
-    
-    let response = result.response.text();
 
-    // Phân tích xem AI có muốn chuyển bước không
+    // ⚠️ CRITICAL: Safety check to prevent crash if API returns null/invalid response
+    if (!result || !result.response) {
+      console.warn('⚠️ Gemini API returned null or invalid response');
+      return {
+        message: "Hệ thống đang bận, em hãy thử gửi lại tin nhắn nhé!",
+        step: this.currentStep,
+        stepName: this._getStepName(this.currentStep),
+        nextStep: null,
+        evaluation: null,
+        isSessionComplete: false,
+        robotStatus: 'idle'
+      };
+    }
+
+    let response = result.response.text();
+    
+    // 🔴 PARSE & EXTRACT STATUS TAG from response
+    // Check if response starts with [CORRECT], [WRONG], or [IDLE]
+    let robotStatus = 'idle';
+    let cleanMessage = response;
+    
+    if (response.trim().startsWith('[CORRECT]')) {
+      robotStatus = 'correct';
+      cleanMessage = response.replace(/^\[CORRECT\]\s*/i, '').trim();
+      console.log('✅ Extracted [CORRECT] tag → robotStatus: correct');
+    } else if (response.trim().startsWith('[WRONG]')) {
+      robotStatus = 'wrong';
+      cleanMessage = response.replace(/^\[WRONG\]\s*/i, '').trim();
+      console.log('❌ Extracted [WRONG] tag → robotStatus: wrong');
+    } else if (response.trim().startsWith('[IDLE]')) {
+      robotStatus = 'idle';
+      cleanMessage = response.replace(/^\[IDLE\]\s*/i, '').trim();
+      console.log('⚪ Extracted [IDLE] tag → robotStatus: idle');
+    } else {
+      // No explicit tag found, use default logic
+      console.log('⚠️ No status tag found, using step-based logic');
+      robotStatus = 'idle';
+    }
+
+    const lowerResponse = cleanMessage.toLowerCase();
+
+    // Phân tích xem AI có muốn chuyển bước không (simple keyword checking)
     let nextStep = null;
     let evaluation = null;
-
-    // Kiểm tra các dấu hiệu chuyển bước trong response (không phân biệt hoa thường)
-    const lowerResponse = response.toLowerCase();
     
-    // ⚠️ KIỂM TRA CHẶT CHẼ: Không cho phép chuyển bước nếu AI chỉ là khen ngợi mà không kiểm tra
-    // Nếu AI nói "[sai]" hoặc "kiểm tra lại", KHÔNG chuyển bước
-    const isCorrectionNeeded = lowerResponse.includes("[sai]") || 
-                               lowerResponse.includes("kiểm tra lại") ||
-                               lowerResponse.includes("xem lại") ||
-                               lowerResponse.includes("hãy tính lại");
-    
-    if ((lowerResponse.includes("bước 2") || lowerResponse.includes("lập kế hoạch")) && this.currentStep === 1 && !isCorrectionNeeded) {
+    if ((lowerResponse.includes("bước 2") || lowerResponse.includes("lập kế hoạch")) && this.currentStep === 1) {
       nextStep = 2;
-      evaluation = this._extractEvaluation(response);
+      evaluation = this._extractEvaluation(cleanMessage);
       this.evaluateStep(1, evaluation || 'pass');
       this.currentStep = 2;
-    } else if ((lowerResponse.includes("bước 3") || lowerResponse.includes("thực hiện kế hoạch")) && this.currentStep === 2 && !isCorrectionNeeded) {
+    } else if ((lowerResponse.includes("bước 3") || lowerResponse.includes("thực hiện")) && this.currentStep === 2) {
       nextStep = 3;
-      evaluation = this._extractEvaluation(response);
+      evaluation = this._extractEvaluation(cleanMessage);
       this.evaluateStep(2, evaluation || 'pass');
       this.currentStep = 3;
-    } else if ((lowerResponse.includes("bước 4") || lowerResponse.includes("kiểm tra & mở rộng") || 
-               (lowerResponse.includes("kiểm tra") && this.currentStep === 3) ||
-               (lowerResponse.includes("mở rộng") && this.currentStep === 3) ||
-               (lowerResponse.includes("cách khác") && this.currentStep === 3) ||
-               (lowerResponse.includes("hợp lý") && this.currentStep === 3)) && this.currentStep === 3 && !isCorrectionNeeded) {
+    } else if ((lowerResponse.includes("bước 4") || lowerResponse.includes("kiểm tra")) && this.currentStep === 3) {
       nextStep = 4;
-      evaluation = this._extractEvaluation(response);
+      evaluation = this._extractEvaluation(cleanMessage);
       this.evaluateStep(3, evaluation || 'pass');
       this.currentStep = 4;
-    } else if ((lowerResponse.includes("hoàn thành") || lowerResponse.includes("hoàn tất") || 
-               lowerResponse.includes("🎉") || lowerResponse.includes("chúc mừng") ||
-               (lowerResponse.includes("giỏi") && lowerResponse.includes("đầy đủ 4 bước")) ||
-               lowerResponse.includes("tuyệt vời") || lowerResponse.includes("chính xác")) && this.currentStep === 4) {
-      nextStep = 5; // Đã hoàn thành bước 4, bài toán xong
-      evaluation = this._extractEvaluation(response);
+    } else if ((lowerResponse.includes("hoàn thành") || lowerResponse.includes("hoàn tất")) && this.currentStep === 4) {
+      nextStep = 5;
+      evaluation = this._extractEvaluation(cleanMessage);
       this.evaluateStep(4, evaluation || 'pass');
-      this.isSessionComplete = true; // Mark session as complete
+      this.isSessionComplete = true;
     }
 
     return {
-      message: response,
+      message: cleanMessage, // ✅ Return cleaned message WITHOUT tag
       step: this.currentStep,
       stepName: this._getStepName(this.currentStep),
       nextStep: nextStep,
       evaluation: evaluation,
-      isSessionComplete: this.isSessionComplete
+      isSessionComplete: this.isSessionComplete,
+      robotStatus: robotStatus // ✅ Return extracted status for robot reaction
     };
+  }
+
+  // 🔴 Extract explicit status tag [CORRECT], [WRONG], or [IDLE] from AI response
+  // Returns: { tag: 'correct'|'wrong'|'idle'|null, cleanText: string }
+  _extractStatusTag(text) {
+    if (!text || typeof text !== 'string') {
+      return { tag: null, cleanText: text };
+    }
+
+    // Regex to match [CORRECT], [WRONG], or [IDLE] at the start
+    const tagMatch = text.match(/^\[?(CORRECT|WRONG|IDLE)\]?\s*/i);
+
+    if (tagMatch) {
+      const tag = tagMatch[1].toUpperCase();
+      // Remove tag from display text
+      const cleanText = text.replace(/^\[?(CORRECT|WRONG|IDLE)\]?\s*/i, '').trim();
+      
+      let robotStatus = null;
+      if (tag === 'CORRECT') {
+        robotStatus = 'correct';
+      } else if (tag === 'WRONG') {
+        robotStatus = 'wrong';
+      } else if (tag === 'IDLE') {
+        robotStatus = 'idle';
+      }
+
+      console.log(`🏷️ Extracted Status Tag: [${tag}] → robotStatus: '${robotStatus}'`);
+      return { tag: robotStatus, cleanText };
+    }
+
+    // No tag found - return null as tag
+    return { tag: null, cleanText: text };
   }
 
   // Trích xuất đánh giá từ response
@@ -326,6 +403,130 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
       return 'need_effort';
     }
     return 'pass'; // Mặc định
+  }
+
+  // 🎯 Analyze sentiment of AI response for robot state
+  // Priority 1: Extract explicit status tag [CORRECT], [WRONG], [IDLE]
+  // Priority 2: Fall back to keyword analysis if no tag found
+  _analyzeSentiment(text) {
+    if (!text || typeof text !== 'string') return 'idle';
+
+    // Priority 1: Try to extract explicit status tag
+    const { tag, cleanText } = this._extractStatusTag(text);
+    if (tag) {
+      console.log(`✅ Using explicit tag status: '${tag}'`);
+      return tag; // 'correct', 'wrong', or 'idle'
+    }
+
+    // Priority 2: Fallback to keyword analysis if no tag found
+    console.log('⚠️ No status tag found, falling back to keyword analysis');
+    const lower = cleanText.toLowerCase();
+
+    const wrongKeywords = [
+      'chưa đúng',
+      'sai',
+      'sai rồi',
+      'thử lại',
+      'kiểm tra lại',
+      'nhầm',
+      'nhầm lẫn',
+      'không chính xác',
+      'tiếc quá'
+    ];
+    for (const kw of wrongKeywords) {
+      if (lower.includes(kw)) {
+        console.log(`📌 Keyword match (wrong): '${kw}'`);
+        return 'wrong';
+      }
+    }
+
+    const correctKeywords = [
+      'chính xác',
+      'đúng rồi',
+      'tuyệt vời',
+      'xuất sắc',
+      'làm tốt',
+      'hoàn thành'
+    ];
+    for (const kw of correctKeywords) {
+      if (lower.includes(kw)) {
+        console.log(`📌 Keyword match (correct): '${kw}'`);
+        return 'correct';
+      }
+    }
+
+    console.log('📌 No keywords matched, defaulting to idle');
+    return 'idle';
+  }
+
+  // Helper: Remove Vietnamese accents for robust regex matching
+  _removeAccents(str) {
+    if (!str) return '';
+    return str
+      .normalize('NFD')  // Decompose accented characters
+      .replace(/[\u0300-\u036f]/g, '')  // Remove diacritics
+      .replace(/đ/g, 'd')  // Replace đ with d
+      .replace(/Đ/g, 'D');  // Replace Đ with D
+  }
+
+  // Determine robot sentiment from AI response text using Advanced Regex Matching
+  // Priority 1: WRONG phrases (correction needed)
+  // Priority 2: CORRECT phrases (affirmative)
+  // Default: IDLE (neutral/thinking)
+  _determineRobotSentiment(responseText) {
+    if (!responseText || typeof responseText !== 'string') return 'idle';
+    
+    // Preprocess: lowercase the text and remove accents for accent-insensitive matching
+    const textLower = responseText.toLowerCase();
+    const textClean = this._removeAccents(textLower);
+
+    // Priority 1: Check WRONG patterns first (correction phrases need priority)
+    const wrongPatterns = [
+      /chua\s*dung/,           // "chưa đúng"
+      /sai\s*roi/,              // "sai rồi"
+      /bi\s*nham/,              // "bị nhầm"
+      /kiem\s*tra\s*lai/,       // "kiểm tra lại"
+      /thu\s*lai/,              // "thử lại"
+      /tinh\s*lai/,             // "tính lại"
+      /chua\s*chinh\s*xac/,     // "chưa chính xác"
+      /khong\s*dung/,           // "không đúng"
+      /nham\s*lan/,             // "nhầm lẫn"
+      /khong\s*chinh\s*xac/     // "không chính xác"
+    ];
+
+    for (const pattern of wrongPatterns) {
+      if (pattern.test(textClean)) {
+        console.log(`🔴 Sentiment (WRONG): Pattern matched - ${pattern}`);
+        return 'wrong';
+      }
+    }
+
+    // Priority 2: Check CORRECT patterns (affirmative phrases)
+    const correctPatterns = [
+      /chinh\s*xac/,            // "chính xác"
+      /dung\s*roi/,             // "đúng rồi"
+      /tuyet\s*voi/,            // "tuyệt vời"
+      /gioi\s*lam/,             // "giỏi lắm"
+      /xuat\s*sac/,             // "xuất sắc"
+      /hoan\s*toan\s*dung/,     // "hoàn toàn đúng"
+      /ket\s*qua\s*dung/,       // "kết quả đúng"
+      /lam\s*tot/,              // "làm tốt"
+      /hoan\s*thanh/,           // "hoàn thành"
+      /dat/,                    // "đạt" (careful with this one as it may match other words)
+      /chuan\s*xac/,            // "chuẩn xác"
+      /hop\s*ly/                // "hợp lý"
+    ];
+
+    for (const pattern of correctPatterns) {
+      if (pattern.test(textClean)) {
+        console.log(`🟢 Sentiment (CORRECT): Pattern matched - ${pattern}`);
+        return 'correct';
+      }
+    }
+
+    // Default: No strong affirmative or correction phrases detected
+    console.log('⚪ Sentiment (IDLE): No matching patterns');
+    return 'idle';
   }
 
   // Tính mức độ chung (mucDoChinh) dựa trên tổng điểm
@@ -686,8 +887,8 @@ Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu h
   ]
 }`;
 
-      const result = await geminiModelManager.generateContent(prompt);
-      const responseText = result.response.text();
+      const result = await this._rateLimitedGenerate(prompt);
+      const responseText = result ? result.response.text() : '';
 
       // Parse JSON response
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -782,8 +983,8 @@ Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu h
       );
 
       // Call Gemini API with key rotation for quota resilience
-      const result = await geminiModelManager.generateContent(prompt);
-      const responseText = result.response.text();
+      const result = await this._rateLimitedGenerate(prompt);
+      const responseText = result ? result.response.text() : '';
 
       // Parse the JSON response and translate to Vietnamese
       const competencyEvaluation = competencyEvaluationService.parseCompetencyEvaluation(responseText);
@@ -804,6 +1005,45 @@ Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu h
    * @param {string} competencyLevel - Mức năng lực của học sinh (Cần cố gắng / Đạt / Tốt)
    * @returns {Promise<string>} - Bài toán luyện tập
    */
+
+  /**
+   * Rate‑limited wrapper around geminiModelManager.generateContent
+   * - forces sequential processing via internal promise chain
+   * - waits 2s after each call
+   * - on 429 errors pauses 10s and retries once
+   * - returns null on permanent failure (caller should fallback)
+   */
+  async _rateLimitedGenerate(prompt) {
+    // enqueue
+    this._pending = this._pending.then(async () => {
+      try {
+        const res = await geminiModelManager.generateContent(prompt);
+        // always delay 2s before allowing next request
+        await delay(2000);
+        return res;
+      } catch (err) {
+        const is429 = err.status === 429 || (err.message && err.message.includes('429')) || (err.message && err.message.toLowerCase().includes('rate limit'));
+        if (is429) {
+          // first pause and retry once
+          await delay(10000);
+          try {
+            const res2 = await geminiModelManager.generateContent(prompt);
+            await delay(2000);
+            return res2;
+          } catch (err2) {
+            console.warn('Second attempt failed for prompt, returning null', err2);
+            await delay(2000);
+            return null;
+          }
+        }
+        // rethrow other errors so callers can catch
+        throw err;
+      }
+    });
+    return this._pending;
+  }
+
+  async generateSimilarProblem(startupProblem1, startupProblem2, context = '', problemNumber = 1) {
   async generateSimilarProblem(startupProblem1, startupProblem2, context = '', problemNumber = 1, competencyLevel = 'Đạt') {
     try {
       
@@ -979,9 +1219,10 @@ SAI: "BÀI 2 LUYỆN TẬP Chủ đề bài thi: Nhân số thập phân Chị L
 
 Bài toán luyện tập:`;
 
-      // Sử dụng generateContent từ geminiModelManager (hỗ trợ auto-rotate key)
-      const result = await geminiModelManager.generateContent(prompt);
-      let similarProblem = result.response.text().trim();
+      // Sử dụng wrapper để rate-limit
+      const result = await this._rateLimitedGenerate(prompt);
+      let similarProblem = result ? result.response.text().trim() : '';
+
       
       // 🔧 POST-PROCESSING: Loại bỏ các header không mong muốn
       // Loại bỏ "BÀI X LUYỆN TẬP" header
@@ -1027,7 +1268,9 @@ Bài toán luyện tập:`;
       
       return similarProblem;
     } catch (error) {
-      throw error;
+      // Safety fallback: If API fails (429, timeout, etc.), return the original problem text
+      console.warn('⚠️ generateSimilarProblem failed, returning original problem:', error.message);
+      return startupProblem1 || startupProblem2 || 'Hãy giải bài toán này một cách từng bước theo 4 bước Polya.';
     }
   }
 
@@ -1103,9 +1346,9 @@ HƯỚNG DẪN TRẢ LỜI:
 
 Bài toán vận dụng:`;
 
-      // Sử dụng generateContent từ geminiModelManager
-      const result = await geminiModelManager.generateContent(prompt);
-      const applicationProblem = result.response.text().trim();
+      // Sử dụng rate-limited wrapper
+      const result = await this._rateLimitedGenerate(prompt);
+      const applicationProblem = result ? result.response.text().trim() : '';
       return applicationProblem;
     } catch (error) {
       throw error;
@@ -1205,7 +1448,7 @@ HƯỚNG DẪN VIẾT NHẬN XÉT:
 }`;
 
       // Sử dụng generateContent từ geminiModelManager
-      const result = await geminiModelManager.generateContent(evaluationPrompt);
+      const result = await this._rateLimitedGenerate(evaluationPrompt);
       const responseText = result.response.text().trim();
       
       // Parse JSON từ response
@@ -1270,8 +1513,8 @@ NHẬN XÉT TỔNG THỂ: ${totalComment}
 
 }`;
 
-      const result = await geminiModelManager.generateContent(prompt);
-      const responseText = result.response.text().trim();
+      const result = await this._rateLimitedGenerate(prompt);
+      const responseText = result ? result.response.text().trim() : '';
 
       // Parse JSON
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -1510,8 +1753,9 @@ YÊU CẦU CHUNG CHO TẤT CẢ CHỦĐỀ:
 
 CHỈ RETURN JSON ARRAY, KHÔNG CÓ TEXT KHÁC.`;
 
-      const result = await geminiModelManager.generateContent(prompt);
-      const responseText = result.response.text().trim();
+      const result = await this._rateLimitedGenerate(prompt);
+      const responseText = result ? result.response.text().trim() : '';
+
 
       // Parse JSON
       let jsonStr = responseText;

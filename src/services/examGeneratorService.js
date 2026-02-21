@@ -1,23 +1,15 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import geminiServiceInstance from './geminiService';
 import apiKeyManager from './apiKeyManager';
 
 class ExamGeneratorService {
   constructor() {
-    this.genAI = null;
-    this.model = null;
+    // no local Gemini instance; use shared geminiModelManager for queuing and key rotation
   }
 
+  // initialize remains for backward compatibility but now does nothing
   async initialize() {
-    try {
-      const apiKey = await apiKeyManager.getValidApiKey();
-      if (!apiKey) {
-        throw new Error('API key không có');
-      }
-      this.genAI = new GoogleGenerativeAI(apiKey);
-      this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    } catch (error) {
-      throw new Error(`Không thể khởi tạo Gemini: ${error.message}`);
-    }
+    // geminiModelManager internally handles API key selection/rotation
+    return;
   }
 
   /**
@@ -30,10 +22,6 @@ class ExamGeneratorService {
    */
   async generateExamFromSamples(params) {
     try {
-      if (!this.model) {
-        await this.initialize();
-      }
-
       const { topicName, lessonName, sampleExams } = params;
 
       if (!sampleExams || sampleExams.length === 0) {
@@ -98,10 +86,11 @@ ${this._formatSampleContent(sample.content)}
 - Phần "aiExplanation" phải chi tiết để hệ thống AI có thể nhận diện lỗi học sinh
 
 **BẮT ĐẦU**:
-Hãy tạo một đề thi mới, hoàn toàn chính xác và phù hợp với format trên. Trả về CHỈNH JSON, không có ký tự khác.`;
+Hãy tạo một đề thi mới, hoàn toàn chính xác và phù hợp với format trên. Trả về CHÍNH JSON, không có ký tự khác.`;
 
-      const result = await this.model.generateContent(prompt);
-      const responseText = result.response.text();
+      // call through geminiService wrapper which itself queues the requests and handles retries
+      const result = await geminiServiceInstance._rateLimitedGenerate(prompt);
+      const responseText = result ? result.response.text() : '';
 
       // Parse JSON từ response
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);

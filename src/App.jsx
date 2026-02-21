@@ -24,6 +24,7 @@ import FacultyExamLobbyPage from './pages/faculty/FacultyExamLobbyPage';
 import FacultyExamLiveSessionPage from './pages/faculty/FacultyExamLiveSessionPage';
 import FacultyExamResultsListPage from './pages/faculty/FacultyExamResultsListPage';
 import FacultyStudentExamResultPage from './pages/faculty/FacultyStudentExamResultPage';
+import TestRobotPage from './pages/TestRobotPage';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -112,6 +113,8 @@ function App() {
         
         {/* Login route */}
         <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={userData && userData.isFaculty() ? '/faculty' : '/student'} replace />} />
+        {/* Test robot page */}
+        <Route path="/test-robot" element={<TestRobotPage />} />
         
         {/* Faculty routes */}
         <Route path="/faculty" element={userData && userData.isFaculty() ? <FacultyPage user={user} userData={userData} onSignOut={handleSignOut} /> : user ? <Navigate to="/student" replace /> : <Navigate to="/login" replace />} />

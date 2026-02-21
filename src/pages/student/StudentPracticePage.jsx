@@ -56,6 +56,34 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         const exercise2 = examData.exercises[1];
         const topicName = examData.title || ''; // Lấy chủ đề từ title của exam
 
+        // Lấy đánh giá năng lực của học sinh từ phần khởi động -> Lấy evaluation.competence level
+        const examProgress = await resultService.getExamProgress(user.uid, examId);
+        const competencyEvaluation = examProgress?.parts?.khoiDong?.evaluation;
+        
+        // Xác định mức năng lực dựa trên competency scores
+        let competencyLevel = 'Đạt'; // Default value
+        if (competencyEvaluation) {
+          // Tính trung bình điểm năng lực
+          const scores = [
+            competencyEvaluation.TC1?.score || 0,
+            competencyEvaluation.TC2?.score || 0,
+            competencyEvaluation.TC3?.score || 0,
+            competencyEvaluation.TC4?.score || 0
+          ].filter(s => s > 0);
+          
+          if (scores.length > 0) {
+            const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+            
+            if (avgScore <= 5) {
+              competencyLevel = 'Cần cố gắng';
+            } else if (avgScore >= 8) {
+              competencyLevel = 'Tốt';
+            } else {
+              competencyLevel = 'Đạt';
+            }
+          }
+        }
+
         // Xây dựng context từ các câu hỏi trong bài tập
         const buildExerciseContext = (exercise) => {
           let context = `Chủ đề bài thi: ${topicName}\n\n`;
@@ -77,6 +105,8 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         const context2 = buildExerciseContext(exercise2);
 
         // Gọi Gemini để tạo bài toán tương tự - TUẦN TỰ với throttle delay để tránh quota limit
+        // Gọi Gemini để tạo bài toán tương tự - TUẦN TỰ (không song song) để tránh quota limit
+        // THÊM competencyLevel vào cuộc gọi
         let similarProblem1, similarProblem2;
         const gService = new geminiService.constructor();
         
@@ -87,13 +117,14 @@ const StudentPracticePage = ({ user, onSignOut }) => {
           similarProblem1 = await gService.generateSimilarProblem(exercise1.name, exercise2.name, context1, 1);
           // Throttle: wait 2 seconds before next API call
           await delay(2000);
+          similarProblem1 = await gService.generateSimilarProblem(exercise1.name, exercise2.name, context1, 1, competencyLevel);
         } catch (err1) {
           console.warn('Failed to generate problem 1, using fallback:', err1.message);
           similarProblem1 = exercise1.name || 'Bài tập 1';
         }
 
         try {
-          similarProblem2 = await gService.generateSimilarProblem(exercise1.name, exercise2.name, context2, 2);
+          similarProblem2 = await gService.generateSimilarProblem(exercise1.name, exercise2.name, context2, 2, competencyLevel);
         } catch (err2) {
           console.warn('Failed to generate problem 2, using fallback:', err2.message);
           similarProblem2 = exercise2.name || 'Bài tập 2';

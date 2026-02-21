@@ -49,6 +49,25 @@ NGUYÊN TẮC GIAO TIẾP VỚI BẠN:
 - Khi bạn trả lời đúng, khen ngợi cụ thể và hỏi câu tiếp theo
 - KHÔNG ghi "BƯỚC 1:", "BƯỚC 2:", v.v. vào câu chat - chỉ đặt câu hỏi một cách tự nhiên
 
+PHÂN BIỆT CÓ-GỢI Ý VÀ LỜI GIẢI (RẤT QUAN TRỌNG - KHI HỌC SINH YÊU CẦU HELP/GỢI Ý):
+❌ SAI - ĐỌC RA LỜI GIẢI/ĐÁP ÁN:
+  "Phép tính là 3 × 2,5 = 7,5 đó"
+  "Bạn cộng cả hai số lại: 100 + 50 = 150"
+  "Đáp án là 25 mét"
+  "Công thức là: (2,5 + 1,5) × 3 = ..."
+
+✅ ĐÚNG - CHỈ GỢI Ý HƯỚNG SUYNSGHĨ:
+  "Bạn thử kiểm tra lại phép tính đó xem"
+  "Bạn cần cộng những gì với nhau?"
+  "NHỮNG THÔNG TIN NÀO BẠN CÓ CHỈ CẦN CỘNG LẠI?"
+  "Phép tính đó, bạn thử tính lại xem sao?"
+
+✅ GỢI Ý-CÂU HỎI ĐÚNG VÍ DỤ:
+  - "Bạn thấy bài toán hỏi cái gì?" (Bước 1)
+  - "Để so sánh 2 số này, bạn sẽ làm phép tính gì?" (Bước 2)
+  - "Phép tính đó bạn kiểm tra lại được không? Kết quả là bao nhiêu?" (Bước 3)
+  - "Kết quả này có đúng với dữ kiện bài toán không?" (Bước 4)
+
 NHỮNG GÌ KHÔNG NÊN LÀM:
 - Không hỏi "bạn làm đúng không?" → hỏi "vậy tiếp theo là gì?"
 - Không nói "sai" trực tiếp → nói "hãy xem lại..."
@@ -689,9 +708,39 @@ Tiêu chí xem câu trả lời "đủ" ở bước 4:
       throw new Error("Chưa khởi tạo bài toán.");
     }
 
-    const hintPrompt = `Bạn đang gặp khó khăn ở BƯỚC ${this.currentStep}.
-Hãy đưa ra 1 gợi ý NHẸ NHÀNG (KHÔNG giải hộ, KHÔNG đưa đáp án).
-Chỉ gợi ý hướng suy nghĩ hoặc 1 câu hỏi dẫn dắt ngắn gọn.`;
+    const hintPrompt = `⚠️ HỌC SINH YÊU CẦU GỢI Ý - CHỈNH ĐẠI GỢI Ý THUẦN TÚY
+
+BẠN ĐANG Ở BƯỚC ${this.currentStep} (${this._getStepName(this.currentStep)}).
+
+**QUY TẮC CƠNG SỬ CHỉ GỢI Ý:**
+- ✋ TUYỆT ĐỐI KHÔNG QUÁ TRỊ GIẢI HỘ HOẶC CHO ĐÁP ÁN
+- ✋ KHÔNG CÓ PHÉP TÍNH CỤ THỂ hoặc ĐÁNH SỐ ĐÁP ÁN
+- ✋ KHÔNG NÊULOÀI TỪ BÀI TOÁN CẦN LÀM
+- ✔️ CHỈ ĐƯA GỢI Ý HƯỚNG SUYNSGHĨ hoặc ĐẶT CÂU HỎI LẪN DẪN
+- ✔️ PHẢI CHỮ "XEM", "TRY", "ĐỊNH VỀ" → để học sinh tự suy nghĩ
+
+**HƯỚNG DẪN CHO TỪNG BƯỚC:**
+
+Bước 1 (Hiểu bài toán): Hỏi về dữ kiện hoặc yêu cầu
+  Gợi ý: "Bạn thấy bài toán cho những thông tin gì? Nó hỏi những gì?"
+
+Bước 2 (Lập kế hoạch): Hỏi về loại phép tính cần dùng
+  Gợi ý: "Để so sánh hai giá trị, bạn nên dùng phép tính nào?"
+
+Bước 3 (Thực hiện): CHỈNH các bước tính, KHÔNG cho kết quả
+  Gợi ý SAI: "3 × 2,5 = 7,5 là sai, đáp án đúng là 7,5"
+  Gợi ý ĐÚNG: "Bạn thử kiểm tra lại phép tính này xem. 3 × 2,5 bằng bao nhiêu?"
+
+Bước 4 (Kiểm tra & mở rộng): Hỏi xem kết quả có hợp lý không
+  Gợi ý: "Kết quả này có khớp với dữ kiện của bài toán không? Nó hợp lý không?"
+
+**ĐỊNH DẠNG GỢI Ý:**
+- Chỉ 1-2 CÂU đơn giản, dễ hiểu
+- Không dài, không phức tạp
+- Tạo ấn tượng là học sinh tự suy làm ra lời giải
+
+**VIẾT GỢI Ý NGAY BÂY GIỜ:**
+(Đưa ra GỢI Ý THUẦN TÚY cho bước hiện tại - KHÔNG PHẢI LỜI GIẢI, KHÔNG PHẢI ĐÁP ÁN)`;
 
     try {
       const result = await this.chat.sendMessage(hintPrompt);
@@ -953,6 +1002,7 @@ Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu h
    * @param {string} startupProblem2 - Bài 2 phần khởi động
    * @param {string} context - Bối cảnh/dạng toán
    * @param {number} problemNumber - Số thứ tự bài luyện tập (1 hoặc 2)
+   * @param {string} competencyLevel - Mức năng lực của học sinh (Cần cố gắng / Đạt / Tốt)
    * @returns {Promise<string>} - Bài toán luyện tập
    */
 
@@ -994,11 +1044,13 @@ Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu h
   }
 
   async generateSimilarProblem(startupProblem1, startupProblem2, context = '', problemNumber = 1) {
+  async generateSimilarProblem(startupProblem1, startupProblem2, context = '', problemNumber = 1, competencyLevel = 'Đạt') {
     try {
       
       let referenceProblem = '';
       let difficultyGuidance = '';
       let topicFocus = '';
+      let competencyAdjustment = '';
       
       if (problemNumber === 1) {
         referenceProblem = startupProblem1;
@@ -1016,6 +1068,33 @@ MỨC ĐỘ CỦA BÀI 2 LUYỆN TẬP:
 - Có cùng số lượng dữ kiện và điều kiện giống bài khởi động
 - Cùng số lượng phép tính và cấp độ suy luận với bài 2 khởi động
 - Bài này giúp học sinh luyện tập sau khi đã hoàn thành bài 1 dễ`;
+      }
+      
+      // SÃD DỰA TRÊN NĂNG LỰC CỦA HỌC SINH TỪ PHẦN KHỞI ĐỘNG
+      if (competencyLevel === 'Cần cố gắng') {
+        competencyAdjustment = `
+⚠️ HỌC SINH CẦN CỐ GẮNG - ĐIỀU CHỈNH ĐỘ KHÓ:
+- Bài toán PHẢI ĐƠN GIẢN HƠNT - Giảm độ khó so với bài khởi động
+- Sử dụng SỐ NHỎ HƠN để dễ tính (ví dụ: 2, 3, 5 thay vì 12, 24, 36)
+- GIẢM SỐ LƯỢNG CÁC PHÉP TÍNH - Tối đa 1-2 phép tính duy nhất
+- LOẠI BỎ các điều kiện phức tạp hoặc phần cộng thêm
+- Bài toán phải tập trung vào KỸ NĂNG CƠ BẢN nhất của chủ đề
+- Ví dụ: Chủ đề "Nhân số thập phân" → Dùng 2 × 1,5 thay vì 2,5 × 42`;
+      } else if (competencyLevel === 'Tốt') {
+        competencyAdjustment = `
+⭐ HỌC SINH NĂNG KHIấU - ĐIỀU CHỈNH ĐỘ KHÓ:
+- Bài toán PHẢI KHÓ HƠN hoặc PHỨC TẠP HƠN bài khởi động
+- Sử dụng SỐ LỚN HƠN hoặc SỐ THẬP PHÂN nhiều chữ số hơn
+- CÓ THỂ THÊM điều kiện phụ hoặc số lượng phép tính nhiều hơn
+- Bài toán có thể yêu cầu suy luận nhiều bước hơn
+- Ví dụ: Chủ đề "Nhân số thập phân" → Dùng 3,25 × 4,5 hoặc kết hợp với phép tính khác`;
+      } else {
+        // Đạt - bình thường
+        competencyAdjustment = `
+✅ HỌC SINH ĐẠT - GIỮ NGUYÊN ĐỘ KHÓ:
+- Bài toán phải TƯƠNG ĐƯƠNG với bài khởi động
+- Cùng cấp độ khó, cùng số lượng phép tính
+- Chỉ thay đổi bối cảnh/numbers nhưng giữ lại cấu trúc`;
       }
       
       // Nếu có context (chủ đề), sử dụng để nhấn mạnh
@@ -1039,6 +1118,7 @@ ${context}
 NHIỆM VỤ:
 Tạo BÀI ${problemNumber} LUYỆN TẬP dựa vào bài khởi động trên:
 ${difficultyGuidance}
+${competencyAdjustment}
 ${topicFocus}
 
 YÊU CẦU TỐI QUAN TRỌNG:

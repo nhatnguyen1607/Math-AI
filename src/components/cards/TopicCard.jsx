@@ -33,8 +33,8 @@ const TopicCard = ({ topic, onEdit, onDelete, onCreateExam, showActions = true }
 
       {/* Stats */}
       <div className="flex gap-4 py-2 border-t border-b border-gray-100 text-xs">
-        <span className="text-gray-600 flex items-center gap-1">� <strong>{topic.examCount || 0}</strong> đề</span>
-        <span className="text-gray-600 flex items-center gap-1">�📚 Lớp {topic.gradeLevel}</span>
+        <span className="text-gray-600 flex items-center gap-1">📘 <strong>{topic.sampleExams?.length || 0}</strong> đề mẫu</span>
+        <span className="text-gray-600 flex items-center gap-1">📚 Lớp {topic.gradeLevel}</span>
       </div>
 
       {/* Actions */}

@@ -115,7 +115,7 @@ function AdminPage({ onLogout }) {
       // Reload users
       await loadUsers();
       setShowUserDetail(false);
-      alert('Người dùng đã được nâng cấp thành Giảng viên');
+      alert('Người dùng đã được nâng cấp thành Giáo viên');
     } catch (error) {
       alert('Lỗi: Không thể nâng cấp người dùng');
     } finally {
@@ -167,7 +167,7 @@ function AdminPage({ onLogout }) {
               </div>
               <div className="stat-card bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-all">
                 <div className="stat-value text-3xl font-bold text-purple-600">{statistics.faculty}</div>
-                <div className="stat-label text-gray-600 mt-2">👨‍🏫 Giảng viên</div>
+                <div className="stat-label text-gray-600 mt-2">👨‍🏫 Giáo viên</div>
               </div>
               <div className="stat-card bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-all">
                 <div className="stat-value text-3xl font-bold text-red-600">{statistics.lockedUsers}</div>
@@ -221,7 +221,7 @@ function AdminPage({ onLogout }) {
                 }`}
                 onClick={() => setActiveTab('faculty')}
               >
-                👨‍🏫 Giảng viên
+                👨‍🏫 Giáo viên
               </button>
               <button
                 className={`tab px-4 py-2 rounded-lg font-semibold transition-all ${
@@ -263,7 +263,7 @@ function AdminPage({ onLogout }) {
                         user.role === 'faculty' ? 'bg-purple-100 text-purple-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
-                        {user.role === 'student' ? '🎓 Học sinh' : user.role === 'faculty' ? '👨‍🏫 Giảng viên' : '🔐 Admin'}
+                        {user.role === 'student' ? '🎓 Học sinh' : user.role === 'faculty' ? '👨‍🏫 Giáo viên' : '🔐 Admin'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm">
@@ -327,7 +327,7 @@ function AdminPage({ onLogout }) {
                     selectedUser.role === 'faculty' ? 'bg-purple-100 text-purple-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
-                    {selectedUser.role === 'student' ? '🎓 Học sinh' : selectedUser.role === 'faculty' ? '👨‍🏫 Giảng viên' : '🔐 Admin'}
+                    {selectedUser.role === 'student' ? '🎓 Học sinh' : selectedUser.role === 'faculty' ? '👨‍🏫 Giáo viên' : '🔐 Admin'}
                   </span>
                 </div>
                 <div className="info-row">
@@ -366,7 +366,7 @@ function AdminPage({ onLogout }) {
                       onClick={() => handlePromoteToFaculty(selectedUser.id)}
                       disabled={actionInProgress}
                     >
-                      {actionInProgress ? '⏳ Đang xử lý...' : '⬆️ Nâng cấp Giảng viên'}
+                      {actionInProgress ? '⏳ Đang xử lý...' : '⬆️ Nâng cấp Giáo viên'}
                     </button>
                   )}
                   {selectedUser.isFaculty() && (

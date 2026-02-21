@@ -640,7 +640,7 @@ class FacultyService {
    * Lấy kết quả hoàn thành của tất cả học sinh cho một đề thi từ student_exam_progress
    * Đây là nguồn dữ liệu chính xác hơn finalLeaderboard vì nó có tất cả học sinh đã làm
    * @param {string} examId - ID của đề thi
-   * @returns {Promise<Array>} - Mảng học sinh với điểm số, sắp xếp theo rank
+   * @returns {Promise<Array>} - Mảng học sinh với điểm số, sắp xếp theo rank năng lực
    */
   async getExamStudentResults(examId) {
     try {
@@ -694,6 +694,19 @@ class FacultyService {
         const khoiDongData = data.parts?.khoiDong;
         
         if (khoiDongData && khoiDongData.completedAt) {
+          // 🎯 TỐN ĐIỂM NĂNG LỰC từ cả 3 phần: khoiDong, luyenTap, vanDung
+          const khoiDongTC = khoiDongData.evaluation?.diemTC || { tc1: 0, tc2: 0, tc3: 0, tc4: 0 };
+          const luyenTapBai1TC = data.parts?.luyenTap?.bai1?.evaluation?.diemTC || { tc1: 0, tc2: 0, tc3: 0, tc4: 0 };
+          const luyenTapBai2TC = data.parts?.luyenTap?.bai2?.evaluation?.diemTC || { tc1: 0, tc2: 0, tc3: 0, tc4: 0 };
+          const vanDungTC = data.parts?.vanDung?.evaluation?.diemTC || { tc1: 0, tc2: 0, tc3: 0, tc4: 0 };
+
+          // Tính tổng điểm năng lực từ cả 3 phần
+          const totalCompetencyScore = 
+            (khoiDongTC.tc1 || 0) + (khoiDongTC.tc2 || 0) + (khoiDongTC.tc3 || 0) + (khoiDongTC.tc4 || 0) +
+            (luyenTapBai1TC.tc1 || 0) + (luyenTapBai1TC.tc2 || 0) + (luyenTapBai1TC.tc3 || 0) + (luyenTapBai1TC.tc4 || 0) +
+            (luyenTapBai2TC.tc1 || 0) + (luyenTapBai2TC.tc2 || 0) + (luyenTapBai2TC.tc3 || 0) + (luyenTapBai2TC.tc4 || 0) +
+            (vanDungTC.tc1 || 0) + (vanDungTC.tc2 || 0) + (vanDungTC.tc3 || 0) + (vanDungTC.tc4 || 0);
+
           results.push({
             uid: userId,
             name: studentName,
@@ -702,15 +715,29 @@ class FacultyService {
             totalQuestions: khoiDongData.totalQuestions || 0,
             percentage: khoiDongData.percentage || 0,
             completedAt: khoiDongData.completedAt,
-            timeSpent: khoiDongData.timeSpent || 0
+            timeSpent: khoiDongData.timeSpent || 0,
+            // 🎯 THÊM tổng điểm năng lực
+            totalCompetencyScore: totalCompetencyScore,
+            competencyDetails: {
+              khoiDong: khoiDongTC,
+              luyenTapBai1: luyenTapBai1TC,
+              luyenTapBai2: luyenTapBai2TC,
+              vanDung: vanDungTC
+            }
           });
         }
       }
 
-      // Sắp xếp theo điểm giảm dần
+      // 🎯 SẮP XẾP THEO TỔNG ĐIỂM NĂNG LỰC GIẢM DẦN (từ cao đến thấp)
       results.sort((a, b) => {
+        // Ưu tiên sắp xếp theo điểm năng lực
+        if (b.totalCompetencyScore !== a.totalCompetencyScore) {
+          return b.totalCompetencyScore - a.totalCompetencyScore;
+        }
+        // Nếu điểm năng lực bằng nhau, sắp xếp theo điểm khởi động
         if (b.score !== a.score) return b.score - a.score;
-        return a.totalQuestions === b.totalQuestions ? 0 : b.totalQuestions - a.totalQuestions;
+        // Nếu vẫn bằng nhau, sắp xếp theo số câu đúng
+        return b.correctAnswers - a.correctAnswers;
       });
 
       // Thêm rank vào

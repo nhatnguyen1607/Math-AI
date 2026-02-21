@@ -588,7 +588,7 @@ const FacultyExamManagementPage = () => {
       <div className="bg-gradient-to-r from-purple-100 to-blue-100 border-b-2 border-purple-200 px-8 lg:px-12 py-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-gray-800">📝 Quản lí Đề Thi</h1>
+            <h1 className="text-3xl font-bold text-gray-800">📝 Quản lí Bài Ôn</h1>
             <button
               onClick={() => navigate('/faculty/learning-pathway/exam')}
               className="px-4 py-2 hover:bg-purple-200 hover:text-purple-700 rounded-lg transition-all duration-300 text-gray-700 flex items-center gap-2 font-semibold"

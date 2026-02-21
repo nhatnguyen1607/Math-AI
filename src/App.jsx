@@ -34,6 +34,40 @@ function App() {
   const [lockError, setLockError] = useState(null);
 
   useEffect(() => {
+    // 1. CHECK LOCALSTORAGE FIRST (for Custom Phone/Username + Password Auth)
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        // Create a mock user object compatible with Firebase user structure
+        setUser({
+          uid: parsedUser.uid,
+          email: parsedUser.email,
+          displayName: parsedUser.displayName,
+          authMethod: 'custom'
+        });
+        
+        // For custom auth, create userData object from localStorage
+        const customUserData = {
+          id: parsedUser.uid,
+          email: parsedUser.email,
+          displayName: parsedUser.displayName,
+          username: parsedUser.username,
+          role: parsedUser.role || 'student',
+          authMethod: 'custom',
+          isFaculty: () => (parsedUser.role === 'faculty'),
+          isLocked: false
+        };
+        setUserData(customUserData);
+        setLoading(false);
+        return; // Exit early - no need to check Firebase Auth
+      } catch (err) {
+        console.warn('Invalid localStorage user data:', err);
+        localStorage.removeItem('user'); // Clear corrupted data
+      }
+    }
+
+    // 2. FALLBACK TO FIREBASE AUTH (for Google Sign-in)
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       
@@ -65,7 +99,15 @@ function App() {
 
   const handleSignOut = async () => {
     try {
+      // Clear localStorage (for custom auth)
+      localStorage.removeItem('user');
+      
+      // Sign out from Firebase (for Google auth)
       await signOutUser();
+      
+      // Reset state
+      setUser(null);
+      setUserData(null);
     } catch (error) {
       console.error('Sign out error:', error);
     }
@@ -112,7 +154,7 @@ function App() {
         <Route path="/admin/topic-management" element={!isAdminAuthenticated ? <AdminLoginPage onLoginSuccess={handleAdminLoginSuccess} /> : <AdminTopicPage onLogout={handleAdminLogout} />} />
         
         {/* Login route */}
-        <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={userData && userData.isFaculty() ? '/faculty' : '/student'} replace />} />
+        <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={userData?.isFaculty?.() === true ? '/faculty' : '/student'} replace />} />
         {/* Test robot page */}
         <Route path="/test-robot" element={<TestRobotPage />} />
         
@@ -141,7 +183,7 @@ function App() {
         <Route path="/student/van-dung/:examId" element={user && (!userData || !userData.isFaculty()) ? <StudentVanDungPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
         
         {/* Default route */}
-        <Route path="/" element={user ? (userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/student" replace />) : <Navigate to="/login" replace />} />
+        <Route path="/" element={user ? (userData?.isFaculty?.() === true ? <Navigate to="/faculty" replace /> : <Navigate to="/student" replace />) : <Navigate to="/login" replace />} />
         
         {/* Catch all - redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />

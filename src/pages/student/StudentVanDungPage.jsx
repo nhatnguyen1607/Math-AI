@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import StudentHeader from '../../components/student/StudentHeader';
 import PracticeChat from '../../components/PracticeChat';
 import RobotCompanion from '../../components/common/RobotCompanion';
+import MobileRobotAvatar from '../../components/common/MobileRobotAvatar';
 import geminiService from '../../services/geminiService';
 import resultService from '../../services/resultService';
 import examService from '../../services/examService';
@@ -20,6 +21,10 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const initializingRef = useRef(false); // Để track xem đã khởi tạo chưa
+
+  // UI state from practice layout
+  const [activeTab, setActiveTab] = useState('vanDung');
+  const leftColRef = useRef(null);
 
   // robot companion state
   const [robotStatus, setRobotStatus] = useState('idle');
@@ -242,132 +247,124 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
+    <div className="min-h-screen bg-gray-50 pt-4 pb-20">
       <StudentHeader user={user} onLogout={onSignOut} />
 
-      <div className="max-w-6xl mx-auto px-5 py-8">
-        {/* Header */}
-        <div className="bg-white rounded-max shadow-lg p-6 mb-8 game-card">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-gray-800 font-quicksand">
-              🌟 Vận dụng
-            </h1>
+      {/* Compact Sticky Header with Title & Progress */}
+      <div className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-2xl font-bold text-gray-800 font-quicksand">🌟 Vận dụng</h1>
             <button
               onClick={() => navigate(-1)}
-              className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-max transition-all font-quicksand"
+              className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-lg transition-all font-quicksand text-sm"
             >
               ← Quay lại
             </button>
           </div>
-          <p className="text-gray-600 font-quicksand">
-            Áp dụng kiến thức vào bài toán thực tế được tạo riêng cho bạn
-          </p>
+          {/* Progress Steps - Horizontal & Compact */}
+          <div className="flex items-center justify-start space-x-3">
+            {['vanDung'].map((step, idx) => {
+              const status = vanDungData?.status;
+              const icon = status === 'completed' ? '✅' : status === 'in_progress' ? '⏳' : '🔒';
+              // build button class conditional on completion first
+              let btnClass = 'flex items-center px-3 py-1 rounded-full font-bold font-quicksand transition-all text-sm ';
+              if (status === 'completed') {
+                btnClass += 'bg-green-500 text-white shadow-md cursor-not-allowed';
+              } else if (activeTab === step) {
+                btnClass += 'bg-blue-500 text-white shadow-md';
+              } else {
+                btnClass += 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50';
+              }
+
+              return (
+                <React.Fragment key={step}>
+                  <button
+                    onClick={() => setActiveTab(step)}
+                    disabled={status === 'completed'}
+                    className={btnClass}
+                  >
+                    <span className="mr-1">{icon}</span>
+                    Vận dụng
+                  </button>
+                </React.Fragment>
+              );
+            })}
+          </div>
         </div>
+      </div>
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Progress Sidebar */}
-          <aside className="lg:col-span-1 bg-white rounded-max shadow-lg p-6 game-card">
-            <h3 className="text-lg font-bold text-gray-800 mb-4 font-quicksand">📊 Tiến độ</h3>
-            
-            <div className="mb-4 pb-4 border-b border-gray-200">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xl">
-                  {vanDungData?.status === 'completed' ? '✅' : '⏳'}
-                </span>
-                <span className="font-bold text-sm font-quicksand">Vận dụng</span>
+      {/* Main Content Grid with Natural Scroll */}
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 px-4 py-6 pb-20">
+        {/* Main Content Column - Flex and grow */}
+        <main className="flex flex-col gap-6" ref={leftColRef}>
+          {vanDungData?.deBai ? (
+            <>
+              {/* STICKY PROBLEM STATEMENT */}
+              <div className="sticky top-[70px] z-30 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 p-4 rounded-xl shadow-sm">
+                <h3 className="text-sm font-bold text-blue-900 font-quicksand mb-2">📝 Đề Bài</h3>
+                <p className="text-base text-blue-800 font-quicksand leading-relaxed">
+                  {vanDungData.deBai}
+                </p>
               </div>
-              <p className="text-xs text-gray-600 font-quicksand mb-2">
-                {vanDungData?.status === 'in_progress' ? 'Đang tiến hành' :
-                 vanDungData?.status === 'completed' ? 'Đã hoàn thành' :
-                 'Chưa mở'}
-              </p>
-            </div>
 
-            {/* Tips */}
-            <div className="bg-blue-50 p-3 rounded-max border-l-4 border-blue-500">
-              <p className="text-xs font-bold text-blue-700 mb-2 font-quicksand">💡 Mẹo:</p>
-              <p className="text-xs text-blue-600 font-quicksand leading-relaxed">
-                Hãy thực hiện đầy đủ 4 bước khi giải bài toán này!
-              </p>
-            </div>
-          </aside>
-
-          {/* Chat Area */}
-          <main className="lg:col-span-3">
-            {vanDungData?.deBai ? (
-              <>
+              {/* SCROLLABLE CHAT */}
+              <div className="flex-1">
                 <PracticeChat
                   userId={user?.uid}
                   examId={examId}
                   baiNumber="vanDung"
                   deBai={vanDungData.deBai}
                   chatHistory={vanDungData.chatHistory || []}
+                  scrollContainerRef={leftColRef}
                   isCompleted={vanDungData.status === 'completed'}
                   evaluation={vanDungData.evaluation}
-                  onCompleted={() => {
-                    // Khi bài hoàn thành, tự động gọi submit
-                    handleSubmitVanDung();
-                  }}
+                  onCompleted={handleSubmitVanDung}
                   onRobotStateChange={(status, msg) => {
                     setRobotStatus(status);
                     setRobotMessage(msg);
                   }}
                 />
-
-                {/* Submit Button - Luôn hiển thị khi đang tiến hành */}
-                {vanDungData?.status === 'in_progress' && (
-                  <div className="mt-4 space-y-3">
-                    <button
-                      onClick={handleSubmitVanDung}
-                      disabled={submitting}
-                      className="w-full px-6 py-4 bg-gradient-to-r from-orange-400 to-red-500 text-white font-bold rounded-max hover:shadow-lg transition-all disabled:opacity-50 font-quicksand text-lg"
-                    >
-                      {submitting ? '⏳ Đang chấm điểm...' : '✓ Nộp bài & Chấm điểm'}
-                    </button>
-                    {vanDungData?.chatHistory?.length === 0 && (
-                      <p className="text-center text-sm text-gray-500 font-quicksand">
-                        💡 Hãy tương tác với AI trước khi nộp bài
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Navigation Button */}
-                {/* {vanDungData?.status === 'completed' && (
-                  <div className="mt-4">
-                    <button
-                      onClick={() => navigate(`/student/exam-result/${examId}`)}
-                      className="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-max hover:shadow-lg transition-all font-quicksand text-lg"
-                    >
-                      ✅ Xem kết quả toàn diện →
-                    </button>
-                  </div>
-                )} */}
-              </>
-            ) : (
-              <div className="bg-white rounded-max shadow-lg p-8 flex items-center justify-center">
-                <p className="text-gray-600 font-quicksand">Đang tải bài tập...</p>
               </div>
-            )}
-          </main>
 
-          {/* Robot Sidebar */}
-          <aside className="lg:col-span-1 flex justify-center">
-            <div className="sticky top-20 w-full max-w-[400px]">
-              <RobotCompanion status={robotStatus} message={robotMessage} />
+              {/* Submit Button */}
+              {vanDungData?.status === 'in_progress' && (
+                <div className="flex gap-3 flex-wrap">
+                  <button
+                    onClick={handleSubmitVanDung}
+                    disabled={submitting}
+                    className="flex-1 min-w-[200px] px-6 py-3 bg-gradient-to-r from-orange-400 to-red-500 text-white font-bold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-quicksand"
+                  >
+                    {submitting ? '⏳ Đang chấm điểm...' : '✓ Nộp bài & Chấm điểm'}
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm p-8 flex items-center justify-center">
+              <p className="text-gray-600 font-quicksand">Đang tải bài tập...</p>
             </div>
-          </aside>
-        </div>
+          )}
+        </main>
 
-        {/* Error Message */}
-        {error && (
-          <div className="fixed bottom-6 right-6 bg-red-500 text-white px-6 py-4 rounded-max shadow-lg flex items-center gap-3 max-w-xs font-quicksand">
-            <span>⚠️ {error}</span>
-            <button onClick={() => setError(null)} className="text-2xl font-bold">✕</button>
+        {/* Sticky Robot Sidebar - Fixed 350px width, no shrink */}
+        <aside className="hidden lg:flex lg:flex-col lg:w-[350px] lg:flex-none">
+          <div className="sticky top-[70px] h-fit bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+            <RobotCompanion status={robotStatus} message={robotMessage} />
           </div>
-        )}
+        </aside>
       </div>
+
+      {/* Mobile Robot Avatar */}
+      <MobileRobotAvatar status={robotStatus} />
+
+      {/* Error Message */}
+      {error && (
+        <div className="fixed bottom-6 right-6 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 max-w-xs font-quicksand z-50">
+          <span>⚠️ {error}</span>
+          <button onClick={() => setError(null)} className="text-2xl font-bold">✕</button>
+        </div>
+      )}
     </div>
   );
 };

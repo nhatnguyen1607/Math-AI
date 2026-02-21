@@ -6,7 +6,8 @@
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
+// removed unused 'os' import to quiet ESLint warning
+
 
 /**
  * Parse exam file (Word or PDF) and return exercises/questions structure

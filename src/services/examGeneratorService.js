@@ -1,10 +1,9 @@
 import geminiServiceInstance from './geminiService';
-import apiKeyManager from './apiKeyManager';
+// apiKeyManager no longer needed here (handled inside geminiModelManager)
+
 
 class ExamGeneratorService {
-  constructor() {
-    // no local Gemini instance; use shared geminiModelManager for queuing and key rotation
-  }
+  // constructor removed as it served no purpose
 
   // initialize remains for backward compatibility but now does nothing
   async initialize() {

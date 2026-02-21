@@ -1,0 +1,5 @@
+# ignore generated build output
+build/
+
+# ignore all css files since eslint is configured for JS/JSX only
+**/*.css

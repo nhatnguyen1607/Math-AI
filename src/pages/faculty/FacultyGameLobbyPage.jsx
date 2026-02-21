@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import authService from '../../services/authService';
 import facultyService from '../../services/faculty/facultyService';
-import studentService from '../../services/student/studentService';
+// studentService unused here
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 
 const FacultyGameLobbyPage = () => {
@@ -33,13 +33,8 @@ const FacultyGameLobbyPage = () => {
     checkAuth();
   }, [navigate]);
 
-  useEffect(() => {
-    if (examId && user?.uid) {
-      loadExam();
-    }
-  }, [examId, user?.uid]);
-
-  const loadExam = async () => {
+  const loadExam = useCallback(async () => {
+    if (!examId) return;
     try {
       setLoading(true);
       const examData = await facultyService.getExamById(examId);
@@ -65,7 +60,13 @@ const FacultyGameLobbyPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [examId, navigate]);
+
+  useEffect(() => {
+    if (examId && user?.uid) {
+      loadExam();
+    }
+  }, [examId, user?.uid, loadExam]);
   useEffect(() => {
     return () => {
       if (unsubscribe) {

@@ -104,20 +104,20 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         const context1 = buildExerciseContext(exercise1);
         const context2 = buildExerciseContext(exercise2);
 
-        // Gọi Gemini để tạo bài toán tương tự - TUẦN TỰ với throttle delay để tránh quota limit
-        // Gọi Gemini để tạo bài toán tương tự - TUẦN TỰ (không song song) để tránh quota limit
-        // THÊM competencyLevel vào cuộc gọi
+        // Gọi Gemini để tạo bài toán tương tự - có truyền năng lực học sinh làm tham số thứ 5
+        // Throttle giữa hai lần gọi (bài 1 và bài 2) bằng delay, không cần gọi zweimal cho cùng một bài
         let similarProblem1, similarProblem2;
         const gService = new geminiService.constructor();
         
-        // Helper: delay function
-        const delay = ms => new Promise(res => setTimeout(res, ms));
-        
         try {
-          similarProblem1 = await gService.generateSimilarProblem(exercise1.name, exercise2.name, context1, 1);
-          // Throttle: wait 2 seconds before next API call
-          await delay(2000);
-          similarProblem1 = await gService.generateSimilarProblem(exercise1.name, exercise2.name, context1, 1, competencyLevel);
+          // chỉ gọi một lần cho bài 1 với độ năng lực đã xác định
+          similarProblem1 = await gService.generateSimilarProblem(
+            exercise1.name,
+            exercise2.name,
+            context1,
+            1,
+            competencyLevel
+          );
         } catch (err1) {
           console.warn('Failed to generate problem 1, using fallback:', err1.message);
           similarProblem1 = exercise1.name || 'Bài tập 1';

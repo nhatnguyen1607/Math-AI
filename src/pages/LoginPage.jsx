@@ -1,29 +1,25 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
   collection, 
   query, 
   where, 
   getDocs, 
   setDoc, 
-  doc, 
-  getDoc 
+  doc 
 } from 'firebase/firestore';
 import { 
-  signInWithPopup, 
-  GoogleAuthProvider,
-  signOut as firebaseSignOut
-} from 'firebase/auth';
-import { auth, db } from '../firebase';
-import { signInWithGoogle } from '../services/authService';
+  signInWithGoogle 
+} from '../services/authService';
 import CryptoJS from 'crypto-js';
-import { User } from '../models';
+// note: other firebase/auth imports were removed since not used
+// User model import removed because it's unused
+// navigation now uses window.location instead of react-router
+import { db } from '../firebase';
 
 const ENCRYPTION_SECRET = process.env.REACT_APP_ENCRYPTION_SECRET || 'default-secret-key';
 
 function LoginPage() {
-  const navigate = useNavigate();
-  
+  // navigation performed via window.location for smoother redirect
   // Toggle between Login and Registration modes
   const [isLoginMode, setIsLoginMode] = useState(true);
   

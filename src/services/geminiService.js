@@ -1043,8 +1043,18 @@ Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu h
     return this._pending;
   }
 
+  // older signature kept for reference:
   // async generateSimilarProblem(startupProblem1, startupProblem2, context = '', problemNumber = 1, competencyLevel = 'Đạt') {
-  async generateSimilarProblem(startupProblem1, startupProblem2, context = '', problemNumber = 1, startupPercentage = 100) {
+  // current signature supports both a competencyLevel and a separate startupPercentage
+  async generateSimilarProblem(
+    startupProblem1,
+    startupProblem2,
+    context = '',
+    problemNumber = 1,
+    competencyLevel = 'Đạt',
+    startupPercentage = 100
+  ) {
+
     try {
       
       let referenceProblem = '';
@@ -1052,8 +1062,10 @@ Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu h
       let topicFocus = '';
       let competencyAdjustment = '';
       
-      // normalize percentage
-      const pct = typeof startupPercentage === 'number' ? startupPercentage : parseFloat(startupPercentage) || 0;
+      // normalize percentage (sometimes a string or undefined)
+      const pct = typeof startupPercentage === 'number'
+        ? startupPercentage
+        : parseFloat(startupPercentage) || 0;
 
       if (problemNumber === 1) {
         referenceProblem = startupProblem1;
@@ -1080,10 +1092,13 @@ MỨC ĐỘ KHÓ: Cần 3 bước tính trở lên hoặc dùng tư duy NGƯỢC
       }
       
       // SÃD DỰA TRÊN NĂNG LỰC CỦA HỌC SINH TỪ PHẦN KHỞI ĐỘNG
+      // ensure competencyLevel is always a string
+      competencyLevel = competencyLevel || 'Đạt';
+
       if (competencyLevel === 'Cần cố gắng') {
         competencyAdjustment = `
 ⚠️ HỌC SINH CẦN CỐ GẮNG - ĐIỀU CHỈNH ĐỘ KHÓ:
-- Bài toán PHẢI ĐƠN GIẢN HƠNT - Giảm độ khó so với bài khởi động
+- Bài toán PHẢI ĐƠN GIẢN HƠN - Giảm độ khó so với bài khởi động
 - Sử dụng SỐ NHỎ HƠN để dễ tính (ví dụ: 2, 3, 5 thay vì 12, 24, 36)
 - GIẢM SỐ LƯỢNG CÁC PHÉP TÍNH - Tối đa 1-2 phép tính duy nhất
 - LOẠI BỎ các điều kiện phức tạp hoặc phần cộng thêm

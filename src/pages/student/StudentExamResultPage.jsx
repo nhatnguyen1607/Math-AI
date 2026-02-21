@@ -169,14 +169,14 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
         <div className="flex flex-col items-center justify-center gap-8 px-5 py-20">
-          <div className="text-8xl">❓</div>
-          <h2 className="text-gray-800 text-3xl font-bold font-quicksand">Không tìm thấy dữ liệu kết quả {isLockedExam ? '(Locked exam)' : '(Regular exam)'}</h2>
-          <p className="text-gray-600 text-lg">examProgress: {examProgress ? 'exists' : 'null'}, parts: {examProgress?.parts ? 'exists' : 'null'}, khoiDong: {examProgress?.parts?.khoiDong ? 'exists' : 'null'}</p>
+          <div className="text-8xl">📝</div>
+          <h2 className="text-gray-800 text-3xl font-bold font-quicksand">Bạn chưa làm bài học này</h2>
+          <p className="text-gray-600 text-lg">Quay lại để chọn bài khác hoặc bắt đầu làm bài mới</p>
           <button
             onClick={() => navigate(-1)}
             className="btn-3d px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-quicksand rounded-max hover:shadow-lg transition-all"
           >
-            Quay lại
+            ← Quay lại
           </button>
         </div>
       </div>

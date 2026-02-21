@@ -289,7 +289,8 @@ const AdminTopicPage = ({ onLogout }) => {
       return;
     }
 
-    if (sampleExams.length === 0 && editingTopic === null) {
+    // Chỉ yêu cầu đề mẫu khi tạo chủ đề mới
+    if (sampleExams.length === 0 && !editingTopic) {
       alert('Vui lòng thêm ít nhất một đề mẫu cho chủ đề mới');
       return;
     }
@@ -298,7 +299,8 @@ const AdminTopicPage = ({ onLogout }) => {
     try {
       const topicData = {
         ...formData,
-        sampleExams: sampleExams,
+        // Nếu đang edit, sử dụng sampleExams mới nếu có thay đổi, nếu không giữ nguyên
+        sampleExams: sampleExams.length > 0 ? sampleExams : (editingTopic?.sampleExams || []),
         createdBy: editingTopic ? editingTopic.createdBy : 'admin',
         createdByName: editingTopic ? editingTopic.createdByName : 'Admin'
       };
@@ -481,6 +483,15 @@ const AdminTopicPage = ({ onLogout }) => {
                   </div>
 
                   <div className="form-actions flex gap-3 pt-6 border-t border-gray-200">
+                    {editingTopic && (
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-green-700 text-white font-bold rounded-lg hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? '⏳ Xử lý...' : '✅ Lưu thay đổi'}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setFormTab('samples')}
@@ -663,8 +674,7 @@ const AdminTopicPage = ({ onLogout }) => {
                 topic={{
                   ...topic,
                   icon: topic.icon || '📚',
-                  color: topic.color || '#4CAF50',
-                  samplesCount: (topic.sampleExams || []).length
+                  color: topic.color || '#4CAF50'
                 }}
                 onEdit={handleEdit}
                 onDelete={handleDelete}

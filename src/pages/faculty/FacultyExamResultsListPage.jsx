@@ -113,6 +113,11 @@ const FacultyExamResultsListPage = () => {
           </h2>
           <p className="text-purple-100">
             Tổng cộng: <strong>{leaderboard.length}</strong> học sinh đã hoàn thành
+            {leaderboard.length > 0 && (
+              <span className="ml-4">
+                | Điểm năng lực cao nhất: <strong>{Math.max(...leaderboard.map(s => s.totalCompetencyScore || 0))}</strong> điểm
+              </span>
+            )}
           </p>
         </div>
 
@@ -131,6 +136,8 @@ const FacultyExamResultsListPage = () => {
                   <tr className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
                     <th className="px-6 py-4 text-left font-semibold">Xếp hạng</th>
                     <th className="px-6 py-4 text-left font-semibold">Tên học sinh</th>
+                    <th className="px-6 py-4 text-center font-semibold">Điểm năng lực</th>
+                    <th className="px-6 py-4 text-center font-semibold">Điểm Khởi động</th>
                     <th className="px-6 py-4 text-center font-semibold">Hành động</th>
                   </tr>
                 </thead>
@@ -145,6 +152,28 @@ const FacultyExamResultsListPage = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-gray-800">{student.name || 'Unknown'}</div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-xl font-bold text-purple-600">{student.totalCompetencyScore || 0}</span>
+                          <span className="text-xs text-gray-500">điểm</span>
+                        </div>
+                        {student.competencyDetails && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            KĐ: {(student.competencyDetails.khoiDong?.tc1 || 0) + (student.competencyDetails.khoiDong?.tc2 || 0) + (student.competencyDetails.khoiDong?.tc3 || 0) + (student.competencyDetails.khoiDong?.tc4 || 0)} | 
+                            LT1: {(student.competencyDetails.luyenTapBai1?.tc1 || 0) + (student.competencyDetails.luyenTapBai1?.tc2 || 0) + (student.competencyDetails.luyenTapBai1?.tc3 || 0) + (student.competencyDetails.luyenTapBai1?.tc4 || 0)} | 
+                            LT2: {(student.competencyDetails.luyenTapBai2?.tc1 || 0) + (student.competencyDetails.luyenTapBai2?.tc2 || 0) + (student.competencyDetails.luyenTapBai2?.tc3 || 0) + (student.competencyDetails.luyenTapBai2?.tc4 || 0)} | 
+                            VD: {(student.competencyDetails.vanDung?.tc1 || 0) + (student.competencyDetails.vanDung?.tc2 || 0) + (student.competencyDetails.vanDung?.tc3 || 0) + (student.competencyDetails.vanDung?.tc4 || 0)}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="text-lg font-bold">
+                          <span className={student.percentage >= 50 ? 'text-green-600' : 'text-red-600'}>
+                            {student.percentage}%
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500">({student.correctAnswers}/{student.totalQuestions})</div>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <button

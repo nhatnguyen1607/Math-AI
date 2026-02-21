@@ -124,13 +124,46 @@ const PracticeChat = ({
       // Save user message to Firestore
       await saveChatMessage(userMsg);
 
-      // Get AI response using geminiService
-      const response = await geminiServiceRef.current.processStudentResponse(userMessage);
+      // 🎯 Kiểm tra xem học sinh yêu cầu gợi ý hay không
+      const hintKeywords = ['gợi ý', 'hint', 'giúp', 'help', 'không biết', 'không hiểu', 'khó', 'chỉ', 'dạy', 'hướng dẫn'];
+      const isAskingForHint = hintKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
+
+      let aiMsg;
       
-      const aiMsg = {
-        role: 'model',
-        parts: [{ text: response.message }]
-      };
+      if (isAskingForHint) {
+        // 🎯 NẾU HỌC SINH YÊU CẦU GỢI Ý -> Chỉ CẤP GỢI Ý THUẦN TÚY
+        try {
+          const hintResponse = await geminiServiceRef.current.getHint();
+          aiMsg = {
+            role: 'model',
+            parts: [{ text: hintResponse }]
+          };
+        } catch (hintError) {
+          // Fallback nếu getHint thất bại
+          const response = await geminiServiceRef.current.processStudentResponse(userMessage);
+          aiMsg = {
+            role: 'model',
+            parts: [{ text: response.message }]
+          };
+        }
+      } else {
+        // ✅ BÌNH THƯỜNG: Xử lý câu trả lời của học sinh
+        const response = await geminiServiceRef.current.processStudentResponse(userMessage);
+        
+        aiMsg = {
+          role: 'model',
+          parts: [{ text: response.message }]
+        };
+
+        // 🎯 Nếu hoàn thành bước 4 (nextStep === 5), tự động gọi callback
+        if (response.nextStep === 5) {
+          setTimeout(() => {
+            if (onCompleted) {
+              onCompleted();
+            }
+          }, 1500); // Chờ 1.5s để hiển thị kết quả hoàn thành
+        }
+      }
 
       setMessages(prev => [...prev, aiMsg]);
 
@@ -140,15 +173,6 @@ const PracticeChat = ({
       // Callback to notify parent about updates
       if (onChatUpdate) {
         onChatUpdate(prev => [...prev, userMsg, aiMsg]);
-      }
-
-      // 🎯 Nếu hoàn thành bước 4 (nextStep === 5), tự động gọi callback
-      if (response.nextStep === 5) {
-        setTimeout(() => {
-          if (onCompleted) {
-            onCompleted();
-          }
-        }, 1500); // Chờ 1.5s để hiển thị kết quả hoàn thành
       }
 
     } catch (err) {

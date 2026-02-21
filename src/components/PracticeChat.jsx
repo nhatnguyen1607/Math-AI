@@ -26,7 +26,6 @@ const PracticeChat = ({
   const [isInitializing, setIsInitializing] = useState(true); // Track initialization state
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
-  const geminiServiceRef = useRef(new geminiService.constructor());
 
   // Helper function để lưu chat history vào đúng service
   const saveChatMessage = useCallback(async (message) => {
@@ -63,8 +62,7 @@ const PracticeChat = ({
       try {
         setIsInitializing(true);
         setError(null);
-        geminiServiceRef.current = new geminiService.constructor();
-        const response = await geminiServiceRef.current.startNewProblem(deBai);
+        const response = await geminiService.startNewProblem(deBai);
         
         const aiMsg = {
           role: 'model',
@@ -144,22 +142,19 @@ const PracticeChat = ({
       const isAskingForHint = hintKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
 
       let aiMsg;
+      let response = null; 
       
-          const aiMsg = {
-            role: 'model',
-            parts: [{ text: response.message }]
-          };
       if (isAskingForHint) {
         // 🎯 NẾU HỌC SINH YÊU CẦU GỢI Ý -> Chỉ CẤP GỢI Ý THUẦN TÚY
         try {
-          const hintResponse = await geminiServiceRef.current.getHint();
+          const hintResponse = await geminiService.getHint();
           aiMsg = {
             role: 'model',
             parts: [{ text: hintResponse }]
           };
         } catch (hintError) {
           // Fallback nếu getHint thất bại
-          const response = await geminiServiceRef.current.processStudentResponse(userMessage);
+          response = await geminiService.processStudentResponse(userMessage);
           aiMsg = {
             role: 'model',
             parts: [{ text: response.message }]
@@ -167,7 +162,7 @@ const PracticeChat = ({
         }
       } else {
         // ✅ BÌNH THƯỜNG: Xử lý câu trả lời của học sinh
-        const response = await geminiServiceRef.current.processStudentResponse(userMessage);
+        response = await geminiService.processStudentResponse(userMessage);
         
         aiMsg = {
           role: 'model',

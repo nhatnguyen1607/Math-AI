@@ -94,7 +94,7 @@ const ExamCard = ({ exam, onEdit, onDelete, onActivate, onStart, onViewResults, 
       <div className="flex flex-col gap-1.5 p-3 border-t border-b border-gray-200 my-2 text-xs flex-grow">
         {className && <span className="text-gray-600 flex items-center gap-2 font-medium">📚 <span className="truncate">{className}</span></span>}
         {topicName && <span className="text-gray-600 flex items-center gap-2 font-medium">📖 <span className="truncate">{topicName}</span></span>}
-        <span className="text-gray-600 flex items-center gap-2">⏱️ {exam.duration || exam.exercises?.reduce((sum, e) => sum + e.duration, 0) || 0}s</span>
+        <span className="text-gray-600 flex items-center gap-2">⏱️ 7 phút</span>
         <span className="text-gray-600 flex items-center gap-2">❓ {exam.exercises?.reduce((sum, e) => sum + e.questions.length, 0) || 0} câu</span>
       </div>
 

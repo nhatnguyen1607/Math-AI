@@ -1,7 +1,33 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
-import Spline from '@splinetool/react-spline';
+import React, { useEffect, useRef, useCallback, useState, Suspense, Component } from 'react';
 import confetti from 'canvas-confetti';
 import './RobotCompanion.css';
+
+// Lazy load Spline to handle React 19 compatibility issues
+const Spline = React.lazy(() => import('@splinetool/react-spline'));
+
+// Error Boundary to catch Spline loading errors
+class SplineErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.warn('Spline component failed to load:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Fallback UI when Spline fails
+      return this.props.fallback || null;
+    }
+    return this.props.children;
+  }
+}
 
 // use local file to avoid cross-origin
 // note: actual filename in public/models is cute_robot.spline
@@ -345,22 +371,28 @@ const RobotCompanion = ({ status = 'idle', message = '' }) => {
 
   return (
     <div className={containerClasses}>
-      {/* 3D robot always visible - with background to prevent dark overlay */}
+      {/* 3D robot always visible - wrapped in Error Boundary and Suspense */}
       <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gradient-to-b from-blue-100 to-blue-50">
-        <Spline scene={SPLINE_URL} onLoad={handleSplineLoad} className="w-full h-full object-cover" />
+        <SplineErrorBoundary fallback={<div className="text-blue-400 text-sm">Robot đang nghỉ ngơi...</div>}>
+          <Suspense fallback={<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>}>
+            <Spline 
+              scene={SPLINE_URL} 
+              onLoad={handleSplineLoad} 
+              className="w-full h-full object-cover" 
+            />
+          </Suspense>
+        </SplineErrorBoundary>
       </div>
 
       {/* overlays */}
       <div className="absolute inset-0 pointer-events-none z-10 flex items-center justify-center">
-        {/* Priority-based overlay rendering using fuzzy status matching */}
         {(() => {
           if (status === 'thinking') return <ThinkingOverlay variant={effectVariant} />;
           if (status === 'correct') return <CorrectOverlay variant={effectVariant} />;
           if (status === 'wrong') return <WrongOverlay variant={effectVariant} />;
-          return null; // idle or anything else shows nothing
+          return null;
         })()}
       </div>
-
     </div>
   );
 };

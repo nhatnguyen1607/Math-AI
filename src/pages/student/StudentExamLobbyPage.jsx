@@ -340,7 +340,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
             <div className="text-4xl mb-3">⏱️</div>
             <div className="text-sm text-gray-700 font-bold font-quicksand mb-2">Thời lượng</div>
             <div className="text-xl font-bold text-green-700 font-quicksand">
-              {exam?.duration || 7} phút
+              {7} phút
             </div>
           </div>
 

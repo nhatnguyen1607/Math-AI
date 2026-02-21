@@ -1043,7 +1043,6 @@ Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu h
     return this._pending;
   }
 
-  async generateSimilarProblem(startupProblem1, startupProblem2, context = '', problemNumber = 1) {
   async generateSimilarProblem(startupProblem1, startupProblem2, context = '', problemNumber = 1, competencyLevel = 'Đạt') {
     try {
       
@@ -1106,6 +1105,102 @@ MỨC ĐỘ CỦA BÀI 2 LUYỆN TẬP:
 - Ví dụ: Nếu chủ đề "Nhân số thập phân", bài toán PHẢI CÓ NHIỀU phép nhân số thập phân làm nội dung chính`;
       }
       
+      // Phát hiện chủ đề từ context để áp dụng hướng dẫn cụ thể
+      let specialTopicGuidance = '';
+      
+      if (context && (context.includes('TỈ SỐ') || context.includes('Tỉ số'))) {
+        specialTopicGuidance = `
+🎯 CHỦ ĐỀ CỤ THỀ: TỈ SỐ VÀ CÁC BÀI TOÁN LIÊN QUAN
+═══════════════════════════════════════════════════════
+**DẠNG BÀI TOÁN "TÌM HAI SỐ KHI BIẾT TỔNG VÀ TỈ SỐ"**
+
+CẤU TRÚC LỌC BẮT BUỘC:
+✅ PHẢI CÓ:
+   - Một tổng cộng (ví dụ: tổng 72 cuốn, 96 học sinh, 60 kg...)
+   - Một TỈ SỐ dưới dạng PHÂN SỐ (ví dụ: 2/4, 5/3, 4/2, 1/2...)
+   - YÊU CẦU tìm hai chỉ tiêu riêng biệt
+
+❌ TUYỆT ĐỐI KHÔNG:
+   - KHÔNG có phần trăm (%) hoặc "X% bằng..."
+   - KHÔNG chỉ là phép cộng/trừ đơn giản (ví dụ: "Bạn An có dây 12,5 mét, dùng 3,5 mét" - ĐỪNG TẠO KIỂU NÀY)
+   - KHÔNG chỉ là tìm 1 số, phải tìm 2 số
+   - KHÔNG để tỉ số chỉ là thông tin phụ
+
+VÍ DỤ ĐÚNG (từ file mẫu):
+   Bài mẫu: "Lớp 5C thống kê 72 cuốn sách từ hai nhóm. Nhóm Bình Minh bằng 2/4 nhóm Hoàng Hôn. Hỏi mỗi nhóm bao nhiêu cuốn?"
+   → Tổng = 72, Tỉ số = 2/4 → Tìm 2 số
+   → Cách giải: Tổng phần = 2 + 4 = 6 → Mỗi phần = 72 ÷ 6 = 12 → Số 1 = 12 × 2 = 24, Số 2 = 12 × 4 = 48
+
+VÍ DỤ SAI:
+   ❌ "Bạn An có dây dài 12,5 mét. Dùng 3,5 mét. Còn lại bao nhiêu?" (chỉ trừ đơn giản)
+   ❌ "2 nhóm có tổng 96 học sinh. Hỏi 1 nhóm có bao nhiêu?" (thiếu tỉ số)
+   ❌ "Nhóm A có 20 cái bánh, bằng 40% nhóm B. Hỏi nhóm B?" (có phần trăm - KHÔNG được)
+`;
+      } else if (context && (context.includes('THỂ TÍCH') || context.includes('Thể tích'))) {
+        specialTopicGuidance = `
+🎯 CHỦ ĐỀ CỤ THỀ: THỂ TÍCH - ĐƠN VỊ ĐO THỂ TÍCH
+═══════════════════════════════════════════════════════
+**DẠNG BÀI TOÁN "ĐỔI ĐƠN VỊ VÀ SO SÁNH THỂ TÍCH"**
+
+CẤU TRÚC LỌC BẮT BUỘC:
+✅ PHẢI CÓ:
+   - HAI ĐẠI LƯỢNG THỂTÍCH ở NHỮNG ĐƠN VỊ KHÁC NHAU (ví dụ: m³ vs dm³ vs cm³)
+   - YÊU CẦU ĐỔI ĐƠN VỊ rồi SO SÁNH hoặc CỘNG TRỪ
+   - Bối cảnh thực tế có liên quan đến chứa/chứa được/đủ không
+
+❌ TUYỆT ĐỐI KHÔNG:
+   - KHÔNG chỉ là cộng/trừ số thường (12 + 8, 96 - 15...)
+   - KHÔNG đổi đơn vị độ dài, khối lượng (chỉ đổi ĐƠN VỊ THỂTÍCH)
+   - KHÔNG để việc ĐỔI ĐƠN VỊ là chi tiết phụ
+   - KHÔNG thiếu sự so sánh hoặc cân bằng
+
+VÍ DỤ ĐÚNG (từ file mẫu):
+   Bài mẫu: "Bể nước 2500 dm³. Xe bồn chở 2,4 m³ nước. Xe có đủ không?"
+   → Phải đổi: 2,4 m³ = ? dm³ → 2,4 × 1000 = 2400 dm³
+   → So sánh: 2400 dm³ < 2500 dm³ → Không đủ, thiếu 100 dm³
+
+VÍ DỤ SAI:
+   ❌ "Nhân dân mua 50kg lạc, 30kg lạc. Tổng bao nhiêu?" (chỉ cộng số tự nhiên)
+   ❌ "Bể 50L, thêm 20L nước. Bây giờ bao nhiêu L?" (không có so sánh, chỉ là cộng)
+   ❌ "Chiếu 3 mét dài, 2 mét rộng. Tính chu vi" (không phải đơn vị thể tích)
+`;
+      } else if (context && (context.includes('DIỆN TÍCH') || context.includes('Diện tích') || context.includes('HÌNH KHỐI') || context.includes('Hình khối'))) {
+        specialTopicGuidance = `
+🎯 CHỦ ĐỀ CỤ THỀ: DIỆN TÍCH VÀ THỂ TÍCH CỦA HÌNH KHỐI
+═══════════════════════════════════════════════════════
+**DẠNG BÀI TOÁN "TÍNH DIỆN TÍCH TOÀN PHẦN / THỂ TÍCH HÌNH HỘP CHỮ NHẬT / HÌNH LẬP PHƯƠNG"**
+
+CẤU TRÚC LỌC BẮT BUỘC:
+✅ PHẢI CÓ:
+   - MÔ TẢ KÍCH THƯỚC HÌNH KHỐI cụ thể (chiều dài, chiều rộng, chiều cao / cạnh)
+   - YÊU CẦU TÍNH DIỆN TÍCH TOÀN PHẦN hoặc THỂ TÍCH hoặc SO SÁNH thể tích
+   - Bối cảnh thực tế (bọc quà, bể nước, xếp hộp, bơm nước...)
+   - CÓ PHÉP TÍNH CỤ THỂ với công thức hình khối
+
+❌ TUYỆT ĐỐI KHÔNG:
+   - KHÔNG chỉ là cộng trừ nhân chia số đơn giản (4 × 6, 20 + 15...)
+   - KHÔNG thiếu kích thước (nếu hình hộp phải có đủ 3 kích thước)
+   - KHÔNG bị nhầm giữa diện tích và thể tích:
+     • Diện tích toàn phần = bọc bên ngoài = cm² (Bài 51)
+     • Thể tích = sức chứa bên trong = cm³ (Bài 52)
+   - KHÔNG làm mòn bài toán thành phép tính quá đơn giản
+
+VÍ DỤ ĐÚNG (từ file mẫu):
+   ✅ Bài 51: "Hộp quà hình lập phương cạnh 10 cm. Bọc giấy kín. Cần giấy bao nhiêu?"
+      → Công thức: V_toàn = 10 × 10 × 6 = 600 cm² (diện tích 6 mặt)
+   
+   ✅ Bài 52: "Bể 40×25 cm, mực nước 15 cm. Thả vật, mực dâng 18 cm. Thể tích vật?"
+      → Tính thể tích lần 1: 40 × 25 × 15 = 15000 cm³
+      → Tính thể tích lần 2: 40 × 25 × 18 = 18000 cm³
+      → Thể tích vật = 18000 - 15000 = 3000 cm³
+
+VÍ DỤ SAI:
+   ❌ "Bạn mua gỗ dài 4 m, rộng 2 m. Tổng bao nhiêu?" (chỉ cộng 4 + 2, không có hình khối cụ thể)
+   ❌ "Hộp hình vuông cạnh 5 cm. Tính chu vi" (chu vi ≠ hình khối, không phải diện tích/thể tích)
+   ❌ "Có 3 hộp, mỗi hộp 500 cm³. Tính cái gì?" (không rõ yêu cầu, không liên quan đến hình khối cụ thể)
+`;
+      }
+
       const prompt = `Bạn là giáo viên toán lớp 5 chuyên tạo bài tập luyện tập có chất lượng cao.
 
 BÀI KHỞI ĐỘNG (MẪU):
@@ -1121,27 +1216,38 @@ ${difficultyGuidance}
 ${competencyAdjustment}
 ${topicFocus}
 
+${specialTopicGuidance}
+
 YÊU CẦU TỐI QUAN TRỌNG:
 
-1. ✅ PHẢI SỬ DỤNG KỸ NĂNG TOÁN HỌC CỦA CHỦ ĐỀ:
-   - Bài toán PHẢI chứa kỹ năng chính của chủ đề, không phải chỉ số tự nhiên đơn giản
-   - Nếu chủ đề "Nhân số thập phân" → PHẢI có phép NHÂN với số thập phân (0,5 | 1,2 | 2,5 | v.v.)
-   - Nếu chủ đề "Chia số thập phân" → PHẢI có phép CHIA liên quan số thập phân
-   - Nếu chủ đề "Cộng/Trừ số thập phân" → PHẢI có CỘNG/TRỪ số thập phân
-   - Nếu chủ đề "Phân số" → PHẢI có phép tính với phân số
-   - Nếu chủ đề "Độ dài/Khối lượng" → PHẢI có phép tính so sánh, cộng trừ các đơn vị này
+1. ✅ PHẢI SỬ DỤNG KỸ NĂNG TOÁN HỌC CHÍNH CỦA CHỦ ĐỀ:
+   - Bài toán PHẢI xoay quanh kiến thức chính, không phải bài toán generic
+   - Bạn vừa nhận được hướng dẫn cụ thể cho chủ đề này ở trên - TUÂN THỦ CHẶT CHẼ
    
-   ❌ SAI VÍ DỤ: Chủ đề "Nhân số thập phân" nhưng bài là "Bạn An có 4 hộp bút, mỗi hộp 6 cây" (chỉ 4 × 6 = số tự nhiên)
-   ✅ ĐÚNG VÍ DỤ: Chủ đề "Nhân số thập phân" và bài là "Bạn An mua 2,5 m vải, giá 42 nghìn/m" (có 2,5 × 42)
+   NẾU CHỦ ĐỀ: TỈ SỐ
+   → PHẢI tìm 2 số khi biết TỔNG và TỈ SỐ (dạng phân số)
+   → ❌ KHÔNG SỬ DỤNG PHẦN TRĂM (%)
+   → VÍ DỤ SAI: "Bạn An có dây 12,5m, dùng 3,5m, còn lại bao nhiêu?" (chỉ là trừ)
+   
+   NẾU CHỦ ĐỀ: THỂ TÍCH - ĐƠN VỊ ĐO
+   → PHẢI có ĐỔI ĐƠN VỊ M3, DM3, CM3
+   → PHẢI SO SÁNH hoặc cân bằng giữa 2 đại lượng thể tích
+   → ❌ KHÔNG PHẢI chỉ cộng trừ số thường
+   
+   NẾU CHỦ ĐỀ: HÌNH KHỐI
+   → PHẢI tính DIỆN TÍCH TOÀN PHẦN hoặc THỂ TÍCH
+   → PHẢI có CÔNG THỨC cụ thể của hình (lập phương, hộp chữ nhật)
+   → PHẢI đầy đủ kích thước (dài × rộng × cao)
+   → ❌ KHÔNG PHẢI chỉ cộng trừ số đơn giản
 
 2. ✅ TẬP TRUNG VÀO CHỦ ĐỀ CHÍNH:
-   - Bài toán phải xoay quanh "${context || 'kỹ năng chính của bài khởi động'}" - đó phải là phần khó và quan trọng
+   - Bài toán phải xoay quanh "${context || 'kỹ năng chính'}" - đó phải là phần khó và quan trọng
    - KHÔNG để chủ đề chính chỉ là chi tiết phụ
+   - Hãy kiểm tra: Phép tính chính của bài có phải là kỹ năng chứ đề không?
 
-3. ✅ LOẠI BỎ HOÀN TOÀN PHẦN TRĂM (%):
-   - KHÔNG được dùng phần trăm (học sinh lớp 5 chưa học)
-   - KHÔNG dùng "giảm 20%", "tăng 15%", "được hưởng 10%"
-   - KHÔNG dùng khái niệm phức tạp: lợi nhuận, lãi suất, tỉ lệ, tỷ số
+3. ✅ LOẠI BỎ HOÀN TOÀN PHẦN TRĂM (%) - TRỪ CHỦĐỀ PHẦN TRĂM:
+   - KHÔNG được dùng phần trăm (học sinh lớp 5 chưa học, trừ nếu học phần trăm)
+   - KHÔNG dùng "giảm 20%", "tăng 15%", "được hưởng 10%", "lợi nhuận", "lãi suất"
 
 4. ✅ ĐỘ KHÓ PHẢI VỪA PHẢI CHO LỚP 5:
    - Sử dụng số tự nhiên hoặc số thập phân đơn giản (max 2 chữ số thập phân)
@@ -1163,35 +1269,93 @@ YÊU CẦU TỐI QUAN TRỌNG:
    - Viết dưới dạng câu chuyện bình thường, dễ tưởng tượng, dài 2-4 dòng
    - Không có cụm từ phức tạp hay khó hiểu
 
-VÍ DỤ THAM KHẢO:
+VÍ DỤ THAM KHẢO - TUÂN THỦ CHẶT CHẼ:
 
-NHÂN SỐ THẬP PHÂN:
-- Bài khởi động: "Mẹ mua 3 m vải, mỗi m giá 12,5 nghìn đồng. Hỏi mẹ phải trả bao nhiêu tiền?"
-- BÀI LUYỆN TẬP (Bài 1 - dễ): "Bạn Hân mua 2 cuốn sách, mỗi cuốn giá 35,5 nghìn đồng. Hỏi Hân phải trả bao nhiêu tiền?"
-  → ĐÚNG: 2 × 35,5 = 71 (có số thập phân + phép nhân)
-- BÀI LUYỆN TẬP (Bài 2 - vừa): "Mẹ mua 2,5 kg táo giá 42 nghìn đồng/kg. Hỏi mẹ phải trả bao nhiêu tiền?"
-  → ĐÚNG: 2,5 × 42 = 105 (có số thập phân + phép nhân)
+═══════════════════════════════════════════════════════════════════════════════
+CHỦ ĐỀ 1: TỈ SỐ VÀ CÁC BÀI TOÁN LIÊN QUAN
+═══════════════════════════════════════════════════════════════════════════════
+DẠNG: "TÌM HAI SỐ KHI BIẾT TỔNG VÀ TỈ SỐ"
 
-CHIA SỐ THẬP PHÂN:
-- Bài khởi động: "Có 10 lít nước chia đều vào 4 chai. Hỏi mỗi chai có bao nhiêu lít?"
-- BÀI LUYỆN TẬP (Bài 1 - dễ): "Có 9 lít nước chia đều vào 4 chai. Hỏi mỗi chai có bao nhiêu lít?"
-  → ĐÚNG: 9 ÷ 4 = 2,25 lít (kết quả là số thập phân)
-- BÀI LUYỆN TẬP (Bài 2 - vừa): "Có 12,5 kg gạo chia đều cho 5 gia đình. Hỏi mỗi gia đình được bao nhiêu kg?"
-  → ĐÚNG: 12,5 ÷ 5 = 2,5 kg (có số thập phân + phép chia)
+✅ VÍ DỤ ĐÚNG (từ file mẫu Bài 38):
+Bài mẫu: "Lớp 5C thống kê được 72 cuốn sách từ hai nhóm. Biết số sách nhóm Bình Minh bằng 2/4 nhóm Hoàng Hôn. Hỏi mỗi nhóm đã mang bao nhiêu cuốn?"
+→ Tổng = 72 ✓ | Tỉ số = 2/4 ✓ | Tìm 2 số ✓
 
-PHÂN SỐ:
-- Bài khởi động: "Mẹ có 3/4 lít sữa, chia đều cho 2 con. Hỏi mỗi con được bao nhiêu lít?"
-- BÀI LUYỆN TẬP (Bài 1 - dễ): "Bạn Hà có 1/2 kg kẹo, chia đều cho 3 bạn. Hỏi mỗi bạn được bao nhiêu kg?"
-  → ĐÚNG: 1/2 ÷ 3 hoặc so sánh phân số (có phân số)
-- BÀI LUYỆN TẬP (Bài 2 - vừa): "Bạn Minh tiêu 2/5 tiền tiết kiệm, còn 3/5 để mua sách. Nếu tiêu thêm 1/5 nữa, còn bao nhiêu?"
-  → ĐÚNG: 3/5 - 1/5 (có phép cộng/trừ phân số)
+Bài 1 luyện tập (dễ): "Cô tổng kết được 80 bộ sách từ hai tủ. Biết số sách tủ A bằng 1/3 tủ B. Hỏi mỗi tủ có bao nhiêu bộ?"
+→ Tổng = 80 ✓ | Tỉ số = 1/3 ✓ | Dễ hơn (số tròn) ✓
 
-ĐO LƯỜNG (Độ dài, Khối lượng, Dung tích):
-- Bài khởi động: "Bạn An có 2,5 m vải, bạn Bình có 1,5 m. Hỏi cả hai có tất cả bao nhiêu m vải?"
-- BÀI LUYỆN TẬP (Bài 1 - dễ): "Cái túi nặng 0,5 kg, quyển sách nặng 1,2 kg. Hỏi cả hai nặng bao nhiêu kg?"
-  → ĐÚNG: 0,5 + 1,2 (có đơn vị đo + phép tính)
-- BÀI LUYỆN TẬP (Bài 2 - vừa): "Thùng A chứa 5,5 lít nước, thùng B chứa 3,2 lít. Hỏi thùng A chứa nhiều hơn B bao nhiêu lít?"
-  → ĐÚNG: 5,5 - 3,2 (có đơn vị + phép tính so sánh)
+Bài 2 luyện tập (vừa): "Trường có 150 học sinh tham gia hai đội: Đội A bằng 2/3 Đội B. Hỏi mỗi đội có bao nhiêu học sinh?"
+→ Tổng = 150 ✓ | Tỉ số = 2/3 ✓ | Vừa phải ✓
+
+❌ VÍ DỤ SAI:
+Sai 1: "Bạn An có dây dài 12,5 mét. Dùng 3,5 mét để buộc quà. Còn lại bao nhiêu mét?"
+  ← Chỉ là phép trừ đơn giản 12,5 - 3,5, KHÔNG HỀ CÓ TỈ SỐ hoặc tìm 2 số!
+
+Sai 2: "Lớp A có 20 bạn, lớp B có tất cả 50 bạn. Hỏi tỉ lệ giữa lớp A và lớp B?"
+  ← Chỉ là so sánh tỉ lệ, không phải tìm 2 số khi biết TỔNG và TỈ SỐ
+
+Sai 3: "Hai nhóm làm bài tập, nhóm A làm được 30%, nhóm B làm được 70%. Hỏi..."
+  ← CÓ PHẦN TRĂM (%) - KHÔNG ĐƯỢC DÙNG!
+
+═══════════════════════════════════════════════════════════════════════════════
+CHỦ ĐỀ 2: THỂ TÍCH - ĐƠN VỊ ĐO THỂ TÍCH
+═══════════════════════════════════════════════════════════════════════════════
+DẠNG: "ĐỔI ĐƠN VỊ VÀ SO SÁNH / CỘNG TRỪ THỂTÍCH"
+
+✅ VÍ DỤ ĐÚNG (từ file mẫu Bài 47):
+Bài mẫu: "Bể nước có ghi dung tích: 2500 dm³. Xe bồn chở 2,4 m³ nước. Hỏi xe bồn có chở đủ nước để đổ đầy bể không?"
+→ 2 đơn vị khác nhau: dm³ và m³ ✓ | Phải đổi: 2,4 m³ = 2400 dm³ ✓ | So sánh: 2400 < 2500 ✓
+
+Bài 1 luyện tập (dễ): "Xô chứa được 50 lít nước. Bình có 8000 cm³ nước. Hỏi xô hay bình chứa nhiều hơn?"
+→ 2 đơn vị: lít (L) và cm³ ✓ | Phải đổi: 50 L = 50000 cm³ ✓ | Dễ hơn ✓
+
+Bài 2 luyện tập (vừa): "Hồi có 3 m³ nước. Xả ra 500 dm³, rồi xả ra 250000 cm³ nữa. Hỏi hồi còn bao nhiêu m³?"
+→ 3 đơn vị khác nhau ✓ | Phải đổi về cùng đơn vị ✓ | Rồi cộng/trừ ✓
+
+❌ VÍ DỤ SAI:
+Sai 1: "An mua 50 kg gạo, Bình mua 30 kg gạo. Hỏi cả hai mua tổng cộng bao nhiêu kg?"
+  ← CHỈ LÀ CỘNG TRỪ SỐ THƯỜNG, không có ĐỔI ĐƠN VỊ THỂTÍCH!
+
+Sai 2: "Bể 1 sâu 2 mét, bể 2 sâu 1,5 mét. Bể nào sâu hơn?"
+  ← CHỈ LÀ SO SÁNH ĐỘ DÀI, không phải so sánh THỂTÍCH (chưa có kích thước đủ)
+
+Sai 3: "Có 5 dm³ nước, thêm 3 dm³, rồi thêm 2 dm³. Tổng bao nhiêu?"
+  ← KHÔNG CÓ ĐỔI ĐƠN VỊ (cùng dm³ từ đầu), chỉ cộng đơn thuần
+
+═══════════════════════════════════════════════════════════════════════════════
+CHỦ ĐỀ 3: DIỆN TÍCH VÀ THỂ TÍCH CỦA HÌNH KHỐI
+═══════════════════════════════════════════════════════════════════════════════
+DẠNG: "TÍNH DIỆN TÍCH TOÀN PHẦN / THỂ TÍCH / SO SÁNH HÌNH KHỐI"
+
+✅ VÍ DỤ ĐÚNG (từ file mẫu Bài 51 & 52):
+
+Bài mẫu 51: "Hộp quà hình lập phương cạnh 10 cm. Muốn bọc giấy kín toàn bộ bên ngoài. Hỏi cần bao nhiêu xăng-ti-mét vuông giấy?"
+→ Hình cụ thể: Lập phương ✓ | Kích thước đầy đủ: cạnh 10 cm ✓ | Yêu cầu: tính DIỆN TÍCH TOÀN PHẦN (6 mặt) ✓
+→ Công thức: 10 × 10 × 6 = 600 cm² ✓
+
+Bài 1 luyện tập (dễ): "Bạn Lan có hộp quà hình lập phương cạnh 5 cm. Cần gói giấy bọc kín hộp. Hỏi cần bao nhiêu xăng-ti-mét vuông giấy?"
+→ Hình cụ thể: Lập phương ✓ | Cạnh 5 cm ✓ | Tính diện tích toàn phần ✓ | Dễ hơn ✓
+
+Bài 2 luyện tập (vừa): "Thùng hình hộp chữ nhật dài 12 cm, rộng 8 cm, cao 6 cm. Hỏi diện tích giấy để bọc kín toàn bộ thùng?"
+→ Hình cụ thể: Hộp chữ nhật ✓ | Đầy đủ 3 kích thước ✓ | Diện tích toàn phần ✓ | Vừa phải ✓
+
+Bài mẫu 52: "Bể nước hình hộp 40 cm × 25 cm. Mực nước 15 cm. Thả vật chìm hoàn toàn, mực dâng 18 cm. Hỏi thể tích vật?"
+→ Hình cụ thể + kích thước ✓ | Phép tính: V1 = 40×25×15, V2 = 40×25×18, Vật = V2 - V1 ✓
+
+Bài 1 luyện tập (dễ): "Bể nước hình hộp dài 20 cm, rộng 10 cm. Mực nước lúc đầu 12 cm. Thả hòn đá, mực dâng 15 cm. Hỏi thể tích hòn đá?"
+→ Hình cụ thể + đủ kích thước ✓ | Tính thể tích bằng cách so sánh mực nước ✓ | Dễ hơn ✓
+
+Bài 2 luyện tập (vừa): "Hộp quà gỗ (lập phương) cạnh 8 cm & hộp quà giấy (lập phương) cạnh 10 cm. Hộp nào chứa được nhiều hơn?"
+→ 2 hình cụ thể ✓ | 2 kích thước ✓ | Tính & so sánh thể tích ✓ | Phải tính V1 = 8³ = 512, V2 = 10³ = 1000 ✓
+
+❌ VÍ DỤ SAI:
+Sai 1: "Bạn mua gỗ dài 4 m, rộng 2 m. Tổng bao nhiêu?"
+  ← Chỉ cộng 4 + 2, KHÔNG CÓ HÌNH KHỐI CỤ THỂ (thiếu chiều cao), không có yêu cầu tính diện tích/thể tích
+
+Sai 2: "Hộp hình vuông cạnh 5 cm. Tính chu vi"
+  ← CHU VI ≠ DIỆN TÍCH/THỂ TÍCH, không phải bài hình khối
+
+Sai 3: "Bạn An có 3 hộp, mỗi hộp 500 cm³. Tính gì?"
+  ← KHÔNG RÕ RÀNG yêu cầu (chỉ nói có hộp, không nói tính diện tích hay thể tích cái gì)
 
 HƯỚNG DẪN TRẢ LỜI:
 - CHỈ trả về nội dung bài toán (không có "Bài toán mới:", "BÀI X LUYỆN TẬP:", không có lời giải)
@@ -1203,19 +1367,33 @@ HƯỚNG DẪN TRẢ LỜI:
 [Bối cảnh/Câu chuyện 2-4 dòng]
 [Câu hỏi duy nhất]
 
-VÍ DỤ:
+VÍ DỤ FORMAT:
 SAI: "BÀI 2 LUYỆN TẬP Chủ đề bài thi: Nhân số thập phân Chị Lan... 1. Diện tích là bao nhiêu? 2. Để tính tiền, cần biết điều gì?"
-ĐÚNG: "Chị Lan đang cắt miếng gỗ có kích thước 0,75 m × 0,4 m để làm khung tấm thảm. Hỏi diện tích miếng gỗ đó là bao nhiêu mét vuông?"
+ĐÚNG: "Chị Lan muốn bọc quà cho bạn. Hộp quà có dạng hình lập phương cạnh 8 cm. Hỏi Chị Lan cần bao nhiêu xăng-ti-mét vuông giấy để bọc kín hộp?"
 
-⚠️ KIỂM TRA CUỐI CÙNG:
-- Bài toán có sử dụng KỸ NĂNG của chủ đề không?
-- Bài toán chỉ có ĐÚNG 1 CÂU HỎI cuối cùng không?
-- Ví dụ:
-  • Chủ đề "Nhân số thập phân" mà bài chỉ có 4 × 6 → SAI (không có số thập phân)
-  • Chủ đề "Phân số" mà bài chỉ có 4 + 3 → SAI (không có phân số)
-  • Chủ đề "Đo lường" mà bài chỉ có 2 + 3 → SAI (không có đơn vị đo)
-  • Bài có 2 câu hỏi → SAI (phải chỉ 1 câu)
-- Nếu bài toán không đạt yêu cầu → BÀI SAI, phải viết lại
+⚠️ KIỂM TRA CUỐI CÙNG TRƯỚC KHI XUẤT LỜI:
+Hãy tự đặt câu hỏi:
+
+1. ❓ BÀI TOÁN CÓ THUỘC CHỦ ĐỀ NÀY KHÔNG?
+   - Nếu TỈ SỐ: Có tổng + tỉ số (phân số) + tìm 2 số? ✓ Có PHẦN TRĂM? ✗ (nếu có = SAI)
+   - Nếu THỂTÍCH - ĐƠN VỊ: Có 2 đơn vị thể tích khác nhau? ✓ Phải ĐỔI ĐƠN VỊ? ✓
+   - Nếu HÌNH KHỐI: Có HÌNH CỤ THỂ (lập phương/hộp chữ nhật)? ✓ Có SỐ LIỆU ĐẦY ĐỦ? ✓
+
+2. ❓ CÓ ĐÚNG 1 CÂU HỎI CUỐI CÙNG KHÔNG?
+   - Đếm số dấu hỏi: phải chỉ 1 cái ✓
+
+3. ❓ PHÉP TÍNH CÓ LÀ KỸ NĂNG CHỦ ĐỀ KHÔNG?
+   - TỈ SỐ: Tìm phần bằng nhau (cộng tỉ lệ), chia tổng, nhân? ✓
+   - THỂTÍCH - ĐƠN VỊ: ĐỔI ĐƠN VỊ, rồi so sánh/cộng/trừ? ✓
+   - HÌNH KHỐI: DIỆN TÍCH TOÀN PHẦN (6×cạnh²) hoặc THỂ TÍCH (dài×rộng×cao)? ✓
+
+4. ❓ CÓ HEADER "BÀI X LUYỆN TẬP", "CHỦ ĐỀ", "VÍ DỤ KHÔNG?
+   - XÓA HẾT những header này ✓
+   - Chỉ giữ câu chuyện + câu hỏi ✓
+
+=============================================================================
+NẾU BÀI KHÔNG ĐẠT CÁC TIÊU CHÍ TRÊN → VIẾT LẠI NGAY, KHÔNG XUẤT!
+=============================================================================
 
 Bài toán luyện tập:`;
 
@@ -1510,8 +1688,7 @@ TC3 (Trình bày giải): ${tc3Comment}
 TC4 (Kiểm tra và vận dụng): ${tc4Comment}
 
 NHẬN XÉT TỔNG THỂ: ${totalComment}
-
-}`;
+`;
 
       const result = await this._rateLimitedGenerate(prompt);
       const responseText = result ? result.response.text().trim() : '';

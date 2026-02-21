@@ -695,17 +695,24 @@ class FacultyService {
         
         if (khoiDongData && khoiDongData.completedAt) {
           // 🎯 TỐN ĐIỂM NĂNG LỰC từ cả 3 phần: khoiDong, luyenTap, vanDung
-          const khoiDongTC = khoiDongData.evaluation?.diemTC || { tc1: 0, tc2: 0, tc3: 0, tc4: 0 };
+          // ✅ Lấy competencyEvaluation từ khoiDongData (chứa TC1, TC2, TC3, TC4)
+          const khoiDongEval = khoiDongData.competencyEvaluation || {};
+          const khoiDongCompetencyScore = khoiDongEval.totalCompetencyScore || 
+            (khoiDongEval.TC1?.score || 0) + (khoiDongEval.TC2?.score || 0) + (khoiDongEval.TC3?.score || 0) + (khoiDongEval.TC4?.score || 0);
+          
+          // Lấy từ evaluation.diemTC cho luyenTap, vanDung
           const luyenTapBai1TC = data.parts?.luyenTap?.bai1?.evaluation?.diemTC || { tc1: 0, tc2: 0, tc3: 0, tc4: 0 };
           const luyenTapBai2TC = data.parts?.luyenTap?.bai2?.evaluation?.diemTC || { tc1: 0, tc2: 0, tc3: 0, tc4: 0 };
-          const vanDungTC = data.parts?.vanDung?.evaluation?.diemTC || { tc1: 0, tc2: 0, tc3: 0, tc4: 0 };
+          const vanDungEval = data.parts?.vanDung?.evaluation || {};
+          const vanDungCompetencyScore = vanDungEval.totalCompetencyScore || 
+            (vanDungEval.TC1?.diem || 0) + (vanDungEval.TC2?.diem || 0) + (vanDungEval.TC3?.diem || 0) + (vanDungEval.TC4?.diem || 0);
 
           // Tính tổng điểm năng lực từ cả 3 phần
           const totalCompetencyScore = 
-            (khoiDongTC.tc1 || 0) + (khoiDongTC.tc2 || 0) + (khoiDongTC.tc3 || 0) + (khoiDongTC.tc4 || 0) +
+            khoiDongCompetencyScore +
             (luyenTapBai1TC.tc1 || 0) + (luyenTapBai1TC.tc2 || 0) + (luyenTapBai1TC.tc3 || 0) + (luyenTapBai1TC.tc4 || 0) +
             (luyenTapBai2TC.tc1 || 0) + (luyenTapBai2TC.tc2 || 0) + (luyenTapBai2TC.tc3 || 0) + (luyenTapBai2TC.tc4 || 0) +
-            (vanDungTC.tc1 || 0) + (vanDungTC.tc2 || 0) + (vanDungTC.tc3 || 0) + (vanDungTC.tc4 || 0);
+            vanDungCompetencyScore;
 
           results.push({
             uid: userId,
@@ -718,23 +725,32 @@ class FacultyService {
             timeSpent: khoiDongData.timeSpent || 0,
             // 🎯 THÊM tổng điểm năng lực
             totalCompetencyScore: totalCompetencyScore,
+            khoiDongCompetencyScore: khoiDongCompetencyScore,  // Điểm riêng phần khởi động
             competencyDetails: {
-              khoiDong: khoiDongTC,
+              khoiDong: khoiDongEval,
               luyenTapBai1: luyenTapBai1TC,
               luyenTapBai2: luyenTapBai2TC,
-              vanDung: vanDungTC
-            }
+              vanDung: vanDungEval
+            },
+            // 🎯 THÊM tongDiem từ các phần luyenTap và vanDung
+            luyenTapBai1TongDiem: data.parts?.luyenTap?.bai1?.evaluation?.tongDiem || 0,
+            luyenTapBai2TongDiem: data.parts?.luyenTap?.bai2?.evaluation?.tongDiem || 0,
+            vanDungTongDiem: data.parts?.vanDung?.evaluation?.tongDiem || 0
           });
         }
       }
 
-      // 🎯 SẮP XẾP THEO TỔNG ĐIỂM NĂNG LỰC GIẢM DẦN (từ cao đến thấp)
+      // 🎯 SẮP XẾP THEO ĐIỂM NĂNG LỰC KHỞI ĐỘNG GIẢM DẦN (từ cao đến thấp)
       results.sort((a, b) => {
-        // Ưu tiên sắp xếp theo điểm năng lực
+        // Ưu tiên sắp xếp theo điểm năng lực khởi động
+        if (b.khoiDongCompetencyScore !== a.khoiDongCompetencyScore) {
+          return b.khoiDongCompetencyScore - a.khoiDongCompetencyScore;
+        }
+        // Nếu điểm năng lực khởi động bằng nhau, sắp xếp theo tổng điểm năng lực
         if (b.totalCompetencyScore !== a.totalCompetencyScore) {
           return b.totalCompetencyScore - a.totalCompetencyScore;
         }
-        // Nếu điểm năng lực bằng nhau, sắp xếp theo điểm khởi động
+        // Nếu vẫn bằng nhau, sắp xếp theo điểm khởi động (phần thi)
         if (b.score !== a.score) return b.score - a.score;
         // Nếu vẫn bằng nhau, sắp xếp theo số câu đúng
         return b.correctAnswers - a.correctAnswers;

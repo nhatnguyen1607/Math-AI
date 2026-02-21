@@ -147,11 +147,17 @@ const FacultyExamLobbyPage = () => {
         </div>
 
         {/* Info Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
           <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
             <div className="text-3xl mb-2">👥</div>
             <div className="text-sm text-gray-500 font-semibold uppercase mb-2">Tham gia</div>
             <div className="text-lg font-bold text-blue-600">{participants.length}</div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
+            <div className="text-3xl mb-2">✅</div>
+            <div className="text-sm text-gray-500 font-semibold uppercase mb-2">Đã nộp bài</div>
+            <div className="text-lg font-bold text-green-600">{participants.filter(p => p.submitted).length}</div>
           </div>
 
           <div className="bg-white rounded-2xl p-6 text-center shadow-lg">

@@ -1043,11 +1043,8 @@ Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu h
     return this._pending;
   }
 
-<<<<<<< HEAD
-  async generateSimilarProblem(startupProblem1, startupProblem2, context = '', problemNumber = 1, competencyLevel = 'Đạt') {
-=======
+  // async generateSimilarProblem(startupProblem1, startupProblem2, context = '', problemNumber = 1, competencyLevel = 'Đạt') {
   async generateSimilarProblem(startupProblem1, startupProblem2, context = '', problemNumber = 1, startupPercentage = 100) {
->>>>>>> NHMN
     try {
       
       let referenceProblem = '';

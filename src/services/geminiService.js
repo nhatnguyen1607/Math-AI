@@ -993,15 +993,19 @@ Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu h
     return this._pending;
   }
 
-  async generateSimilarProblem(startupProblem1, startupProblem2, context = '', problemNumber = 1) {
+  async generateSimilarProblem(startupProblem1, startupProblem2, context = '', problemNumber = 1, startupPercentage = 100) {
     try {
       
       let referenceProblem = '';
       let difficultyGuidance = '';
       let topicFocus = '';
       
+      // normalize percentage
+      const pct = typeof startupPercentage === 'number' ? startupPercentage : parseFloat(startupPercentage) || 0;
+
       if (problemNumber === 1) {
         referenceProblem = startupProblem1;
+        // bài 1 luôn giữ hướng dẫn dễ như trước, không phụ thuộc vào điểm
         difficultyGuidance = `
 MỨC ĐỘ CỦA BÀI 1 LUYỆN TẬP:
 - Phải là MỨC ĐỘ DỄ, ĐƠN GIẢN, CHỈ CẦN 1-2 PHÉP TÍNH
@@ -1010,12 +1014,17 @@ MỨC ĐỘ CỦA BÀI 1 LUYỆN TẬP:
 - Đây là bài để học sinh luyện tập đầu tiên, phải cơ bản và dễ hiểu`;
       } else if (problemNumber === 2) {
         referenceProblem = startupProblem2;
-        difficultyGuidance = `
-MỨC ĐỘ CỦA BÀI 2 LUYỆN TẬP:
-- Phải có độ khó TƯƠNG ĐƯƠNG với bài 2 khởi động
-- Có cùng số lượng dữ kiện và điều kiện giống bài khởi động
-- Cùng số lượng phép tính và cấp độ suy luận với bài 2 khởi động
-- Bài này giúp học sinh luyện tập sau khi đã hoàn thành bài 1 dễ`;
+        // điều chỉnh mức độ theo phần trăm kết quả khởi động
+        if (pct < 50) {
+          difficultyGuidance = `
+MỨC ĐỘ DỄ: Chỉ dùng đúng 1 bước tính. Lời văn trực diện, cho sẵn mọi dữ kiện, không có dữ kiện thừa.`;
+        } else if (pct >= 50 && pct < 80) {
+          difficultyGuidance = `
+MỨC ĐỘ VỪA: Cần 2 bước tính. Học sinh phải tính một đại lượng trung gian trước.`;
+        } else {
+          difficultyGuidance = `
+MỨC ĐỘ KHÓ: Cần 3 bước tính trở lên hoặc dùng tư duy NGƯỢC (cho kết quả, tìm thành phần ban đầu). BẮT BUỘC chèn thêm 1 dữ kiện thừa để thử thách.`;
+        }
       }
       
       // Nếu có context (chủ đề), sử dụng để nhấn mạnh
@@ -1204,7 +1213,7 @@ Bài toán luyện tập:`;
    */
   async generateApplicationProblem(studentContext) {
     try {
-      const { errorsInKhoiDong = [], weaknessesInLuyenTap = {}, topicName = 'Bài toán' } = studentContext;
+      const { errorsInKhoiDong = [], weaknessesInLuyenTap = {}, topicName = 'Bài toán', practicePercentage = 100 } = studentContext;
       
       // Xây dựng danh sách yếu điểm từ các tiêu chí
       let weaknessText = '';
@@ -1221,6 +1230,17 @@ Bài toán luyện tập:`;
         if (weaknessesInLuyenTap.TC4.diem < 2) weaknessText += `- Yếu ở khía cạnh kiểm tra lại kết quả\n`;
       }
 
+      // xác định hướng dẫn mức độ theo phần trăm luyện tập
+      let difficultyGuidance = '';
+      const pct = typeof practicePercentage === 'number' ? practicePercentage : parseFloat(practicePercentage) || 0;
+      if (pct < 50) {
+        difficultyGuidance = `MỨC ĐỘ DỄ: Chỉ dùng đúng 1 bước tính. Lời văn trực diện, cho sẵn mọi dữ kiện, không có dữ kiện thừa.`;
+      } else if (pct >= 50 && pct < 80) {
+        difficultyGuidance = `MỨC ĐỘ VỪA: Cần 2 bước tính. Học sinh phải tính một đại lượng trung gian trước.`;
+      } else {
+        difficultyGuidance = `MỨC ĐỘ KHÓ: Cần 3 bước tính trở lên hoặc dùng tư duy NGƯỢC (cho kết quả, tìm thành phần ban đầu). BẮT BUỘC chèn thêm 1 dữ kiện thừa để thử thách.`;
+      }
+
       const prompt = `Bạn là giáo viên toán lớp 5 tâm huyết, chuyên tạo bài tập vận dụng vừa đủ khó để giúp học sinh nhận biết được các lỗi sai nhưng vẫn trong tầm cơ bản.
 
 HỒSƠ NĂNG LỰC HỌC SINH:
@@ -1233,6 +1253,7 @@ ${errorsInKhoiDong.map((e, i) => `${i + 1}. ${e}`).join('\n')}
 ${weaknessText}\n` : ''}
 
 NHIỆM VỤ:
+${difficultyGuidance}
 Tạo 1 BÀI TOÁN VẬN DỤNG (Real-world Application Problem) phù hợp với học sinh lớp 5 để giúp khắc phục những yếu điểm trên.
 **QUAN TRỌNG NHẤT: Bài toán PHẢI TẬP TRUNG VÀO CHỦĐỀ CHÍNH "${topicName}" - đó phải là phần chính và khó nhất của bài toán, không phải chỉ là phần phụ.**
 
@@ -1244,7 +1265,7 @@ YÊU CẦU TỐI QUAN TRỌNG:
    - Bài toán nên CÓ 2-3 dữ kiện để cần phân tích, nhưng không quá nhiều
    - Phép tính cơ bản như: cộng, trừ, nhân, chia, số thập phân đơn giản
    
-2. ✅ CHỦĐỀ PHẢI LÀ TRUNG TÂM CỦA BÀI TOÁN:
+2. ✅ CHỦ ĐỀ PHẢI LÀ TRUNG TÂM CỦA BÀI TOÁN:
    - Nếu chủ đề là "Nhân số thập phân": Bài toán PHẢI CÓ NHIỀU phép nhân số thập phân làm nội dung chính. Ví dụ: "Mẹ mua 2,5 kg táo giá 35.500 đồng/kg. Bố mua 1,5 lít nước cam giá 18.000 đồng/lít. Hỏi tổng tiền mua là bao nhiêu?"
    - Nếu chủ đề là "Chia số thập phân": Bài toán PHẢI làm nổi bật phép chia. Ví dụ: "Có 7,5 lít sữa chia đều vào các chai 1,5 lít. Hỏi cần bao nhiêu chai?"
    - Nếu chủ đề liên quan "Cộng/Trừ số thập phân": Bài toán PHẢI có nhiều phép cộng/trừ với số thập phân

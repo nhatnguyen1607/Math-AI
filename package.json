@@ -10,6 +10,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^13.5.0",
     "canvas-confetti": "^1.9.4",
+    "crypto-js": "^4.2.0",
     "firebase": "^12.8.0",
     "mammoth": "^1.11.0",
     "react": "^19.2.4",

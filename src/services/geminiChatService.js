@@ -233,17 +233,23 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
     throw new Error(`Không thể khởi tạo bài toán sau ${maxRetries} lần thử. Error: ${lastError?.message || 'Unknown error'}`);
   }
 
-    restoreSession(problemText, chatHistory) {
+  restoreSession(problemText, chatHistory) {
     this.currentProblem = problemText;
-    
-    // Tạo lại phiên chat với toàn bộ lịch sử cũ
-    if (this.model) {
-      this.chatSession = this.model.startChat({
+    const model = geminiModelManager.getModel();
+    if (model) {
+      this.chat = model.startChat({
         history: chatHistory.map(msg => ({
           role: msg.role === 'user' ? 'user' : 'model',
           parts: msg.parts
-        }))
+        })),
+        generationConfig: { temperature: 0.3 } // Lower temperature for stability
       });
+      // Detect current step from history to prevent restarting at Step 1
+      const fullText = chatHistory.map(m => m.parts[0].text).join(' ');
+      if (fullText.includes("BƯỚC 4")) this.currentStep = 4;
+      else if (fullText.includes("BƯỚC 3")) this.currentStep = 3;
+      else if (fullText.includes("BƯỚC 2")) this.currentStep = 2;
+      else this.currentStep = 1;
     }
   }
 

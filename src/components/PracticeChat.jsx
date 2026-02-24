@@ -116,82 +116,52 @@ const PracticeChat = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputValue.trim() || isLoading || isCompleted || isInitializing) return;
+// Trong hàm handleSendMessage
+const handleSendMessage = async (e) => {
+  e.preventDefault();
+  if (!inputValue.trim() || isLoading || isCompleted || isInitializing) return;
 
-    try {
-      setError(null);
-      const userMessage = inputValue.trim();
+  try {
+    setError(null);
+    const userMessage = inputValue.trim();
 
-      // Add user message to UI
-      const userMsg = {
-        role: 'user',
-        parts: [{ text: userMessage }]
-      };
-      setMessages(prev => [...prev, userMsg]);
-      setInputValue('');
-      setIsLoading(true);
+    const userMsg = { role: 'user', parts: [{ text: userMessage }] };
+    setMessages(prev => [...prev, userMsg]);
+    setInputValue('');
+    setIsLoading(true);
 
-      // Immediate feedback: show robot thinking state
+    if (onRobotStateChange) onRobotStateChange('thinking', 'AI đang xử lý...');
+
+    await saveChatMessage(userMsg);
+
+    const hintKeywords = ['gợi ý', 'hint', 'giúp', 'help', 'không biết', 'không hiểu', 'khó', 'chỉ', 'dạy', 'hướng dẫn'];
+    const isAskingForHint = hintKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
+
+    // CHỈ khai báo let aiMsg một lần ở đây
+    let aiMsg;
+    let response = null; 
+    
+    if (isAskingForHint) {
       try {
-        if (onRobotStateChange) onRobotStateChange('thinking', 'AI đang xử lý...');
-      } catch (err) {
-        // swallow any errors from parent callback
-        console.warn('onRobotStateChange handler error:', err);
-      }
-
-      // Save user message to Firestore
-      await saveChatMessage(userMsg);
-
-      // 🎯 Kiểm tra xem học sinh yêu cầu gợi ý hay không
-      const hintKeywords = ['gợi ý', 'hint', 'giúp', 'help', 'không biết', 'không hiểu', 'khó', 'chỉ', 'dạy', 'hướng dẫn'];
-      const isAskingForHint = hintKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
-
-      let aiMsg;
-      let response = null; 
-      
-      if (isAskingForHint) {
-        // 🎯 NẾU HỌC SINH YÊU CẦU GỢI Ý -> Chỉ CẤP GỢI Ý THUẦN TÚY
-        try {
-          const hintResponse = await geminiService.getHint();
-          aiMsg = {
-            role: 'model',
-            parts: [{ text: hintResponse }]
-          };
-        } catch (hintError) {
-          // Fallback nếu getHint thất bại
-          response = await geminiService.processStudentResponse(userMessage);
-          aiMsg = {
-            role: 'model',
-            parts: [{ text: response.message }]
-          };
-        }
-      } else {
-        // ✅ BÌNH THƯỜNG: Xử lý câu trả lời của học sinh
+        const hintResponse = await geminiService.getHint();
+        aiMsg = { role: 'model', parts: [{ text: hintResponse }] }; // Gán giá trị, không dùng const/let
+      } catch (hintError) {
         response = await geminiService.processStudentResponse(userMessage);
-        
-        aiMsg = {
-          role: 'model',
-          parts: [{ text: response.message }]
-        };
-
-        // 🎯 Nếu hoàn thành bước 4 (nextStep === 5), tự động gọi callback
-        if (response.nextStep === 5) {
-          setTimeout(() => {
-            if (onCompleted) {
-              onCompleted();
-            }
-          }, 1500); // Chờ 1.5s để hiển thị kết quả hoàn thành
-        }
+        aiMsg = { role: 'model', parts: [{ text: response.message }] };
       }
+    } else {
+      response = await geminiService.processStudentResponse(userMessage);
+      aiMsg = { role: 'model', parts: [{ text: response.message }] };
 
-          setMessages(prev => [...prev, aiMsg]);
+      if (response.nextStep === 5) {
+        setTimeout(() => { if (onCompleted) onCompleted(); }, 1500);
+      }
+    }
 
-      // Save AI response to Firestore
-      await saveChatMessage(aiMsg);
+    setMessages(prev => [...prev, aiMsg]);
+    await saveChatMessage(aiMsg);
 
-      // Callback to notify parent about updates
+    // Callback to notify parent about updates
       if (onChatUpdate) {
         onChatUpdate(prev => [...prev, userMsg, aiMsg]);
       }

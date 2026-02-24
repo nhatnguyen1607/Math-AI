@@ -223,7 +223,7 @@ const FacultyExamLobbyPage = () => {
                 Đang bắt đầu...
               </>
             ) : (
-              <>🚀 Bắt đầu phiên thi</>
+              <>🚀 Bắt đầu</>
             )}
           </button>
           <button
@@ -234,16 +234,6 @@ const FacultyExamLobbyPage = () => {
           </button>
         </div>
 
-        {/* Info Message */}
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg">
-          <p className="text-blue-700 font-semibold mb-2">💡 Gợi ý:</p>
-          <ul className="text-blue-600 space-y-1 text-sm">
-            <li>• Chờ tất cả học sinh bấm "Tham gia" trước khi bắt đầu</li>
-            <li>• Khi bấm "Bắt đầu", học sinh sẽ thấy đếm ngược 3-2-1</li>
-            <li>• Sau đó chuyển sang trang làm bài với timer 7 phút</li>
-            <li>• Bạn sẽ xem bảng xếp hạng realtime khi phiên thi bắt đầu</li>
-          </ul>
-        </div>
       </div>
     </div>
   );

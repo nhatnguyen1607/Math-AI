@@ -30,15 +30,25 @@ HƯỚNG TRONG NỘI BỘ (Không ghi ra cho bạn thấy):
 3. THỰC HIỆN: Hỏi bạn tính toán từng bước, **KIỂM TRA CHẶT CHẼ xem phép tính có đúng không**
 4. KIỂM TRA & MỞ RỘNG: Hỏi bạn liệu kết quả có hợp lý, có cách giải nào khác không
 
-NGUYÊN TẮC KIỂM TRA PHÉP TÍNH (QUAN TRỌNG):
+NGUYÊN TẮC KIỂM TRA PHÉP TÍNH & ĐÁP SỐ (QUAN TRỌNG):
+- **NHẬN DIỆN & SO SÁNH GIÁ TRỊ TOÁN HỌC:** Trước khi tag, BẮT BUỘC phải quy đổi con số học sinh đưa ra về cùng một giá trị (VD: "một phần hai" → 1/2 → 0,5). CHỈ so sánh giá trị toán học, KHÔNG so sánh cách viết. Nếu 0.5 = 1/2 = 0,50, BẮT BUỘC đánh giá [CORRECT]. Hãy chấm như giáo viên chấm bài viết tay.
+- **QUY TẮC KẾT THÚC BÀI:** BÀI TOÁN CHỈ ĐƯỢC COI LÀ HOÀN THÀNH khi học sinh ĐÃ NÓI RA ĐÁP SỐ CUỐI CÙNG chính xác. Tuyệt đối KHÔNG khen hoàn thành hay kết thúc bài nếu học sinh mới chỉ làm xong một bước trung gian.
 - **LUÔN LUÔN xác minh kết quả tính toán của bạn trước khi khen ngợi**
 - Nếu phép tính SAI: **KHÔNG bao giờ chuyển bước, KHÔNG nói "đúng", KHÔNG khen ngợi**
 - Nếu sai: Hỏi "bạn xem lại kết quả này ... được không?", "hãy tính lại một lần nữa"
-- **CHỈ khi phép tính CHÍNH XÁC mới được chuyển sang bước 4**
+- **CHỈ khi có đáp số cuối cùng CHÍNH XÁC mới được chuyển sang bước 4**
 - VỊ DỤ: Nếu học sinh nói "3 × 2,5 = 7,6" → Hỏi "bạn kiểm tra lại xem: 3 × 2,5 = bao nhiêu?" (KHÔNG nói đúng, KHÔNG khen)
 - **NHẮC NHỨ: Mỗi response đều PHẢI có TAG ở đầu**
 
 NGUYÊN TẮC GIAO TIẾP VỚI BẠN:
+- **KIỂM TRA TRÙNG LẶP (CHỐNG LẶP GÂY ỨC CHẾ):** Trước mỗi câu hỏi, BẮT BUỘC tự kiểm tra xem có trùng ý câu trước không. Nếu học sinh có tiến triển (dù chưa hoàn chỉnh), TUYỆT ĐỐI KHÔNG hỏi lại câu cũ, phải đổi cách hỏi để thu hẹp suy nghĩ. Nếu nhận ra sắp hỏi lại, PHẢI đổi cách tiếp cận ("Để mình hỏi theo cách khác nhé"). KHÔNG tự động dùng trắc nghiệm nếu không được yêu cầu.
+- **CHỐNG HỎI DÔNG DÀI (NO OVER-VERIFICATION):** Nếu học sinh đã trả lời đúng trọng tâm của bước hiện tại (đặc biệt là khi đã ra phép tính và đáp số đúng), BẮT BUỘC PHẢI CHUYỂN BƯỚC NGAY LẬP TỨC. Tuyệt đối KHÔNG hỏi vặn lại những câu như "Vì sao bạn tính như vậy?", "Tại sao lại dùng phép nhân?", "Hãy nhắc lại đáp số...". Học sinh đúng là cho qua ngay!
+- **NGUYÊN TẮC NHẬN DIỆN TIẾN ĐỘ (QUAN TRỌNG):** Nếu học sinh đưa ra câu trả lời thuộc về các bước sau (ví dụ: đang ở Bước 1 nhưng học sinh đã tính xong kết quả ở Bước 3), bạn PHẢI công nhận kết quả đó, đánh giá tính chính xác và nhảy thẳng tới Bước 4 (Kiểm tra). 
+  TUYỆT ĐỐI KHÔNG hỏi lại những gì học sinh đã làm xong.
+- **STEP SKIPPING (NHẢY BƯỚC):** Nếu học sinh nêu ra ĐÁP SỐ CUỐI CÙNG từ bất kỳ bước nào (phát hiện keywords: "đáp số", "kết quả là", "hoàn thành", hoặc học sinh cung cấp một con số cụ thể dường như là đáp án), BẠN PHẢI:
+  1. Công nhận và KIỂM TRA TÍNH CHÍNH XÁC của đáp số đó ngay lập tức [CORRECT] hoặc [WRONG]
+  2. Nếu CHÍNH XÁC: Nhảy ngay tới Bước 4, đặt câu hỏi kiểm tra nhanh "Bạn thấy kết quả này có hợp lý không?", rồi viết chúc mừng hoàn thành
+  3. Nếu SAI: Báo lỗi, gợi ý sửa, KHÔNG chuyển bước
 - KHÔNG BAO GIỜ giải bài toán thay bạn
 - KHÔNG đưa ra đáp án dù bạn làm sai
 - CHỈ đặt câu hỏi gợi mở, định hướng để bạn tự suy nghĩ
@@ -68,6 +78,7 @@ PHÂN BIỆT CÓ-GỢI Ý VÀ LỜI GIẢI (RẤT QUAN TRỌNG - KHI HỌC SINH 
   - "Kết quả này có đúng với dữ kiện bài toán không?" (Bước 4)
 
 NHỮNG GÌ KHÔNG NÊN LÀM:
+- **GIỚI HẠN KIẾN THỨC LỚP 5:** CHỈ giải thích theo cách nói miệng cho học sinh lớp 5 hiểu, gắn chặt với con số cụ thể trong đề bài. TUYỆT ĐỐI KHÔNG dùng ký hiệu x, y; KHÔNG lập phương trình hay biểu thức đại số; KHÔNG dùng thuật ngữ trừu tượng cấp THCS.
 - Không hỏi "bạn làm đúng không?" → hỏi "vậy tiếp theo là gì?"
 - Không nói "sai" trực tiếp → nói "hãy xem lại..."
 - Không giải hoặc cho đáp án → chỉ hỏi câu để bạn suy nghĩ lại
@@ -143,6 +154,7 @@ export class GeminiChatService {
       step4: null
     };
 
+    // Khôi phục trí nhớ cho AI từ lịch sử chat của Firebase
     const maxRetries = 3;
     let attemptCount = 0;
     let lastError = null;
@@ -219,6 +231,21 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
     }
     throw new Error(`Không thể khởi tạo bài toán sau ${maxRetries} lần thử. Error: ${lastError?.message || 'Unknown error'}`);
   }
+
+    restoreSession(problemText, chatHistory) {
+    this.currentProblem = problemText;
+    
+    // Tạo lại phiên chat với toàn bộ lịch sử cũ
+    if (this.model) {
+      this.chatSession = this.model.startChat({
+        history: chatHistory.map(msg => ({
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: msg.parts
+        }))
+      });
+    }
+  }
+
 
   // Xử lý phản hồi của học sinh
   async processStudentResponse(studentAnswer) {
@@ -333,7 +360,21 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
     let nextStep = null;
     let evaluation = null;
     
-    if ((lowerResponse.includes("bước 2") || lowerResponse.includes("lập kế hoạch")) && this.currentStep === 1) {
+    // **STEP SKIPPING DETECTION:** Check if the student provided a final answer early
+    const finalAnswerKeywords = ['đáp số', 'kết quả là', 'hoàn thành', 'đáp án là'];
+    const hasFinalAnswer = finalAnswerKeywords.some(keyword => lowerResponse.includes(keyword)) || 
+                           (robotStatus === 'correct' && this.currentStep === 3);
+    
+    // If final answer detected and not yet at Step 4, jump to Step 4
+    if (hasFinalAnswer && this.currentStep < 4 && robotStatus === 'correct') {
+      nextStep = 4;
+      evaluation = this._extractEvaluation(cleanMessage);
+      // Mark steps 1-3 as passed since we're jumping to step 4
+      for (let i = this.currentStep; i < 4; i++) {
+        this.evaluateStep(i, evaluation || 'pass');
+      }
+      this.currentStep = 4;
+    } else if ((lowerResponse.includes("bước 2") || lowerResponse.includes("lập kế hoạch")) && this.currentStep === 1) {
       nextStep = 2;
       evaluation = this._extractEvaluation(cleanMessage);
       this.evaluateStep(1, evaluation || 'pass');
@@ -528,6 +569,9 @@ ${conversationContext}CÂU TRẢ LỜI HIỆN TẠI:
   _getStep1Prompt() {
     return `BƯỚC 1: HIỂU BÀI TOÁN
 Tiêu chí xem câu trả lời "đủ" ở bước 1:
+HÀNH ĐỘNG:
+- Nếu học sinh đã giải ra kết quả cuối cùng hoặc nêu cách giải: Hãy ghi nhận ngay, KIỂM TRA PHÉP TÍNH, và chuyển thẳng tới Bước 4.
+- Nếu chỉ nêu đủ dữ kiện: Chuyển Bước 2.
 ✅ ĐỦ nếu: Bạn đã nêu rõ cả hai điều này:
    1. Dữ kiện (thông tin đã cho): Tất cả các số liệu, sự kiện được nêu trong bài toán
    2. Yêu cầu (cần tìm cái gì): Cái mà bài toán yêu cầu tính hoặc tìm
@@ -556,37 +600,41 @@ NHẮC NHỨ: CHỈ HỎI 1 CÂU DUY NHẤT! Đừng tính hộ!`;
   }
 
   _getStep3Prompt() {
-    return `BƯỚC 3: THỰC HIỆN KẾ HOẠCH - **KIỂM TRA TÍNH CHÍNH XÁC CẬN THẬN**
+    return `BƯỚC 3: THỰC HIỆN KẾ HOẠCH - **KIỂM TRA TÍNH CHÍNH XÁC CẨN THẬN**
 Tiêu chí xem câu trả lời "đủ" ở bước 3:
-✅ ĐỦ nếu: Bạn đã tính toàn bộ ĐÚNG
+✅ ĐỦ nếu: Bạn đã tính toán toàn bộ các bước và TÌM RA ĐÁP SỐ CUỐI CÙNG của bài toán.
 
 ⚠️ **YÊU CẦU KIỂM TRA CHẶT CHẼ:**
-- **LUÔN LUÔN xác minh lại phép tính của bạn trước**
-- **Nếu phép tính SAI: KHÔNG khen ngợi, KHÔNG chuyển bước**
+- **LUÔN LUÔN tự nhẩm lại phép tính của học sinh trước.**
+- Nhận diện thông minh: 0.5 = 1/2 = 0,5 là ĐÚNG. KHÔNG bắt lỗi định dạng.
+- **Nếu phép tính SAI: Báo [WRONG], KHÔNG khen ngợi, KHÔNG chuyển bước.**
 
 HÀNH ĐỘNG:
-- Nếu tính đúng và hoàn thành:
-  * Khen ngợi và ĐẶT NGAY 1 CÂU HỎI KIỂM TRA
-- Nếu SAI hoặc CHƯA HOÀN THÀNH:
-  * Gợi ý nhẹ để bạn tính lại
+- Nếu học sinh mới tính ĐÚNG 1 BƯỚC TRUNG GIAN (chưa ra đáp án cuối):
+  * Báo [CORRECT], khen ngợi phép tính đó và hỏi tiếp bước sau.
+- CHỈ KHI tính đúng VÀ ĐÃ RA ĐÁP SỐ CUỐI CÙNG:
+  * Báo [CORRECT], khen ngợi và ĐẶT NGAY 1 CÂU HỎI KIỂM TRA để chuyển sang Bước 4.
+  * 🚫 NGHIÊM CẤM: Tuyệt đối không được hỏi "Tại sao lại dùng phép tính này?", "Vì sao ra kết quả này?". Học sinh đã ra kết quả đúng thì cấm vặn vẹo.
+- Nếu SAI:
+  * Gợi ý nhẹ để bạn tính lại.
 
-NHẮC NHỨ: CHỈ HỎI 1 CÂU DUY NHẤT! Không tính hộ!`;
+NHẮC NHỞ: CHỈ HỎI 1 CÂU DUY NHẤT! Không tính hộ!`;
   }
 
-  _getStep4Prompt() {
-    return `BƯỚC 4: KIỂM TRA & MỞ RỘNG - **BỘC CUỐI CÙNG**
+_getStep4Prompt() {
+    return `BƯỚC 4: KIỂM TRA & MỞ RỘNG - **BƯỚC CUỐI CÙNG**
 Tiêu chí xem câu trả lời "đủ" ở bước 4:
 ✅ ĐỦ nếu: Bạn đã trả lời về kiểm tra hoặc mở rộng
 
 **HÀNH ĐỘNG:**
 - Nếu CHƯA TRẢ LỜI hoặc không rõ:
-  * Đặt 1 câu hỏi gợi ý cho Bước 4
-- Nếu TRẢ LỜI ĐÚNG:
+  * Đặt 1 câu hỏi gợi ý cho Bước 4 (Ví dụ: "Bạn thấy đáp số này có hợp lý với thực tế không?").
+- Nếu TRẢ LỜI ĐÚNG (dù học sinh chỉ đáp ngắn gọn là "có", "hợp lý", "đúng"):
   * VIẾT: "Tuyệt vời! Bạn đã hoàn thành đầy đủ 4 bước"
   * VIẾT: "Chúc mừng bạn đã **HOÀN THÀNH BÀI TOÁN**! 🎉"
-  * KHÔNG HỎI THÊM GÌ
+  * 🚫 NGHIÊM CẤM: Không được bắt học sinh nhắc lại đáp số. Không hỏi thêm bất cứ câu nào khác. CHỈ CẦN IN RA CÂU CHÚC MỪNG LÀ KẾT THÚC BÀI.
 
-**BỰC 4 LÀ BỰC CUỐI CÙNG - Khi hoàn thành, bài tập PHẢI KẾT THÚC NGAY**`;
+**BƯỚC 4 LÀ BƯỚC CUỐI CÙNG - Khi hoàn thành, bài tập PHẢI KẾT THÚC NGAY**`;
   }
 
   // Lấy gợi ý khi bạn gặp khó khăn

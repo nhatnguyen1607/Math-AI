@@ -38,6 +38,12 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         // Kiểm tra nếu đã có phiên luyện tập cũ
         const existingSession = await resultService.getPracticeSessionData(user.uid, examId);
         if (existingSession?.luyenTap?.bai1?.deBai?.length > 50) {
+          // if we already have a session, decide which tab should be active
+          if (existingSession.luyenTap.bai1.status === 'completed') {
+            setActiveTab('bai2');
+          } else {
+            setActiveTab('bai1');
+          }
           setPracticeData(existingSession);
           setLoading(false);
           return;
@@ -208,8 +214,8 @@ const StudentPracticePage = ({ user, onSignOut }) => {
 
       // Mở bài tiếp theo
       if (baiNumber === 'bai1') {
-        updatedData.luyenTap.bai2.status = 'in_progress';
-      }
+        updatedData.luyenTap.bai2.status = 'in_progress';        // after a short delay switch to bài2 automatically
+        setTimeout(() => setActiveTab('bai2'), 1500);      }
 
       setPracticeData(updatedData);
       setSubmitting(false);
@@ -285,13 +291,19 @@ const StudentPracticePage = ({ user, onSignOut }) => {
               const baiData = practiceData.luyenTap?.[bai];
               const status = baiData?.status;
               const icon = status === 'completed' ? '✅' : status === 'in_progress' ? '⏳' : '🔒';
+              const isBai1 = bai === 'bai1';
+              const isBai2 = bai === 'bai2';
+              const bai1Completed = practiceData.luyenTap.bai1?.status === 'completed';
+              const isDisabled = !practiceData.luyenTap || status === 'locked' || (isBai1 && bai1Completed) || (isBai2 && !bai1Completed);
               return (
                 <React.Fragment key={bai}>
                   <button
                     onClick={() => setActiveTab(bai)}
-                    disabled={!practiceData.luyenTap || status === 'locked'}
+                    disabled={isDisabled}
                     className={`flex items-center px-3 py-1 rounded-full font-bold font-quicksand transition-all text-sm ${
-                      activeTab === bai
+                      isDisabled
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed line-through'
+                        : activeTab === bai
                         ? 'bg-blue-500 text-white shadow-md'
                         : status === 'locked'
                         ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
@@ -355,14 +367,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
                 >
                   {submitting ? '⏳ Đang chấm điểm...' : '✓ Nộp bài & Chấm điểm'}
                 </button>
-                {activeTab === 'bai1' && (bai2?.status === 'in_progress' || bai2?.status === 'completed') && (
-                  <button
-                    onClick={() => setActiveTab('bai2')}
-                    className="px-6 py-3 bg-blue-500 text-white font-bold rounded-lg hover:shadow-lg transition-all font-quicksand"
-                  >
-                    Sang Bài 2 →
-                  </button>
-                )}
+                
                 {activeTab === 'bai2' && bai2?.status === 'completed' && (
                   <button
                     onClick={() => navigate(-1)}

@@ -479,6 +479,7 @@ YÊU CẦU TỐI QUAN TRỌNG:
 5. ✅ CHỈ MỘT CÂU HỎI CUỐI
 6. ✅ THAY ĐỔI BỐI CẢNH nhưng giữ nguyên cấu trúc
 7. ✅ ĐỀ SÁNG TẠO NHƯNG RÕ RÀNG
+8. ✅ TUYỆT ĐỐI KHÔNG tạo bài toán mang tư duy đại số THCS (không bắt học sinh tìm x, y, không lập phương trình).
 
 HƯỚNG DẪN TRẢ LỜI:
 - CHỈ trả về nội dung bài toán (không có "Bài toán mới:", "BÀI X LUYỆN TẬP:", không có lời giải)
@@ -593,7 +594,7 @@ ${sampleSummary}
 
 ${topicSpecificGuide}
 
-YÊU CẦU CHUNG CHO TẤT CẢ CHỦĐỀ:
+YÊU CẦU CHUNG CHO TẤT CẢ CHỦ ĐỀ:
 1. ✅ GIỮ NGUYÊN CẤU TRÚC TEMPLATE:
    - Số lượng bài tập, thời gian, số câu hỏi GIỐNG HỆT template
    - Kiểu câu hỏi (single/multiple) giữ nguyên
@@ -612,6 +613,8 @@ YÊU CẦU CHUNG CHO TẤT CẢ CHỦĐỀ:
    - Mỗi question: id, question, type, options, correctAnswers (array indices), explanation
    - Type: "single" hoặc "multiple"
    - correctAnswers: array chỉ số (ví dụ: [1], [0, 2])
+
+7. ✅ BÁM SÁT KIẾN THỨC TIỂU HỌC: Các câu hỏi và bài toán tuyệt đối không dùng ẩn x, y hoặc các khái niệm Toán cấp 2.
 
 CHỈ RETURN JSON ARRAY, KHÔNG CÓ TEXT KHÁC.`;
   }

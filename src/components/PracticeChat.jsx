@@ -60,6 +60,13 @@ const PracticeChat = ({
   useEffect(() => {
     const initializeProblem = async () => {
       try {
+        // nếu đã có lịch sử chat thì không gọi lại API Gemini
+        if (chatHistory && chatHistory.length > 0) {
+          geminiService.currentProblem = deBai;
+          setIsInitializing(false);
+          return;
+        }
+
         setIsInitializing(true);
         setError(null);
         const response = await geminiService.startNewProblem(deBai);
@@ -91,7 +98,7 @@ const PracticeChat = ({
     if (deBai && !isCompleted) {
       initializeProblem();
     }
-  }, [deBai, baiNumber, isCompleted, chatHistory, saveChatMessage, onChatUpdate]);
+  }, [deBai, baiNumber, isCompleted, saveChatMessage, onChatUpdate]);
 
   // Auto scroll to bottom using parent-provided scroll container if available
   const scrollToBottom = () => {

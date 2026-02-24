@@ -68,7 +68,8 @@ export class GeminiPracticeService {
     context = '',
     problemNumber = 1,
     competencyLevel = 'Đạt',
-    startupPercentage = 100
+    startupPercentage = 100,
+    specificWeaknesses = ""
   ) {
 
     try {
@@ -207,7 +208,8 @@ QUY TẮC BẮT BUỘC:
         difficultyGuidance, 
         competencyAdjustment, 
         topicFocus, 
-        specialTopicGuidance
+        specialTopicGuidance,
+        specificWeaknesses
       );
 
       // Sử dụng wrapper để rate-limit
@@ -768,7 +770,7 @@ VÍ DỤ SAI:
 `;
   }
 
-  _buildSimilarProblemPrompt(referenceProblem, context, difficultyGuidance, competencyAdjustment, topicFocus, specialTopicGuidance) {
+  _buildSimilarProblemPrompt(referenceProblem, context, difficultyGuidance, competencyAdjustment, topicFocus, specialTopicGuidance, specificWeaknesses = "") {
     return `Bạn là giáo viên toán lớp 5 chuyên tạo bài tập luyện tập có chất lượng cao.
 
 BÀI KHỞI ĐỘNG (MẪU):
@@ -783,7 +785,10 @@ Tạo BÀI LUYỆN TẬP dựa vào bài khởi động trên:
 ${difficultyGuidance}
 ${competencyAdjustment}
 ${topicFocus}
-
+${specificWeaknesses ? `
+⚠️ NHỮNG ĐIỂM YẾU CẦN KHẮC PHỤC:
+${specificWeaknesses}
+` : ''}
 ${specialTopicGuidance}
 
 YÊU CẦU TỐI QUAN TRỌNG:

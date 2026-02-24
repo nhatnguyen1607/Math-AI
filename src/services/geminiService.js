@@ -97,26 +97,25 @@ export class GeminiService {
 
   // ============ PRACTICE SERVICE METHODS ============
 
-  async generateSimilarProblem(
+async generateSimilarProblem(
+  problemText1,
+  problemText2,
+  problemContext = "",
+  problemNumber = 1,
+  competencyLevel = "Dat", // Đảm bảo có tham số này
+  startupPercentage = 100,
+  specificWeaknesses = ""
+) {
+  return this._practiceService.generateSimilarProblem(
     problemText1,
     problemText2,
-    problemContext = "",
-    problemNumber = 1,
-    competencyLevel = "Dat",
-    startupPercentage = 100,
-    specificWeaknesses = ""
-  ) {
-    return this._practiceService.generateSimilarProblem(
-      problemText1,
-      problemText2,
-      problemContext,
-      problemNumber,
-      competencyLevel,
-      startupPercentage,
-      specificWeaknesses
-    );
-  }
-
+    problemContext,
+    problemNumber,
+    competencyLevel,
+    startupPercentage,
+    specificWeaknesses
+  );
+}
   async generateApplicationProblem(studentContext) {
     return this._practiceService.generateApplicationProblem(studentContext);
   }

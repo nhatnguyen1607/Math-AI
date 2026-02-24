@@ -309,7 +309,21 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
 
             {showLeaderboard && (
               <div className="p-8 bg-yellow-50">
-                {exam?.finalLeaderboard && exam.finalLeaderboard.length > 0 ? (
+                {/* 🔧 Ưu tiên finalLeaderboard, nếu không có thì tạo từ session.participants */}
+                {(() => {
+                  // Tạo leaderboard từ session participants nếu chưa có finalLeaderboard
+                  let leaderboardData = exam?.finalLeaderboard;
+                  if ((!leaderboardData || leaderboardData.length === 0) && session?.participants) {
+                    leaderboardData = Object.entries(session.participants)
+                      .map(([uid, data]) => ({
+                        uid,
+                        name: data.studentName || data.name || 'Học sinh',
+                        displayName: data.studentName || data.name,
+                        score: data.score || 0
+                      }))
+                      .sort((a, b) => b.score - a.score);
+                  }
+                  return leaderboardData && leaderboardData.length > 0 ? (
                   <div className="bg-white rounded-max shadow-md overflow-hidden">
                     <table className="w-full">
                       <thead>
@@ -320,7 +334,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                         </tr>
                       </thead>
                       <tbody>
-                        {exam.finalLeaderboard.map((entry, idx) => {
+                        {leaderboardData.map((entry, idx) => {
                           const isMe = entry.uid === user?.uid;
                           return (
                             <tr 
@@ -350,7 +364,8 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                     <div className="text-4xl mb-4">📊</div>
                     <p>Chưa có dữ liệu bảng xếp hạng</p>
                   </div>
-                )}
+                );
+                })()}
               </div>
             )}
           </div>

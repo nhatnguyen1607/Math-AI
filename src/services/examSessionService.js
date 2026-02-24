@@ -339,7 +339,9 @@ export const completeExamForStudent = async (sessionId, uid, finalData) => {
         ...currentParticipant,
         ...finalData,
         isCompleted: true,
+        submitted: true,      // 🔧 Thêm để hiển thị đúng số "Đã nộp bài"
         completedAt: serverTimestamp(),
+        submittedAt: serverTimestamp(), // 🔧 Thêm thời gian nộp
         lastUpdated: serverTimestamp()
       }
     });

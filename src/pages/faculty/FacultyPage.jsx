@@ -6,6 +6,7 @@ import FacultyHeader from '../../components/faculty/FacultyHeader';
 const FacultyPage = ({ user, userData, onSignOut }) => {
   const [loading, setLoading] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
+  const [showDevNotice, setShowDevNotice] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,6 +29,11 @@ const FacultyPage = ({ user, userData, onSignOut }) => {
 
   const handleNavigate = (path, params = {}) => {
     navigate(path, { state: { selectedClass, classId: selectedClass?.id, ...params } });
+  };
+
+  const handleWorksheetClick = () => {
+    setShowDevNotice(true);
+    setTimeout(() => setShowDevNotice(false), 3000);
   };
 
   // Early return if loading
@@ -100,7 +106,7 @@ const FacultyPage = ({ user, userData, onSignOut }) => {
                 </button>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer p-8" onClick={() => handleNavigate('/faculty/learning-pathway/exam', { type: 'worksheet' })}>
+              <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer p-8" onClick={handleWorksheetClick}>
                 <div className="text-6xl mb-4">📋</div>
                 <h3 className="text-2xl font-bold text-gray-800 mb-2">Phiếu bài tập</h3>
                 <p className="text-gray-600 mb-6">Tạo và quản lý đề thi, kích hoạt phiên học trực tiếp, và xem kết quả chi tiết</p>
@@ -131,6 +137,17 @@ const FacultyPage = ({ user, userData, onSignOut }) => {
           </div>
         </div>
       </div>
+
+      {/* Development Notice Modal */}
+      {showDevNotice && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl animate-pulse">
+            <div className="text-6xl mb-4">🚧</div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Nội dung đang phát triển</h3>
+            <p className="text-gray-600">Tính năng này sẽ sớm được cập nhật. Vui lòng quay lại sau!</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

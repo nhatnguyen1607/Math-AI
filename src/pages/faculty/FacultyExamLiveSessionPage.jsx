@@ -38,7 +38,7 @@ const FacultyExamLiveSessionPage = () => {
   const loadExamData = useCallback(async () => {
     try {
       if (!sessionId) {
-        alert('Không tìm thấy phiên thi');
+        alert('Không tìm thấy trò chơi');
         navigate('/faculty/exam-management');
         return;
       }
@@ -118,11 +118,11 @@ const FacultyExamLiveSessionPage = () => {
         // Auto-finish exam without asking
         examSessionService.finishExamSession(sessionId)
           .then(() => {
-            alert('⏰ Hết giờ! Phiên thi đã kết thúc và khóa. Bài làm của tất cả học sinh đã được nộp tự động.');
+            alert('⏰ Hết giờ! trò chơi đã kết thúc và khóa. Bài làm của tất cả học sinh đã được nộp tự động.');
             navigate('/faculty/exam-management');
           })
           .catch((error) => {
-            alert('Lỗi khi kết thúc phiên thi tự động');
+            alert('Lỗi khi kết thúc trò chơi tự động');
           });
       }
     }, 1000);
@@ -131,16 +131,16 @@ const FacultyExamLiveSessionPage = () => {
   }, [sessionId, session, navigate]);
 
   const handleEndExam = async () => {
-    if (window.confirm('Bạn có chắc chắn muốn kết thúc phiên thi? Bài làm của tất cả học sinh sẽ được nộp tự động.')) {
+    if (window.confirm('Bạn có chắc chắn muốn kết thúc trò chơi? Bài làm của tất cả học sinh sẽ được nộp tự động.')) {
       try {
         // 🔧 Finish exam session (auto-submits all students & locks exam)
         await examSessionService.finishExamSession(sessionId);
         
-        alert('✅ Phiên thi đã kết thúc! Bài làm của tất cả học sinh đã được nộp tự động.');
+        alert('✅ Trò chơi đã kết thúc! Bài làm của tất cả học sinh đã được nộp tự động.');
         navigate('/faculty/exam-management');
       } catch (error) {
         console.error('Error ending exam:', error);
-        alert('Lỗi khi kết thúc phiên thi');
+        alert('Lỗi khi kết thúc trò chơi');
       }
     }
   };
@@ -159,7 +159,7 @@ const FacultyExamLiveSessionPage = () => {
   });
 
   // const navItems = [
-  //   { icon: '📊', label: 'Phiên Thi Trực Tiếp: ' + exam.title }
+  //   { icon: '📊', label: 'trò chơi Trực Tiếp: ' + exam.title }
   // ];
 
   return (
@@ -202,7 +202,7 @@ const FacultyExamLiveSessionPage = () => {
               cursor: 'pointer'
             }}
           >
-            ⏹️ Kết thúc phiên thi
+            ⏹️ Kết thúc trò chơi
           </button>
         </div>
 

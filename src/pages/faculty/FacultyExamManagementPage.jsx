@@ -314,7 +314,7 @@ const FacultyExamManagementPage = () => {
   const handleGenerateExamWithAI = async () => {
     // Validate title first
     if (!formData.title.trim()) {
-      alert('Vui lòng nhập tiêu đề đề thi trước');
+      alert('Vui lòng nhập tiêu đề bài ôn trước');
       return;
     }
 
@@ -363,7 +363,7 @@ const FacultyExamManagementPage = () => {
     setCurrentQuestionIndex(0);
     setFormData({
       ...formData,
-      title: `[AI] ${formData.title || 'Đề thi (tạo bởi AI)'}` 
+      title: ` ${formData.title || 'Bài ôn (tạo bởi AI)'}` 
     });
   };
 
@@ -377,7 +377,7 @@ const FacultyExamManagementPage = () => {
     e.preventDefault();
 
     if (!formData.title.trim()) {
-      alert('Vui lòng nhập tiêu đề đề thi');
+      alert('Vui lòng nhập tiêu đề bài ôn');
       return;
     }
 
@@ -458,11 +458,11 @@ const FacultyExamManagementPage = () => {
       if (editingExam) {
         // Update existing exam
         await facultyService.updateExam(editingExam.id, examData);
-        alert('Cập nhật đề thi thành công!');
+        alert('Cập nhật bài ôn thành công!');
       } else {
         // Create new exam
         await facultyService.createExam(examData, user?.id);
-        alert('Tạo đề thi thành công!');
+        alert('Tạo bài ôn thành công!');
       }
       
       resetForm();
@@ -472,8 +472,8 @@ const FacultyExamManagementPage = () => {
         setExams(examsData || []);
       }
     } catch (error) {
-      const errorMsg = error.message || 'Lỗi không xác định khi lưu đề thi';
-      alert(`Lỗi khi lưu đề thi:\n${errorMsg}`);
+      const errorMsg = error.message || 'Lỗi không xác định khi lưu bài ôn';
+      alert(`Lỗi khi lưu bài ôn:\n${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -482,14 +482,14 @@ const FacultyExamManagementPage = () => {
   const handleActivateExam = async (examId) => {
     try {
       await facultyService.activateExam(examId);
-      alert('Kích hoạt đề thi thành công!');
+      alert('Kích hoạt bài ôn thành công!');
       // Reload exams
       if (user?.id && selectedClassId && selectedTopicId) {
         const examsData = await facultyService.getExamsByFaculty(user.id, selectedClassId, selectedTopicId);
         setExams(examsData || []);
       }
     } catch (error) {
-      alert('Lỗi khi kích hoạt đề thi');
+      alert('Lỗi khi kích hoạt bài ôn');
     }
   };
 
@@ -509,7 +509,7 @@ const FacultyExamManagementPage = () => {
         navigate(`/faculty/exam-lobby/${sessionId}`);
       }
     } catch (error) {
-      alert('Lỗi khi bắt đầu đề thi: ' + error.message);
+      alert('Lỗi khi bắt đầu bài ôn: ' + error.message);
     }
   };
 
@@ -534,17 +534,17 @@ const FacultyExamManagementPage = () => {
   };
 
   const handleDeleteExam = async (examId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa đề thi này?')) {
+    if (window.confirm('Bạn có chắc chắn muốn xóa bài ôn này?')) {
       try {
         await facultyService.deleteExam(examId);
-        alert('Xóa đề thi thành công!');
+        alert('Xóa bài ôn thành công!');
         // Reload exams
         if (user?.id && selectedClassId && selectedTopicId) {
           const examsData = await facultyService.getExamsByFaculty(user.id, selectedClassId, selectedTopicId);
           setExams(examsData || []);
         }
       } catch (error) {
-        alert('Lỗi khi xóa đề thi');
+        alert('Lỗi khi xóa bài ôn');
       }
     }
   };
@@ -576,7 +576,7 @@ const FacultyExamManagementPage = () => {
   }
 
   // const navItems = [
-  //   { icon: '📝', label: 'Quản lí Đề Thi' }
+  //   { icon: '📝', label: 'Quản lí bài ôn' }
   // ];
 
   return (
@@ -686,7 +686,7 @@ const FacultyExamManagementPage = () => {
           <div className="bg-white rounded-xl shadow-lg p-6 lg:p-8 mb-8 border border-purple-200">
             <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
               <span>{editingExam ? '📝' : '✨'}</span>
-              {editingExam ? `Sửa đề thi: ${editingExam.title}` : 'Tạo đề thi mới (7 phút)'}
+              {editingExam ? `Sửa bài ôn: ${editingExam.title}` : 'Tạo bài ôn mới (7 phút)'}
             </h3>
             <form onSubmit={handleCreateExam}>
               {/* Basic Info */}
@@ -699,7 +699,7 @@ const FacultyExamManagementPage = () => {
                 </div>
                 
                 <div className="mb-5">
-                  <label className="block mb-2 text-gray-700 font-semibold">Tiêu đề đề thi *</label>
+                  <label className="block mb-2 text-gray-700 font-semibold">Tiêu đề bài ôn *</label>
                   <input
                     type="text"
                     value={formData.title}
@@ -715,7 +715,7 @@ const FacultyExamManagementPage = () => {
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Mô tả đề thi..."
+                    placeholder="Mô tả bài ôn..."
                     rows="3"
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
                   />
@@ -845,7 +845,7 @@ const FacultyExamManagementPage = () => {
                     <h5 className="font-semibold text-gray-800">Tạo đề tương đương với AI</h5>
                   </div>
                   <p className="text-sm text-gray-600 mb-4">
-                    Tạo đề thi tương đương dựa trên đề mẫu của chủ đề. AI sẽ tạo câu hỏi mới phù hợp với cùng mức độ khó.
+                    Tạo bài ôn tương đương dựa trên đề mẫu của chủ đề. AI sẽ tạo câu hỏi mới phù hợp với cùng mức độ khó.
                   </p>
                   
                   <button
@@ -858,7 +858,7 @@ const FacultyExamManagementPage = () => {
                   </button>
 
                   {!formData.title.trim() && (
-                    <p className="text-xs text-gray-500 mt-2">⚠️ Vui lòng nhập tiêu đề đề thi trước</p>
+                    <p className="text-xs text-gray-500 mt-2">⚠️ Vui lòng nhập tiêu đề bài ôn trước</p>
                   )}
 
                   {!selectedTopicId && (
@@ -1137,7 +1137,7 @@ const FacultyExamManagementPage = () => {
                   className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-lg font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none" 
                   disabled={loading}
                 >
-                  {loading ? 'Đang lưu...' : (editingExam ? 'Lưu đề thi' : 'Tạo đề thi')}
+                  {loading ? 'Đang lưu...' : (editingExam ? 'Lưu bài ôn' : 'Tạo bài ôn')}
                 </button>
               </div>
             </form>
@@ -1150,7 +1150,7 @@ const FacultyExamManagementPage = () => {
             onClick={() => setShowForm(true)}
             className="mb-8 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
           >
-            ➕ Tạo đề thi mới
+            ➕ Tạo bài ôn mới
           </button>
         )}
 
@@ -1158,13 +1158,13 @@ const FacultyExamManagementPage = () => {
         {exams.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-xl shadow-md">
             <span className="text-6xl mb-4 block">📝</span>
-            <p className="text-xl text-gray-500 mb-4">Chưa có đề thi nào</p>
-            <p className="text-gray-400 mb-6">Hãy tạo đề thi đầu tiên để bắt đầu!</p>
+            <p className="text-xl text-gray-500 mb-4">Chưa có bài ôn nào</p>
+            <p className="text-gray-400 mb-6">Hãy tạo bài ôn đầu tiên để bắt đầu!</p>
             <button
               onClick={() => setShowForm(true)}
               className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
             >
-              📝 Tạo đề thi mới
+              📝 Tạo bài ôn mới
             </button>
           </div>
         ) : (

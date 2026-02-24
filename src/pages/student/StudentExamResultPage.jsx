@@ -31,6 +31,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
   // UI states
   const [activeTab, setActiveTab] = useState('khoiDong');
   const [showDetails, setShowDetails] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [expandedQuestions, setExpandedQuestions] = useState({});
   const [showCongrats, setShowCongrats] = useState(fromExam);
 
@@ -276,18 +277,83 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
               </div>
             </div>
 
-            {/* <div className="flex flex-col items-center gap-3 p-6 bg-yellow-100 rounded-max">
-              <div className={`text-5xl font-bold font-quicksand ${isPassed ? 'text-green-600' : 'text-orange-600'}`}>
-                {isPassed ? '✓' : '✗'}
+            {/* Score Box */}
+            <div className="flex flex-col items-center gap-3 p-6 bg-blue-100 rounded-max">
+              <div className="text-5xl font-bold text-blue-600 font-quicksand">
+                {(() => {
+                  const myEntry = exam?.finalLeaderboard?.find(entry => entry.uid === user?.uid);
+                  return myEntry?.score ?? correctCount * 10;
+                })()}
               </div>
-              <div className={`text-2xl font-bold font-quicksand ${isPassed ? 'text-green-600' : 'text-orange-600'}`}>
-                {isPassed ? 'PASS' : 'FAIL'}
+              <div className="text-gray-700 font-bold font-quicksand">Điểm số</div>
+              <div className="text-sm text-gray-600">
+                {(() => {
+                  const myRank = exam?.finalLeaderboard?.findIndex(entry => entry.uid === user?.uid) + 1;
+                  return myRank > 0 ? `Hạng ${myRank}/${exam?.finalLeaderboard?.length || 0}` : '';
+                })()}
               </div>
-            </div> */}
+            </div>
           </div>
 
           {/* Competency Evaluation - HIDDEN FOR STUDENTS - Only for Faculty 
               This is now displayed through CompetencyEvaluationDisplay in FacultyStudentExamResultPage */}
+
+          {/* Leaderboard Section */}
+          <div className="border-t-4 border-gray-200">
+            <button
+              onClick={() => setShowLeaderboard(!showLeaderboard)}
+              className="btn-3d w-full p-6 bg-white border-b-3 border-yellow-400 rounded-none text-lg font-bold text-gray-800 cursor-pointer transition-all hover:bg-yellow-50 font-quicksand"
+            >
+              {showLeaderboard ? '▼' : '▶'} 🏆 Bảng xếp hạng
+            </button>
+
+            {showLeaderboard && (
+              <div className="p-8 bg-yellow-50">
+                {exam?.finalLeaderboard && exam.finalLeaderboard.length > 0 ? (
+                  <div className="bg-white rounded-max shadow-md overflow-hidden">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gradient-to-r from-yellow-400 to-orange-400 text-white">
+                          <th className="py-4 px-6 text-left font-quicksand">Hạng</th>
+                          <th className="py-4 px-6 text-left font-quicksand">Tên</th>
+                          <th className="py-4 px-6 text-center font-quicksand">Điểm</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {exam.finalLeaderboard.map((entry, idx) => {
+                          const isMe = entry.uid === user?.uid;
+                          return (
+                            <tr 
+                              key={entry.uid || idx} 
+                              className={`border-b border-gray-200 transition-all ${
+                                isMe ? 'bg-blue-100 font-bold' : 'hover:bg-gray-50'
+                              }`}
+                            >
+                              <td className="py-4 px-6 font-quicksand">
+                                {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
+                              </td>
+                              <td className="py-4 px-6 font-quicksand">
+                                {entry.displayName || entry.name || 'Học sinh'}
+                                {isMe && <span className="ml-2 text-blue-600">(Bạn)</span>}
+                              </td>
+                              <td className="py-4 px-6 text-center font-quicksand font-bold text-blue-600">
+                                {entry.score ?? 0}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-600 font-quicksand">
+                    <div className="text-4xl mb-4">📊</div>
+                    <p>Chưa có dữ liệu bảng xếp hạng</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Show Details Section - Chia 2 phần BT */}
           <div className="border-t-4 border-gray-200">

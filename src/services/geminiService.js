@@ -102,14 +102,18 @@ export class GeminiService {
     problemText2,
     problemContext = "",
     problemNumber = 1,
-    competencyLevel = "Dat"
+    competencyLevel = "Dat",
+    startupPercentage = 100,
+    specificWeaknesses = ""
   ) {
     return this._practiceService.generateSimilarProblem(
       problemText1,
       problemText2,
       problemContext,
       problemNumber,
-      competencyLevel
+      competencyLevel,
+      startupPercentage,
+      specificWeaknesses
     );
   }
 

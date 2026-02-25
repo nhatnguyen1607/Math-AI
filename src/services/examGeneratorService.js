@@ -351,7 +351,7 @@ Câu hỏi mẫu (CHỌN 1-2 trong các dạng sau):
 **BẮT ĐẦU**: Tạo đề cho bài "${lessonName}". CẢ 2 BÀI đều phải về "${lessonName}". Trả về JSON bắt đầu bằng { kết thúc bằng }`;
 
       // call through geminiService wrapper which itself queues the requests and handles retries
-      const result = await geminiServiceInstance._rateLimitedGenerate(prompt);
+      const result = await geminiServiceInstance._practiceService._rateLimitedGenerate(prompt);
       const responseText = result ? result.response.text() : '';
 
       // Parse JSON từ response

@@ -5,7 +5,8 @@ import facultyService from '../../services/faculty/facultyService';
 import examSessionService from '../../services/examSessionService';
 import classService from '../../services/classService';
 import topicService from '../../services/topicService';
-import geminiService from '../../services/geminiService';
+// import geminiService from '../../services/geminiService';
+import examGeneratorService from '../../services/examGeneratorService';
 import { parseExamFile } from '../../services/fileParserService';
 import ExamCard from '../../components/cards/ExamCard';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
@@ -337,13 +338,13 @@ const FacultyExamManagementPage = () => {
       }
 
       // Call AI to generate exam based on sampleExams - use form title as lesson name
-      const generatedExercises = await geminiService.generateExamFromSampleExam(
-        topic.name,
-        formData.title, // Pass the exam title as lesson name
-        topic.sampleExams
-      );
+      const generatedExercises = await examGeneratorService.generateExamFromSamples({
+        topicName: topic.name,
+        lessonName: formData.title,
+        sampleExams: topic.sampleExams
+      });
 
-      setAiExercises(generatedExercises);
+      setAiExercises(generatedExercises?.data?.exercises || []);
       setAiError(null);
     } catch (error) {
       setAiError(`❌ Lỗi: ${error.message}`);
@@ -356,8 +357,14 @@ const FacultyExamManagementPage = () => {
   // Apply AI-generated exercises
   const handleApplyAIExercises = () => {
     if (!aiExercises) return;
-    
-    setExercises(aiExercises);
+
+    // Add default scoring if missing
+    const exercisesWithScoring = aiExercises.map(ex => ({
+      ...ex,
+      scoring: ex.scoring || { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 }
+    }));
+
+    setExercises(exercisesWithScoring);
     setAiExercises(null);
     setCurrentExerciseIndex(0);
     setCurrentQuestionIndex(0);

@@ -236,16 +236,22 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
   restoreSession(problemText, chatHistory) {
     this.currentProblem = problemText;
     const model = geminiModelManager.getModel();
-    if (model) {
+    if (model && chatHistory && chatHistory.length > 0) {
+      // Đảm bảo phần tử đầu tiên là 'user'
+      let fixedHistory = Array.isArray(chatHistory) ? [...chatHistory] : [];
+      if (fixedHistory.length > 0 && fixedHistory[0].role !== 'user') {
+        // Thêm prompt hệ thống làm user đầu tiên
+        fixedHistory.unshift({ role: 'user', parts: [{ text: problemText }] });
+      }
       this.chat = model.startChat({
-        history: chatHistory.map(msg => ({
+        history: fixedHistory.map(msg => ({
           role: msg.role === 'user' ? 'user' : 'model',
           parts: msg.parts
         })),
-        generationConfig: { temperature: 0.3 } // Lower temperature for stability
+        generationConfig: { temperature: 0.3 }
       });
       // Detect current step from history to prevent restarting at Step 1
-      const fullText = chatHistory.map(m => m.parts[0].text).join(' ');
+      const fullText = fixedHistory.map(m => m.parts[0].text).join(' ');
       if (fullText.includes("BƯỚC 4")) this.currentStep = 4;
       else if (fullText.includes("BƯỚC 3")) this.currentStep = 3;
       else if (fullText.includes("BƯỚC 2")) this.currentStep = 2;
@@ -546,8 +552,14 @@ Hãy đặt CHỈ 1 câu hỏi gợi mở giúp mình bắt đầu hiểu bài t
       conversationContext += '\n';
     }
 
+    // Phân tích đề toán để xác định đúng ý nghĩa
+    let dePhanTich = this._analyzeProblemStatement(this.currentProblem);
+
     let prompt = `BÀI TOÁN GỐC:
 ${this.currentProblem}
+
+PHÂN TÍCH ĐỀ BÀI:
+${dePhanTich}
 
 ${conversationContext}CÂU TRẢ LỜI HIỆN TẠI:
 "${studentAnswer}"\n\n`;
@@ -571,6 +583,33 @@ ${conversationContext}CÂU TRẢ LỜI HIỆN TẠI:
     }
 
     return prompt;
+  }
+
+  // Phân tích đề toán: xác định đúng ý nghĩa các từ 'tăng lên thành', 'tăng thêm', 'là'
+  _analyzeProblemStatement(problemText) {
+    if (!problemText || typeof problemText !== 'string') return '';
+    const lower = problemText.toLowerCase();
+    let result = '';
+    // Tăng lên thành X
+    const tangLenThanhMatch = lower.match(/tăng lên thành\s*(\d+)/);
+    if (tangLenThanhMatch) {
+      result += `Đề bài cho biết tổng mới là ${tangLenThanhMatch[1]} (không phải số tăng thêm).\n`;
+    }
+    // Tăng X
+    const tangThemMatch = lower.match(/tăng\s*(\d+)/);
+    if (tangThemMatch && !tangLenThanhMatch) {
+      result += `Đề bài cho biết số tăng thêm là ${tangThemMatch[1]} (không phải tổng mới).\n`;
+    }
+    // Là X
+    const laMatch = lower.match(/là\s*(\d+)/);
+    if (laMatch) {
+      result += `Đề bài cho biết tổng mới là ${laMatch[1]}.\n`;
+    }
+    // Nếu không match gì đặc biệt
+    if (!result) {
+      result = 'Đề bài không có từ khóa đặc biệt, hãy đọc kỹ dữ kiện và yêu cầu.';
+    }
+    return result;
   }
 
   _getStep1Prompt() {

@@ -319,7 +319,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
                   scrollContainerRef={leftColRef}
                   isCompleted={vanDungData.status === 'completed'}
                   evaluation={vanDungData.evaluation}
-                  onCompleted={handleSubmitVanDung}
+                  // onCompleted={handleSubmitVanDung} // Bỏ tự động nộp
                   onRobotStateChange={(status, msg) => {
                     setRobotStatus(status);
                     setRobotMessage(msg);

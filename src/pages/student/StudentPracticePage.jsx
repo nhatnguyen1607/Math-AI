@@ -291,10 +291,11 @@ const StudentPracticePage = ({ user, onSignOut }) => {
               const baiData = practiceData.luyenTap?.[bai];
               const status = baiData?.status;
               const icon = status === 'completed' ? '✅' : status === 'in_progress' ? '⏳' : '🔒';
-              const isBai1 = bai === 'bai1';
+              // const isBai1 = bai === 'bai1'; // Không dùng đến
               const isBai2 = bai === 'bai2';
               const bai1Completed = practiceData.luyenTap.bai1?.status === 'completed';
-              const isDisabled = !practiceData.luyenTap || status === 'locked' || (isBai1 && bai1Completed) || (isBai2 && !bai1Completed);
+              // Chỉ disable nếu status là 'locked' hoặc (bài 2 mà bài 1 chưa completed)
+              const isDisabled = !practiceData.luyenTap || status === 'locked' || (isBai2 && !bai1Completed);
               return (
                 <React.Fragment key={bai}>
                   <button

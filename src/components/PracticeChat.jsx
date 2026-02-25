@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import resultService from '../services/resultService';
 import geminiService from '../services/geminiService';
+import geminiChatService from '../services/geminiChatService';
 
 /**
  * PracticeChat Component
@@ -42,63 +43,65 @@ const PracticeChat = ({
     }
   }, [baiNumber, userId, examId]);
 
-  // Reset state khi baiNumber thay đổi (chuyển từ bài 1 → bài 2)
-  // VÀ sync messages từ chatHistory nếu có
+  // Sync messages từ chatHistory khi chatHistory thay đổi
   useEffect(() => {
     if (chatHistory && chatHistory.length > 0) {
-      // Có dữ liệu lịch sử → load lại
       setMessages(chatHistory);
       setIsInitializing(false);
-    } else {
-      // Không có dữ liệu lịch sử → reset và chuẩn bị khởi tạo
+    }
+  }, [chatHistory]);
+
+  // Reset state khi baiNumber thay đổi (chuyển từ bài 1 → bài 2)
+  useEffect(() => {
+    if (!chatHistory || chatHistory.length === 0) {
       setMessages([]);
       setError(null);
     }
-  }, [baiNumber, chatHistory]);
+  }, [baiNumber]);
 
-  // Khởi tạo geminiService khi bài mới (LUÔN khởi tạo để đảm bảo chat session sẵn sàng)
+  // Chỉ khởi tạo bài toán 1 lần duy nhất cho mỗi session
+  const hasInitializedRef = useRef(false);
+
   useEffect(() => {
+    if (hasInitializedRef.current) return;
+    if (!deBai || isCompleted) return;
+
+    // Nếu đã có chatHistory thì không khởi tạo lại, chỉ tiếp tục chat
+    if (chatHistory && chatHistory.length > 0) {
+      geminiChatService.restoreSession(deBai, chatHistory);
+      setIsInitializing(false);
+      hasInitializedRef.current = true;
+      return;
+    }
+
+    // Nếu chưa có chatHistory thì khởi tạo bài toán
     const initializeProblem = async () => {
       try {
-        // nếu đã có lịch sử chat thì không gọi lại API Gemini
-        if (chatHistory && chatHistory.length > 0) {
-          geminiService.currentProblem = deBai;
-          setIsInitializing(false);
-          return;
-        }
-
         setIsInitializing(true);
         setError(null);
-        const response = await geminiService.startNewProblem(deBai);
-        
+        const response = await geminiChatService.startNewProblem(deBai);
+
         const aiMsg = {
           role: 'model',
           parts: [{ text: response.message }]
         };
-        
-        // Chỉ thêm tin nhắn AI nếu chưa có lịch sử (check chatHistory instead of messages)
-        if (!chatHistory || chatHistory.length === 0) {
-          setMessages([aiMsg]);
-          
-          // Lưu AI message từ startNewProblem vào Firestore
-          await saveChatMessage(aiMsg);
-          
-          if (onChatUpdate) {
-            onChatUpdate([aiMsg]);
-          }
+
+        setMessages([aiMsg]);
+        await saveChatMessage(aiMsg);
+        if (onChatUpdate) {
+          onChatUpdate([aiMsg]);
         }
+        hasInitializedRef.current = true;
       } catch (err) {
         setError('Lỗi khi khởi tạo bài toán: ' + err.message);
+        hasInitializedRef.current = false;
       } finally {
         setIsInitializing(false);
       }
     };
 
-    // Khởi tạo geminiService khi bài toán hoặc bài số thay đổi
-    if (deBai && !isCompleted) {
-      initializeProblem();
-    }
-  }, [deBai, baiNumber, isCompleted, saveChatMessage, onChatUpdate]);
+    initializeProblem();
+  }, [deBai, isCompleted, saveChatMessage, onChatUpdate]);
 
   // Auto scroll to bottom using parent-provided scroll container if available
   const scrollToBottom = () => {
@@ -119,7 +122,8 @@ const PracticeChat = ({
 // Trong hàm handleSendMessage
 const handleSendMessage = async (e) => {
   e.preventDefault();
-  if (!inputValue.trim() || isLoading || isCompleted || isInitializing) return;
+  // Nếu có lỗi khởi tạo, không cho gửi tin nhắn
+  if (!inputValue.trim() || isLoading || isCompleted || isInitializing || error?.includes('khởi tạo bài toán')) return;
 
   try {
     setError(null);
@@ -143,14 +147,14 @@ const handleSendMessage = async (e) => {
     
     if (isAskingForHint) {
       try {
-        const hintResponse = await geminiService.getHint();
+        const hintResponse = await geminiChatService.getHint();
         aiMsg = { role: 'model', parts: [{ text: hintResponse }] }; // Gán giá trị, không dùng const/let
       } catch (hintError) {
-        response = await geminiService.processStudentResponse(userMessage);
+        response = await geminiChatService.processStudentResponse(userMessage);
         aiMsg = { role: 'model', parts: [{ text: response.message }] };
       }
     } else {
-      response = await geminiService.processStudentResponse(userMessage);
+      response = await geminiChatService.processStudentResponse(userMessage);
       aiMsg = { role: 'model', parts: [{ text: response.message }] };
 
       if (response.nextStep === 5) {
@@ -277,18 +281,23 @@ const handleSendMessage = async (e) => {
               ⏳ Đang khởi tạo bài toán...
             </div>
           )}
+          {error?.includes('khởi tạo bài toán') && (
+            <div className="text-center text-red-500 py-2 text-sm font-quicksand">
+              {error}
+            </div>
+          )}
           <div className="flex gap-2">
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Nhập câu trả lời của em..."
-              disabled={isLoading || isInitializing}
+              disabled={isLoading || isInitializing || error?.includes('khởi tạo bài toán')}
               className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-quicksand disabled:bg-gray-100"
             />
             <button
               type="submit"
-              disabled={isLoading || isInitializing || !inputValue.trim()}
+              disabled={isLoading || isInitializing || !inputValue.trim() || error?.includes('khởi tạo bài toán')}
               className="px-6 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-quicksand"
             >
               {isLoading ? '⏳' : '➤'}

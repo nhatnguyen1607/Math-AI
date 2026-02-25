@@ -59,18 +59,24 @@ const PracticeChat = ({
     }
   }, [baiNumber]);
 
-  // Chỉ khởi tạo bài toán 1 lần duy nhất cho mỗi session
-  const hasInitializedRef = useRef(false);
+  // Track which baiNumber has been initialized so we re-init when it changes
+  const initializedBaiRef = useRef(null);
+
+  // whenever baiNumber switches, clear the record so effect can re-run cleanly
+  useEffect(() => {
+    initializedBaiRef.current = null;
+  }, [baiNumber]);
 
   useEffect(() => {
-    if (hasInitializedRef.current) return;
+    // if we've already initialized for this specific baiNumber, do nothing
+    if (initializedBaiRef.current === baiNumber) return;
     if (!deBai || isCompleted) return;
 
     // Nếu đã có chatHistory thì không khởi tạo lại, chỉ tiếp tục chat
     if (chatHistory && chatHistory.length > 0) {
       geminiChatService.restoreSession(deBai, chatHistory);
       setIsInitializing(false);
-      hasInitializedRef.current = true;
+      initializedBaiRef.current = baiNumber;
       return;
     }
 
@@ -91,17 +97,17 @@ const PracticeChat = ({
         if (onChatUpdate) {
           onChatUpdate([aiMsg]);
         }
-        hasInitializedRef.current = true;
+        initializedBaiRef.current = baiNumber;
       } catch (err) {
         setError('Lỗi khi khởi tạo bài toán: ' + err.message);
-        hasInitializedRef.current = false;
+        // leave ref as-is so we attempt again later
       } finally {
         setIsInitializing(false);
       }
     };
 
     initializeProblem();
-  }, [deBai, isCompleted, saveChatMessage, onChatUpdate]);
+  }, [deBai, isCompleted, saveChatMessage, onChatUpdate, baiNumber]);
 
   // Auto scroll to bottom using parent-provided scroll container if available
   const scrollToBottom = () => {

@@ -559,7 +559,96 @@ VÍ DỤ ĐÚNG:
       return this._getTopicGuidanceDienTich();
     }
 
+    if (contextLower.includes("số tự nhiên") || 
+    contextLower.includes("chương 1")) {
+      return this._getTopicGuidanceSoTuNhien();
+    }
+    if (contextLower.includes("phân số") || 
+    contextLower.includes("chương 2")) {
+      return this._getTopicGuidancePhanSo();
+    }
+    if (contextLower.includes("số thập phân") || 
+    contextLower.includes("chương 3")) {
+      return this._getTopicGuidanceSoThapPhan();
+    }
+
     return "";
+  }
+
+  _getTopicGuidanceSoTuNhien() {
+    return `
+🎯 CHỦ ĐỀ CỤ THỂ: SỐ TỰ NHIÊN VÀ CÁC PHÉP TÍNH
+═══════════════════════════════════════════════════════
+**DẠNG BÀI TOÁN "CỘNG, TRỪ, NHÂN, CHIA VÀ LÀM TRÒN SỐ TỰ NHIÊN"**
+
+CẤU TRÚC LỌC BẮT BUỘC:
+✅ PHẢI CÓ:
+   - Các đại lượng là SỐ TỰ NHIÊN hoàn toàn.
+   - Trọng tâm vào các kĩ năng: Cộng, Trừ, Nhân, Chia hoặc Làm tròn số tự nhiên.
+   - Bối cảnh: Đời sống học sinh lớp 5, mua sắm, trường học, thiên nhiên.
+
+❌ TUYỆT ĐỐI KHÔNG:
+   - KHÔNG dùng số thập phân (có dấu phẩy) hoặc phân số.
+   - KHÔNG dùng tỷ số phần trăm (%).
+   - KHÔNG dùng biến số x, y (tư duy đại số THCS).
+
+VÍ DỤ ĐÚNG:
+   "Một thư viện có 3456 quyển sách. Người ta quyên góp thêm 1250 quyển nữa. Hỏi thư viện có tất cả bao nhiêu quyển sách?"
+   "Trường tiểu học có 1245 học sinh. Để chuẩn bị cho hội thao, trường xếp mỗi hàng 15 học sinh. Hỏi xếp được bao nhiêu hàng và còn dư mấy bạn?"
+`;
+  }
+
+_getTopicGuidancePhanSo() {
+    return `
+🎯 CHỦ ĐỀ CỤ THỂ: PHÂN SỐ VÀ CÁC PHÉP TÍNH
+═══════════════════════════════════════════════════════
+**DẠNG BÀI TOÁN "CỘNG, TRỪ, NHÂN, CHIA PHÂN SỐ, HỖN SỐ VÀ PHÂN SỐ THẬP PHÂN"**
+
+CẤU TRÚC LỌC BẮT BUỘC:
+✅ PHẢI CÓ:
+   - Dữ kiện phải có PHÂN SỐ (cùng mẫu hoặc khác mẫu) hoặc HỖN SỐ.
+   - Các dạng toán: Tính toán trực tiếp, so sánh phân số, hoặc ứng dụng tìm phân số của một số.
+   - Bối cảnh: Chia bánh, đo độ dài dải ruy băng, chia diện tích đất trồng trọt, chia thời gian.
+
+❌ TUYỆT ĐỐI KHÔNG:
+   - KHÔNG dùng số thập phân (ví dụ: 0,5; 1,2).
+   - KHÔNG dùng tỷ số phần trăm (%).
+
+VÍ DỤ ĐÚNG:
+   "Một mảnh vườn hình chữ nhật, người ta dùng 2/5 diện tích để trồng rau và 1/3 diện tích để trồng hoa. Hỏi diện tích trồng rau và hoa chiếm bao nhiêu phần diện tích mảnh vườn?"
+   "Có 3/4 cái bánh pizza, chia đều cho 2 anh em. Hỏi mỗi người được bao nhiêu phần của cái bánh?"
+`;
+  }
+
+ _getTopicGuidanceSoThapPhan() {
+    return `
+🎯 CHỦ ĐỀ CỤ THỂ: SỐ THẬP PHÂN VÀ CÁC PHÉP TÍNH
+═══════════════════════════════════════════════════════
+**DẠNG BÀI TOÁN SỐ THẬP PHÂN ĐƯỢC PHÂN LỌC THEO TỪNG KỸ NĂNG**
+
+CẤU TRÚC LỌC BẮT BUỘC:
+✅ PHẢI CÓ dữ kiện là SỐ THẬP PHÂN (có dấu phẩy, ví dụ: 4,68; 12,478; 0,25).
+✅ NẾU BÀI TOÁN LÀ "LÀM TRÒN SỐ THẬP PHÂN":
+   - Phải mô phỏng các tình huống đo lường thực tế.
+   - VÍ DỤ MẪU: 
+     + Làm tròn đến số tự nhiên: "Trong hội thi 'Nông sản sạch', quả bí đỏ nặng 4,68 kg. Ban tổ chức yêu cầu làm tròn đến số tự nhiên gần nhất. Hỏi quả bí đỏ nặng khoảng bao nhiêu ki-lô-gam?"
+     + Làm tròn phần mười/phần trăm: "Bạn Nam chạy 10 m trong 12,478 giây. Làm tròn kết quả đến hàng phần trăm. Thành tích của Nam là khoảng bao nhiêu giây?"
+
+✅ NẾU BÀI TOÁN LÀ "NHÂN SỐ THẬP PHÂN":
+   - Nhân STP với STN: "Mỗi cốc có 0,25 lít nước cam, mỗi bạn uống một cốc. Hỏi 3 bạn uống bao nhiêu lít?" (SGK tr.72)
+   - Nhân STP với STP: "Mỗi giờ ô tô đi được 84,5 km. Hỏi trong 1,2 giờ ô tô đi được bao nhiêu km?" (SGK tr.67)
+   - Nhân với 10, 100, 0.1...: "10 chú gấu con, mỗi chú ăn 4,5 kg cá. 10 chú ăn hết bao nhiêu kg?" (SGK tr.85) HOẶC "Kho có 45,8 tấn gạo, lấy ra 0,1 số gạo. Đã lấy ra bao nhiêu tấn?"
+
+✅ NẾU BÀI TOÁN LÀ "CHIA SỐ THẬP PHÂN":
+   - Chia STP cho STN: "Rô-bốt chia đều 9,68 yến cá vào 8 khay. Mỗi khay đựng bao nhiêu yến?" (SGK tr.77)
+   - Chia STP cho STP: "Mặt sàn hình chữ nhật có diện tích 292,8 m² và chiều rộng 9,6 m. Tính chiều dài." (SGK tr.82) HOẶC "Chú rồng trả 15,4 kg kẹo cho 4 chiếc răng sâu. Nhổ 1 chiếc trả bao nhiêu kg?"
+   - Chia cho 10, 100, 0.1...: "Giấy màu dày 0,1 mm. Chồng giấy dày 23,5 mm có bao nhiêu tờ?"
+
+❌ TUYỆT ĐỐI KHÔNG:
+   - KHÔNG sử dụng phân số (a/b).
+   - KHÔNG dùng biến số x, y.
+   - TRÁNH nhầm lẫn sang tỉ số phần trăm (%) nếu bài không yêu cầu.
+`;
   }
 
   _getTopicGuidanceTiSo() {
@@ -803,7 +892,7 @@ Bài toán luyện tập:`;
 
   _getExamTopicGuideTheTich() {
     return `
-**HƯỚNG DẪN ĐẶC THỨ CHO CHỦĐỀ: THỂ TÍCH - ĐƠN VỊ ĐO THỂ TÍCH**
+**HƯỚNG DẪN ĐẶC THỨ CHO CHỦ ĐỀ: THỂ TÍCH - ĐƠN VỊ ĐO THỂ TÍCH**
 
 ✅ NỘI DUNG:
 - Tính thể tích hình hộp chữ nhật: V = dài × rộng × cao
@@ -822,7 +911,7 @@ Bài toán luyện tập:`;
 
   _getExamTopicGuideDienTich() {
     return `
-**HƯỚNG DẪN ĐẶC THỨ CHO CHỦĐỀ: DIỆN TÍCH VÀ THỂ TÍCH CỦA HÌNH KHỐI**
+**HƯỚNG DẪN ĐẶC THỨ CHO CHỦ ĐỀ: DIỆN TÍCH VÀ THỂ TÍCH CỦA HÌNH KHỐI**
 
 ✅ GỢI Ý:
 - Tập trung vào công thức diện tích xung quanh, toàn phần và thể tích.

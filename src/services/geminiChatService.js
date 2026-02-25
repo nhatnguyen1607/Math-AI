@@ -66,7 +66,7 @@ PHÂN BIỆT CÓ-GỢI Ý VÀ LỜI GIẢI (RẤT QUAN TRỌNG - KHI HỌC SINH 
   "Đáp án là 25 mét"
   "Công thức là: (2,5 + 1,5) × 3 = ..."
 
-✅ ĐÚNG - CHỈ GỢI Ý HƯỚNG SUYNSGHĨ:
+✅ ĐÚNG - CHỈ GỢI Ý HƯỚNG SUYN SGHĨ:
   "Bạn thử kiểm tra lại phép tính đó xem"
   "Bạn cần cộng những gì với nhau?"
   "NHỮNG THÔNG TIN NÀO BẠN CÓ CHỈ CẦN CỘNG LẠI?"

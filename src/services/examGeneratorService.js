@@ -46,6 +46,64 @@ ${this._formatSampleContent(sample.content)}
 📖 **HƯỚNG DẪN CỤ THỂ CHO TỪNG BÀI HỌC**
 ═══════════════════════════════════════════════════════════════
 
+🔷 **CHƯƠNG 1. SỐ TỰ NHIÊN**
+(Ôn tập và mở rộng các phép tính với số tự nhiên)
+
+**Ôn tập về số tự nhiên & Phép tính (Cộng, Trừ, Nhân, Chia):**
+- Context: Các tình huống thực tế về số lượng lớn, dân số, diện tích, tiền tệ.
+- Bài 1: Thực hiện phép tính hoặc tính giá trị biểu thức số tự nhiên.
+- Bài 2: Bài toán lời văn giải quyết vấn đề thực tế cần 2-3 bước tính.
+
+**Làm tròn số tự nhiên:**
+- Context: Ước lượng số liệu trong thực tế.
+- Bài 1: Làm tròn đến hàng chục, trăm, nghìn...
+- Bài 2: Vận dụng làm tròn để giải quyết tình huống ước lượng mua sắm hoặc thống kê.
+
+🔷 **CHƯƠNG 2. PHÂN SỐ**
+(Phân số và các phép tính với phân số)
+
+**Ôn tập phân số & So sánh phân số:**
+- Context: Chia phần, tỉ lệ các bộ phận trong một tổng thể.
+- Bài 1: Rút gọn, quy đồng hoặc so sánh các phân số.
+- Bài 2: Bài toán thực tế về chia quà, chia đất hoặc so sánh phần công việc.
+
+**Cộng, Trừ phân số (Cùng & Khác mẫu số):**
+- Context: Thêm hoặc bớt các phần đại lượng.
+- Bài 1: Tính tổng hoặc hiệu phân số.
+- Bài 2: Bài toán lời văn (VD: vòi nước chảy vào bể, quãng đường đi trong nhiều ngày).
+
+**Nhân, Chia phân số & Hỗn số:**
+- Context: Tìm phân số của một số hoặc chia đều đại lượng cho nhiều phần.
+- Bài 1: Phép tính nhân, chia phân số hoặc hỗn số.
+- Bài 2: Tính diện tích hình học hoặc chia đều số lượng hàng hóa.
+
+🔷 **CHƯƠNG 3. SỐ THẬP PHÂN**
+
+**Khái niệm & So sánh số thập phân (Bài 10, 11, 14):**
+- Context: Các đơn vị đo lường có số lẻ (mét, kg, lít).
+- Bài 1: Đọc, viết, xác định hàng của STP hoặc so sánh các STP.
+- Bài 2: Sắp xếp thứ tự các số liệu đo lường thực tế từ bé đến lớn hoặc ngược lại.
+
+**Làm tròn số thập phân:**
+- Context: Các tình huống cần kết quả gọn (cân nặng, đo đạc, thi đấu).
+- Bài 1: Làm tròn đến số tự nhiên gần nhất, hàng phần mười hoặc hàng phần trăm.
+- Bài 2: Bài toán thực tiễn. VD: Quả bí đỏ 4,68 kg làm tròn đến STN; lượng nước 0,46 lít làm tròn đến hàng phần mười; thành tích chạy 12,478 giây làm tròn đến hàng phần trăm.
+
+**Phép cộng & Phép trừ số thập phân (Bài 19, 20):**
+- Context: Thu chi tiền tệ, tổng độ dài quãng đường hoặc chênh lệch chiều cao.
+- Bài 1: Tính tổng/hiệu các số thập phân.
+- Bài 2: Bài toán lời văn nhiều bước tính STP.
+
+**Phép nhân số thập phân (Bài 21, 23):**
+- Context: Gấp nhiều lần đại lượng lẻ, tính diện tích hoặc nhân nhẩm.
+- Bài 1: Nhân STP với STN, STP với STP hoặc nhân nhẩm với 10, 100, 0.1, 0.01...
+- Bài 2: Bài toán vận dụng. VD: 3 bạn uống nước cam (mỗi bạn 0,25 l); ô tô đi 1,2 giờ (mỗi giờ 84,5 km); 10 chú gấu ăn cá (mỗi chú 4,5 kg); lấy ra 0,1 số gạo trong kho 45,8 tấn.
+
+**Phép chia số thập phân (Bài 22, 23):**
+- Context: Chia đều đại lượng, tìm kích thước hoặc chia nhẩm.
+- Bài 1: Chia STP cho STN, STN cho STP, STP cho STP hoặc chia nhẩm cho 10, 100, 0.1, 0.01...
+- Bài 2: Bài toán vận dụng. VD: Chia đều 9,68 yến cá vào 8 khay; nhổ 4 răng sâu hết 15,4 kg kẹo; tính chiều dài mặt sàn kính (S=292,8, R=9,6); trung bình mỗi lần máy xúc (10 lần được 937,8 tấn); tìm số tờ giấy màu (mỗi tờ 0,1 mm, cả chồng 23,5 mm).
+
 🔷 **CHỦ ĐỀ: TỈ SỐ VÀ CÁC BÀI TOÁN LIÊN QUAN**
 
 **Bài 36. Tỉ số. Tỉ số phần trăm:**

@@ -159,90 +159,110 @@ export const parseCompetencyEvaluation = (responseText) => {
  * @returns {string} - Formatted prompt for Gemini
  */
 export const generateCompetencyEvaluationPrompt = (studentResponses, problemStatement) => {
+  // Calculate total correct ratio for reference
+  const totalResponses = studentResponses.length;
+  const totalCorrect = studentResponses.filter(r => r && r.toLowerCase().includes('đúng')).length;
+  const correctRatio = totalResponses > 0 ? ((totalCorrect / totalResponses) * 100).toFixed(1) : 0;
+  
   return `Bạn là một giáo viên toán học giỏi đang đánh giá kỹ năng giải quyết vấn đề của một học sinh lớp 5 theo khung đánh giá chi tiết sau:
 
 KHUNG ĐÁNH GIÁ NĂN LỰC - ĐIỂM SỐ CHI TIẾT:
 
 TC1. Nhận biết được vấn đề cần giải quyết (tối đa 2 điểm):
-  • Cần cố gắng (0 điểm): Không xác định được đầy đủ dữ kiện, yêu cầu bài toán
-  • Đạt (1 điểm): Xác định đầy đủ dữ kiện và yêu cầu bài toán
-  • Tốt (2 điểm): Xác định chính xác dữ kiện, yêu cầu và mối quan hệ giữa chúng
+  • Cần cố gắng (0 điểm): Không xác định được đầy đủ dữ kiện, yêu cầu bài toán (làm sai > 50% câu)
+  • Đạt (1 điểm): Xác định đầy đủ dữ kiện và yêu cầu bài toán (làm đúng 50-80% câu)
+  • Tốt (2 điểm): Xác định chính xác dữ kiện, yêu cầu và mối quan hệ giữa chúng (làm đúng > 80% câu)
 
-TC2. Nêu được cách thức GQVĐ - ĐỌC CHỈ TIÊU CHI TIẾT HƯỚNG DẪN NÀY:
-  Mức "Cần cố gắng" (0 điểm):
-    - Không nhận dạng được dạng toán học (0 điểm)
-    - Không đề xuất được cách giải (0 điểm)
-    - Không lựa chọn được phép toán phù hợp (0 điểm)
-  Mức "Đạt" (tính tổng = 1.0 điểm):
-    - Nhận dạng được dạng toán đã học (0.3 điểm)
-    - Đề xuất được một cách giải phù hợp (0.3 điểm)
-    - Lựa chọn phép toán/công thức cơ bản phù hợp (0.4 điểm)
-  Mức "Tốt" (tính tổng = 2.0 điểm):
-    - Nhận dạng đúng dạng toán, áp dụng vào bài toán tương tự (0.6 điểm)
-    - Đề xuất được các cách giải khác nhau (0.7 điểm)
-    - Lựa chọn chiến lược giải quyết vấn đề tối ưu (0.7 điểm)
+TC2. Nêu được cách thức GQVĐ (tối đa 2 điểm):
+  • Cần cố gắng (0 điểm): Không nhận dạng dạng toán hoặc đề xuất cách giải sai (làm sai > 50% câu)
+  • Đạt (1 điểm): Nhận dạng được dạng toán, đề xuất cách giải phù hợp, lựa chọn phép toán cơ bản (làm đúng 50-80% câu)
+  • Tốt (2 điểm): Nhận dạng chính xác, đề xuất nhiều cách giải, lựa chọn chiến lược tối ưu (làm đúng > 80% câu)
 
 TC3. Trình bày được cách thức GQVĐ (tối đa 2 điểm):
-  • Cần cố gắng (0 điểm): Thực hiện sai toàn bộ phép tính hoặc bước giải
-  • Đạt (1 điểm): Thực hiện đúng các bước giải và phép tính cơ bản
-  • Tốt (2 điểm): Thực hiện đúng và đầy đủ các phép tính với nhiều cách giải khác nhau
+  • Cần cố gắng (0 điểm): Thực hiện sai toàn bộ phép tính hoặc bước giải (làm sai > 50% câu)
+  • Đạt (1 điểm): Thực hiện đúng các bước giải và phép tính cơ bản (làm đúng 50-80% câu)
+  • Tốt (2 điểm): Thực hiện đúng và đầy đủ các phép tính, trình bày rõ ràng (làm đúng > 80% câu)
 
-TC4. Kiểm tra được giải pháp đã thực hiện - ĐỌC CHỈ TIÊU CHI TIẾT HƯỚNG DẪN NÀY:
-  Mức "Cần cố gắng" (0 điểm):
-    - Không kiểm tra lại kết quả hoặc kiểm tra sai (0 điểm)
-    - Không vận dụng được vào bài toán tương tự (0 điểm)
-  Mức "Đạt" (tính tổng = 1.0 điểm):
-    - Kiểm tra lại kết quả và điều chỉnh đúng (0.5 điểm)
-    - Vận dụng được vào bài toán tương tự (0.5 điểm)
-  Mức "Tốt" (tính tổng = 2.0 điểm):
-    - Kiểm tra lại kết quả bằng các cách khác nhau (1 điểm)
-    - Vận dụng được vào bài toán ở mức độ mở rộng, nâng cao hơn (1 điểm)
+TC4. Kiểm tra được giải pháp đã thực hiện (tối đa 2 điểm):
+  • Cần cố gắng (0 điểm): Không kiểm tra hoặc kiểm tra sai (làm sai > 50% câu)
+  • Đạt (1 điểm): Kiểm tra lại kết quả, vận dụng được vào bài toán tương tự (làm đúng 50-80% câu)
+  • Tốt (2 điểm): Kiểm tra bằng nhiều cách, vận dụng vào bài toán nâng cao (làm đúng > 80% câu)
 
 ---
 
 BÀI TOÁN: ${problemStatement}
 
-CÁC PHẢN HỒI CỦA HỌC SINH:
+THỐNG KÊ HỌC SINH: ${totalCorrect}/${totalResponses} câu đúng (${correctRatio}%)
+
+CÁC PHẢN HỒI CỦA HỌC SINH - PHÂN TÍCH TỪ TỪNG CÂU:
 ${studentResponses.map((response, index) => 
-  `Câu trả lời ${index + 1}: ${response}`
+  `Câu ${index + 1}: ${response}`
 ).join('\n')}
 
 ---
 
-HƯỚNG DẪN ĐÁNH GIÁ:
-1. Phân tích chi tiết từng tiêu chí (TC1-4) dựa vào phản hồi của học sinh
-2. Dùng chi tiết hướng dẫn điểm số ở trên để gán điểm chính xác
-3. GHI CHÚ: TC1, TC3 là 0/1/2 đơn giản. Nhưng TC2, TC4 có thành phần nhỏ, cộng lại mới bằng 0/1/2
-4. Viết nhận xét RẤT CHI TIẾT, CÓ Ý NGHĨA, 10-12 CÂU (200-250 từ), CHỈ DÙNG TIẾNG VIỆT (không tiếng Anh)
-5. Tính totalScore = TC1 + TC2 + TC3 + TC4, tối đa 8 điểm
+HƯỚNG DẪN ĐÁNH GIÁ (BẮT BUỘC TUÂN THỦ):
 
-ĐỊNH DẠNG JSON PHẢN HỒI (CẬP NHẬT VÀ TRẢ LỜI):
+**BƯỚC 1: PHÂN TÍCH TỪNG PHẢN HỒI RIÊNG BIỆT**
+- Phải xem xét ĐẦY ĐỦ TẤT CẢ ${totalResponses} câu trả lời
+- Không được chỉ nhìn bài 1 mà bỏ sót bài 2, 3, ...
+- Mô tả chi tiết từng câu: đúng hay sai, lý do là gì
+
+**BƯỚC 2: TÍNH TỈ LỆ ĐỀU**
+- Đã làm đúng ${correctRatio}% câu
+- Nếu >= 80%: CÓ THỂ xem xét điểm 2 cho tiêu chí tương ứng
+- Nếu 50-80%: XEM XÉT điểm 1 cho tiêu chí tương ứng
+- Nếu < 50%: PHẢI là điểm 0 cho tiêu chí tương ứng (không có ngoại lệ)
+- NGUYÊN TẮC: Tỉ lệ < 50% KHÔNG THỂ bao giờ đạt mức "Đạt" hoặc "Tốt"
+
+**BƯỚC 3: VIẾT NHẬN XÉT CHI TIẾT**
+- Phải nhắc đến CHI TIẾT từng câu (Câu 1 ntn, Câu 2 ntn, ...)
+- Không được tổng quát hóa mà bỏ sót câu nào
+- Đưa cụ thể ví dụ: "Câu 1 học sinh làm đúng vì..., Câu 2 làm sai vì..."
+- Viết 150-200 từ cho mỗi tiêu chí
+
+**BƯỚC 4: TÍNH TỔNG ĐIỂM**
+- totalScore = TC1 + TC2 + TC3 + TC4
+- Phải nằm trong khoảng 0-8
+
+**RÀNG BUỘC LOGIC (BẮT BUỘC):**
+- Nếu học sinh làm sai > 50% (< 50% đúng): KHÔNG THỂ là mức "Đạt" hay "Tốt"
+- Nếu học sinh làm đúng 50-80%: KHÔNG THỂ là mức "Tốt", tối đa là "Đạt"
+- Nếu học sinh làm đúng >= 80%: CÓ THỂ là "Tốt"
+- Không tiền lệ, không ngoại lệ - áp dụng chế độ này cho TẤT CẢ tiêu chí
+
+ĐỊNH DẠNG JSON PHẢN HỒI:
 {
   "TC1": {
     "level": "Cần cố gắng|Đạt|Tốt",
     "score": 0hoặc1hoặc2,
-    "nhanXet": "Nhận xét chi tiết (10-12 câu, 200-250 từ) về nhận biết vấn đề - ghi cụ thể: dữ kiện nào xác định đúng, dữ kiện nào bỏ sót, mối quan hệ giữa các dữ kiện ra sao"
+    "nhanXet": "Phân tích chi tiết từng câu (Câu 1: ..., Câu 2: ..., Câu 3: ..., v.v.) - 150-200 từ"
   },
   "TC2": {
     "level": "Cần cố gắng|Đạt|Tốt",
     "score": 0hoặc1hoặc2,
-    "nhanXet": "Nhận xét chi tiết (10-12 câu, 200-250 từ) về cách thức giải - ghi cụ thể: đã nhận dạng dạng toán nào, đề xuất cách giải gì, phép toán nào được chọn"
+    "nhanXet": "Phân tích chi tiết từng câu (Câu 1: ..., Câu 2: ..., Câu 3: ..., v.v.) - 150-200 từ"
   },
   "TC3": {
     "level": "Cần cố gắng|Đạt|Tốt",
     "score": 0hoặc1hoặc2,
-    "nhanXet": "Nhận xét chi tiết (10-12 câu, 200-250 từ) về trình bày - ghi cụ thể: bước giải nào đúng, bước nào sai, phép tính nào chính xác, trình bày có rõ ràng không"
+    "nhanXet": "Phân tích chi tiết từng câu (Câu 1: ..., Câu 2: ..., Câu 3: ..., v.v.) - 150-200 từ"
   },
   "TC4": {
     "level": "Cần cố gắng|Đạt|Tốt",
     "score": 0hoặc1hoặc2,
-    "nhanXet": "Nhận xét chi tiết (10-12 câu, 200-250 từ) về kiểm tra - ghi cụ thể: đã kiểm tra lại kết quả chưa, cách kiểm tra ra sao, vận dụng vào bài toán tương tự được không"
+    "nhanXet": "Phân tích chi tiết từng câu (Câu 1: ..., Câu 2: ..., Câu 3: ..., v.v.) - 150-200 từ"
   },
   "totalScore": 0đến8,
-  "tongNhanXet": "Nhận xét tổng thể ngắn gọn (3-4 câu)"
+  "tongNhanXet": "Nhận xét tổng thể (3-4 câu)"
 }
 
-QUAN TRỌNG: Phải trả lời bằng JSON hợp lệ, field "nhanXet" phải chi tiết 200-250 từ, không chứa ký tự đặc biệt.`;
+QUAN TRỌNG:
+- Trả lời JSON hợp lệ, không có ký tự đặc biệt trong nhanXet
+- PHẢI nhắc đến từng câu cụ thể trong nhận xét
+- KHÔNG được bỏ sót bài nào
+- PHẢI tuân thủ ràng buộc logic về tỉ lệ đúng/sai
+- Viết toàn bộ bằng tiếng Việt`;
 };
 
 
@@ -298,9 +318,48 @@ export const getOverallCompetencyLevel = (totalScore) => {
 };
 
 /**
- * Create initial empty competency evaluation
- * @returns {Object} - Empty competency evaluation structure
+ * Validate competency score logic to ensure consistency
+ * @param {Object} evaluation - Parsed competency evaluation
+ * @param {number} correctCount - Number of correct responses
+ * @param {number} totalCount - Total number of responses
+ * @returns {Object} - Validation result with warnings if any
  */
+export const validateCompetencyScore = (evaluation, correctCount, totalCount) => {
+  const correctRatio = totalCount > 0 ? (correctCount / totalCount) * 100 : 0;
+  const warnings = [];
+
+  // Check each criterion
+  const criteria = ['TC1', 'TC2', 'TC3', 'TC4'];
+  
+  criteria.forEach(tc => {
+    const criterion = evaluation[tc];
+    if (!criterion) return;
+
+    // Logic checks based on correct ratio
+    if (correctRatio < 50) {
+      // < 50% correct: Cannot be "achieved" or "good"
+      if (criterion.level !== 'need_effort' || criterion.score !== 0) {
+        warnings.push(`${tc}: Với tỉ lệ ${correctRatio.toFixed(1)}% (< 50%), ${tc} phải là "Cần cố gắng" (0 điểm), nhưng hiện là "${criterion.level}" (${criterion.score} điểm)`);
+      }
+    } else if (correctRatio < 80) {
+      // 50-80% correct: Can be "achieved" (1) but NOT "good" (2)
+      if (criterion.level === 'good' || criterion.score === 2) {
+        warnings.push(`${tc}: Với tỉ lệ ${correctRatio.toFixed(1)}% (50-80%), ${tc} tối đa là "Đạt" (1 điểm), không thể là "Tốt" (2 điểm)`);
+      }
+    }
+    // >= 80% can be any level (0, 1, or 2)
+  });
+
+  return {
+    isValid: warnings.length === 0,
+    correctRatio: correctRatio.toFixed(1),
+    warnings: warnings,
+    summary: warnings.length === 0 
+      ? `✓ Đánh giá hợp lý với tỉ lệ ${correctRatio.toFixed(1)}% bài làm đúng`
+      : `⚠ Có ${warnings.length} điểm cần kiểm tra lại`
+  };
+};
+
 export const createEmptyEvaluation = () => {
   return {
     TC1: {
@@ -324,15 +383,15 @@ export const createEmptyEvaluation = () => {
       comment: ''
     },
     totalCompetencyScore: 0
-  };
 };
-
+}
 const competencyEvaluationService = {
   parseCompetencyEvaluation,
   generateCompetencyEvaluationPrompt,
   normalizeLevelName,
   getLevelScore,
   getOverallCompetencyLevel,
+  validateCompetencyScore,
   createEmptyEvaluation,
   COMPETENCY_LEVELS,
   OVERALL_COMPETENCY_LEVELS,

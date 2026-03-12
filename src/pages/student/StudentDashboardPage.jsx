@@ -454,7 +454,7 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
                         handleJoinExam(exam);
                       }}
                     >
-                      {exam?.isLocked === true ? '📊 Xem kết quả' : '🚀 Bắt đầu thi'}
+                      {exam?.isLocked === true ? '📊 Xem kết quả' : '🚀 Bắt đầu'}
                     </button>
                   </div>
                   );
@@ -462,7 +462,7 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
               ) : (
                 <div className="bg-white rounded-max shadow-lg p-16 text-center game-card">
                   <p className="text-5xl mb-4">📭</p>
-                  <p className="text-gray-600 text-lg font-quicksand">Lớp này chưa có đề thi nào.</p>
+                  <p className="text-gray-600 text-lg font-quicksand">Lớp này chưa có đề nào.</p>
                 </div>
               )}
             </div>

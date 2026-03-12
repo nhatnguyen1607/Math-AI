@@ -556,19 +556,22 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
                                     </div>
 
                                     {(() => {
-                                      // Find the AI comment for this question
+                                      // Find the AI comment for this question - ONLY show AI comments, NO database fallback
                                       const aiComment = studentResult.data?.parts?.khoiDong?.aiAnalysis?.questionComments?.find(
                                         (c) => c.questionNum === globalQuestionIndex + 1
                                       );
-                                      const displayText = aiComment?.comment || question.explanation;
-                                      const isAIComment = !!aiComment?.comment;
+                                      
+                                      // Only display if AI generated a unique comment for THIS student
+                                      if (!aiComment?.comment) {
+                                        return null; // Don't show database explanation as fallback
+                                      }
 
-                                      return displayText && (
-                                        <div className={`p-6 border-l-4 rounded-2xl ${isAIComment ? 'bg-indigo-100 border-indigo-600' : 'bg-purple-100 border-purple-600'}`}>
+                                      return (
+                                        <div className={`p-6 border-l-4 rounded-2xl bg-indigo-100 border-indigo-600`}>
                                           <h4 className="text-sm font-bold text-gray-800 uppercase mb-3">
-                                            {isAIComment ? '💡 Nhận xét:' : '📚 Giải thích:'}
+                                            💡 Nhận xét AI:
                                           </h4>
-                                          <p className="text-gray-800 leading-relaxed text-base">{displayText}</p>
+                                          <p className="text-gray-800 leading-relaxed text-base">{aiComment.comment}</p>
                                         </div>
                                       );
                                     })()}

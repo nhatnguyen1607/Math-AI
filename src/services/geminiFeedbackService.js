@@ -199,6 +199,23 @@ Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu h
       // Parse the JSON response and translate to Vietnamese
       const competencyEvaluation = competencyEvaluationService.parseCompetencyEvaluation(responseText);
       
+      // Validate the evaluation against correct/incorrect count
+      const correctCount = studentAnswers.filter(answer => answer?.isCorrect === true).length;
+      const totalCount = studentAnswers.length;
+      const validation = competencyEvaluationService.validateCompetencyScore(
+        competencyEvaluation,
+        correctCount,
+        totalCount
+      );
+      
+      // Add validation info to evaluation result
+      competencyEvaluation._validation = validation;
+      
+      // Log warnings if any (for debugging)
+      if (!validation.isValid) {
+        console.warn('⚠ Competency Evaluation Validation Warnings:', validation.warnings);
+      }
+      
       return competencyEvaluation;
     } catch (error) {
       return competencyEvaluationService.createEmptyEvaluation();

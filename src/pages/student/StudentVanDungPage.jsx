@@ -5,6 +5,7 @@ import PracticeChat from '../../components/PracticeChat';
 import RobotCompanion from '../../components/common/RobotCompanion';
 import MobileRobotAvatar from '../../components/common/MobileRobotAvatar';
 import geminiService from '../../services/geminiService';
+import { GeminiPracticeServiceTimeVelocity } from '../../services/geminiPracticeServiceTimeVelocity';
 import resultService from '../../services/resultService';
 import examService from '../../services/examService';
 
@@ -21,6 +22,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const initializingRef = useRef(false); // Để track xem đã khởi tạo chưa
+  const [examTitle, setExamTitle] = useState(''); // 🆕 Thêm state để lưu examTitle trực tiếp
 
   // UI state from practice layout
   const [activeTab, setActiveTab] = useState('vanDung');
@@ -56,9 +58,17 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
           return;
         }
 
+        // 🆕 Set examTitle ở đây trước mọi return!
+        const examTitle = exam.title || 'Bài toán';
+        console.log('🔵 [StudentVanDungPage] Lấy examTitle từ exam:', examTitle);
+        setExamTitle(examTitle);
+
         // Kiểm tra nếu đã có phiên Vận dụng cũ (với dữ liệu sẵn)
         const existingVanDung = await resultService.getVanDungSession(user.uid, examId);
         if (existingVanDung?.deBai?.length > 50) {
+          console.log('🔵 [StudentVanDungPage] Using existing VanDung, không regenerate');
+          // 🆕 Ensure examTitle is added to existing vanDung too
+          existingVanDung.examTitle = examTitle;
           setVanDungData(existingVanDung);
           setLoading(false);
           return;
@@ -112,14 +122,34 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
         }
 
         // Gọi Gemini để tạo bài toán vận dụng được cá nhân hóa
-        const gService = new geminiService.constructor();
+        console.log('🔵 [StudentVanDungPage] Generating new VanDung');
+        
+        // Check if topic is Time/Velocity/Motion related
+        const lower = examTitle.toLowerCase();
+        const isTimeVelocity = (
+          lower.includes('thời gian') || 
+          lower.includes('vận tốc') || 
+          lower.includes('chuyển động') || 
+          lower.includes('quãng đường') || 
+          lower.includes('tốc độ') ||
+          (lower.includes('số đo') && lower.includes('thời gian'))
+        );
+        console.log('🔵 [StudentVanDungPage] isTimeVelocity:', isTimeVelocity);
+        
+        let gService;
+        if (isTimeVelocity) {
+          gService = new GeminiPracticeServiceTimeVelocity();
+        } else {
+          gService = new geminiService.constructor();
+        }
         let applicationProblem;
         
         try {
           applicationProblem = await gService.generateApplicationProblem({
             errorsInKhoiDong: lỗiKhoiDong,
             weaknessesInLuyenTap: yếuĐiềmLuyenTap,
-            topicName: exam.title || 'Bài toán'
+            topicName: exam.title || 'Bài toán',
+            practicePercentage: 0
           });
         } catch (err) {
           applicationProblem = 'Bài toán vận dụng. Bạn hãy giải quyết bài toán này bằng cách thực hiện đầy đủ 4 bước Polya.';
@@ -133,6 +163,9 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
         );
 
         if (vanDung && vanDung.deBai) {
+          // 🆕 Thêm examTitle vào vanDung data
+          vanDung.examTitle = examTitle;
+          console.log('🔵 [StudentVanDungPage] Setting vanDungData with examTitle:', examTitle);
           setVanDungData(vanDung);
         } else {
           setError('Lỗi: Không thể khởi tạo phiên Vận dụng');
@@ -319,6 +352,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
                   scrollContainerRef={leftColRef}
                   isCompleted={vanDungData.status === 'completed'}
                   evaluation={vanDungData.evaluation}
+                  topicName={vanDungData.examTitle || examTitle}
                   // onCompleted={handleSubmitVanDung} // Bỏ tự động nộp
                   onRobotStateChange={(status, msg) => {
                     setRobotStatus(status);

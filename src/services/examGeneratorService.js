@@ -78,6 +78,72 @@ ${this._formatSampleContent(sample.content)}
 - Bài 1: Tính giá trị % đơn giản (số × %/100).
 - Bài 2: Bài toán có nhiều mức % hoặc so sánh các giá trị %.
 
+═══════════════════════════════════════════════════════════════
+🎓 **HƯỚNG DẪN: CÂU HỎI BƯỚC 4 CHO MỖI LOẠI BÀI HỌC**
+═══════════════════════════════════════════════════════════════
+
+⚠️ **VỈ DỤ CÂU HỎI BƯỚC 4 (KIỂM TRA/GIẢI THÍCH) CHO TỪNG BÀI:**
+
+📌 **Bài 36 - Tỉ số (Bước 4 mẫu):**
+- "Tỉ số A/B có ý nghĩa gì? Nó cho biết điều gì?"
+- "Vì sao ta cần rút gọn tỉ số? Rút gọn có lợi ích gì?"
+- "Tỉ số [A/B] so với [C/D], tỉ số nào lớn hơn? Điều này có ý nghĩa gì?"
+- "Cách nào để kiểm tra lại rằng tỉ số A:B = a:b là đúng?"
+
+📌 **Bài 37 - Tỉ lệ bản đồ (Bước 4 mẫu):**
+- "Vì sao chiều dài thực tế lớn hơn chiều dài trên bản đồ?"
+- "Tỉ lệ bản đồ 1:X có ý nghĩa gì? Nó cho biết cái gì?"
+- "Nếu bản đồ có tỉ lệ lớn hơn (VD 1:100.000 thay vì 1:50.000), bản đồ sẽ to hay nhỏ hơn? Vì sao?"
+- "Cách nào để kiểm tra lại kết quả kích thước thực tế?"
+
+📌 **Bài 38 - Tổng & Tỉ số (Bước 4 mẫu):**
+- "Nếu ta cộng [số A] + [số B] từ kết quả, có được tổng [X] không? Kiểm tra lại."
+- "Vì sao [số A] nhỏ/lớn hơn [số B]? Từ tỉ số nào ta biết được?"
+- "Nếu tỉ số thay đổi (VD từ 2/5 thành 3/5), [số A] sẽ thay đổi như thế nào?"
+- "Kết quả có hợp lý với tình huống không? Tại sao?"
+
+📌 **Bài 39 - Hiệu & Tỉ số (Bước 4 mẫu):**
+- "Nếu lấy [số lớn] - [số bé], có được hiệu [X] không? Kiểm tra lại."
+- "Vì sao [số lớn] lớn hơn [số bé]? Từ tỉ số nào ta biết được?"
+- "Nếu hiệu thay đổi, [số lớn] và [số bé] sẽ thay đổi như thế nào?"
+- "Phương án [A] hay phương án [B] cho kết quả hợp lý hơn? Vì sao?"
+
+📌 **Bài 40 - Tìm tỉ số phần trăm (Bước 4 mẫu):**
+- "Tỉ lệ % này có hợp lý không? Nó có lớn/bé quá không?"
+- "Nếu ta tính ngược lại (lấy [B]/[A]×100), ta được bao nhiêu? Tại sao khác [X]%?"
+- "Kết quả [X]% cho biết cái gì chiếm bao nhiêu phần trăm của cái khác?"
+- "Cách nào để kiểm tra lại rằng [X]% là đúng?"
+
+📌 **Bài 41 - Tìm giá trị phần trăm (Bước 4 mẫu):**
+- "Cách nào để kiểm tra lại kết quả [X] từ [%] của [Y]?"
+- "Nếu % thay đổi, kết quả sẽ thay đổi như thế nào?"
+- "Kết quả [X] này có hợp lý với tình huống không? Vì sao?"
+- "Nếu ta lấy [kết quả] ÷ [số ban đầu] × 100, ta được bao nhiêu %?"
+
+📌 **Bài 46, 47 - Đổi đơn vị đo (Bước 4 mẫu):**
+- "Vì sao [số lần] cm³/dm³ lại bằng [số lần] dm³/m³? Có quy luật nào không?"
+- "Nếu đổi đơn vị từ cm³ sang dm³, số đo sẽ nhỏ đi hay lớn lên? Vì sao?"
+- "Kết quả so sánh [X] với [Y] ở đơn vị khác nhau, kết luận nào đúng? Tại sao?"
+- "Cách nào để kiểm tra lại kết quả đổi đơn vị?"
+
+📌 **Bài 50, 51 - Diện tích (Bước 4 mẫu):**
+- "Vì sao tính diện tích toàn phần chứ không phải xung quanh? Sự khác nhau là gì?"
+- "Nếu tăng chiều dài hình hộp, diện tích xung quanh sẽ tăng bao nhiêu lần?"
+- "Kết quả [X] m² có hợp lý cho bài toán không? Vì sao?"
+- "Cách nào để kiểm tra lại diện tích vừa tính?"
+
+📌 **Bài 52, 53 - Thể tích (Bước 4 mẫu):**
+- "Vì sao thể tích nước dâng cao lên đúng bằng thể tích vật thả vào?"
+- "Nếu tăng cạnh hình lập phương gấp 2 lần, thể tích sẽ tăng gấp bao nhiêu lần? Vì sao?"
+- "Kết quả [X] cm³ có hợp lý không? Nó có quá lớn/nhỏ không?"
+- "Cách nào để kiểm tra lại thể tích vừa tính?"
+
+🔴 **QUY TẮC CHI TIẾT:**
+- Mỗi bài PHẢI chọn TỐI THIỂU 2 ví dụ trên để tạo 2 câu hỏi Bước 4
+- Có thể kết hợp hoặc chỉnh sửa theo nội dung cụ thể của bài
+- Các câu hỏi Bước 4 phải dựa vào kết quả tìm được ở Bước 3
+- 🚨 NẾU BÀI THIẾU 2 CÂU HỎI BƯỚC 4 → PHẢI THÊM NGAY!
+
 **Bài 44. Luyện tập chung (Tỉ số):**
 - Context: Kết hợp các dạng toán về tỉ số đã học.
 - Bài 1: Bài toán tổng hợp đơn giản.
@@ -280,10 +346,17 @@ Câu hỏi mẫu (CHỌN 1-2 trong các dạng sau):
 - Random vị trí đáp án đúng
 - Đáp án sai phải có lý do phổ biến (nhầm công thức, tính sai, hiểu sai đề...)
 
-🔴 **BẮT BUỘC:**
-- Mỗi bài PHẢI có ít nhất 1 câu hỏi Bước 4 ở cuối (kiểm tra/đánh giá)
-- Câu hỏi Bước 4 thường có dạng: "Vì sao...", "Kết quả ... cho biết điều gì?", "Cách nào để kiểm tra lại?"
-- Nếu thiếu câu hỏi Bước 4, bài tập coi như chưa hoàn chỉnh!
+🔴 **BẮT BUỘC - KIỂM TRA LẠI KỆT QUẢ (BƯỚC 4 POLYA):**
+- 👉 **Mỗi bài TỐI THIỂU PHẢI CÓ 2 CÂU HỎI BƯỚC 4 ở cuối** (không phải chỉ 1 câu)
+- Câu hỏi Bước 4 phải hỏi về cách kiểm tra/xác minh kết quả, ý nghĩa, hoặc lý do
+- Dạng câu hỏi Bước 4 bao gồm:
+  * "Vì sao [kết quả] lớn hơn/nhỏ hơn [kết quả khác]?" → Giải thích so sánh
+  * "[Kết quả] cho ta biết điều gì?" → Ý nghĩa thực tiễn
+  * "Cách nào để kiểm tra lại kết quả [kết quả vừa tìm]?" → Xác minh
+  * "Theo em, [phát biểu/phương án] nào đúng? Vì sao?" → Loại bỏ sai lầm
+  * "Em có chắc chắn về kết quả không? Tại sao?" → Tự tin giải thích
+- 🚨 **NẾU BÀI THIẾU 2 CÂU HỎI BƯỚC 4 → KHÔNG ĐƯỢC DỪNG, PHẢI THÊM ĐỦ VÀO!**
+- Nếu bài chỉ có Bước 1, 2, 3 mà thiếu Bước 4, bài tập coi như chưa hoàn chỉnh!
 
 ═══════════════════════════════════════════════════════════════
 ⚡ **BÀI 2 PHẢI KHÓ HƠN BÀI 1**
@@ -348,7 +421,57 @@ Câu hỏi mẫu (CHỌN 1-2 trong các dạng sau):
 
 ❌ **NẾU BÀI 2 THUỘC BÀI HỌC KHÁC → TẠO LẠI BÀI 2!**
 
-**BẮT ĐẦU**: Tạo đề cho bài "${lessonName}". CẢ 2 BÀI đều phải về "${lessonName}". Trả về JSON bắt đầu bằng { kết thúc bằng }`;
+═══════════════════════════════════════════════════════════════
+🔴 **KIỂM TRA BƯỚC 4 - KIỂM TRA LẠI KỌT QUẢ (TRƯỚC KHI SUBMIT):**
+═══════════════════════════════════════════════════════════════
+
+🚨 **BẮT BUỘC - QUY TẮC CHẤT LƯỢNG CUỐI CÙNG:**
+
+Trước khi trả về JSON, kiểm tra từng bài:
+
+✅ **BÀI 1:**
+   1. Đếm tất cả các câu hỏi = ? câu
+   2. Có bao nhiêu câu hỏi HỎI VỀ KIỂM TRA/GIẢI THÍCH? (Bước 4)
+      - Câu hỏi "Vì sao..." hoặc "Cách nào để kiểm tra..." → ✓ Là Bước 4
+      - Câu hỏi "Tính... kết quả là...?" → ✗ Là Bước 3, không phải Bước 4
+   3. 🔴 **TỐI THIỂU PHẢI CÓ 2 CÂU HỎI BƯỚC 4**
+   4. Nếu < 2 câu → PHẢI THÊM câu hỏi kiểm tra/ giải thích cho đến đủ 2 câu!
+
+✅ **BÀI 2:**
+   1. Đếm tất cả các câu hỏi = ? câu
+   2. Có bao nhiêu câu hỏi HỎI VỀ KIỂM TRA/GIẢI THÍCH? (Bước 4)
+   3. 🔴 **TỐI THIỂU PHẢI CÓ 2 CÂU HỎI BƯỚC 4**
+   4. Nếu < 2 câu → PHẢI THÊM câu hỏi kiểm tra/giải thích cho đến đủ 2 câu!
+
+🔴 **NHỮNG GÌ KHÔNG TÍNH LÀ "KIỂM TRA LẠI":**
+❌ "Kết quả tìm được là bao nhiêu?" → Đây là Bước 3 (thực hiện)
+❌ "Để tính X, em cần làm gì?" → Đây là Bước 2 (lập kế hoạch)
+❌ "X có ý nghĩa gì?" + chỉ hỏi về khái niệm → Có thể là Bước 1 hoặc Bước 4 (tùy nội dung)
+
+🟢 **NHỮNG GÌ TÍNH LÀ "KIỂM TRA LẠI" (BƯỚC 4):**
+✅ "Vì sao [kết quả] lớn hơn [kết quả khác]?" → Giải thích so sánh
+✅ "[Kết quả] cho biết điều gì?" + giải thích ý nghĩa thực tiễn → Đánh giá ý nghĩa
+✅ "Cách nào để kiểm tra lại [kết quả]?" → Xác minh kết quả
+✅ "Em có thể giải thích tại sao [phát biểu] là đúng/sai?" → Phân tích sai lầm
+✅ "Theo em, phương án [A/B/C/D] tốt hơn vì sao?" → So sánh mục tiêu
+✅ "[Phát biểu A] so với [Phát biểu B], phát biểu nào phản ánh tốt hơn?" → Đánh giá lựa chọn
+
+💡 **HƯỚNG DẪN THÊM CÂU HỎI BƯỚC 4:**
+
+Nếu bài chỉ có Bước 1, 2, 3 mà thiếu Bước 4:
+1. Xem kết quả tìm được ở Bước 3
+2. Thêm câu hỏi hỏi "Vì sao kết quả này lớn/nhỏ/hợp lý?"
+3. Hoặc hỏi "Kết quả này cho ta biết điều gì về tình huống?"
+4. Hoặc hỏi "Làm thế nào để kiểm tra lại kết quả này?"
+
+📋 **VÍ DỤ:**
+- Nếu bài về "tỉ lệ bản đồ" → Thêm câu hỏi "Vì sao chiều dài thực tế lớn hơn chiều dài trên bản đồ?"
+- Nếu bài về "tổng và tỉ số" → Thêm câu hỏi "Nếu ta cộng 2 kết quả lại, ta được bao nhiêu?"
+- Nếu bài về "tỉ số %" → Thêm câu hỏi "Tỉ lệ % này có hợp lý với tình huống không? Vì sao?"
+
+═══════════════════════════════════════════════════════════════
+
+**BẮT ĐẦU**: Tạo đề cho bài "${lessonName}". CẢ 2 BÀI đều phải về "${lessonName}". Mỗi bài phải có TỐI THIỂU 2 CÂU HỎI BƯỚC 4 (kiểm tra lại kết quả). Trả về JSON bắt đầu bằng { kết thúc bằng }`;
 
       // call through geminiService wrapper which itself queues the requests and handles retries
       const result = await geminiServiceInstance._practiceService._rateLimitedGenerate(prompt);
@@ -360,7 +483,9 @@ Câu hỏi mẫu (CHỌN 1-2 trong các dạng sau):
         throw new Error('Không thể phân tích đáp án từ AI');
       }
 
-      const generatedExam = JSON.parse(jsonMatch[0]);
+      // Sanitize JSON string to remove control characters
+      const sanitizedJson = this._sanitizeJsonString(jsonMatch[0]);
+      const generatedExam = JSON.parse(sanitizedJson);
       return {
         success: true,
         data: generatedExam
@@ -413,6 +538,42 @@ ${questionsText}`;
     }
 
     return JSON.stringify(content, null, 2);
+  }
+
+  /**
+   * Sanitize JSON string to remove control characters that cause JSON parse errors
+   * @private
+   */
+  _sanitizeJsonString(jsonStr) {
+    try {
+      // First attempt: try regular JSON parse
+      return JSON.stringify(JSON.parse(jsonStr));
+    } catch (e) {
+      // If that fails, sanitize the string
+      // Replace actual newlines with \n, tabs with \t, etc.
+      let sanitized = jsonStr
+        .replace(/[\r]/g, '\\r')  // Replace return with escaped \r
+        .replace(/[\n]/g, '\\n')  // Replace newline with escaped \n
+        .replace(/[\t]/g, '\\t')  // Replace tab with escaped \t
+        // eslint-disable-next-line no-control-regex
+        .replace(/[\x00-\x1f]/g, (match) => {
+          // Replace other control characters
+          return '\\u' + ('000' + match.charCodeAt(0).toString(16)).slice(-4);
+        });
+      
+      // Try json5 parsing for better error recovery if needed
+      try {
+        return JSON.stringify(JSON.parse(sanitized));
+      } catch (e2) {
+        // Last resort: try to fix common JSON formatting issues
+        sanitized = sanitized
+          .replace(/,\s*}/g, '}')  // Remove trailing commas before }
+          .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
+          .replace(/:\s*undefined/g, ': null');  // Replace undefined with null
+        
+        return JSON.stringify(JSON.parse(sanitized));
+      }
+    }
   }
 
   /**

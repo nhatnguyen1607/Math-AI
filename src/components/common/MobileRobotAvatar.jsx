@@ -18,10 +18,8 @@ const MobileRobotAvatar = ({
   onTap = null,
   showMessage = null 
 }) => {
-  // deprecated component warning
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn('MobileRobotAvatar is deprecated; use RobotCompanion directly.');
-  }
+  // Note: This component is lightweight for mobile devices.
+  // For new implementations, use RobotCompanion directly.
 
   // simple mobile avatar mapping and styling
   const emojiMap = {

@@ -1,7 +1,24 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import resultService from '../services/resultService';
-import geminiService from '../services/geminiService';
 import geminiChatService from '../services/geminiChatService';
+import geminiChatServiceTimeVelocity from '../services/geminiChatServiceTimeVelocity';
+
+// Helper: check if topicName matches the Time/Velocity/Motion topic
+// Covers: "Số đo thời gian", "Vận tốc", "Chuyển động", "Quãng đường", "Tốc độ", etc.
+const isTimeVelocityTopic = (topicName) => {
+  if (!topicName) return false;
+  const lower = topicName.toLowerCase();
+  // Check if ANY keyword matches (OR logic, not AND)
+  return (
+    lower.includes('thời gian') || 
+    lower.includes('vận tốc') || 
+    lower.includes('chuyển động') || 
+    lower.includes('quãng đường') || 
+    lower.includes('tốc độ') ||
+    lower.includes('tốc độ chuyển động') ||
+    (lower.includes('số đo') && lower.includes('thời gian'))
+  );
+};
 
 /**
  * PracticeChat Component
@@ -19,8 +36,18 @@ const PracticeChat = ({
   isCompleted = false,
   evaluation = null,
   // parent may provide the scroll container ref (left column of page)
-  scrollContainerRef = null
+  scrollContainerRef = null,
+  topicName = ''
 }) => {
+  // Select the appropriate chat service based on topic
+  const chatService = useMemo(() => {
+    const isTimeVelocity = isTimeVelocityTopic(topicName);
+ 
+    if (isTimeVelocity) {
+      return geminiChatServiceTimeVelocity;
+    }
+    return geminiChatService;
+  }, [topicName]);
   const [messages, setMessages] = useState(chatHistory);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -51,24 +78,27 @@ const PracticeChat = ({
     }
   }, [chatHistory]);
 
+  // Chỉ khởi tạo bài toán 1 lần duy nhất cho mỗi session
+  const hasInitializedRef = useRef(false);
+
   // Reset state khi baiNumber thay đổi (chuyển từ bài 1 → bài 2)
   useEffect(() => {
     if (!chatHistory || chatHistory.length === 0) {
       setMessages([]);
       setError(null);
+      hasInitializedRef.current = false; // 🔴 RESET hasInitializedRef để khởi tạo bài mới
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baiNumber]);
-
-  // Chỉ khởi tạo bài toán 1 lần duy nhất cho mỗi session
-  const hasInitializedRef = useRef(false);
 
   useEffect(() => {
     if (hasInitializedRef.current) return;
     if (!deBai || isCompleted) return;
 
+
     // Nếu đã có chatHistory thì không khởi tạo lại, chỉ tiếp tục chat
     if (chatHistory && chatHistory.length > 0) {
-      geminiChatService.restoreSession(deBai, chatHistory);
+      chatService.restoreSession(deBai, chatHistory);
       setIsInitializing(false);
       hasInitializedRef.current = true;
       return;
@@ -79,7 +109,9 @@ const PracticeChat = ({
       try {
         setIsInitializing(true);
         setError(null);
-        const response = await geminiChatService.startNewProblem(deBai);
+        // Truyền flag isApplicationProblem nếu đây là bài vận dụng
+        const isApplicationProblem = baiNumber === 'vanDung';
+        const response = await chatService.startNewProblem(deBai, isApplicationProblem);
 
         const aiMsg = {
           role: 'model',
@@ -101,6 +133,7 @@ const PracticeChat = ({
     };
 
     initializeProblem();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deBai, isCompleted, saveChatMessage, onChatUpdate]);
 
   // Auto scroll to bottom using parent-provided scroll container if available
@@ -147,17 +180,18 @@ const handleSendMessage = async (e) => {
     
     if (isAskingForHint) {
       try {
-        const hintResponse = await geminiChatService.getHint();
+        const hintResponse = await chatService.getHint();
         aiMsg = { role: 'model', parts: [{ text: hintResponse }] }; // Gán giá trị, không dùng const/let
       } catch (hintError) {
-        response = await geminiChatService.processStudentResponse(userMessage);
+        response = await chatService.processStudentResponse(userMessage, messages);
         aiMsg = { role: 'model', parts: [{ text: response.message }] };
       }
     } else {
-      response = await geminiChatService.processStudentResponse(userMessage);
+      response = await chatService.processStudentResponse(userMessage, messages);
       aiMsg = { role: 'model', parts: [{ text: response.message }] };
 
-      if (response.nextStep === 5) {
+      // ✅ CHỈ kiểm tra response.nextStep nếu response tồn tại (không phải gợi ý)
+      if (response && response.nextStep === 5) {
         setTimeout(() => { if (onCompleted) onCompleted(); }, 1500);
       }
     }
@@ -182,11 +216,12 @@ const handleSendMessage = async (e) => {
           }, 3000);
         }
       } catch (err) {
-        console.warn('Error applying robot state from response:', err);
+
       }
 
       // 🎯 Nếu hoàn thành bước 4 (nextStep === 5), tự động gọi callback
-      if (response.nextStep === 5) {
+      // ✅ CHỈ kiểm tra nếu response tồn tại (không phải gợi ý)
+      if (response && response.nextStep === 5) {
         setTimeout(() => {
           if (onCompleted) {
             onCompleted();
@@ -195,13 +230,7 @@ const handleSendMessage = async (e) => {
       }
 
     } catch (err) {
-      console.error('❌ Chi tiết lỗi khi gửi tin nhắn:', {
-        message: err.message,
-        status: err.status,
-        errorCode: err.code,
-        fullError: err
-      });
-      
+
       // Kiểm tra nguyên nhân lỗi cụ thể
       if (!process.env.REACT_APP_GEMINI_API_KEY_1) {
         setError('⚠️ Chưa cấu hình API Key Gemini. Vui lòng thêm REACT_APP_GEMINI_API_KEY_1 vào file .env');

@@ -16,10 +16,6 @@ class SplineErrorBoundary extends Component {
     return { hasError: true };
   }
 
-  componentDidCatch(error, errorInfo) {
-    console.warn('Spline component failed to load:', error);
-  }
-
   render() {
     if (this.state.hasError) {
       // Fallback UI when Spline fails
@@ -256,27 +252,21 @@ const RobotCompanion = ({ status = 'idle', message = '' }) => {
   const handleSplineLoad = useCallback((app) => {
     splineAppRef.current = app;
     
-    console.log('✅ Spline Loaded - Initializing Robot');
     
     // 🔍 DEBUG: Log all available variables in the model
     try {
-      const vars = app.getVariables();
-      console.log('📋 Available Variables in Model:', vars);
+      // const vars = app.getVariables();
       
       // Also try to list all animatable properties
       if (app.scene && app.scene.animations) {
-        console.log('🎬 Available Animations:', app.scene.animations);
       }
     } catch (e) {
-      console.debug('ℹ️ Could not retrieve model variables:', e.message);
     }
     
     // Initialize mood to 0 (idle) on load
     try {
       app.setVariable('Mood', 0);
-      console.log('✅ Robot loaded - Initial Mood set to 0 (Idle)');
     } catch (e) {
-      console.error('❌ Error initializing robot mood:', e);
     }
   }, []);
 
@@ -286,7 +276,6 @@ const RobotCompanion = ({ status = 'idle', message = '' }) => {
     setEffectVariant(Math.floor(Math.random() * 3));
 
     if (!splineAppRef.current) {
-      console.warn('⚠️ Spline app not loaded yet');
       return;
     }
 
@@ -331,7 +320,6 @@ const RobotCompanion = ({ status = 'idle', message = '' }) => {
     
     if (isCorrect && !hasConfettiRef.current) {
       hasConfettiRef.current = true;
-      console.log('🎉 Triggering confetti animation (variant', effectVariant, ')');
       const colors =
         effectVariant === 1
           ? ['#FFD700', '#FFC107', '#FFEB3B'] // golden variant

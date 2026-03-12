@@ -244,14 +244,25 @@ const StudentExamPage = ({ user, onSignOut }) => {
       
 
 
+      // Normalize answers to an ordered array before saving to Firestore
+      const answersArray = Object.keys(validatedAnswers)
+        .map(k => ({ index: parseInt(k, 10), ...validatedAnswers[k] }))
+        .sort((a, b) => a.index - b.index)
+        .map(({ index, ...rest }) => rest);
+
       // Hoàn thành exam cho học sinh
       if (user?.uid) {
-        await examSessionService.completeExamForStudent(sessionId, user.uid, {
-          score: totalScore,
-          correctAnswers,
-          answers: validatedAnswers,
-          totalQuestions: questions.length
-        });
+        try {
+          await examSessionService.completeExamForStudent(sessionId, user.uid, {
+            score: totalScore,
+            correctAnswers,
+            answers: answersArray,
+            totalQuestions: questions.length
+          });
+        } catch (writeErr) {
+          console.error('completeExamForStudent error:', writeErr);
+          throw writeErr;
+        }
       }
 
       // 1. Gọi AI Đánh giá năng lực (Dùng evaluateCompetencyFramework - 4 TC mới)
@@ -336,19 +347,25 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
       // 3. Lưu vào tiến trình (Lưu vào parts.khoiDong)
       if (user?.uid && exam?.id) {
-        await resultService.upsertExamProgress(user.uid, exam.id, {
-          part: 'khoiDong',
-          data: {
-            score: totalScore,
-            correctAnswers,
-            totalQuestions: questions.length,
-            percentage: questions.length > 0 ? Math.round((correctAnswers / questions.length) * 100) : 0,
-            answers: validatedAnswers,
-            aiAnalysis: aiAnalysis,
-            competencyEvaluation: competencyEvaluation,
-            completedAt: new Date().toISOString()
-          }
-        });
+        try {
+          await resultService.upsertExamProgress(user.uid, exam.id, {
+            part: 'khoiDong',
+            data: {
+              score: totalScore,
+              correctAnswers,
+              totalQuestions: questions.length,
+              percentage: questions.length > 0 ? Math.round((correctAnswers / questions.length) * 100) : 0,
+              answers: answersArray,
+              aiAnalysis: aiAnalysis,
+              competencyEvaluation: competencyEvaluation,
+              completedAt: new Date().toISOString()
+            },
+            sessionId // include sessionId for traceability
+          });
+        } catch (writeErr) {
+          console.error('upsertExamProgress error:', writeErr);
+          throw writeErr;
+        }
       }
 
       setIsCompleted(true);
@@ -511,6 +528,37 @@ const StudentExamPage = ({ user, onSignOut }) => {
       if (draftSaveTimerRef.current) clearInterval(draftSaveTimerRef.current);
     };
   }, [user?.uid, currentQuestionIndex, answers, questions, isAnswered, isCompleted, timeRemaining, session]);
+
+  // Fallback: if no questions loaded but exam has exercises, try to extract
+  useEffect(() => {
+    if (questions.length === 0 && exam?.exercises?.length > 0) {
+      const fallbackQuestions = [];
+      exam.exercises.forEach((exercise, exerciseIndex) => {
+        if (exercise.questions && exercise.questions.length > 0) {
+          exercise.questions.forEach((q) => {
+            fallbackQuestions.push({
+              ...q,
+              exerciseContext: exercise.context || exercise.name || '',
+              exerciseId: exercise.id,
+              exerciseIndex
+            });
+          });
+        }
+      });
+      if (fallbackQuestions.length > 0) {
+        setQuestions(fallbackQuestions);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questions, exam]);
+
+  // Auto-submit when session is finished by teacher or timeout (if not already submitted)
+  useEffect(() => {
+    if (session?.status === 'finished' && !isCompleted && !isSubmitting) {
+      handleAutoSubmit();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.status, isCompleted, isSubmitting]);
 
   // Handler: Trả lời câu hỏi
   const handleSelectAnswer = (optionIndex) => {
@@ -699,6 +747,8 @@ const StudentExamPage = ({ user, onSignOut }) => {
     );
   }
 
+
+  // --- UI rendering logic ---
   if (!session || !exam || questions.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
@@ -778,73 +828,10 @@ const StudentExamPage = ({ user, onSignOut }) => {
     );
   }
 
-  // Fallback: if no questions loaded but exam has exercises, try to extract
-  let displayQuestions = questions;
-  if (questions.length === 0 && exam?.exercises?.length > 0) {
-    const fallbackQuestions = [];
-    exam.exercises.forEach((exercise, exerciseIndex) => {
-      if (exercise.questions && exercise.questions.length > 0) {
-        exercise.questions.forEach((q) => {
-          fallbackQuestions.push({
-            ...q,
-            exerciseContext: exercise.context || exercise.name || '',
-            exerciseId: exercise.id,
-            exerciseIndex
-          });
-        });
-      }
-    });
-    displayQuestions = fallbackQuestions;
-    if (fallbackQuestions.length > 0) {
-      setQuestions(fallbackQuestions);
-    }
-  }
 
-  if (!session || displayQuestions.length === 0) {
-    return (
-      <div className="student-exam-page">
-        <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
-        <div className="text-center py-20">
-          <p className="text-xl text-gray-700 font-quicksand">
-            {!session ? 'Không tìm thấy phiên thi' : 'Không tìm thấy câu hỏi trong đề thi'}
-          </p>
-          <button
-            onClick={() => navigate(-1)}
-            className="btn-3d mt-6 px-6 py-3 bg-blue-500 text-white rounded-max font-quicksand"
-          >
-            ← Quay lại
-          </button>
-        </div>
-      </div>
-    );
-  }
 
-  // Check if exam session already finished
-  if (session?.status === 'finished') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-8 bg-white rounded-max p-12 shadow-2xl game-card">
-          <div className="text-8xl animate-bounce-gentle">✅</div>
-          <h2 className="text-4xl font-bold text-gray-800 font-quicksand text-center">Đề thi đã kết thúc!</h2>
-          <p className="text-xl text-gray-600 font-quicksand">Giáo viên đã kết thúc bài thi. Đang chuyển đến trang kết quả...</p>
-          <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-        </div>
-      </div>
-    );
-  }
 
-  if (isCompleted) {
-    return (
-      <div className="student-exam-page completed-state">
-        <div className="completed-container">
-          <div className="completed-icon">✅</div>
-          <h2>Bài thi của bạn đã hoàn thành!</h2>
-          <p>Đang chuyển đến trang kết quả...</p>
-          <div className="spinner"></div>
-        </div>
-      </div>
-    );
-  }
+  // --- UI rendering logic ---
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
@@ -926,7 +913,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
             <h3 className="text-xl font-bold text-gray-800 mb-6 font-quicksand">Danh sách câu hỏi</h3>
 
             <div className="grid grid-cols-5 gap-2 mb-8">
-              {displayQuestions.map((_, idx) => {
+              {questions.map((_, idx) => {
                 const isCurrentQuestion = idx === currentQuestionIndex;
                 const answerData = answers[idx];
                 const isAnswered = answerData !== undefined;

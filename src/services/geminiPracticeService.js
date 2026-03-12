@@ -91,19 +91,27 @@ export class GeminiPracticeService {
         if (competencyLevel === "Cần cố gắng") {
           difficultyGuidance = `
 🔴 MỨC ĐỘ BÀI 1 - CỰC DỄ (Học sinh Cần cố gắng):
-- Bài toán phải cực kỳ đơn giản, học sinh chỉ cần nhìn là nhẩm ra đáp án ngay, không cần trình bày nhiều bước.
-- Chỉ dùng phép tính cộng, trừ, nhân, chia đơn giản với số nhỏ (dưới 20), không có bẫy, không có dữ kiện thừa.
-- Không dùng ngữ cảnh phức tạp, không yêu cầu giải thích, chỉ hỏi trực tiếp phép tính hoặc thao tác đơn giản nhất.
-- Đề bài ngắn gọn, rõ ràng, không cần trình bày lời giải, chỉ cần đáp số.
-- Ví dụ: "Tính 7 + 5 = ?" hoặc "Có 12 quả táo, cho đi 3 quả, còn lại bao nhiêu quả?"
-`;
+- Bài toán PHẢI CỰC KỲ ĐƠN GIẢN - Chỉ 1 phép tính duy nhất, không có phép tính kế tiếp
+- Số liệu NHỎ VÀ DỄ TÍNH: Nhân/chia với số nhỏ (dưới 10), không có số thập phân phức tạp
+- Nếu dùng số thập phân → CHỈ 1 chữ số thập phân + nhân với số tự nhiên NHỎ (2, 3, 4, 5)
+- TUYỆT ĐỐI KHÔNG dữ kiện thừa, không suy luận nhiều bước
+- Bối cảnh TRỰC TIẾP, ngắn gọn, rõ ràng
+
+📌 VÍ DỤ CHO NHÂN SỐ THẬP PHÂN:
+✅ "Mỗi hộp milk 0,5 lít. 3 hộp bao nhiêu lít?" (CHỈ nhân 0,5 × 3, 1 chữ số thập phân × nhỏ)
+❌ "Một cô thợ may dùng 1,2 mét vải để may một chiếc áo. Hỏi nếu cô ấy may 3,5 chiếc áo thì cần bao nhiêu mét vải?" (Quá khó: 2 chữ số thập phân, 1,2 × 3,5)
+❌ "Hùng vận tốc 15,6 km/giờ, 1,5 giờ được bao nhiêu km?" (Quá khó: 2 chữ số thập phân)`;
         } else if (competencyLevel === "Tốt") {
           difficultyGuidance = `
-🟢 MỨC ĐỘ BÀI 1 - TƯƠNG ĐƯƠNG KHỞI ĐỘNG (Học sinh Tốt):
-- Giữ ĐỘ KHÓ TƯƠNG ĐƯƠNG bài 1 khởi động
-- Cùng số bước tính, cùng loại số liệu
-- Thay đổi BỐI CẢNH và CON SỐ nhưng giữ CẤU TRÚC
-- Học sinh Tốt sẽ làm bài 2 khó hơn, nên bài 1 không cần tăng độ khó`;
+🟢 MỨC ĐỘ BÀI 1 - PHỨC TẠP HƠN KHỞI ĐỘNG (Học sinh Tốt):
+- BÀI 1 PHẢI KHÓ HƠN khởi động (cả 2 bài phải khó, bài 2 khó hơn bài 1)
+- **CÓ 2 PHÉP TÍNH hoặc 1 phép tính phức tạp** với số thập phân đa chữ số
+- Số liệu PHỨC TẠP: Nhiều chữ số thập phân, yêu cầu tính toán cẩn thận
+- CÓ THỂ: yêu cầu so sánh nhẹ, suy luận đơn giản
+
+📌 VÍ DỤ CHO NHÂN SỐ THẬP PHÂN:
+✅ "Tính 32,5 × 2,4" (2 chữ số thập phân, khó hơn 2,5 × 4)
+✅ "Vận tốc 25,5 km/giờ, 2,5 giờ được bao nhiêu km, rồi chia 6 được bao nhiêu?" (2 phép tính)`;
         } else {
           // Đạt - giữ nguyên
           difficultyGuidance = `
@@ -111,36 +119,52 @@ export class GeminiPracticeService {
 - Giữ ĐỘ KHÓ TƯƠNG ĐƯƠNG bài 1 khởi động
 - Cùng số bước tính (1-2 bước)
 - Thay đổi BỐI CẢNH và CON SỐ nhưng giữ CẤU TRÚC
-- Số liệu dễ tính nhưng không quá đơn giản`;
+- Số liệu dễ tính nhưng không quá đơn giản
+
+📌 VÍ DỤ:
+✅ ĐÚNG: "Mẹ có 24 quả cam, chia đều cho 4 con. Mỗi con được bao nhiêu quả?" (1 bước chia, số vừa phải, rõ ràng)
+❌ SAI: "An có 5 cái kẹo, thêm 3 cái. Bây giờ có bao nhiêu?" (quá dễ, chỉ thích hợp mức Cần cố gắng)`;
         }
+
       } else if (problemNumber === 2) {
         referenceProblem = startupProblem2;
         if (competencyLevel === "Cần cố gắng") {
           difficultyGuidance = `
-🔴 MỨC ĐỘ BÀI 2 - CỰC DỄ (Học sinh Cần cố gắng):
-- Bài toán phải cực kỳ đơn giản, học sinh chỉ cần nhìn là nhẩm ra đáp án ngay, không cần trình bày nhiều bước.
-- Chỉ dùng phép tính cộng, trừ, nhân, chia đơn giản với số nhỏ (dưới 20), không có bẫy, không có dữ kiện thừa.
-- Không dùng ngữ cảnh phức tạp, không yêu cầu giải thích, chỉ hỏi trực tiếp phép tính hoặc thao tác đơn giản nhất.
-- Đề bài ngắn gọn, rõ ràng, không cần trình bày lời giải, chỉ cần đáp số.
-- Ví dụ: "Tính 8 × 3 = ?" hoặc "Có 15 viên bi, chia đều cho 3 bạn, mỗi bạn được mấy viên?"
-`;
+🔴 MỨC ĐỘ BÀI 2 - DỄ NHƯNG KHÓ HƠN BÀI 1 (Học sinh Cần cố gắng):
+- Bài 2 CŨNG CHỈ 1 phép tính duy nhất (2 bài dễ cho mức này)
+- Nhưng BÀI 2 PHẢI KHÓ HƠN BÀI 1: **Nhân với số lớn hơn** (nhân với 4, 5, 6, 8 thay vì 2, 3)
+- PHẢI CÓ 1 CHỮ SỐ THẬP PHÂN: Nếu bài 1 là 0,5, bài 2 có thể là 1,2, 1,5, 2,5 nhân với số tự nhiên lớn hơn
+- ⚠️ KHÔNG ĐƯỢC nhân 2 số thập phân (ví dụ: KHÔNG nhân 1,2 × 3,5, KHÔNG nhân 15,6 × 1,5)
+- VẪN CỰC KỲ ĐƠN GIẢN: 1 phép tính, không so sánh, không suy luận
+
+📌 VÍ DỤ CHO NHÂN SỐ THẬP PHÂN:
+✅ Bài 1: "Mỗi hộp milk 0,5 lít. 3 hộp bao nhiêu lít?" (Dễ - 0,5 × 3, nhân nhỏ)
+✅ Bài 2: "Mỗi mét vải 1,5 m, mua 6 mét, tổng dài bao nhiêu?" (Khó hơn - 1,5 × 6, nhân lớn hơn)
+❌ SAI: "Một cô thợ may dùng 1,2 mét vải để may một chiếc áo. Nếu may 3,5 chiếc áo thì cần bao nhiêu mét vải?" (LỖI: 1,2 × 3,5 = nhân 2 số thập phân, quá khó)`;
         } else if (competencyLevel === "Tốt") {
           difficultyGuidance = `
 🟢 MỨC ĐỘ BÀI 2 - KHÓ HƠN KHỞI ĐỘNG (Học sinh Tốt):
-- PHẢI KHÓ HƠN bài 2 khởi động để thử thách
-- Thêm 1-2 BƯỚC TÍNH so với bài khởi động
-- Số liệu PHỨC TẠP HƠN (số thập phân, số lớn hơn)
-- CÓ THỂ THÊM: dữ kiện thừa, tư duy ngược, so sánh 2 phương án
-- Yêu cầu suy luận và kết hợp nhiều kỹ năng
-- Ví dụ: Nếu khởi động tìm 2 số → Luyện tập: tìm 2 số rồi so sánh với điều kiện khác`;
+- **PHẢI KHÓ HƠN** bài 2 khởi động để thử thách
+- **PHẢI CÓ 2-3 phép tính** hoặc 1 phép + so sánh/suy luận
+- Số liệu PHỨC TẠP: Nhiều chữ số thập phân, phép tính chuỗi (nhân rồi cộng, cộng rồi nhân...)
+- CÓ THỂ: So sánh 2 phương án, tính tổng của nhiều items, kiểm tra đủ/thiếu
+
+📌 VÍ DỤ CHO NHÂN SỐ THẬP PHÂN:
+✅ "Vận động viên A: 32,5 km/giờ × 2,4 giờ. VĐV B: 28 km/giờ × 3 giờ. Ai dài hơn? Dài hơn bao nhiêu?" (Nhân × 2, so sánh)
+✅ "Hùng: 15,6 km/giờ × 1,5 giờ, rồi đi tiếp 10,2 km/giờ × 2 giờ. Tổng quãng đường?" (Nhân × 2, cộng)`;
         } else {
           // Đạt - giữ tương đương
           difficultyGuidance = `
 🟡 MỨC ĐỘ BÀI 2 - TƯƠNG ĐƯƠNG KHỞI ĐỘNG (Học sinh Đạt):
 - Giữ ĐỘ KHÓ TƯƠNG ĐƯƠNG bài 2 khởi động
-- Cùng số bước tính (2-3 bước)
+- Cùng SỐ BƯỚC TÍNH (2 phép tính hoặc 1 phép + yêu cầu)
 - Thay đổi BỐI CẢNH và CON SỐ nhưng giữ CẤU TRÚC
-- Học sinh đã làm tốt khởi động → tiếp tục luyện với độ khó tương đương`;
+- Học sinh Đạt không cần quá khó, chỉ cần thêm luyện tập
+
+📌 VÍ DỤ CHO NHÂN SỐ THẬP PHÂN:
+✅ ĐÚNG: "Kim chạy 18,5 km/giờ trong 2,5 giờ được bao nhiêu km?" (1 phép nhân, số liệu vừa phải)
+✅ ĐÚNG: "Mua 3,5 kg táo giá bao nhiêu nếu 1 kg = 2 đơn vị tiền?" (2 bước, tương đương độ khó)
+❌ SAI: "Tính với 2 vận động viên, so sánh chi tiết, tính sai biệt" (Quá khó, thích hợp mức Tốt)`;
         }
       }
 
@@ -159,7 +183,11 @@ QUY TẮC BẮT BUỘC:
 - Số liệu NHỎ HƠN, DỄ TÍNH HƠN (2, 5, 10, 20 thay vì 12, 24, 72)
 - Số bước tính ÍT HƠN (1 bước thay vì 2-3 bước)
 - Bối cảnh NGẮN GỌN, TRỰC TIẾP
-- KHÔNG có dữ kiện thừa, điều kiện phức tạp`;
+- KHÔNG có dữ kiện thừa, điều kiện phức tạp
+
+📌 VÍ DỤ CHO MỨC "CẦN CỐ GẮNG":
+✅ BÀI ĐÚNG: "Có 5 cái kẹo, thêm 3 cái nữa. Bây giờ có mấy cái kẹo?" (cộng số nhỏ, 1 bước, không bẫy)
+❌ BÀI SAI: "Mẹ mua 3.5 kg táo, bố mua 2,5 kg, anh mua 1.5 kg. Tổng cộng là bao nhiêu?" (số thập phân + 3 dữ kiện, quá khó)`;
       } else if (competencyLevel === "Tốt") {
         competencyAdjustment = `
 ═══════════════════════════════════════════════════════════════
@@ -174,7 +202,11 @@ QUY TẮC BẮT BUỘC:
 - Số liệu PHỨC TẠP HƠN (số thập phân nhiều chữ số, số lớn)
 - Số bước tính NHIỀU HƠN (thêm 1-2 bước so với khởi động)
 - CÓ THỂ THÊM: dữ kiện thừa, tư duy ngược, so sánh phương án
-- Yêu cầu suy luận và kết hợp kỹ năng`;
+- Yêu cầu suy luận và kết hợp kỹ năng
+
+📌 VÍ DỤ CHO MỨC "TỐT":
+✅ BÀI ĐÚNG: "Bố có 2,5 kg gạo, mẹ mua thêm 1,75 kg. Một tuần nhà ăn hết 2,8 kg. Hỏi còn lại bao nhiêu kg gạo?" (cộng + trừ thập phân, 2 bước, logic rõ)
+❌ BÀI SAI: "Có 5 cái kẹo, thêm 3 cái. Bây giờ có mấy cái?" (quá easy cho mức Tốt)`;
       } else {
         // Đạt - bình thường
         competencyAdjustment = `
@@ -189,7 +221,11 @@ Học sinh làm ĐẠT phần khởi động → Giữ độ khó tương đươ
 QUY TẮC BẮT BUỘC:
 - Cùng MỨC ĐỘ KHÓ với bài khởi động
 - Cùng SỐ BƯỚC TÍNH
-- Chỉ thay đổi BỐI CẢNH và CON SỐ cụ thể`;
+- Chỉ thay đổi BỐI CẢNH và CON SỐ cụ thể
+
+📌 VÍ DỤ CHO MỨC "ĐẠT":
+✅ BÀI ĐÚNG: "Mẹ mua 3 kg táo giá 25,000 đồng/kg. Bố mua 2 kg cam giá 30,000 đồng/kg. Hỏi tổng tiền mua là bao nhiêu?" (2 bước nhân, cộng, độ khó vừa phải)
+❌ BÀI SAI: "Mẹ mua 3.5 kg táo, bố mua 2.5 kg cam, anh mua 1.5 kg ổi. Mỗi kg táo 20,000đ, cam 25,000đ, ổi 18,000đ. Tính tổng?" (quá nhiều dữ kiện, 3 bước)`;
       }
 
       // Nếu có context (chủ đề), sử dụng để nhấn mạnh
@@ -286,65 +322,110 @@ QUY TẮC BẮT BUỘC:
           : parseFloat(practicePercentage) || 0;
       if (pct < 50) {
         difficultyGuidance =
-          "MỨC ĐỘ DỄ: Chỉ dùng đúng 1 bước tính. Lời văn trực diện, cho sẵn mọi dữ kiện, không có dữ kiện thừa.";
+          `🔴 MỨC ĐỘ CỰC DỄ (Học sinh Cần cố gắng):
+- BÀI PHẢI CỰC KỲ ĐƠN GIẢN: Chỉ 1 phép tính duy nhất
+- TUYỆT ĐỐI KHÔNG dữ kiện thừa - mỗi thông tin đều cần thiết để giải
+- Lời văn TRỰC TIẾP, rõ ràng, dễ tưởng tượng
+- Ví dụ: "Mỗi bạn được 0,75 lít nước. Lớp có 32 bạn. Hỏi cần bao nhiêu lít nước?"
+- ❌ SAI: Thêm dữ kiện như "có 2 bạn không tham gia" - điều này làm bài phức tạp thêm`;
       } else if (pct >= 50 && pct < 80) {
         difficultyGuidance =
-          "MỨC ĐỘ VỪA: Cần 2 bước tính. Học sinh phải tính một đại lượng trung gian trước.";
+          `🟠 MỨC ĐỘ VỪA (Học sinh Đạt):
+- Cần 2 bước tính: Học sinh phải tính 1 đại lượng trung gian trước
+- Tối đa 1-2 dữ kiện hỗ trợ, nhưng mỗi dữ kiện đều cân thiết
+- Không quá 4 dữ kiện chính
+- Ví dụ: "Giá 1kg là 25k, mua 2,5kg. Hỏi giá tiền?" (2 dữ kiện chính)`;
       } else {
         difficultyGuidance =
-          "MỨC ĐỘ KHÓ: Cần 3 bước tính trở lên hoặc dùng tư duy NGƯỢC (cho kết quả, tìm thành phần ban đầu). BẮT BUỘC chèn thêm 1 dữ kiện thừa để thử thách.";
+          `🟢 MỨC ĐỘ KHÓ (Học sinh Tốt):
+- Cần 3+ bước tính hoặc tư duy NGƯỢC (cho kết quả, tìm thành phần ban đầu)
+- Có thể chèn 1 dữ kiện thừa để thử thách (nhưng rõ ràng là thừa)
+- Tình huống phức tạp hơn, yêu cầu phân tích sâu
+- Ví dụ: "1 chiếc bánh nặng 0,05kg, sản xuất 1250 chiếc, mua thêm 50kg hạt điều (không dùng tới). Hỏi tổng khối lượng bánh?" (dữ kiện thừa: 50kg hạt điều)`;
       }
 
       // Hướng dẫn chi tiết theo từng bài học/chủ đề (giống logic phần luyện tập)
       const lessonGuide = this._getLessonSpecificGuidance(topicName);
 
-      const prompt = `Bạn là giáo viên toán lớp 5 tâm huyết, chuyên tạo bài tập vận dụng vừa đủ khó để giúp học sinh nhận biết được các lỗi sai nhưng vẫn trong tầm cơ bản.
-      
-HỒSƠ NĂNG LỰC HỌC SINH:
-Chủ đề: ${topicName}
+      const prompt = `[HỆ THỐNG HƯỚNG DẪN AI - CHỈ DÀNH CHO AI, KHÔNG HIỂN THỊ CHO NGƯỜI DÙNG]
 
-${errorsInKhoiDong.length > 0 ? `Những lỗi mắc phải ở phần Khởi động (trắc nghiệm):
-${errorsInKhoiDong.map((e, i) => `${i + 1}. ${e}`).join("\n")}
+Bạn là giáo viên toán lớp 5 tâm huyết, chuyên tạo bài tập vận dụng dựa trên chủ đề cụ thể, phù hợp mức độ học sinh.
 
-` : ""}${weaknessText ? `Những điểm yếu khi giải toán Polya ở phần Luyện tập:
-${weaknessText}\n` : ""}
+═══════════════════════════════════════════════════════════════
+CHỦĐỀ: "${topicName}"
+═══════════════════════════════════════════════════════════════
 
-NHIỆM VỤ:
+HỒSƠ HỌC SINH:
+${errorsInKhoiDong.length > 0 ? `Lỗi ở Khởi động: ${errorsInKhoiDong.join(", ")}` : "Không có lỗi cụ thể"}
+${weaknessText ? `Yếu điểm: ${weaknessText.replace(/\n/g, " ")}` : ""}
+
+MỨC ĐỘ TIÊU CHUẨN:
 ${difficultyGuidance}
 ${lessonGuide ? `
-HƯỚNG DẪN ĐẶC THÙ CHO BÀI HỌC (PHẢI TUÂN THEO):
-${lessonGuide}
-` : ""}
-Tạo 1 BÀI TOÁN VẬN DỤNG (Real-world Application Problem) phù hợp với học sinh lớp 5 để giúp khắc phục những yếu điểm trên.
-**QUAN TRỌNG NHẤT: Bài toán PHẢI TẬP TRUNG VÀO CHỦ ĐỀ CHÍNH "${topicName}" - đó phải là phần chính và khó nhất của bài toán, không phải chỉ là phần phụ.**
+HƯỚNG DẪN CHI TIẾT CHỦĐỀ:
+${lessonGuide}` : ""}
 
-YÊU CẦU TỐI QUAN TRỌNG:
-1. ✅ MỨC ĐỘ PHẢI DỄ VÀ PHÁT TRIỂN CHỦ ĐỀ:
-   - Bài toán nên dựa trên một tình huống thực tế quen thuộc của học sinh lớp 5 (gia đình, nhà trường, chợ, cửa hàng, dã ngoại...)
-   - KHÔNG dùng phần trăm (%), vì bạn chưa được học
-   - KHÔNG dùng khái niệm phức tạp (lợi nhuận, lãi suất, tỉ lệ, tỷ số...)
-   - Bài toán nên CÓ 2-3 dữ kiện để cần phân tích, nhưng không quá nhiều
-   - Phép tính cơ bản như: cộng, trừ, nhân, chia, số thập phân đơn giản
+═══════════════════════════════════════════════════════════════
+NHIỆM VỤ: TẠO BÀI TOÁN VẬN DỤNG (CHỈ IN ĐỀ BÀI, KHÔNG IN PHÂN TÍCH)
+═══════════════════════════════════════════════════════════════
+
+YÊU CẦU BẮBUỘC:
+1️⃣ CHỦĐỀ PHẢI LÀ TRỌNG TÂM CHÍNH - không thêm kỹ năng khác
+2️⃣ MỨC ĐỘ ĐÚNG VỚI HƯỚNG DẪN
+${pct < 50 ? `
+3️⃣ CHỈ 1 PHÉP TÍNH DUY NHẤT - Không được có phép tính thứ 2!
+   - ❌ SAI: "Tính chiều dài dây (phép 1), rồi tính giá tiền (phép 2)" → 2 phép
+   - ✅ ĐÚNG: "Tính chiều dài dây gấp mấy lần" → Chỉ 1 phép nhân
+
+4️⃣ TUYỆT ĐỐI KHÔNG THỪA DỮ KIỆN:
+   - Tất cả thông tin cho PHẢI được dùng để giải
+   - ❌ SAI: "Chiều cao 1,5m, chiều rộng 2,4m... tính chiều rộng × 1,5" → chiều cao thừa
+   - ✅ ĐÚNG: "Chiều rộng 2,4m, tính dây dài gấp 1,5 lần"
+
+5️⃣ KHÔNG thêm dữ kiện phụ để "làm phức tạp": Không hỏi giá tiền, số lượng, v.v
+   - ❌ SAI: "Giá 125.000 đồng/mét, hỏi tổng chi phí" → thêm phép cộng & phép nhân tiền tệ
+   - ✅ ĐÚNG: "Hỏi bao nhiêu mét dây" → Chỉ 1 phép nhân SO THẬP PHÂN
    
-2. ✅ CHỦ ĐỀ PHẢI LÀ TRUNG TÂM CỦA BÀI TOÁN:
-   - Nếu chủ đề là "Nhân số thập phân": Bài toán PHẢI CÓ NHIỀU phép nhân số thập phân làm nội dung chính. Ví dụ: "Mẹ mua 2,5 kg táo giá 35.500 đồng/kg. Bố mua 1,5 lít nước cam giá 18.000 đồng/lít. Hỏi tổng tiền mua là bao nhiêu?"
-   - Nếu chủ đề là "Chia số thập phân": Bài toán PHẢI làm nổi bật phép chia. Ví dụ: "Có 7,5 lít sữa chia đều vào các chai 1,5 lít. Hỏi cần bao nhiêu chai?"
-   - Nếu chủ đề liên quan "Cộng/Trừ số thập phân": Bài toán PHẢI có nhiều phép cộng/trừ với số thập phân
+6️⃣ VÍ DỤ ĐÚNG CHO "CẦN CỐ GẮNG":
+   ✅ Bà Lan cần mua dây để viền rèm. Chiều rộng rèm là 2,4 mét. Dây cần dài gấp 1,5 lần chiều rộng. Hỏi bà cần mua bao nhiêu mét dây?
+   (Chỉ tính: 2,4 × 1,5)
    
-3. ✅ CHỈ MỘT CÂU HỎI CUỐI (không phải 2-3 câu)
+   ✅ Mỗi chiếc bánh cần 0,075 kg bột. Để làm 1500 chiếc bánh, cần bao nhiêu kg bột?
+   (Chỉ tính: 0,075 × 1500)
 
-4. ✅ ĐỂ ĐỌC DỄ HIỂU: Viết dưới dạng câu chuyện bình thường, dễ tưởng tượng
+7️⃣ VÍ DỤ SAI CHO "CẦN CỐ GẮNG":
+   ❌ Bà Lan dự định làm rèm 2,4m × 1,5m. Dây trang trí gấp 1,5 lần rộng. Có 3,5m kim tuyến sẵn. Giá vải 125k/m, giá dây 35,5k/m. Tổng chi phí?
+   (Quá nhiều dữ kiện, quá nhiều phép tính!)
+   
+   ❌ Xưởng bánh: mỗi bánh 0,075kg bột, 0,02kg đường, sản xuất 1500 chiếc, mua 50kg hạt điều. Cần bao nhiêu kg bột?
+   (Dữ kiện thừa: đường 0,02kg, hạt điều 50kg → không dùng)
 
-VÍ DỤ CHO CHỦ ĐỀ "NHÂN SỐ THẬP PHÂN":
-"Gia đình bạn An đi siêu thị chuẩn bị cho buổi dã ngoại. Bố mua 3 kg táo, mỗi kilogam giá 35.500 đồng. Mẹ mua 2,5 lít nước cam ép, mỗi lít giá 18.000 đồng. An còn xin mua thêm 4 gói bánh quy, mỗi gói giá 12.750 đồng. Hỏi nếu bố An mang theo 220.000 đồng, thì gia đình còn lại bao nhiêu tiền sau khi mua sắm?"
+Tùy theo mức độ, điều chỉnh số lượng dữ kiện:
+- CẦN CỐ GẮNG: 2-3 dữ kiện CHÍNH, KHÔNG có thừa
+- ĐẠT: 3-4 dữ kiện CHÍNH, có thể 1 thừa rõ ràng
+- TỐT: 4-5 dữ kiện, có 1 thừa không quá rõ`
+      : (pct >= 50 && pct < 80) ? `
+3️⃣ TỐI ĐA 2 HOẶC 3 PHÉP TÍNH liên tiếp
+   - ✅ ĐÚNG: "Tính lượng bột (phép 1), tính tiền (phép 2)"
+   - ❌ SAI: Thêm phép 3, 4, 5...
 
-VÍ DỤ CHO CHỦĐỀ "CHIA SỐ THẬP PHÂN":
-"Cô giáo có 12,5 lít nước khoáng để chia đều cho các bạn học sinh trong lớp. Mỗi bạn được 0,5 lít. Hỏi lớp đó có bao nhiêu bạn học sinh?"
+4️⃣ CÓ THỂ CÓ 1 DỮKIỆN THỪA rõ ràng (nhưng chỉ 1 cái)
+   - ✅ ĐÚNG: "Bánh nặng 0,05kg, kẹo nặng 0,02kg, làm 1250 bánh, mua 50kg hạt (không dùng). Tính khối lượng bánh?"
+   - ❌ SAI: Nhiều dữ kiện thừa > 1
+   `
+      : `
+3️⃣ TỐI ĐA 3-4 PHÉP TÍNH liên tiếp
+   - ✅ ĐÚNG: "Tính A (phép 1), tính B (phép 2), tính C (phép 3)"
+   - ❌ SAI: Quá 4 phép tính
 
-HƯỚNG DẪN TRẢ LỜI:
-- CHỈ trả về nội dung bài toán (không có "Bài toán mới:", không có lời giải, không có gợi ý)
-- Bài toán phải là một đoạn văn liền mạch, tự nhiên, dài 3-5 dòng
-- CHẮC CHẮN bài toán tập trung vào chủ đề "${topicName}"
+4️⃣ CÓ ĐÚNG 1 DỮKIỆN THỪA rõ ràng để test lựa chọn
+   - ✅ ĐÚNG: Học sinh phải nhận ra dữ kiện nào cần, loại bỏ cái thừa
+   - ❌ SAI: Không có hoặc quá 1 dữ kiện thừa
+   `}
+
+5️⃣ HÌNH THỨC: Câu chuyện tự nhiên, dễ hiểu, chỉ 1 câu hỏi cuối
+
+CHỈ IN DÒNG NÀY (KHÔNG IN PHÂN TÍCH, HƯỚNG DẪN, V.V):
 
 Bài toán vận dụng:`;
 
@@ -790,10 +871,19 @@ VÍ DỤ SAI:
   ) {
     return `Bạn là giáo viên toán lớp 5 chuyên tạo bài tập luyện tập có chất lượng cao.
 
+═══════════════════════════════════════════════════════════════
+🔴 [BẮT BUỘC] CHỈ TẠO BÀI TOÁN VỀ CHỦĐỀ: "${context || "Bài học"}"
+═══════════════════════════════════════════════════════════════
+⚠️ NGHIÊM CẢNH: Toàn bộ bài toán PHẢI xoay quanh CHỦ ĐỀ NÀY
+- Nếu chủ đề là "Nhân số thập phân": BÀI PHẢI CÓ PHÉP NHÂN SỐ THẬP PHÂN LÀM TRỌNG TÂM
+- Nếu chủ đề là "Tỉ số": BÀI PHẢI CÓ PHẦN TỬ TỈ SỐ/SO SÁNH
+- Nếu chủ đề là "Thể tích": BÀI PHẢI TÍNH HOẶC SO SÁNH THỂ TÍCH
+- KHÔNG được tạo bài toán chung chung hoặc khác chủ đề
+
 BÀI KHỞI ĐỘNG (MẪU):
 ${referenceProblem}
 
-${context ? `CHỦ ĐỀ BÀI TẬP:
+${context ? `CHỦ ĐỀ BÀI TẬP (PHẢI TUÂN THỦ):
 ${context}
 ` : ""}
 
@@ -810,18 +900,39 @@ ${specialTopicGuidance}
 
 YÊU CẦU TỐI QUAN TRỌNG:
 
-1. ✅ PHẢI SỬ DỤNG KỸ NĂNG TOÁN HỌC CHÍNH CỦA CHỦ ĐỀ
-2. ✅ TẬP TRUNG VÀO CHỦ ĐỀ CHÍNH
-3. ✅ LOẠI BỎ HOÀN TOÀN PHẦN TRĂM (%) - TRỪ CHỦĐỀ PHẦN TRĂM
-4. ✅ ĐỘ KHÓ PHẢI VỪA PHẢI CHO LỚP 5
+1. ✅ PHẢI SỬ DỤNG KỸ NĂNG TOÁN HỌC CHÍNH CỦA CHỦ ĐỀ "${context || "Bài học"}"
+   → Kỹ năng chính PHẢI xuất hiện RÕRŒNG và LÀ TRỌNG TÂM bài toán
+   → KHÔNG được để kỹ năng chính chỉ là chi tiết phụ
+
+2. ✅ TẬP TRUNG 100% VÀO CHỦ ĐỀ CHÍNH
+   → ĐỀ SÁNG TẠO NHƯNG RÕ RÀNG
+
+3. ✅ LOẠI BỎ HOÀN TOÀN PHẦN TRĂM (%) - TRỪ CHỦ ĐỀ "PHẦN TRĂM"
+
+4. ✅ ĐỘ KHÓ PHẢI VỪA PHẢI CHO LỚP 5 + TUÂN THEO HƯỚNG DẪN TRÊN
+
 5. ✅ CHỈ MỘT CÂU HỎI CUỐI
-6. ✅ THAY ĐỔI BỐI CẢNH nhưng giữ nguyên cấu trúc
-7. ✅ ĐỀ SÁNG TẠO NHƯNG RÕ RÀNG
-8. ✅ TUYỆT ĐỐI KHÔNG tạo bài toán mang tư duy đại số THCS (không bắt học sinh tìm x, y, không lập phương trình).
+
+6. ✅ THAY ĐỔI BỐI CẢNH nhưng giữ nguyên CẤU TRÚC TOÁN HỌC
+
+7. ✅ **SỐ THẬP PHÂN PHẢI DÙNG DẤU PHẨY (,) CHỨ KHÔNG DÙNG DẤU CHẤM (.)**
+   → VÍ DỤ ĐÚNG: 15,25 km; 1,5 giờ; 1,2 mét; 3,5 chiếc
+   → VÍ DỤ SAI: 15.25 km; 1.5 giờ; 1.2 mét; 3.5 chiếc
+
+8. ✅ TUYỆT ĐỐI KHÔNG tạo bài toán chứa:
+   - Biến số x, y hoặc ẩn chưa biết (đại số THCS)
+   - Các khái niệm THCS (phương trình, bất phương trình, lợi nhuận %, lãi suất...)
+
+KIỂM TRA TỰ NHANH (PHẢI TRỰC TRẢ LỜI):
+- ❓ Bài toán này có TẬP TRUNG vào chủ đề "${context || "Bài học"}" không?
+- ❓ Kỹ năng chính của chủ đề có xuất hiện RÕRŒNG không?
+- ❓ Độ khó có phù hợp với hướng dẫn trên không?
+→ Nếu câu trả lời "KHÔNG" cho bất kỳ câu nào → HÃY TẠO LẠI BÀI KHÁC
 
 HƯỚNG DẪN TRẢ LỜI:
 - CHỈ trả về nội dung bài toán (không có "Bài toán mới:", "BÀI X LUYỆN TẬP:", không có lời giải)
 - Bài toán phải là một đoạn văn liền mạch, tự nhiên, kết thúc bằng CHÍNH XÁC 1 CÂU HỎI duy nhất
+- Nếu không tự tin bài toán tập trung vào chủ đề → KHÔNG TRÍCH từ bất kỳ đâu, HÃY TẠO LẠI
 
 Bài toán luyện tập:`;
   }

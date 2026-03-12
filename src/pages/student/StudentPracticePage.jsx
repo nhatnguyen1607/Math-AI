@@ -5,6 +5,7 @@ import PracticeChat from '../../components/PracticeChat';
 import RobotCompanion from '../../components/common/RobotCompanion';
 import MobileRobotAvatar from '../../components/common/MobileRobotAvatar';
 import geminiService from '../../services/geminiService';
+import { GeminiPracticeServiceTimeVelocity } from '../../services/geminiPracticeServiceTimeVelocity';
 import resultService from '../../services/resultService';
 import examService from '../../services/examService';
 
@@ -23,6 +24,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
   const [activeTab, setActiveTab] = useState('bai1');
   const [robotStatus, setRobotStatus] = useState('idle');
   const [robotMessage, setRobotMessage] = useState('');
+  const [topicName, setTopicName] = useState('');
   const leftColRef = useRef(null);
 
   // Khởi tạo dữ liệu luyện tập
@@ -35,6 +37,18 @@ const StudentPracticePage = ({ user, onSignOut }) => {
           return;
         }
 
+        // 🔴 ALWAYS load examData to get topicName (needed for session restore too!)
+        const examData = await examService.getExamById(examId);
+        if (!examData || !examData.exercises || examData.exercises.length < 2) {
+          setError('Đề thi không chứa đủ bài tập');
+          setLoading(false);
+          return;
+        }
+        
+        const topicNameFromExam = examData.title || '';
+        setTopicName(topicNameFromExam);
+        console.log('🔵 [StudentPracticePage] Loaded topicName from exam:', topicNameFromExam);
+
         // Kiểm tra nếu đã có phiên luyện tập cũ
         const existingSession = await resultService.getPracticeSessionData(user.uid, examId);
         if (existingSession?.luyenTap?.bai1?.deBai?.length > 50) {
@@ -44,15 +58,10 @@ const StudentPracticePage = ({ user, onSignOut }) => {
           } else {
             setActiveTab('bai1');
           }
+          // 🆕 Add topicName to restored session data
+          existingSession.topicName = topicNameFromExam;
           setPracticeData(existingSession);
-          setLoading(false);
-          return;
-        }
-
-        // Lấy dữ liệu đề thi
-        const examData = await examService.getExamById(examId);
-        if (!examData || !examData.exercises || examData.exercises.length < 2) {
-          setError('Đề thi không chứa đủ bài tập');
+          console.log('🔵 [StudentPracticePage] Restored existing session with topicName:', topicNameFromExam);
           setLoading(false);
           return;
         }
@@ -60,7 +69,6 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         // Tạo context từ các bài tập gốc để Gemini hiểu chủ đề
         const exercise1 = examData.exercises[0];
         const exercise2 = examData.exercises[1];
-        const topicName = examData.title || ''; // Lấy chủ đề từ title của exam
 
         // Lấy đánh giá năng lực của học sinh từ phần khởi động -> Lấy evaluation.competence level
         const examProgress = await resultService.getExamProgress(user.uid, examId);
@@ -92,7 +100,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
 
         // Xây dựng context từ các câu hỏi trong bài tập
         const buildExerciseContext = (exercise) => {
-          let context = `Chủ đề bài thi: ${topicName}\n\n`;
+          let context = `Chủ đề bài thi: ${topicNameFromExam}\n\n`;
           context += `Bài tập: ${exercise.name || 'Bài tập'}\n\n`;
           
           if (exercise.questions && exercise.questions.length > 0) {
@@ -113,7 +121,24 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         // Gọi Gemini để tạo bài toán tương tự - có truyền năng lực học sinh làm tham số thứ 5
         // Throttle giữa hai lần gọi (bài 1 và bài 2) bằng delay, không cần gọi zweimal cho cùng một bài
         let similarProblem1, similarProblem2;
-        const gService = new geminiService.constructor();
+        
+        // Conditionally use the Time/Velocity practice service
+        // Check if topic is Time/Velocity/Motion related
+        const lower = topicNameFromExam && topicNameFromExam.toLowerCase();
+        const isTimeVelocity = lower && (
+          lower.includes('thời gian') || 
+          lower.includes('vận tốc') || 
+          lower.includes('chuyển động') || 
+          lower.includes('quãng đường') || 
+          lower.includes('tốc độ') ||
+          (lower.includes('số đo') && lower.includes('thời gian'))
+        );
+        let gService;
+        if (isTimeVelocity) {
+          gService = new GeminiPracticeServiceTimeVelocity();
+        } else {
+          gService = new geminiService.constructor();
+        }
         
         try {
           // chỉ gọi một lần cho bài 1 với độ năng lực đã xác định
@@ -145,6 +170,9 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         
         // Đảm bảo practice có cấu trúc đúng
         if (practice && practice.luyenTap) {
+          // 🆕 Add topicName to practice data for sync
+          practice.topicName = topicNameFromExam;
+          console.log('🔵 [StudentPracticePage] Setting practiceData with topicName:', topicNameFromExam);
           setPracticeData(practice);
         } else {
           setError('Lỗi: Cấu trúc dữ liệu không hợp lệ');
@@ -345,6 +373,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
                   scrollContainerRef={leftColRef}
                   isCompleted={currentBai.status === 'completed'}
                   evaluation={currentBai.evaluation}
+                  topicName={practiceData?.topicName || topicName}
                   onCompleted={() => {
                     if (activeTab === 'bai1') {
                       handleSubmitPractice('bai1');

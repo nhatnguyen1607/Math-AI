@@ -197,7 +197,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
       setJoined(true);
       setError(null);
     } catch (err) {
-      setError('Không thể tham gia phòng thi. Vui lòng thử lại.');
+      setError('Không thể tham gia. Vui lòng thử lại.');
     } finally {
       setJoiningLoading(false);
     }
@@ -441,7 +441,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
                     Đang tham gia...
                   </>
                 ) : (
-                  <>✓ Tham gia phòng thi</>
+                  <>✓ Tham gia</>
                 )}
               </button>
               <button

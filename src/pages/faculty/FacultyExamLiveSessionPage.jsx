@@ -261,16 +261,15 @@ const FacultyExamLiveSessionPage = () => {
           </div> */}
 
           <div className="stat-card">
-            <div className="stat-icon">🎯</div>
+            <div className="stat-icon">📊</div>
             <div className="stat-info">
               <div className="stat-value">
                 {Math.round(
-                  (participants.filter(p => (p.score || 0) >= exam.passingScore).length /
-                    Math.max(participants.length, 1)) *
-                    100
-                )}%
+                  participants.reduce((sum, p) => sum + (p.score || 0), 0) /
+                    Math.max(participants.length, 1)
+                )}
               </div>
-              <div className="stat-label">Đạt điểm</div>
+              <div className="stat-label">Điểm trung bình</div>
             </div>
           </div>
         </div>

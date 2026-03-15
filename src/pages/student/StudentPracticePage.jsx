@@ -47,7 +47,6 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         
         const topicNameFromExam = examData.title || '';
         setTopicName(topicNameFromExam);
-        console.log('🔵 [StudentPracticePage] Loaded topicName from exam:', topicNameFromExam);
 
         // Kiểm tra nếu đã có phiên luyện tập cũ
         const existingSession = await resultService.getPracticeSessionData(user.uid, examId);
@@ -61,7 +60,6 @@ const StudentPracticePage = ({ user, onSignOut }) => {
           // 🆕 Add topicName to restored session data
           existingSession.topicName = topicNameFromExam;
           setPracticeData(existingSession);
-          console.log('🔵 [StudentPracticePage] Restored existing session with topicName:', topicNameFromExam);
           setLoading(false);
           return;
         }
@@ -150,14 +148,12 @@ const StudentPracticePage = ({ user, onSignOut }) => {
             competencyLevel
           );
         } catch (err1) {
-          console.warn('Failed to generate problem 1, using fallback:', err1.message);
           similarProblem1 = exercise1.name || 'Bài tập 1';
         }
 
         try {
           similarProblem2 = await gService.generateSimilarProblem(exercise1.name, exercise2.name, context2, 2, competencyLevel);
         } catch (err2) {
-          console.warn('Failed to generate problem 2, using fallback:', err2.message);
           similarProblem2 = exercise2.name || 'Bài tập 2';
         }
 
@@ -172,7 +168,6 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         if (practice && practice.luyenTap) {
           // 🆕 Add topicName to practice data for sync
           practice.topicName = topicNameFromExam;
-          console.log('🔵 [StudentPracticePage] Setting practiceData with topicName:', topicNameFromExam);
           setPracticeData(practice);
         } else {
           setError('Lỗi: Cấu trúc dữ liệu không hợp lệ');
@@ -364,7 +359,6 @@ const StudentPracticePage = ({ user, onSignOut }) => {
 
               {/* SCROLLABLE CHAT */}
               <div className="flex-1">
-                {console.log('📖 [StudentPracticePage] Creating PracticeChat with topicName:', practiceData?.topicName || topicName)}
                 <PracticeChat
                   userId={user?.uid}
                   examId={examId}

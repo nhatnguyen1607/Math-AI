@@ -51,16 +51,7 @@ class GeminiModelManager {
       const apiKey = process.env.REACT_APP_VERTEX_AI_API_KEY;
       const projectId = process.env.REACT_APP_GCP_PROJECT_ID;
       const location = process.env.REACT_APP_GCP_LOCATION || 'us-central1';
-
-      console.log('🔍 Vertex AI Init - API Key exists:', !!apiKey);
-      console.log('🔍 Vertex AI Init - Project ID:', projectId);
-      console.log('🔍 Vertex AI Init - Location:', location);
-      console.log('🔍 All env vars:', Object.keys(process.env).filter(k => k.includes('VERTEX') || k.includes('GCP')));
-
       if (!apiKey || !projectId) {
-        console.warn('❌ Vertex AI credentials not fully configured.');
-        console.warn('   - API Key present:', !!apiKey);
-        console.warn('   - Project ID present:', !!projectId);
         return;
       }
 
@@ -71,7 +62,6 @@ class GeminiModelManager {
         isVertexAI: true
       };
       
-      console.log('✅ Vertex AI initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize Vertex AI:', error);
     }
@@ -101,8 +91,6 @@ class GeminiModelManager {
       maxOutputTokens: 16384
     };
 
-    console.log(`📤 Calling Backend API - Model: ${modelName}, Endpoint: ${apiEndpoint}`);
-
     try {
       const response = await fetch(`${apiEndpoint}/api/vertexai-generate`, {
         method: 'POST',
@@ -131,7 +119,6 @@ class GeminiModelManager {
       const finishReason = data.finishReason;
       const usage = data.usage;
 
-      console.log(`✅ Response - Length: ${content.length}, finishReason: ${finishReason}, tokens: ${usage?.totalTokenCount}/${usage?.promptTokenCount}+${usage?.candidatesTokenCount}`);
       if (finishReason !== 'STOP') {
         console.warn(`⚠️ Response may be incomplete. Finish reason: ${finishReason}`);
       }
@@ -289,9 +276,6 @@ class GeminiModelManager {
           
         } catch (error) {
           lastError = error;
-          
-          // Log lỗi để debug
-          console.error(`Error with model ${model.name}:`, error.message);
           
           // Kiểm tra loại lỗi
           const isQuotaError = error.message?.includes("Rate limit") || 

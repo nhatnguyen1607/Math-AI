@@ -67,7 +67,7 @@ CHI TIẾT PHẢN HỒI THEO BƯỚC:
 3. 🟢 THỰC HIỆN (Bước 3):
    - Chỉ nêu số: "Bạn hãy lấy [số liệu 1] và [số liệu 2] để tính nhé". KHÔNG nêu tên phép tính.
 4. 🔵 KIỂM TRA (Bước 4):
-   - Nếu đúng -> MOVE_NEXT. Nếu chưa rõ -> hỏi "Kết quả này có đơn vị là gì nhỉ?" hoặc "Nếu số lượng thay đổi thì kết quả thế nào?".
+   - Nếu đúng -> MOVE_NEXT. Nếu chưa rõ -> hỏi các câu hỏi để học sinh có thể kiểm tra lại đáp số, ví dụ "Nếu số lượng thay đổi thì kết quả thế nào?".
 
 LUÔN TRẢ VỀ JSON:
 {

@@ -42,18 +42,15 @@ const PracticeChat = ({
 }) => {
   // Select the appropriate chat service based on topic using router
   const chatService = useMemo(() => {
-    console.log('🔄 [PracticeChat] Selecting service for topic:', topicName);
     
     // 🆕 Use serviceRouter instead of hardcoded logic
     const routerService = chatServiceRouter.getService(topicName);
     
     if (routerService) {
-      console.log('✅ [PracticeChat] → Using: Router service');
       return routerService;
     }
     
     // Fallback to default if router returns null
-    console.log('✅ [PracticeChat] → Using: GeminiChatService (default fallback)');
     return geminiChatService;
   }, [topicName]);
   const [messages, setMessages] = useState(chatHistory);
@@ -98,13 +95,11 @@ const PracticeChat = ({
     
     // Debug: log available voices (once)
     if (!window._voicesLogged && voices.length > 0) {
-      console.log('🎤 Available voices:', voices.map(v => `${v.name} (${v.lang})`));
       window._voicesLogged = true;
     }
     
     if (vietnameseVoice) {
       utterance.voice = vietnameseVoice;
-      console.log('✅ Using Vietnamese voice:', vietnameseVoice.name);
     } else {
       console.warn('⚠️ No Vietnamese voice found. Available:', voices.length);
     }
@@ -156,13 +151,8 @@ const PracticeChat = ({
     if (hasInitializedRef.current) return;
     if (!deBai || isCompleted) return;
 
-    console.log('📜 [PracticeChat] Effect triggered - initializing chat service');
-    console.log('🔧 [PracticeChat] ChatService type:', chatService?.constructor?.name);
-    console.log('🔧 [PracticeChat] ChatService has startNewProblem?', typeof chatService?.startNewProblem === 'function');
-
     // Nếu đã có chatHistory thì không khởi tạo lại, chỉ tiếp tục chat
     if (chatHistory && chatHistory.length > 0) {
-      console.log('📚 [PracticeChat] Restoring session with existing chat history');
       chatService.restoreSession(deBai, chatHistory);
       setIsInitializing(false);
       hasInitializedRef.current = true;
@@ -174,12 +164,9 @@ const PracticeChat = ({
       try {
         setIsInitializing(true);
         setError(null);
-        console.log('🚀 [PracticeChat] Calling startNewProblem on service:', chatService?.constructor?.name);
         // Truyền flag isApplicationProblem nếu đây là bài vận dụng
         const isApplicationProblem = baiNumber === 'vanDung';
         const response = await chatService.startNewProblem(deBai, isApplicationProblem);
-        console.log('✅ [PracticeChat] Got response from startNewProblem:', response?.message?.substring(0, 50) + '...');
-
         const aiMsg = {
           role: 'model',
           parts: [{ text: response.message }]

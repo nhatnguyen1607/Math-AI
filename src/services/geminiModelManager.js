@@ -93,7 +93,7 @@ class GeminiModelManager {
    */
   async _callVertexAIAPI(modelName, prompt) {
     // Get API endpoint - local dev hoặc production
-    const apiEndpoint = process.env.REACT_APP_BACKEND_API_URL || 'http://localhost:3001';
+    const apiEndpoint = process.env.REACT_APP_BACKEND_API_URL || 'http://localhost:8080';
     
     const requestBody = {
       modelName: modelName,

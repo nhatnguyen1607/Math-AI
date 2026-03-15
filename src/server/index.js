@@ -13,17 +13,27 @@ const path = require('path');
 const app = express();
 const PORT = parseInt(process.env.PORT) || 8080;
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'https://math-ai-vert.vercel.app',
-    process.env.FRONTEND_URL || 'https://math-ai-vert.vercel.app'
-  ],
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'https://math-ai-vert.vercel.app',
+      'http://localhost:3000'
+    ];
+    // Cho phép các domain trong list hoặc request không có origin (như Postman)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS Policy: Origin not allowed'));
+    }
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
-  credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
+// Xử lý riêng cho các yêu cầu OPTIONS từ trình duyệt
+app.options('*', cors(corsOptions));
 
 /**
  * Load service account credentials từ file JSON

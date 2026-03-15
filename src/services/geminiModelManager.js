@@ -117,7 +117,7 @@ class GeminiModelManager {
 
       const content = data.content || '';
       const finishReason = data.finishReason;
-      const usage = data.usage;
+      // const usage = data.usage;
 
       if (finishReason !== 'STOP') {
         console.warn(`⚠️ Response may be incomplete. Finish reason: ${finishReason}`);

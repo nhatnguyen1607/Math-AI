@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import studentService from '../../services/student/studentService';
-import classService from '../../services/classService';
-import resultService from '../../services/resultService';
-import StudentClassSelectionPage from './StudentClassSelectionPage';
-import StudentHeader from '../../components/student/StudentHeader';
-import StudentTopicPage from './StudentTopicPage';
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import studentService from "../../services/student/studentService";
+import classService from "../../services/classService";
+
+import StudentClassSelectionPage from "./StudentClassSelectionPage";
+import StudentHeader from "../../components/student/StudentHeader";
+import StudentTopicSelectionPage from "./StudentTopicSelectionPage";
+import StudentExamSelectionPage from "./StudentExamSelectionPage";
+import StudentLearningPathwayPage from "./StudentLearningPathwayPage";
 
 const StudentDashboardPage = ({ user, onSignOut }) => {
   const navigate = useNavigate();
@@ -20,9 +22,15 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
   const [showClassSelector, setShowClassSelector] = useState(false);
   const [studentClasses, setStudentClasses] = useState([]);
   const [showDevNotice, setShowDevNotice] = useState(false);
-  
+
   // Determine current view from URL path
-  const currentView = location.includes('/topic-management') ? 'topic-management' : location.includes('/exam-management') ? 'exam-management' : null;
+  const currentView = location.includes("/pathways")
+    ? "pathway-selection"
+    : location.includes("/pathway/") && location.includes("/exams")
+    ? "exam-selection"
+    : location.includes("/pathway/")
+    ? "topic-selection"
+    : null;
 
   // Load student's joined classes when user is available
   useEffect(() => {
@@ -30,46 +38,50 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
       if (!user?.uid) {
         return;
       }
-      
+
       try {
         const classes = await classService.getClassesByStudent(user.uid);
         setStudentClasses(classes || []);
-      } catch (error) {
-      }
+      } catch (error) {}
     };
-    
+
     loadStudentClasses();
   }, [user?.uid]);
 
-  const loadClassData = useCallback(async (userId) => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-    try {
-      
-      // Load data based on current view
-      const topicType = currentView === 'exam-management' ? 'worksheet' : 'startup';
-      const examType = currentView === 'exam-management' ? 'worksheet' : 'startup';
-      
-      const [topicsData, statsData, examsData] = await Promise.all([
-        studentService.getAvailableTopics(selectedClass?.id, topicType),
-        studentService.getStudentStats(userId),
-        studentService.getAvailableExams(selectedClass?.id, examType)
-      ]);
-      setTopics(topicsData || []);
-      setExams(examsData || []);
-      
-      // Debug log to show what exams were loaded with their isLocked status
-      (examsData || []).forEach(e => {
-      });
-      
-      setUserStats(statsData);
-    } catch (error) {
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedClass, currentView]);
+  const loadClassData = useCallback(
+    async (userId) => {
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const [topicsData, statsData, examsData] = await Promise.all([
+          studentService.getAvailableTopics(selectedClass?.id, "startup"),
+          studentService.getStudentStats(userId),
+          studentService.getAvailableExams(selectedClass?.id, "startup"),
+        ]);
+        setTopics(topicsData || []);
+        console.log("Toàn bộ exams lấy về:", examsData);
+        // LỌC BỎ CÁC BÀI THI DRAFT Ở ĐÂY 👇
+        const validExams = (examsData || []).filter((exam) => {
+          // Log từng bài thi ra để kiểm tra status
+          console.log(`Bài thi: ${exam.title} - Trạng thái:`, exam.status);
+
+          // Chuyển status về chữ thường rồi mới so sánh (phòng trường hợp 'Draft' hoặc 'DRAFT')
+          // Và kiểm tra xem exam có property status không
+          return exam?.status?.toLowerCase() !== "draft";
+        });
+        setExams(validExams);
+
+        setUserStats(statsData);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [selectedClass],
+  );
 
   useEffect(() => {
     if (selectedClass && user?.uid) {
@@ -84,7 +96,7 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
   useEffect(() => {
     if (classId && studentClasses.length > 0) {
       // Load class from studentClasses list
-      const cls = studentClasses.find(c => c.id === classId);
+      const cls = studentClasses.find((c) => c.id === classId);
       if (cls) {
         setSelectedClass(cls);
       }
@@ -101,7 +113,7 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
   // Load selected topic when topicId URL param changes
   useEffect(() => {
     if (topicId && topics.length > 0) {
-      const topic = topics.find(t => t.id === topicId);
+      const topic = topics.find((t) => t.id === topicId);
       if (topic) {
         setSelectedTopic(topic);
       }
@@ -110,58 +122,32 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
     }
   }, [topicId, topics]);
 
-  const handleSelectClass = useCallback((cls) => {
-    setSelectedClass(cls);
-    setSelectedTopic(null);
-    setShowClassSelector(false);
-    // Save classId to sessionStorage for use in other pages like LearningPathwayPage
-    sessionStorage.setItem('selectedClassId', cls.id);
-    navigate(`/student/${cls.id}`);
-  }, [navigate]);
+  const handleSelectClass = useCallback(
+    (cls) => {
+      setSelectedClass(cls);
+      setSelectedTopic(null);
+      setShowClassSelector(false);
+      // Save classId to sessionStorage for use in other pages like LearningPathwayPage
+      sessionStorage.setItem("selectedClassId", cls.id);
+      navigate(`/student/${cls.id}`);
+    },
+    [navigate],
+  );
 
   const handleChangeClass = () => {
     setShowClassSelector(true);
   };
 
   const handleStartupClick = useCallback(() => {
-    navigate(`/student/learning-pathway/exam`);
-  }, [navigate]);
+    navigate(`/student/${selectedClass?.id}/pathways`);
+  }, [navigate, selectedClass?.id]);
 
   const handleWorksheetClick = useCallback(() => {
     setShowDevNotice(true);
     setTimeout(() => setShowDevNotice(false), 3000);
   }, []);
 
-  const handleJoinExam = async (exam) => {
-    try {
-      // Check if exam is locked
-      if (exam?.isLocked === true) {
-        // For locked exams, navigate to result page by examId
-        navigate(`/student/exam-result/${exam.id}`, {
-          state: { fromExam: false, examId: exam.id }
-        });
-        return;
-      }
-      // For unlocked exams, check if student has already completed
-      if (user?.uid) {
-        const progress = await resultService.getExamProgress(user.uid, exam.id);
-        
-        // If progress exists and isFirst is false, redirect to result page
-        if (progress && progress.isFirst === false) {
-          navigate(`/student/exam-result/${progress.sessionId || exam.id}`, {
-            state: { fromExam: false, examId: exam.id }
-          });
-          return;
-        }
-      }
-
-      // Otherwise, go to exam lobby (first time or in progress)
-      window.location.href = `/student/exam-lobby/${exam.id}`;
-    } catch (error) {
-      // If there's an error, go to exam lobby as fallback
-      window.location.href = `/student/exam-lobby/${exam.id}`;
-    }
-  };
+  // Removed unused handleJoinExam function
 
   // Redirect if user logs out
   if (!user) {
@@ -170,29 +156,33 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
 
   // Show class selector if in that mode
   if (showClassSelector) {
-    return <StudentClassSelectionPage user={user} onSelectClass={handleSelectClass} onSignOut={onSignOut} />;
+    return (
+      <StudentClassSelectionPage
+        user={user}
+        onSelectClass={handleSelectClass}
+        onSignOut={onSignOut}
+      />
+    );
   }
 
   // If no selected class and URL has no classId, show class selector
   if (!selectedClass && !classId) {
     // Show limited dashboard with "Select Class" button
-    const navItems = [
-      { icon: '📚', label: 'Chọn lớp học' }
-    ];
+    const navItems = [{ icon: "📚", label: "Chọn lớp học" }];
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={navItems} />
-        
+
         <div className="px-8 py-8 max-w-7xl mx-auto w-full flex flex-col items-center justify-center min-h-[80vh]">
           <div className="text-center">
             <h1 className="text-5xl font-bold text-gray-800 mb-4 font-quicksand">
-              Chào mừng, {user?.displayName || 'Bạn'}! 👋
+              Chào mừng, {user?.displayName || "Bạn"}! 👋
             </h1>
             <p className="text-xl text-gray-600 mb-12 font-quicksand">
               Vui lòng chọn lớp học của bạn để bắt đầu
             </p>
-            
+
             <div className="game-card bg-white rounded-max shadow-lg p-12 max-w-md">
               <div className="text-7xl mb-6">🎓</div>
               <h2 className="text-3xl font-bold text-gray-800 mb-6 font-quicksand">
@@ -213,7 +203,8 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
               ) : (
                 <>
                   <p className="text-gray-600 mb-6 font-quicksand">
-                    Bạn chưa tham gia lớp nào. Hãy tham gia lớp của bạn bằng mã lớp.
+                    Bạn chưa tham gia lớp nào. Hãy tham gia lớp của bạn bằng mã
+                    lớp.
                   </p>
                   <button
                     onClick={handleChangeClass}
@@ -230,18 +221,42 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
     );
   }
 
-  // Hiển thị StudentTopicPage nếu đang ở topic-management view
-  if (currentView === 'topic-management') {
+// Handle pathway selection view
+  if (currentView === "pathway-selection") {
     return (
-      <StudentTopicPage 
-        user={user} 
-        onSignOut={onSignOut} 
-        selectedClass={selectedClass} 
-        topics={topics} 
+      <StudentLearningPathwayPage
+        user={user}
+        onSignOut={onSignOut}
+        selectedClass={selectedClass}
+      />
+    );
+  }
+
+  // Handle topic selection view
+  if (currentView === "topic-selection") {
+    return (
+      <StudentTopicSelectionPage
+        user={user}
+        onSignOut={onSignOut}
+        selectedClass={selectedClass}
+        topics={topics}
         exams={exams}
         selectedTopic={selectedTopic}
         setSelectedTopic={setSelectedTopic}
         topicId={topicId}
+      />
+    );
+  }
+
+  // Handle exam selection view (exams for a specific topic)
+  if (currentView === "exam-selection") {
+    return (
+      <StudentExamSelectionPage
+        user={user}
+        onSignOut={onSignOut}
+        selectedClass={selectedClass}
+        topics={topics}
+        exams={exams}
       />
     );
   }
@@ -251,7 +266,9 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
         <div className="text-center">
           <div className="text-6xl mb-4 animate-bounce-gentle">✨</div>
-          <div className="text-2xl font-bold text-gray-700 font-quicksand">Đang tải dữ liệu...</div>
+          <div className="text-2xl font-bold text-gray-700 font-quicksand">
+            Đang tải dữ liệu...
+          </div>
         </div>
       </div>
     );
@@ -262,11 +279,11 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
-        
+
         <div className="px-8 py-8 max-w-7xl mx-auto w-full">
           {/* Change Class Button */}
           <div className="mb-8 flex gap-4">
-            <button 
+            <button
               onClick={handleChangeClass}
               className="btn-3d bg-blue-500 text-white py-3 px-6 rounded-max font-quicksand hover:shadow-lg transition-all font-bold"
               title="Chọn lớp khác"
@@ -278,10 +295,13 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
           {/* Welcome Section */}
           <div className="mb-12">
             <h1 className="text-5xl font-bold text-gray-800 mb-2 font-quicksand">
-              Chào mừng, {user?.displayName || 'Bạn'}! 👋
+              Chào mừng, {user?.displayName || "Bạn"}! 👋
             </h1>
             <p className="text-xl text-gray-600 font-quicksand">
-              Lớp: <span className="font-bold text-gray-800">{selectedClass?.name}</span>
+              Lớp:{" "}
+              <span className="font-bold text-gray-800">
+                {selectedClass?.name}
+              </span>
             </p>
           </div>
 
@@ -294,7 +314,9 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
                   <div className="text-4xl font-bold text-gray-800 font-quicksand">
                     {userStats?.completedExams || 0}
                   </div>
-                  <div className="text-gray-700 font-quicksand">Đề thi hoàn thành</div>
+                  <div className="text-gray-700 font-quicksand">
+                    Đề thi hoàn thành
+                  </div>
                 </div>
               </div>
             </div>
@@ -306,7 +328,9 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
                   <div className="text-4xl font-bold text-gray-800 font-quicksand">
                     {userStats?.averageScore || 0}%
                   </div>
-                  <div className="text-gray-700 font-quicksand">Điểm trung bình</div>
+                  <div className="text-gray-700 font-quicksand">
+                    Điểm trung bình
+                  </div>
                 </div>
               </div>
             </div>
@@ -318,7 +342,9 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
                   <div className="text-4xl font-bold text-gray-800 font-quicksand">
                     {topics.length}
                   </div>
-                  <div className="text-gray-700 font-quicksand">Chủ đề khả dụng</div>
+                  <div className="text-gray-700 font-quicksand">
+                    Chủ đề khả dụng
+                  </div>
                 </div>
               </div>
             </div>
@@ -327,28 +353,35 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
           {/* Main Actions */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Khởi động Card */}
-            <div 
-              onClick={handleStartupClick}
+            <div
               className="group game-card bg-gradient-to-br from-yellow-300 to-orange-300 rounded-max shadow-lg p-10 cursor-pointer transition-all duration-300 transform hover:-translate-y-4 hover:shadow-2xl"
             >
-              <div className="text-7xl mb-6 text-center animate-bounce-gentle">🚀</div>
+              <div className="text-7xl mb-6 text-center animate-bounce-gentle">
+                🚀
+              </div>
               <h2 className="text-3xl font-bold text-gray-800 mb-3 font-quicksand text-center">
                 🗺️ Trò chơi
               </h2>
               <p className="text-gray-700 mb-8 font-quicksand text-center">
                 Chọn chủ đề và bắt đầu hành trình học tập của bạn
               </p>
-              <button className="btn-3d w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-4 px-6 rounded-max font-quicksand text-lg">
+              <button 
+                onClick={handleStartupClick}
+                type="button"
+                className="btn-3d w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-4 px-6 rounded-max font-quicksand text-lg"
+              >
                 Khám phá Bản đồ →
               </button>
             </div>
 
             {/* Phiếu bài tập Card */}
-            <div 
+            <div
               onClick={handleWorksheetClick}
               className="group game-card bg-gradient-to-br from-pink-300 to-rose-300 rounded-max shadow-lg p-10 cursor-pointer transition-all duration-300 transform hover:-translate-y-4 hover:shadow-2xl"
             >
-              <div className="text-7xl mb-6 text-center animate-bounce-gentle">📋</div>
+              <div className="text-7xl mb-6 text-center animate-bounce-gentle">
+                📋
+              </div>
               <h2 className="text-3xl font-bold text-gray-800 mb-3 font-quicksand text-center">
                 📝 Phiếu bài tập
               </h2>
@@ -367,8 +400,12 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl animate-bounce-gentle">
               <div className="text-6xl mb-4">🚧</div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-2 font-quicksand">Nội dung đang phát triển</h3>
-              <p className="text-gray-600 font-quicksand">Tính năng này sẽ sớm được cập nhật. Vui lòng quay lại sau!</p>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2 font-quicksand">
+                Nội dung đang phát triển
+              </h3>
+              <p className="text-gray-600 font-quicksand">
+                Tính năng này sẽ sớm được cập nhật. Vui lòng quay lại sau!
+              </p>
             </div>
           </div>
         )}
@@ -382,92 +419,25 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
 
       {/* Nội dung chính */}
       <div className="p-8">
-        {currentView === 'exam-management' ? (
-          // Danh sách đề thi
-          <div className="max-w-5xl mx-auto">
-            <div className="flex items-center gap-4 mb-10">
-              <button 
-                onClick={() => navigate(-1)}
-                className="btn-3d bg-white text-gray-800 py-3 px-6 rounded-max font-quicksand hover:shadow-lg transition-all"
-              >
-                ← Quay lại
-              </button>
-              <h2 className="text-4xl font-bold text-gray-800 font-quicksand">Các đề thi bài tập</h2>
-            </div>
-
-            <div className="space-y-6">
-              {exams && exams.length > 0 ? (
-                exams.map((exam, idx) => {
-                  return (
-                  <div 
-                    key={exam.id} 
-                    className="game-card bg-white rounded-max shadow-lg hover:shadow-2xl p-8 transition-all duration-300 transform hover:-translate-y-2 border-l-8 border-blue-500"
-                  >
-                    {/* Exam Title */}
-                    <div className="flex items-center gap-4 mb-4">
-                      <span className="text-4xl">📚</span>
-                      <div className="flex-1">
-                        <h3 className="text-2xl font-bold text-gray-800 font-quicksand">
-                          {exam.title}
-                        </h3>
-                      </div>
-                      <span className="text-2xl">{idx + 1}</span>
-                    </div>
-
-                    {/* Exam Stats */}
-                    <div className="grid grid-cols-3 gap-4 mb-6 pb-6 border-b-2 border-gray-200">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-blue-600 font-quicksand">
-                          {exam.questions?.length || 0}
-                        </div>
-                        <div className="text-sm text-gray-600 font-quicksand">Câu hỏi</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-green-600 font-quicksand">
-                          {exam.duration}
-                        </div>
-                        <div className="text-sm text-gray-600 font-quicksand">phút</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-yellow-600 font-quicksand">
-                          {exam.passingScore}%
-                        </div>
-                        <div className="text-sm text-gray-600 font-quicksand">điểm đạt</div>
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    {exam.description && (
-                      <p className="text-gray-600 text-base mb-6 font-quicksand">
-                        {exam.description}
-                      </p>
-                    )}
-
-                    {/* Join Button */}
-                    <button
-                      className={`btn-3d w-full font-bold py-4 px-6 rounded-max transition-all duration-300 font-quicksand text-lg ${
-                        exam?.isLocked === true
-                          ? 'bg-gradient-to-r from-purple-400 to-indigo-500 hover:from-purple-500 hover:to-indigo-600'
-                          : 'bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600'
-                      } text-white`}
-                      onClick={() => {
-                        handleJoinExam(exam);
-                      }}
-                    >
-                      {exam?.isLocked === true ? '📊 Xem kết quả' : '🚀 Bắt đầu'}
-                    </button>
-                  </div>
-                  );
-                })
-              ) : (
-                <div className="bg-white rounded-max shadow-lg p-16 text-center game-card">
-                  <p className="text-5xl mb-4">📭</p>
-                  <p className="text-gray-600 text-lg font-quicksand">Lớp này chưa có đề nào.</p>
-                </div>
-              )}
-            </div>
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center gap-4 mb-10">
+            <button
+              onClick={() => navigate(-1)}
+              className="btn-3d bg-white text-gray-800 py-3 px-6 rounded-max font-quicksand hover:shadow-lg transition-all"
+            >
+              ← Quay lại
+            </button>
+            <h2 className="text-4xl font-bold text-gray-800 font-quicksand">
+              Không tìm thấy trang
+            </h2>
           </div>
-        ) : null}
+          <div className="bg-white rounded-max shadow-lg p-16 text-center game-card">
+            <p className="text-5xl mb-4">🔍</p>
+            <p className="text-gray-600 text-lg font-quicksand">
+              Trang này không tồn tại.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Development Notice Modal */}
@@ -475,8 +445,12 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl animate-bounce-gentle">
             <div className="text-6xl mb-4">🚧</div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2 font-quicksand">Nội dung đang phát triển</h3>
-            <p className="text-gray-600 font-quicksand">Tính năng này sẽ sớm được cập nhật. Vui lòng quay lại sau!</p>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2 font-quicksand">
+              Nội dung đang phát triển
+            </h3>
+            <p className="text-gray-600 font-quicksand">
+              Tính năng này sẽ sớm được cập nhật. Vui lòng quay lại sau!
+            </p>
           </div>
         </div>
       )}

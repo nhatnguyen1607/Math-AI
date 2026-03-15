@@ -539,8 +539,8 @@ Nếu bài chỉ có Bước 1, 2, 3 mà thiếu Bước 4:
       responseText = responseText.replace(/```[\w]*\n?/g, '').trim();
 
       // Find JSON object - look for first { and last }
-      const firstBrace = responseText.indexOf('{');
-      const lastBrace = responseText.lastIndexOf('}');
+      let firstBrace = responseText.indexOf('{');
+      let lastBrace = responseText.lastIndexOf('}');
       
       console.log('🔍 JSON Search - firstBrace:', firstBrace, 'lastBrace:', lastBrace, 'textLength:', responseText.length);
       
@@ -552,8 +552,10 @@ Nếu bài chỉ có Bước 1, 2, 3 mà thiếu Bước 4:
         throw new Error('Không thể phân tích đáp án từ AI');
       }
 
-      const jsonStr = responseText.substring(firstBrace, lastBrace + 1);
+      let jsonStr = responseText.substring(firstBrace, lastBrace + 1).trim();
       console.log('✅ JSON extracted, length:', jsonStr.length);
+      console.log('   First 100 chars:', jsonStr.substring(0, 100));
+      console.log('   Last 100 chars:', jsonStr.substring(Math.max(0, jsonStr.length - 100)));
 
       // Sanitize JSON string to remove control characters
       const sanitizedJson = this._sanitizeJsonString(jsonStr);
@@ -563,10 +565,15 @@ Nếu bài chỉ có Bước 1, 2, 3 mà thiếu Bước 4:
         data: generatedExam
       };
     } catch (error) {
-      console.error('Lỗi khi tạo đề:', error);
+      console.error('❌ Lỗi khi tạo đề:');
+      console.error('   Message:', error.message);
+      console.error('   Stack:', error.stack);
+      if (error.at !== undefined) {
+        console.error('   Position:', error.at);
+      }
       return {
         success: false,
-        error: error.message
+        error: error.message || 'Không thể tạo đề từ AI'
       };
     }
   }
@@ -621,29 +628,51 @@ ${questionsText}`;
       // First attempt: try regular JSON parse
       return JSON.stringify(JSON.parse(jsonStr));
     } catch (e) {
-      // If that fails, sanitize the string
-      // Replace actual newlines with \n, tabs with \t, etc.
+      console.log('⚠️ JSON parse failed, attempting sanitization:', e.message);
+      
       let sanitized = jsonStr
-        .replace(/[\r]/g, '\\r')  // Replace return with escaped \r
-        .replace(/[\n]/g, '\\n')  // Replace newline with escaped \n
-        .replace(/[\t]/g, '\\t')  // Replace tab with escaped \t
-        // eslint-disable-next-line no-control-regex
-        .replace(/[\x00-\x1f]/g, (match) => {
-          // Replace other control characters
-          return '\\u' + ('000' + match.charCodeAt(0).toString(16)).slice(-4);
+        .trim()
+        // Remove BOM if present
+        .replace(/^\ufeff/, '')
+        // Fix common issues: replace literal newlines/tabs inside strings
+        // This is a careful approach that handles newlines within quoted strings
+        .replace(/:\s*"([^"]*?)[\r\n]+([^"]*?)"/g, (match, before, after) => {
+          // Newline inside a string value - escape it
+          return ': "' + before + '\\n' + after.replace(/[\r\n]/g, '\\n') + '"';
         });
       
-      // Try json5 parsing for better error recovery if needed
       try {
+        console.log('✅ Attempting parse after newline fix');
         return JSON.stringify(JSON.parse(sanitized));
       } catch (e2) {
-        // Last resort: try to fix common JSON formatting issues
-        sanitized = sanitized
-          .replace(/,\s*}/g, '}')  // Remove trailing commas before }
-          .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
-          .replace(/:\s*undefined/g, ': null');  // Replace undefined with null
+        console.log('⚠️ Sanitization attempt 2 failed, trying aggressive cleanup');
         
-        return JSON.stringify(JSON.parse(sanitized));
+        // More aggressive approach: handle all string values
+        sanitized = sanitized
+          .replace(/[\r\n]+/g, ' ')  // Replace newlines with space (outside strings)
+          .replace(/,\s*}/g, '}')      // Remove trailing commas before }
+          .replace(/,\s*]/g, ']')      // Remove trailing commas before ]
+          .replace(/:\s*undefined/g, ': null')  // undefined → null
+          .replace(/'/g, '"')  // Single quotes → double quotes (if needed)
+          .replace(/:\s*"([^"]*?)"/g, (match, value) => {
+            // Properly escape quotes in string values
+            const escaped = value
+              .replace(/\\/g, '\\\\')
+              .replace(/"/g, '\\"')
+              .replace(/[\n\r]+/g, '\\n')
+              .replace(/[\t]+/g, '\\t');
+            return ': "' + escaped + '"';
+          });
+        
+        try {
+          console.log('✅ Attempting parse after aggressive cleanup');
+          return JSON.stringify(JSON.parse(sanitized));
+        } catch (e3) {
+          console.error('❌ All sanitization attempts failed');
+          console.error('   Original error:', e.message);
+          console.error('   Sanitized string first 500 chars:', sanitized.substring(0, 500));
+          throw new Error(`JSON parse failed after sanitization: ${e.message}`);
+        }
       }
     }
   }

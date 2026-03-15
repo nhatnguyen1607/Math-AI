@@ -1,26 +1,22 @@
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import StudentHeader from '../../components/student/StudentHeader';
 
 /**
  * StudentLearningPathwayPage
- * Chỉ dùng để chọn mạch học tập (algebra hoặc geometry)
- * Sau khi chọn, navigate đến StudentTopicPage với pathway param
+ * Để chọn pathway học tập
+ * Sau khi chọn, navigate đến StudentTopicSelectionPage
  */
-const StudentLearningPathwayPage = ({ user, onSignOut }) => {
+const StudentLearningPathwayPage = ({ user, onSignOut, selectedClass }) => {
   const navigate = useNavigate();
-  const { mode } = useParams(); // 'exam' hoặc 'practice'
 
   const handlePathwaySelect = (pathway) => {
-    // Navigate to StudentTopicPage with the selected pathway
-    // pathway sẽ được lưu vào state để StudentTopicPage có thể sử dụng
-    navigate(`/student/topic-management/${pathway}/${mode}`, {
-      state: { learningPathway: pathway, mode }
-    });
+    // Navigate to topic selection page with pathway in URL path
+    navigate(`/student/${selectedClass?.id}/pathway/${pathway}`);
   };
 
   const handleBack = () => {
-    navigate('/student/dashboard');
+    navigate(`/student/${selectedClass?.id}`);
   };
 
   return (
@@ -43,7 +39,7 @@ const StudentLearningPathwayPage = ({ user, onSignOut }) => {
             <div className="text-center mb-16">
               <h1 className="text-5xl font-bold text-gray-800 mb-4 font-quicksand">Chọn Mạch Học Tập</h1>
               <p className="text-xl text-gray-600 font-quicksand">
-                {mode === 'exam' ? '🎓 Hãy chọn mạch học tập để bắt đầu thi' : '📝 Hãy chọn mạch học tập để luyện tập'}
+                🎓 Hãy chọn mạch học tập để bắt đầu khám phá các chủ đề
               </p>
             </div>
 

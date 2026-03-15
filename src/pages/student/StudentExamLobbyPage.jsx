@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import StudentHeader from '../../components/student/StudentHeader';
-import examSessionService from '../../services/examSessionService';
-import examService from '../../services/examService';
+import examSessionService from '../../services/faculty/examSessionService';
+import examService from '../../services/faculty/examService';
 
 /**
  * StudentExamLobbyPage

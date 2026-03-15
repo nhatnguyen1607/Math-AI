@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import * as worksheetService from '../../services/worksheetService';
+import * as worksheetService from '../../services/faculty/worksheetService';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 
 const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {

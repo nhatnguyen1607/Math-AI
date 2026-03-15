@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import classService from '../../services/classService';
+import classService from '../../services/faculty/classService';
 import facultyService from '../../services/faculty/facultyService';
 
 const ExamCard = ({ exam, onEdit, onDelete, onActivate, onStart, onViewResults, onViewLeaderboard }) => {

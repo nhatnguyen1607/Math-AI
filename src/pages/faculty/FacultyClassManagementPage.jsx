@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import classService from '../../services/classService';
+import classService from '../../services/faculty/classService';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 
 const FacultyClassManagementPage = ({ user, onSelectClass, onSignOut }) => {  

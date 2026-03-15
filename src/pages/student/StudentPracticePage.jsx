@@ -4,10 +4,10 @@ import StudentHeader from '../../components/student/StudentHeader';
 import PracticeChat from '../../components/PracticeChat';
 import RobotCompanion from '../../components/common/RobotCompanion';
 import MobileRobotAvatar from '../../components/common/MobileRobotAvatar';
-import geminiService from '../../services/geminiService';
-import { GeminiPracticeServiceTimeVelocity } from '../../services/geminiPracticeServiceTimeVelocity';
-import resultService from '../../services/resultService';
-import examService from '../../services/examService';
+import geminiService from '../../services/gemini/geminiService';
+import { GeminiPracticeServiceTimeVelocity } from '../../services/gemini/geminiPracticeServiceTimeVelocity';
+import resultService from '../../services/faculty/resultService';
+import examService from '../../services/faculty/examService';
 
 /**
  * StudentPracticePage

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import authService from '../../services/authService';
-import examSessionService from '../../services/examSessionService';
+import examSessionService from '../../services/faculty/examSessionService';
 import facultyService from '../../services/faculty/facultyService';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 

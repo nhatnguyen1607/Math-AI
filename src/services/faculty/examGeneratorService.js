@@ -1,4 +1,4 @@
-import geminiServiceInstance from './geminiService';
+import geminiServiceInstance from '../gemini/geminiService';
 // apiKeyManager no longer needed here (handled inside geminiModelManager)
 
 

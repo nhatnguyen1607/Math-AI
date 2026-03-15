@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import resultService from '../services/resultService';
-import geminiChatService from '../services/geminiChatService';
+import resultService from '../services/faculty/resultService';
+import geminiChatService from '../services/gemini/geminiChatService';
 // import geminiChatServiceTimeVelocity from '../services/geminiChatServiceTimeVelocity';
 import { chatServiceRouter } from '../services/serviceRouter';
 

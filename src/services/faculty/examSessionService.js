@@ -18,9 +18,9 @@ import {
   getDocs,
   orderBy,
   increment
-} from '../firebase';
+} from '../../firebase';
 
-import { ExamSession } from '../models/ExamSession';
+import { ExamSession } from '../../models/ExamSession';
 
 /**
  * ============================================================================

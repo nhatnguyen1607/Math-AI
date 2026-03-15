@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import authService from '../../services/authService';
 import facultyService from '../../services/faculty/facultyService';
-import examSessionService from '../../services/examSessionService';
+import examSessionService from '../../services/faculty/examSessionService';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 
 const FacultyExamLiveSessionPage = () => {

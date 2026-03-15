@@ -3,12 +3,12 @@
  * Educational Architect 2026
  */
 
-import { GeminiPracticeServiceTimeVelocity } from "./geminiPracticeServiceTimeVelocity";
-import { GeminiPracticeServiceTiSo } from "./geminiPracticeServiceTiSo";
-import { GeminiPracticeService } from "./geminiPracticeService";
+import { GeminiPracticeServiceTimeVelocity } from "./gemini/geminiPracticeServiceTimeVelocity";
+import { GeminiPracticeServiceTiSo } from "./gemini/geminiPracticeServiceTiSo";
+import { GeminiPracticeService } from "./gemini/geminiPracticeService";
 
-import { GeminiChatServiceTimeVelocity } from "./geminiChatServiceTimeVelocity";
-import { GeminiChatServiceTiSo } from "./geminiChatServiceTiSo";
+import { GeminiChatServiceTimeVelocity } from "./gemini/geminiChatServiceTimeVelocity";
+import { GeminiChatServiceTiSo } from "./gemini/geminiChatServiceTiSo";
 
 /**
  * Router cho Practice Service

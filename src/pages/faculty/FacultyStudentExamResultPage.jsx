@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import authService from '../../services/authService';
-import resultService from '../../services/resultService';
+import resultService from '../../services/faculty/resultService';
 import facultyService from '../../services/faculty/facultyService';
-import geminiService from '../../services/geminiService';
+import geminiService from '../../services/gemini/geminiService';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 import CompetencyEvaluationDisplay from '../../components/CompetencyEvaluationDisplay';
 

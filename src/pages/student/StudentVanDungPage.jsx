@@ -4,10 +4,10 @@ import StudentHeader from '../../components/student/StudentHeader';
 import PracticeChat from '../../components/PracticeChat';
 import RobotCompanion from '../../components/common/RobotCompanion';
 import MobileRobotAvatar from '../../components/common/MobileRobotAvatar';
-import geminiService from '../../services/geminiService';
+import geminiService from '../../services/gemini/geminiService';
 import { practiceServiceRouter } from '../../services/serviceRouter';
-import resultService from '../../services/resultService';
-import examService from '../../services/examService';
+import resultService from '../../services/faculty/resultService';
+import examService from '../../services/faculty/examService';
 
 /**
  * StudentVanDungPage

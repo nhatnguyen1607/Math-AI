@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import resultService from '../../services/resultService';
+import resultService from '../../services/faculty/resultService';
 import StudentHeader from '../../components/student/StudentHeader';
 
 const StudentExamSelectionPage = ({ 
@@ -98,13 +98,13 @@ const StudentExamSelectionPage = ({
                     <div className="grid grid-cols-3 gap-4 mb-6 pb-6 border-b-2 border-gray-200">
                       <div className="text-center">
                         <div className="text-3xl font-bold text-blue-600 font-quicksand">
-                          {exam.questions?.length || 0}
+                          {exam.totalQuestions || exam.exercises?.reduce((sum, e) => sum + e.questions.length, 0) || 0}
                         </div>
                         <div className="text-sm text-gray-600 font-quicksand">Câu hỏi</div>
                       </div>
                       <div className="text-center">
                         <div className="text-3xl font-bold text-green-600 font-quicksand">
-                          {exam.duration}
+                          7
                         </div>
                         <div className="text-sm text-gray-600 font-quicksand">phút</div>
                       </div>

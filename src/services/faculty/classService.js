@@ -16,7 +16,7 @@ import {
   arrayUnion,
   arrayRemove
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '../../firebase';
 
 class ClassService {
   /**

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import StudentHeader from '../../components/student/StudentHeader';
-import examSessionService from '../../services/examSessionService';
-import examService from '../../services/examService';
+import examSessionService from '../../services/faculty/examSessionService';
+import examService from '../../services/faculty/examService';
 import scoringService from '../../services/scoringService';
-import geminiService from '../../services/geminiService';
-import resultService from '../../services/resultService';
+import geminiService from '../../services/gemini/geminiService';
+import resultService from '../../services/faculty/resultService';
 
 /**
  * StudentExamPage

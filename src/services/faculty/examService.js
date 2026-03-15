@@ -10,7 +10,7 @@ import {
   query,
   where,
   getDocs
-} from '../firebase';
+} from '../../firebase';
 
 /**
  * Tạo một phiên thi mới (exam_sessions document)

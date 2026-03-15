@@ -10,8 +10,8 @@ import {
   where,
   orderBy
 } from "firebase/firestore";
-import { db } from "../firebase";
-import { Worksheet } from "../models";
+import { db } from "../../firebase";
+import { Worksheet } from "../../models";
 
 // Tạo phiếu bài tập mới
 export const createWorksheet = async (classId, userId, worksheetData) => {

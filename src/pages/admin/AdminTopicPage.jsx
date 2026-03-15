@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import topicService from '../../services/topicService';
+import topicService from '../../services/faculty/topicService';
 import TopicCard from '../../components/cards/TopicCard';
 import AdminHeader from '../../components/admin/AdminHeader';
-import { parseExamFile } from '../../services/fileParserService';
+import { parseExamFile } from '../../services/faculty/fileParserService';
 
 const AdminTopicPage = ({ onLogout }) => {
   const [topics, setTopics] = useState([]);

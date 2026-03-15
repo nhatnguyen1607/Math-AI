@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { COMPETENCY_CRITERIA, OVERALL_COMPETENCY_LEVELS } from '../services/competencyEvaluationService';
+import { COMPETENCY_CRITERIA, OVERALL_COMPETENCY_LEVELS } from '../services/gemini/competencyEvaluationService';
 
 const CompetencyEvaluationDisplay = ({ evaluation, showDetails = true }) => {
   if (!evaluation || !evaluation.TC1) {

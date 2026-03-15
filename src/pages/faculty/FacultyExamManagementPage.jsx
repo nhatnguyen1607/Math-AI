@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import authService from '../../services/authService';
 import facultyService from '../../services/faculty/facultyService';
-import examSessionService from '../../services/examSessionService';
-import classService from '../../services/classService';
-import topicService from '../../services/topicService';
+import examSessionService from '../../services/faculty/examSessionService';
+import classService from '../../services/faculty/classService';
+import topicService from '../../services/faculty/topicService';
 // import geminiService from '../../services/geminiService';
-import examGeneratorService from '../../services/examGeneratorService';
-import { parseExamFile } from '../../services/fileParserService';
+import examGeneratorService from '../../services/faculty/examGeneratorService';
+import { parseExamFile } from '../../services/faculty/fileParserService';
 import ExamCard from '../../components/cards/ExamCard';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 

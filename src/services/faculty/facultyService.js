@@ -362,7 +362,7 @@ class FacultyService {
   async startExam(examId, facultyId, classId) {
     try {
       // Import examSessionService để tạo hoặc lấy session
-      const { createExamSession, getActiveExamSession } = await import('../examSessionService');
+      const { createExamSession, getActiveExamSession } = await import('./examSessionService');
       
       // 🔧 KIỂM TRA: Có session active cho exam này chưa?
       const existingSessionId = await getActiveExamSession(examId);

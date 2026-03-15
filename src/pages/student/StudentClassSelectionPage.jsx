@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import classService from '../../services/classService';
+import classService from '../../services/faculty/classService';
 import StudentHeader from '../../components/student/StudentHeader';
 
 const StudentClassSelectionPage = ({ user, onSelectClass, onSignOut }) => {

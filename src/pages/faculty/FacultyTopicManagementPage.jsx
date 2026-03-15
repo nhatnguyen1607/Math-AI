@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import topicService from '../../services/topicService';
+import topicService from '../../services/faculty/topicService';
 import authService from '../../services/authService';
 import facultyService from '../../services/faculty/facultyService';
 import TopicCard from '../../components/cards/TopicCard';

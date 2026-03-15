@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import StudentHeader from '../../components/student/StudentHeader';
-import examSessionService from '../../services/examSessionService';
-import examService from '../../services/examService';
-import resultService from '../../services/resultService';
+import examSessionService from '../../services/faculty/examSessionService';
+import examService from '../../services/faculty/examService';
+import resultService from '../../services/faculty/resultService';
 
 /**
  * StudentExamResultPage

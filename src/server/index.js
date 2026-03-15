@@ -33,7 +33,15 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 // Xử lý riêng cho các yêu cầu OPTIONS từ trình duyệt
-app.options('*', cors(corsOptions));
+app.options(/(.*)/, cors(corsOptions));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Debug middleware
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`, 'Body:', req.body);
+  next();
+});
 
 /**
  * Load service account credentials từ file JSON

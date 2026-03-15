@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = parseInt(process.env.PORT) || 8080;
 const corsOptions = {
   origin: [
     'http://localhost:3000',
@@ -156,10 +156,7 @@ app.get('/health', (req, res) => {
  * Start server
  */
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n╔════════════════════════════════════════╗`);
-  console.log(`║  Vertex AI Backend Server              ║`);
-  console.log(`║  Running on port: ${PORT}                   ║`);
-  console.log(`╚════════════════════════════════════════╝\n`);
+  console.log(`Server is listening on 0.0.0.0:${PORT}`);
 });
 
 // Graceful shutdown

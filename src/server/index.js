@@ -11,9 +11,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = 3001;
-
-// Configure CORS to allow Vercel frontend
+const PORT = process.env.PORT || 3001;
 const corsOptions = {
   origin: [
     'http://localhost:3000',

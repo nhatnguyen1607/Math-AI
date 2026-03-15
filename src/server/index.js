@@ -13,7 +13,18 @@ const path = require('path');
 const app = express();
 const PORT = process.env.SERVER_PORT || 3001;
 
-app.use(cors());
+// Configure CORS to allow Vercel frontend
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'https://math-ai-vert.vercel.app',
+    process.env.FRONTEND_URL || 'https://math-ai-vert.vercel.app'
+  ],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 /**

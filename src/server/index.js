@@ -28,8 +28,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // Handle preflight requests
-app.options('*', cors(corsOptions));
-
+app.options(/(.*)/, cors(corsOptions));
 /**
  * Load service account credentials từ file JSON
  */
@@ -160,11 +159,10 @@ app.get('/health', (req, res) => {
 /**
  * Start server
  */
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n╔════════════════════════════════════════╗`);
   console.log(`║  Vertex AI Backend Server              ║`);
-  console.log(`║  Running on http://localhost:${PORT}        ║`);
-  console.log(`║  Endpoint: POST /api/vertexai-generate ║`);
+  console.log(`║  Running on port: ${PORT}                   ║`);
   console.log(`╚════════════════════════════════════════╝\n`);
 });
 

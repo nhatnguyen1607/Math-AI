@@ -415,7 +415,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
         {!joined && session.status === 'waiting' && (
           <div className="flex items-center gap-3 bg-yellow-400 text-white px-6 py-4 rounded-max shadow-lg mb-8 font-quicksand">
             <span className="text-2xl">⚠️</span>
-            <span>Chuẩn bị sẵn sàng: Bạn sẽ có {exam?.duration || 7} phút để hoàn thành bài thi.</span>
+            <span>Chuẩn bị sẵn sàng: Bạn sẽ có 7 phút để hoàn thành bài thi.</span>
           </div>
         )}
 
@@ -494,7 +494,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
             </li>
             <li className="flex items-start gap-3 text-gray-700 font-quicksand">
               <span className="text-3xl flex-shrink-0">✓</span>
-              <span className="text-lg">Quản lý thời gian hợp lý ({exam?.duration || 7} phút cho tất cả)</span>
+              <span className="text-lg">Quản lý thời gian hợp lý (7 phút cho tất cả)</span>
             </li>
           </ul>
         </div>

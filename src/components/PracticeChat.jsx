@@ -1,24 +1,25 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import resultService from '../services/resultService';
 import geminiChatService from '../services/geminiChatService';
-import geminiChatServiceTimeVelocity from '../services/geminiChatServiceTimeVelocity';
+// import geminiChatServiceTimeVelocity from '../services/geminiChatServiceTimeVelocity';
+import { chatServiceRouter } from '../services/serviceRouter';
 
 // Helper: check if topicName matches the Time/Velocity/Motion topic
 // Covers: "Số đo thời gian", "Vận tốc", "Chuyển động", "Quãng đường", "Tốc độ", etc.
-const isTimeVelocityTopic = (topicName) => {
-  if (!topicName) return false;
-  const lower = topicName.toLowerCase();
-  // Check if ANY keyword matches (OR logic, not AND)
-  return (
-    lower.includes('thời gian') || 
-    lower.includes('vận tốc') || 
-    lower.includes('chuyển động') || 
-    lower.includes('quãng đường') || 
-    lower.includes('tốc độ') ||
-    lower.includes('tốc độ chuyển động') ||
-    (lower.includes('số đo') && lower.includes('thời gian'))
-  );
-};
+// const isTimeVelocityTopic = (topicName) => {
+//   if (!topicName) return false;
+//   const lower = topicName.toLowerCase();
+//   // Check if ANY keyword matches (OR logic, not AND)
+//   return (
+//     lower.includes('thời gian') || 
+//     lower.includes('vận tốc') || 
+//     lower.includes('chuyển động') || 
+//     lower.includes('quãng đường') || 
+//     lower.includes('tốc độ') ||
+//     lower.includes('tốc độ chuyển động') ||
+//     (lower.includes('số đo') && lower.includes('thời gian'))
+//   );
+// };
 
 /**
  * PracticeChat Component
@@ -39,13 +40,20 @@ const PracticeChat = ({
   scrollContainerRef = null,
   topicName = ''
 }) => {
-  // Select the appropriate chat service based on topic
+  // Select the appropriate chat service based on topic using router
   const chatService = useMemo(() => {
-    const isTimeVelocity = isTimeVelocityTopic(topicName);
- 
-    if (isTimeVelocity) {
-      return geminiChatServiceTimeVelocity;
+    console.log('🔄 [PracticeChat] Selecting service for topic:', topicName);
+    
+    // 🆕 Use serviceRouter instead of hardcoded logic
+    const routerService = chatServiceRouter.getService(topicName);
+    
+    if (routerService) {
+      console.log('✅ [PracticeChat] → Using: Router service');
+      return routerService;
     }
+    
+    // Fallback to default if router returns null
+    console.log('✅ [PracticeChat] → Using: GeminiChatService (default fallback)');
     return geminiChatService;
   }, [topicName]);
   const [messages, setMessages] = useState(chatHistory);
@@ -53,7 +61,60 @@ const PracticeChat = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true); // Track initialization state
   const [error, setError] = useState(null);
+  const [isTTSEnabled, setIsTTSEnabled] = useState(false); // 🆕 Text-to-Speech toggle
   const messagesEndRef = useRef(null);
+
+  // 🆕 Hàm phát âm thanh AI response - with voice debugging
+  const speakMessage = useCallback((text) => {
+    if (!isTTSEnabled) return;
+    
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    
+    // Create utterance
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'vi-VN'; // Vietnamese
+    
+    // 🆕 Chọn giọng nói tiếng Việt - try multiple strategies
+    const voices = window.speechSynthesis.getVoices();
+    
+    // Strategy 1: tìm voice tiếng Việt exact
+    let vietnameseVoice = voices.find(v => 
+      v.lang && (v.lang === 'vi' || v.lang === 'vi-VN' || v.lang.startsWith('vi-'))
+    );
+    
+    // Strategy 2: tìm voice Google Tiếng Việt
+    if (!vietnameseVoice) {
+      vietnameseVoice = voices.find(v => v.name && (
+        v.name.toLowerCase().includes('vietnamese') || 
+        v.name.toLowerCase().includes('tiếng việt')
+      ));
+    }
+    
+    // Strategy 3: tìm voice có lang chứa 'vi'
+    if (!vietnameseVoice) {
+      vietnameseVoice = voices.find(v => v.lang && v.lang.toLowerCase().includes('vi'));
+    }
+    
+    // Debug: log available voices (once)
+    if (!window._voicesLogged && voices.length > 0) {
+      console.log('🎤 Available voices:', voices.map(v => `${v.name} (${v.lang})`));
+      window._voicesLogged = true;
+    }
+    
+    if (vietnameseVoice) {
+      utterance.voice = vietnameseVoice;
+      console.log('✅ Using Vietnamese voice:', vietnameseVoice.name);
+    } else {
+      console.warn('⚠️ No Vietnamese voice found. Available:', voices.length);
+    }
+    
+    utterance.rate = 0.85; // Slower for better comprehension
+    utterance.pitch = 0.95;
+    utterance.volume = 1;
+    
+    window.speechSynthesis.speak(utterance);
+  }, [isTTSEnabled]);
 
   // Helper function để lưu chat history vào đúng service
   const saveChatMessage = useCallback(async (message) => {
@@ -95,9 +156,13 @@ const PracticeChat = ({
     if (hasInitializedRef.current) return;
     if (!deBai || isCompleted) return;
 
+    console.log('📜 [PracticeChat] Effect triggered - initializing chat service');
+    console.log('🔧 [PracticeChat] ChatService type:', chatService?.constructor?.name);
+    console.log('🔧 [PracticeChat] ChatService has startNewProblem?', typeof chatService?.startNewProblem === 'function');
 
     // Nếu đã có chatHistory thì không khởi tạo lại, chỉ tiếp tục chat
     if (chatHistory && chatHistory.length > 0) {
+      console.log('📚 [PracticeChat] Restoring session with existing chat history');
       chatService.restoreSession(deBai, chatHistory);
       setIsInitializing(false);
       hasInitializedRef.current = true;
@@ -109,9 +174,11 @@ const PracticeChat = ({
       try {
         setIsInitializing(true);
         setError(null);
+        console.log('🚀 [PracticeChat] Calling startNewProblem on service:', chatService?.constructor?.name);
         // Truyền flag isApplicationProblem nếu đây là bài vận dụng
         const isApplicationProblem = baiNumber === 'vanDung';
         const response = await chatService.startNewProblem(deBai, isApplicationProblem);
+        console.log('✅ [PracticeChat] Got response from startNewProblem:', response?.message?.substring(0, 50) + '...');
 
         const aiMsg = {
           role: 'model',
@@ -198,6 +265,9 @@ const handleSendMessage = async (e) => {
 
     setMessages(prev => [...prev, aiMsg]);
     await saveChatMessage(aiMsg);
+
+    // 🆕 Phát âm thanh AI response nếu TTS được bật
+    speakMessage(aiMsg.parts[0].text);
 
     // Callback to notify parent about updates
       if (onChatUpdate) {
@@ -316,18 +386,44 @@ const handleSendMessage = async (e) => {
             </div>
           )}
           <div className="flex gap-2">
-            <input
-              type="text"
+            <textarea
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Nhập câu trả lời của em..."
+              onKeyDown={(e) => {
+                // Shift+Enter: xuống dòng | Enter: gửi tin nhắn
+                if (e.key === 'Enter') {
+                  if (e.shiftKey) {
+                    // Shift+Enter: xuống dòng (allow default)
+                    return;
+                  } else {
+                    // Enter: gửi tin nhắn
+                    e.preventDefault();
+                    handleSendMessage(e);
+                  }
+                }
+              }}
+              placeholder="Nhập câu trả lời của bạn... (Shift+Enter để xuống dòng, Enter để gửi)"
               disabled={isLoading || isInitializing || error?.includes('khởi tạo bài toán')}
-              className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-quicksand disabled:bg-gray-100"
+              className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-quicksand disabled:bg-gray-100 resize-none"
+              style={{ minHeight: '80px', maxHeight: '150px', lineHeight: '1.5' }}
             />
+            {/* 🆕 Speaker Button - TTS Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsTTSEnabled(!isTTSEnabled)}
+              className={`px-4 py-2 rounded-lg font-bold transition-all font-quicksand h-fit ${
+                isTTSEnabled
+                  ? 'bg-green-500 text-white hover:bg-green-600'
+                  : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+              }`}
+              title={isTTSEnabled ? 'Tắt giọng nói' : 'Bật giọng nói'}
+            >
+              {isTTSEnabled ? '🔊' : '🔇'}
+            </button>
             <button
               type="submit"
               disabled={isLoading || isInitializing || !inputValue.trim() || error?.includes('khởi tạo bài toán')}
-              className="px-6 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-quicksand"
+              className="px-6 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-quicksand h-fit"
             >
               {isLoading ? '⏳' : '➤'}
             </button>

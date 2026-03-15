@@ -671,10 +671,10 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
                               {['TC1', 'TC2', 'TC3', 'TC4'].map((tc) => {
                                 const tcData = evaluation[tc];
                                 const tcNames = {
-                                  'TC1': 'Nhận biết vấn đề',
-                                  'TC2': 'Nêu cách giải',
-                                  'TC3': 'Trình bày giải',
-                                  'TC4': 'Kiểm tra giải pháp'
+                                  'TC1': 'Nhận biết được vấn đề cần giải quyết',
+                                  'TC2': 'Nêu được cách thức giải quyết vấn đề',
+                                  'TC3': 'Trình bày được cách thức giải quyết vấn đề',
+                                  'TC4': 'Kiểm tra được giải pháp đã thực hiện'
                                 };
                                 
                                 // Color based on score (0-2 per TC)

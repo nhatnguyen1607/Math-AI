@@ -1,20 +1,26 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import apiKeyManager from "./apiKeyManager";
+// Sử dụng Vertex AI REST API từ browser
+// Không cần import Google Generative AI SDK vì giờ dùng REST API trực tiếp
 
-// Danh sách các model với thứ tự ưu tiên
+// Model names hỗ trợ trong Vertex AI
 const MODELS = [
-    {
-    name: "gemini-2.5-flash",
-    displayName: "Gemini 2.5 Flash Lite",
-    rpdLimit: 20,
-    type: "text"
-  },
   {
-    name: "gemini-2.5-flash-lite",
+    name: "gemini-2.5-flash",
     displayName: "Gemini 2.5 Flash",
     rpdLimit: 20,
     type: "text"
   },
+  {
+    name: "gemini-2.0-flash",
+    displayName: "Gemini 2.0 Flash",
+    rpdLimit: 20,
+    type: "text"
+  },
+  {
+    name: "gemini-1.5-pro",
+    displayName: "Gemini 1.5 Pro",
+    rpdLimit: 10,
+    type: "text"
+  }
 ];
 
 class GeminiModelManager {
@@ -22,6 +28,7 @@ class GeminiModelManager {
     this.currentModelIndex = 0;
     this.modelUsageCount = {}; // Theo dõi số lần sử dụng mỗi model trong ngày
     this.lastResetDate = new Date().toDateString();
+    this.vertexAIInstance = null;
     
     // Khởi tạo bộ đếm cho từng model
     MODELS.forEach(model => {
@@ -29,16 +36,116 @@ class GeminiModelManager {
     });
 
     // Queue promise used to serialize calls and avoid rate limit bursts
-    // Always resolved by default so first call proceeds immediately.
     this._queue = Promise.resolve();
+    
+    // Khởi tạo Vertex AI instance
+    this._initializeVertexAI();
   }
 
   /**
-   * Lấy instance GoogleGenerativeAI với API key hiện tại
+   * Khởi tạo Vertex AI instance với API key từ env
+   * Sử dụng Vertex AI REST API thay vì SDK vì SDK không tương thích với browser
    */
-  _getGeminiInstance() {
-    const apiKey = apiKeyManager.getCurrentKey();
-    return new GoogleGenerativeAI(apiKey);
+  _initializeVertexAI() {
+    try {
+      const apiKey = process.env.REACT_APP_VERTEX_AI_API_KEY;
+      const projectId = process.env.REACT_APP_GCP_PROJECT_ID;
+      const location = process.env.REACT_APP_GCP_LOCATION || 'us-central1';
+
+      console.log('🔍 Vertex AI Init - API Key exists:', !!apiKey);
+      console.log('🔍 Vertex AI Init - Project ID:', projectId);
+      console.log('🔍 Vertex AI Init - Location:', location);
+      console.log('🔍 All env vars:', Object.keys(process.env).filter(k => k.includes('VERTEX') || k.includes('GCP')));
+
+      if (!apiKey || !projectId) {
+        console.warn('❌ Vertex AI credentials not fully configured.');
+        console.warn('   - API Key present:', !!apiKey);
+        console.warn('   - Project ID present:', !!projectId);
+        return;
+      }
+
+      this.vertexAIInstance = {
+        apiKey,
+        projectId,
+        location,
+        isVertexAI: true
+      };
+      
+      console.log('✅ Vertex AI initialized successfully');
+    } catch (error) {
+      console.error('❌ Failed to initialize Vertex AI:', error);
+    }
+  }
+
+  /**
+   * Lấy Vertex AI instance hoặc khởi tạo lại nếu cần
+   */
+  _getVertexAIInstance() {
+    if (!this.vertexAIInstance) {
+      this._initializeVertexAI();
+    }
+    return this.vertexAIInstance;
+  }
+
+  /**
+   * Gọi Backend API (sử dụng Vertex AI service account credentials)
+   * Endpoint có thể là local (http://localhost:3001) hoặc production (Vercel)
+   */
+  async _callVertexAIAPI(modelName, prompt) {
+    // Get API endpoint - local dev hoặc production
+    const apiEndpoint = process.env.REACT_APP_BACKEND_API_URL || 'http://localhost:3001';
+    
+    const requestBody = {
+      modelName: modelName,
+      prompt: prompt,
+      maxOutputTokens: 16384
+    };
+
+    console.log(`📤 Calling Backend API - Model: ${modelName}, Endpoint: ${apiEndpoint}`);
+
+    try {
+      const response = await fetch(`${apiEndpoint}/api/vertexai-generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const error = new Error(
+          errorData.error || `API Error: ${response.status}`
+        );
+        error.status = response.status;
+        throw error;
+      }
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'API returned error');
+      }
+
+      const content = data.content || '';
+      const finishReason = data.finishReason;
+      const usage = data.usage;
+
+      console.log(`✅ Response - Length: ${content.length}, finishReason: ${finishReason}, tokens: ${usage?.totalTokenCount}/${usage?.promptTokenCount}+${usage?.candidatesTokenCount}`);
+      if (finishReason !== 'STOP') {
+        console.warn(`⚠️ Response may be incomplete. Finish reason: ${finishReason}`);
+      }
+
+      return {
+        response: {
+          text: () => content
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ Backend API Error:', error.message);
+      throw error;
+    }
   }
 
   // Reset bộ đếm nếu sang ngày mới
@@ -54,6 +161,7 @@ class GeminiModelManager {
   }
 
   // Lấy model hiện tại (có kiểm tra RPD limit)
+  // Trả về một object giả lập interface của GenerativeModel từ Google AI SDK
   getModel() {
     this._checkAndResetDailyCount();
     
@@ -64,12 +172,29 @@ class GeminiModelManager {
       
       if (usageCount < model.rpdLimit) {
         this.currentModelIndex = i;
-        return this._getGeminiInstance().getGenerativeModel({ model: model.name });
+        // Trả về wrapped model interface
+        return this._wrapModelInterface(model.name);
       }
     }
     
     // Nếu tất cả model đã vượt limit, dùng model đầu tiên (sẽ nhận lỗi từ API)
-    return this._getGeminiInstance().getGenerativeModel({ model: MODELS[0].name });
+    return this._wrapModelInterface(MODELS[0].name);
+  }
+
+  /**
+   * Tạo wrapper interface tương thích với GenerativeModel
+   */
+  _wrapModelInterface(modelName) {
+    const manager = this;
+    return {
+      async generateContent(prompt) {
+        // Nếu là string, chuyển đổi thành format tương thích
+        const processedPrompt = typeof prompt === 'string' ? prompt : 
+          (prompt.parts ? prompt.parts.map(p => p.text).join('') : JSON.stringify(prompt));
+        
+        return manager._callVertexAIAPI(modelName, processedPrompt);
+      }
+    };
   }
 
   // Tăng bộ đếm khi sử dụng model
@@ -91,7 +216,7 @@ class GeminiModelManager {
       
       if (usageCount < model.rpdLimit) {
         this.currentModelIndex = i;
-        return this._getGeminiInstance().getGenerativeModel({ model: model.name });
+        return this._wrapModelInterface(model.name);
       }
     }
     
@@ -102,7 +227,7 @@ class GeminiModelManager {
       
       if (usageCount < model.rpdLimit) {
         this.currentModelIndex = i;
-        return this._getGeminiInstance().getGenerativeModel({ model: model.name });
+        return this._wrapModelInterface(model.name);
       }
     }
     
@@ -120,123 +245,73 @@ class GeminiModelManager {
         limit: model.rpdLimit,
         available: this.modelUsageCount[model.name] < model.rpdLimit
       })),
-      apiKeys: apiKeyManager.getUsageStats(),
-      totalRequests: apiKeyManager.totalRequests,
-      availableKeys: apiKeyManager.getAvailableKeyCount(),
-      totalKeys: apiKeyManager.keyConfigs.length
+      projectId: process.env.REACT_APP_GCP_PROJECT_ID,
+      location: process.env.REACT_APP_GCP_LOCATION || 'us-central1',
+      isVertexAI: true
     };
   }
 
   // Gọi model với tự động fallback nếu hết RPD
-  // Logic: Thử tất cả models trước, chỉ đổi key khi tất cả models đã hết quota
-  // Hỗ trợ hàng đợi để tránh gửi nhiều request cùng lúc (đã gây lỗi 429)
   async generateContent(prompt) {
     // ---------- queueing/throttling logic ----------
-    // Wait for any previous request to complete (including post-delay)
     await this._queue;
 
-    // Prepare a new queue promise that will be resolved after this call finishes
     let resolveQueue;
     const queuePromise = new Promise(res => {
       resolveQueue = res;
     });
-    // set _queue to the new placeholder so calls coming after will await it
     this._queue = queuePromise;
 
     try {
       // Add a small inter-request delay to avoid burst limit
       await this._delay(500);
 
-      // ---------- original generateContent body ----------
+      // ---------- Vertex AI generateContent body ----------
       let lastError = null;
-      let maxKeyAttempts = apiKeyManager.keyConfigs.length; // Số key khả dụng
-      let keyAttempts = 0;
 
-      while (keyAttempts < maxKeyAttempts) {
-        const modelsNotAvailableForThisKey = new Set(); // Track models hết quota/404 với key hiện tại
-        let modelAttempts = 0;
-
-        // Thử các model theo thứ tự ưu tiên với key hiện tại
-        for (let i = 0; i < MODELS.length; i++) {
-          const model = MODELS[i];
-          
-          // Bỏ qua model đã vượt limit (toàn cục) hoặc đã không khả dụng với key này
-          if (this.modelUsageCount[model.name] >= model.rpdLimit || 
-              modelsNotAvailableForThisKey.has(model.name)) {
-            continue;
-          }
-
-          modelAttempts++;
-          
-          try {
-            const geminiInstance = this._getGeminiInstance();
-            const currentModel = geminiInstance.getGenerativeModel({ model: model.name });
-            const result = await currentModel.generateContent(prompt);
-            
-            // Tăng bộ đếm khi thành công
-            this.modelUsageCount[model.name]++;
-            apiKeyManager.incrementRequestCount();
-            this.currentModelIndex = i;
-            
-            return result;
-            
-          } catch (error) {
-            lastError = error;
-            
-            // Kiểm tra loại lỗi
-            const isQuotaError = error.message?.includes("Rate limit") || 
-                                  error.message?.includes("quota") ||
-                                  error.message?.includes("429") ||
-                                  error.status === 429;
-            
-            const isNotFoundError = error.message?.includes("404") || 
-                                     error.message?.includes("not found") ||
-                                     error.status === 404;
-            
-            // Cả quota error lẫn not found error đều đánh dấu model không khả dụng
-            if (isQuotaError) {
-              modelsNotAvailableForThisKey.add(model.name);
-            } else if (isNotFoundError) {
-              modelsNotAvailableForThisKey.add(model.name);
-            }
-            // Các lỗi khác không đánh dấu, chỉ bỏ qua model này lần này
-          }
+      // Thử các model theo thứ tự ưu tiên
+      for (let i = 0; i < MODELS.length; i++) {
+        const model = MODELS[i];
+        
+        // Bỏ qua model đã vượt limit
+        if (this.modelUsageCount[model.name] >= model.rpdLimit) {
+          continue;
         }
-
-        // Kiểm tra nếu tất cả models đã không khả dụng với key hiện tại
-        const allModelsUnavailableOrOverLimit = MODELS.every(model => 
-          this.modelUsageCount[model.name] >= model.rpdLimit || 
-          modelsNotAvailableForThisKey.has(model.name)
-        );
-
-        if (allModelsUnavailableOrOverLimit) {
-          apiKeyManager.markKeyAsExhausted(lastError);
+        
+        try {
+          const result = await this._callVertexAIAPI(model.name, prompt);
           
-          // Thử rotate sang key khác
-          if (apiKeyManager.rotateToNextKey()) {
-            keyAttempts++;
-          } else {
-            break;
-          }
-        } else if (modelAttempts === 0) {
-          // Không thử được model nào (tất cả vượt limit hoặc hết quota)
-          break;
-        } else {
-          apiKeyManager.markKeyAsExhausted(lastError);
+          // Tăng bộ đếm khi thành công
+          this.modelUsageCount[model.name]++;
+          this.currentModelIndex = i;
           
-          if (apiKeyManager.rotateToNextKey()) {
-            keyAttempts++;
-            
-            // Chờ một chút trước khi retry
-            await new Promise(resolve => setTimeout(resolve, 500));
-          } else {
-            break;
+          return result;
+          
+        } catch (error) {
+          lastError = error;
+          
+          // Log lỗi để debug
+          console.error(`Error with model ${model.name}:`, error.message);
+          
+          // Kiểm tra loại lỗi
+          const isQuotaError = error.message?.includes("Rate limit") || 
+                                error.message?.includes("quota") ||
+                                error.message?.includes("429") ||
+                                error.status === 429;
+          
+          const isNotFoundError = error.message?.includes("404") || 
+                                   error.message?.includes("not found") ||
+                                   error.status === 404;
+          
+          if (isQuotaError || isNotFoundError) {
+            // Đánh dấu model này đã vượt hạn cho ngày hôm nay
+            this.modelUsageCount[model.name] = model.rpdLimit;
           }
         }
       }
-      
-      const availableKeys = apiKeyManager.getAvailableKeyCount();
-      throw new Error(`Tất cả API keys đã hết quota hoặc bị lỗi. Keys available: ${availableKeys}/${apiKeyManager.keyConfigs.length}. Last error: ${lastError?.message}`);
+
+      // Nếu tất cả models đã không khả dụng
+      throw new Error(`Tất cả Vertex AI models đã hết quota hoặc bị lỗi. Last error: ${lastError?.message}`);
 
     } finally {
       // resolve the queue after a short delay to maintain spacing
@@ -249,18 +324,12 @@ class GeminiModelManager {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // Lấy log rotation API key
-  getKeyRotationLog() {
-    return apiKeyManager.getRotationLog();
-  }
-
   // Reset usage (dùng cho testing)
   resetUsage() {
     MODELS.forEach(model => {
       this.modelUsageCount[model.name] = 0;
     });
     this.currentModelIndex = 0;
-    apiKeyManager.reset();
   }
 }
 

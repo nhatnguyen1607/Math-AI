@@ -533,16 +533,30 @@ Nếu bài chỉ có Bước 1, 2, 3 mà thiếu Bước 4:
 
       // call through geminiService wrapper which itself queues the requests and handles retries
       const result = await geminiServiceInstance._practiceService._rateLimitedGenerate(prompt);
-      const responseText = result ? result.response.text() : '';
+      let responseText = result ? result.response.text() : '';
 
-      // Parse JSON từ response
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
+      // Strip markdown code blocks (```json ... ```)
+      responseText = responseText.replace(/```[\w]*\n?/g, '').trim();
+
+      // Find JSON object - look for first { and last }
+      const firstBrace = responseText.indexOf('{');
+      const lastBrace = responseText.lastIndexOf('}');
+      
+      console.log('🔍 JSON Search - firstBrace:', firstBrace, 'lastBrace:', lastBrace, 'textLength:', responseText.length);
+      
+      if (firstBrace === -1 || lastBrace === -1 || firstBrace >= lastBrace) {
+        console.error('❌ JSON extraction failed.');
+        console.error('   Response length:', responseText.length);
+        console.error('   First 300 chars:', responseText.substring(0, 300));
+        console.error('   Last 300 chars:', responseText.substring(Math.max(0, responseText.length - 300)));
         throw new Error('Không thể phân tích đáp án từ AI');
       }
 
+      const jsonStr = responseText.substring(firstBrace, lastBrace + 1);
+      console.log('✅ JSON extracted, length:', jsonStr.length);
+
       // Sanitize JSON string to remove control characters
-      const sanitizedJson = this._sanitizeJsonString(jsonMatch[0]);
+      const sanitizedJson = this._sanitizeJsonString(jsonStr);
       const generatedExam = JSON.parse(sanitizedJson);
       return {
         success: true,

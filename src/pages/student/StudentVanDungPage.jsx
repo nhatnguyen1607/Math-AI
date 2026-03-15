@@ -5,7 +5,7 @@ import PracticeChat from '../../components/PracticeChat';
 import RobotCompanion from '../../components/common/RobotCompanion';
 import MobileRobotAvatar from '../../components/common/MobileRobotAvatar';
 import geminiService from '../../services/geminiService';
-import { GeminiPracticeServiceTimeVelocity } from '../../services/geminiPracticeServiceTimeVelocity';
+import { practiceServiceRouter } from '../../services/serviceRouter';
 import resultService from '../../services/resultService';
 import examService from '../../services/examService';
 
@@ -124,24 +124,10 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
         // Gọi Gemini để tạo bài toán vận dụng được cá nhân hóa
         console.log('🔵 [StudentVanDungPage] Generating new VanDung');
         
-        // Check if topic is Time/Velocity/Motion related
-        const lower = examTitle.toLowerCase();
-        const isTimeVelocity = (
-          lower.includes('thời gian') || 
-          lower.includes('vận tốc') || 
-          lower.includes('chuyển động') || 
-          lower.includes('quãng đường') || 
-          lower.includes('tốc độ') ||
-          (lower.includes('số đo') && lower.includes('thời gian'))
-        );
-        console.log('🔵 [StudentVanDungPage] isTimeVelocity:', isTimeVelocity);
+        // 🆕 Sử dụng router để auto-detect topic
+        const gService = practiceServiceRouter.getService(exam.title || 'Bài toán');
+        console.log('🔵 [StudentVanDungPage] Using service for topic:', exam.title);
         
-        let gService;
-        if (isTimeVelocity) {
-          gService = new GeminiPracticeServiceTimeVelocity();
-        } else {
-          gService = new geminiService.constructor();
-        }
         let applicationProblem;
         
         try {
@@ -343,6 +329,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
 
               {/* SCROLLABLE CHAT */}
               <div className="flex-1">
+                {console.log('📖 [StudentVanDungPage] Creating PracticeChat with topicName:', vanDungData.examTitle || examTitle)}
                 <PracticeChat
                   userId={user?.uid}
                   examId={examId}

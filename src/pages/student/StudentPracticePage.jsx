@@ -364,6 +364,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
 
               {/* SCROLLABLE CHAT */}
               <div className="flex-1">
+                {console.log('📖 [StudentPracticePage] Creating PracticeChat with topicName:', practiceData?.topicName || topicName)}
                 <PracticeChat
                   userId={user?.uid}
                   examId={examId}

@@ -24,6 +24,8 @@ import FacultyExamLobbyPage from './pages/faculty/FacultyExamLobbyPage';
 import FacultyExamLiveSessionPage from './pages/faculty/FacultyExamLiveSessionPage';
 import FacultyExamResultsListPage from './pages/faculty/FacultyExamResultsListPage';
 import FacultyStudentExamResultPage from './pages/faculty/FacultyStudentExamResultPage';
+import FacultyWorksheetEditorPage from './pages/faculty/FacultyWorksheetEditorPage';
+import FacultyWorksheetManagementPage from './pages/faculty/FacultyWorksheetManagementPage';
 import TestRobotPage from './pages/TestRobotPage';
 
 function App() {
@@ -167,6 +169,8 @@ function App() {
         <Route path="/faculty/exam-live/:sessionId" element={userData && userData.isFaculty() ? <FacultyExamLiveSessionPage user={user} userData={userData} onSignOut={handleSignOut} /> : user ? <Navigate to="/student" replace /> : <Navigate to="/login" replace />} />
         <Route path="/faculty/exam-results/:examId" element={userData && userData.isFaculty() ? <FacultyExamResultsListPage user={user} userData={userData} onSignOut={handleSignOut} /> : user ? <Navigate to="/student" replace /> : <Navigate to="/login" replace />} />
         <Route path="/faculty/student-exam-result/:examId/:userId" element={userData && userData.isFaculty() ? <FacultyStudentExamResultPage user={user} userData={userData} onSignOut={handleSignOut} /> : user ? <Navigate to="/student" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/faculty/worksheet/management" element={userData && userData.isFaculty() ? <FacultyWorksheetManagementPage user={user} onSignOut={handleSignOut} /> : user ? <Navigate to="/student" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/faculty/worksheet/editor" element={userData && userData.isFaculty() ? <FacultyWorksheetEditorPage user={user} onSignOut={handleSignOut} /> : user ? <Navigate to="/student" replace /> : <Navigate to="/login" replace />} />
         
         {/* Student routes */}
         <Route path="/student" element={user && (!userData || !userData.isFaculty()) ? <StudentDashboardPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />

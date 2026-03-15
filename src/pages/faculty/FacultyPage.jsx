@@ -6,7 +6,6 @@ import FacultyHeader from '../../components/faculty/FacultyHeader';
 const FacultyPage = ({ user, userData, onSignOut }) => {
   const [loading, setLoading] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
-  const [showDevNotice, setShowDevNotice] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,8 +31,7 @@ const FacultyPage = ({ user, userData, onSignOut }) => {
   };
 
   const handleWorksheetClick = () => {
-    setShowDevNotice(true);
-    setTimeout(() => setShowDevNotice(false), 3000);
+    handleNavigate('/faculty/worksheet/management');
   };
 
   // Early return if loading
@@ -137,17 +135,6 @@ const FacultyPage = ({ user, userData, onSignOut }) => {
           </div>
         </div>
       </div>
-
-      {/* Development Notice Modal */}
-      {showDevNotice && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl animate-pulse">
-            <div className="text-6xl mb-4">🚧</div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">Nội dung đang phát triển</h3>
-            <p className="text-gray-600">Tính năng này sẽ sớm được cập nhật. Vui lòng quay lại sau!</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

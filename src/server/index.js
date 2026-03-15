@@ -25,8 +25,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Handle preflight requests
-app.options(/(.*)/, cors(corsOptions));
 /**
  * Load service account credentials từ file JSON
  */

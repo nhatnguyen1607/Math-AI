@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as worksheetService from '../../services/worksheetService';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
@@ -14,18 +14,7 @@ const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {
   const [loading, setLoading] = useState(true);
   const [showTypeSelector, setShowTypeSelector] = useState(!worksheetType);
 
-  useEffect(() => {
-    if (!classId) {
-      navigate('/faculty', { replace: true });
-      return;
-    }
-
-    if (worksheetType) {
-      loadWorksheets();
-    }
-  }, [classId, worksheetType]);
-
-  const loadWorksheets = async () => {
+  const loadWorksheets = useCallback(async () => {
     try {
       setLoading(true);
       const data = await worksheetService.getWorksheetsByClassAndType(classId, worksheetType);
@@ -36,7 +25,18 @@ const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [classId, worksheetType]);
+
+  useEffect(() => {
+    if (!classId) {
+      navigate('/faculty', { replace: true });
+      return;
+    }
+
+    if (worksheetType) {
+      loadWorksheets();
+    }
+  }, [classId, worksheetType, loadWorksheets, navigate]);
 
   const handleSelectType = (type) => {
     setShowTypeSelector(false);
@@ -223,7 +223,7 @@ const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {
                       {worksheet.name}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      Tạo ngày: {new Date(worksheet.createdAt).toLocaleDateString('vi-VN')}
+                      Tạo ngày: {worksheet.createdAt?.toDate?.() ? new Date(worksheet.createdAt.toDate()).toLocaleDateString('vi-VN') : new Date(worksheet.createdAt).toLocaleDateString('vi-VN')}
                     </p>
                   </div>
 

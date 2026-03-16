@@ -2,7 +2,7 @@
  * geminiService.js - FACADE
  * 
  * File nay da duoc tach thanh 3 file nho hon de de quan ly:
- * - geminiChatService.js: Tuong tac AI chat (Polya method)
+ * - geminiChatServiceSoThapPhan.js: Tuong tac AI chat (Polya method) cho So thap phan
  * - geminiFeedbackService.js: Danh gia va nhan xet
  * - geminiPracticeService.js: Tao bai luyen tap va van dung
  * 
@@ -10,12 +10,12 @@
  */
 
 // Import tu cac service da tach
-import { GeminiChatService } from "./geminiChatService";
+import { GeminiChatServiceSoThapPhan } from "./geminiChatServiceSoThapPhan";
 import { GeminiFeedbackService } from "./geminiFeedbackService";
 import { GeminiPracticeService } from "./geminiPracticeService";
 
 // Re-export cac class
-export { GeminiChatService, GeminiFeedbackService, GeminiPracticeService };
+export { GeminiChatServiceSoThapPhan, GeminiFeedbackService, GeminiPracticeService };
 
 /**
  * GeminiService - Facade class
@@ -24,7 +24,7 @@ export { GeminiChatService, GeminiFeedbackService, GeminiPracticeService };
 export class GeminiService {
   constructor() {
     // Delegate to actual services
-    this._chatService = new GeminiChatService();
+    this._chatService = new GeminiChatServiceSoThapPhan();
     this._feedbackService = new GeminiFeedbackService();
     this._practiceService = new GeminiPracticeService();
   }

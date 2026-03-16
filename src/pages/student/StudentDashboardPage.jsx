@@ -21,7 +21,6 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
   const [selectedClass, setSelectedClass] = useState(null);
   const [showClassSelector, setShowClassSelector] = useState(false);
   const [studentClasses, setStudentClasses] = useState([]);
-  const [showDevNotice, setShowDevNotice] = useState(false);
 
   // Determine current view from URL path
   const currentView = location.includes("/pathways")
@@ -61,14 +60,7 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
           studentService.getAvailableExams(selectedClass?.id, "startup"),
         ]);
         setTopics(topicsData || []);
-        console.log("Toàn bộ exams lấy về:", examsData);
-        // LỌC BỎ CÁC BÀI THI DRAFT Ở ĐÂY 👇
         const validExams = (examsData || []).filter((exam) => {
-          // Log từng bài thi ra để kiểm tra status
-          console.log(`Bài thi: ${exam.title} - Trạng thái:`, exam.status);
-
-          // Chuyển status về chữ thường rồi mới so sánh (phòng trường hợp 'Draft' hoặc 'DRAFT')
-          // Và kiểm tra xem exam có property status không
           return exam?.status?.toLowerCase() !== "draft";
         });
         setExams(validExams);
@@ -143,9 +135,8 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
   }, [navigate, selectedClass?.id]);
 
   const handleWorksheetClick = useCallback(() => {
-    setShowDevNotice(true);
-    setTimeout(() => setShowDevNotice(false), 3000);
-  }, []);
+    navigate(`/student/${selectedClass?.id}/worksheets`);
+  }, [navigate, selectedClass?.id]);
 
   // Removed unused handleJoinExam function
 
@@ -394,21 +385,6 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
             </div>
           </div>
         </div>
-
-        {/* Development Notice Modal */}
-        {showDevNotice && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl animate-bounce-gentle">
-              <div className="text-6xl mb-4">🚧</div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-2 font-quicksand">
-                Nội dung đang phát triển
-              </h3>
-              <p className="text-gray-600 font-quicksand">
-                Tính năng này sẽ sớm được cập nhật. Vui lòng quay lại sau!
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -439,21 +415,6 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
           </div>
         </div>
       </div>
-
-      {/* Development Notice Modal */}
-      {showDevNotice && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl animate-bounce-gentle">
-            <div className="text-6xl mb-4">🚧</div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2 font-quicksand">
-              Nội dung đang phát triển
-            </h3>
-            <p className="text-gray-600 font-quicksand">
-              Tính năng này sẽ sớm được cập nhật. Vui lòng quay lại sau!
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import resultService from '../services/faculty/resultService';
-import geminiChatService from '../services/gemini/geminiChatService';
+import geminiChatServiceSoThapPhan from '../services/gemini/geminiChatServiceSoThapPhan';
 // import geminiChatServiceTimeVelocity from '../services/geminiChatServiceTimeVelocity';
 import { chatServiceRouter } from '../services/serviceRouter';
 
@@ -51,7 +51,7 @@ const PracticeChat = ({
     }
     
     // Fallback to default if router returns null
-    return geminiChatService;
+    return geminiChatServiceSoThapPhan;
   }, [topicName]);
   const [messages, setMessages] = useState(chatHistory);
   const [inputValue, setInputValue] = useState('');

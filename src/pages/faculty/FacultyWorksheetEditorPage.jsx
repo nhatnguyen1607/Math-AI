@@ -32,7 +32,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
 
   // Bài 4
   const [bai4Questions, setBai4Questions] = useState([]);
-  const [, setExpandedBai4] = useState(null);
   const [bai4Explanation, setBai4Explanation] = useState('');
 
   // Load worksheet data
@@ -618,7 +617,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                         <button
                           onClick={() => {
                             updateBai4Question(q.id, 'type', 'so_cach_giai');
-                            setExpandedBai4(q.id);
                           }}
                           className="flex-1 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold rounded-lg transition-all duration-300"
                         >
@@ -627,7 +625,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                         <button
                           onClick={() => {
                             updateBai4Question(q.id, 'type', 'cau_hoi_nho');
-                            setExpandedBai4(q.id);
                           }}
                           className="flex-1 px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 font-semibold rounded-lg transition-all duration-300"
                         >

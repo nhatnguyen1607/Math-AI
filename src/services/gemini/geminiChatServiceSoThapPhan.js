@@ -1,10 +1,10 @@
 import geminiModelManager from "./geminiModelManager";
 
 /**
- * GeminiChatService - Phiên bản Đa chủ đề Polya 4 Bước 2026
- * Tích hợp chi tiết lỗi: Số thập phân, Tỉ số, Tỉ lệ bản đồ, Tổng/Hiệu-Tỉ.
+ * GeminiChatServiceSoThapPhan - Phiên bản Polya 4 Bước 2026
+ * Chuyên dụng cho chủ đề Số thập phân (cộng, trừ, nhân, chia)
  */
-export class GeminiChatService {
+export class GeminiChatServiceSoThapPhan {
   constructor() {
     this.currentProblem = "";
     this.currentStep = 1;
@@ -337,17 +337,34 @@ HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
         
         // Extract số từ bài toán để tạo câu hỏi cụ thể
         if (this.currentProblem && this.currentProblem.trim()) {
-          const numberMatches = this.currentProblem.match(/[\d,.]+/g);
-          if (numberMatches && Array.isArray(numberMatches) && numberMatches.length > 1) {
+          const numberMatches = this.currentProblem.match(/\d+(?:[,.]\d+)?/g);
+          // Lọc chỉ những số hợp lệ (không phải NaN)
+          const validNumbers = numberMatches 
+            ? numberMatches.filter(num => {
+                const parsed = parseFloat(num.replace(',', '.'));
+                return !isNaN(parsed) && num.length > 0;
+              })
+            : [];
+          
+          if (validNumbers && validNumbers.length > 0) {
             // Chọn ngẫu nhiên 1 số từ bài toán
-            const randomNumber = numberMatches[Math.floor(Math.random() * numberMatches.length)];
-            // Tạo số mới (thêm 5 hoặc thêm 10%)
+            const randomNumber = validNumbers[Math.floor(Math.random() * validNumbers.length)];
+            // Tạo số mới (thêm 5)
             const numValue = parseFloat(randomNumber.replace(',', '.'));
-            const newNumber = (numValue + 5).toFixed(2).replace('.', ',');
-            data.next_question = 
-              `Bạn hãy kiểm tra lại kết quả của bạn nhé. Bạn hãy suy nghĩ xem: nếu thay đổi ${randomNumber} thành ${newNumber}, kết quả sẽ là bao nhiêu?`;
+            
+            // Double-check không phải NaN
+            if (!isNaN(numValue)) {
+              const newValue = numValue + 5;
+              const newNumber = newValue.toFixed(2).replace('.', ',');
+              data.next_question = 
+                `Bạn hãy kiểm tra lại kết quả của bạn nhé. Bạn hãy suy nghĩ xem: nếu thay đổi ${randomNumber} thành ${newNumber}, kết quả sẽ là bao nhiêu?`;
+            } else {
+              // Fallback nếu parse fail
+              data.next_question =
+                "Bạn hãy kiểm tra lại kết quả của bạn nhé. Bạn hãy suy nghĩ xem: nếu thay đổi một trong các số liệu ban đầu thì kết quả sẽ thay đổi như thế nào?";
+            }
           } else {
-            // Fallback nếu không extract được đủ số
+            // Fallback nếu không extract được số
             data.next_question =
               "Bạn hãy kiểm tra lại kết quả của bạn nhé. Bạn hãy suy nghĩ xem: nếu thay đổi một trong các số liệu ban đầu thì kết quả sẽ thay đổi như thế nào?";
           }
@@ -365,8 +382,15 @@ HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
           studentAnswer
         );
         
-        // Nếu học sinh xác nhận kiểm tra xong → MOVE_NEXT để kết thúc
-        if (hasConfirmedCorrect && data.status === "CORRECT") {
+        // Normalize status để so sánh case-insensitive
+        const isStatusCorrect = data.status && data.status.toLowerCase() === "correct";
+        
+        // 🔴 KIỂM TRA: Nếu câu trả lời chứa "trình bày lời giải" → CÓ LẼ AI NHẦM bước 2 vào bước 4
+        // Hoặc nếu học sinh đã xác nhận chính xác → KẾT THÚC NGAY
+        const containsPresentSolution = /trình bày|nêu.*lời giải/i.test(data.next_question);
+        
+        if ((hasConfirmedCorrect && isStatusCorrect) || hasConfirmedCorrect || containsPresentSolution) {
+          // Nếu phát hiện bất kỳ dấu hiệu hoàn thành → KẾT THÚC PHIÊN
           data.step_status = "MOVE_NEXT";
           data.feedback = 
             "🎉 Xuất sắc! Bạn đã hoàn thành bài toán theo đầy đủ 4 bước của Polya rồi đó!";
@@ -434,5 +458,5 @@ HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
   }
 }
 
-const geminiChatServiceInstance = new GeminiChatService();
-export default geminiChatServiceInstance;
+const geminiChatServiceSoThapPhanInstance = new GeminiChatServiceSoThapPhan();
+export default geminiChatServiceSoThapPhanInstance;

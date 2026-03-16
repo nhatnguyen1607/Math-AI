@@ -5,10 +5,12 @@
 
 import { GeminiPracticeServiceTimeVelocity } from "./gemini/geminiPracticeServiceTimeVelocity";
 import { GeminiPracticeServiceTiSo } from "./gemini/geminiPracticeServiceTiSo";
+import { GeminiPracticeServiceSoThapPhan } from "./gemini/geminiPracticeServiceSoThapPhan";
 import { GeminiPracticeService } from "./gemini/geminiPracticeService";
 
 import { GeminiChatServiceTimeVelocity } from "./gemini/geminiChatServiceTimeVelocity";
 import { GeminiChatServiceTiSo } from "./gemini/geminiChatServiceTiSo";
+import { GeminiChatServiceSoThapPhan } from "./gemini/geminiChatServiceSoThapPhan";
 
 /**
  * Router cho Practice Service
@@ -35,6 +37,15 @@ export class PracticeServiceRouter {
         topic.includes('so sánh tỉ')) {
       return 'ti-so';
     }
+
+    // Topics liên quan Số thập phân
+    if (topic.includes('số thập phân') || topic.includes('thập phân') || 
+        topic.includes('decimal') || topic.includes('phép tính thập phân') ||
+        topic.includes('cộng thập phân') || topic.includes('trừ thập phân') ||
+        topic.includes('nhân thập phân') || topic.includes('chia thập phân') ||
+        topic.includes('dấu phẩy')) {
+      return 'decimal';
+    }
     
     return 'default';
   }
@@ -49,6 +60,9 @@ export class PracticeServiceRouter {
         return service;
       case 'ti-so':
         service = new GeminiPracticeServiceTiSo();
+        return service;
+      case 'decimal':
+        service = new GeminiPracticeServiceSoThapPhan();
         return service;
       default:
         service = new GeminiPracticeService();
@@ -87,6 +101,17 @@ export class ChatServiceRouter {
       return 'ti-so';
     }
     
+    // Topics liên quan Số thập phân
+    const isDecimal = topic.includes('số thập phân') || topic.includes('thập phân') || 
+        topic.includes('decimal') || topic.includes('phép tính thập phân') ||
+        topic.includes('cộng thập phân') || topic.includes('trừ thập phân') ||
+        topic.includes('nhân thập phân') || topic.includes('chia thập phân') ||
+        topic.includes('dấu phẩy');
+    
+    if (isDecimal) {
+      return 'decimal';
+    }
+    
     return 'default';
   }
 
@@ -100,6 +125,9 @@ export class ChatServiceRouter {
         return service;
       case 'ti-so':
         service = new GeminiChatServiceTiSo();
+        return service;
+      case 'decimal':
+        service = new GeminiChatServiceSoThapPhan();
         return service;
       default:
         return null;

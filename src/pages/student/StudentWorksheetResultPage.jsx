@@ -18,6 +18,44 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
         
         // Load result
         const resultData = await worksheetResultService.getWorksheetResult(resultId);
+        
+        // Convert object arrangements/answers back to arrays if needed
+        if (resultData) {
+          // Fix Bài 1 selections - convert object to array if needed
+          if (resultData.bai_1?.selections && typeof resultData.bai_1.selections === 'object' && !Array.isArray(resultData.bai_1.selections)) {
+            // Convert object to array: {0: id1, 1: id2} => [id1, id2]
+            resultData.bai_1.selections = Object.values(resultData.bai_1.selections);
+          }
+
+          // Fix Bài 2 arrangements - convert object values to arrays
+          if (resultData.bai_2?.arrangements && typeof resultData.bai_2.arrangements === 'object') {
+            const fixedArrangements = {};
+            for (const [key, value] of Object.entries(resultData.bai_2.arrangements)) {
+              if (typeof value === 'object' && !Array.isArray(value)) {
+                // Convert object to array: {0: q1, 1: q2} => [q1, q2]
+                fixedArrangements[key] = Object.values(value);
+              } else {
+                fixedArrangements[key] = value || [];
+              }
+            }
+            resultData.bai_2.arrangements = fixedArrangements;
+          }
+
+          // Fix Bài 4 answers - convert object values to arrays
+          if (resultData.bai_4?.answers && typeof resultData.bai_4.answers === 'object') {
+            const fixedAnswers = {};
+            for (const [key, value] of Object.entries(resultData.bai_4.answers)) {
+              if (typeof value === 'object' && !Array.isArray(value)) {
+                // Convert object to array: {0: ans1, 1: ans2} => [ans1, ans2]
+                fixedAnswers[key] = Object.values(value);
+              } else {
+                fixedAnswers[key] = value || [];
+              }
+            }
+            resultData.bai_4.answers = fixedAnswers;
+          }
+        }
+        
         setResult(resultData);
 
         // Load worksheet to get detailed questions
@@ -142,7 +180,13 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
             </div>
 
             <div className="space-y-6">
-              {Object.keys(result.bai_2.arrangements || {}).map((cachKey) => {
+              {Object.keys(result.bai_2.arrangements || {})
+                .sort((a, b) => {
+                  const numA = parseInt(a.replace('cach_', ''));
+                  const numB = parseInt(b.replace('cach_', ''));
+                  return numA - numB;
+                })
+                .map((cachKey) => {
                 const cachNum = cachKey.replace('cach_', '');
                 const arrangements = result.bai_2.arrangements[cachKey] || [];
                 

@@ -86,8 +86,13 @@ const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {
   };
 
   const handleViewResults = (worksheetId) => {
-    // TODO: Navigate to results page
-    alert('Chức năng xem kết quả sẽ phát triển sau');
+    navigate(`/faculty/worksheet/${worksheetId}/results`, {
+      state: {
+        classId,
+        selectedClass,
+        worksheetType: worksheetType
+      }
+    });
   };
 
   if (showTypeSelector) {

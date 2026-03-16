@@ -71,7 +71,7 @@ export const getWorksheetResult = async (resultId) => {
 
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
-      throw new Error('Result not found');
+      return null; // Return null instead of throwing error - result simply doesn't exist yet
     }
 
     return snapshot.docs[0].data();
@@ -108,11 +108,19 @@ export const getStudentWorksheetResults = async (studentId, classId) => {
 // Lấy kết quả của 1 phiếu bài tập
 export const getWorksheetResultsByWorksheet = async (worksheetId, classId) => {
   try {
+    const conditions = [
+      where('worksheetId', '==', worksheetId),
+      orderBy('submittedAt', 'desc')
+    ];
+
+    // Only add classId filter if it's provided
+    if (classId) {
+      conditions.splice(1, 0, where('classId', '==', classId));
+    }
+
     const q = query(
       collection(db, 'worksheet_results'),
-      where('worksheetId', '==', worksheetId),
-      where('classId', '==', classId),
-      orderBy('submittedAt', 'desc')
+      ...conditions
     );
 
     const snapshot = await getDocs(q);

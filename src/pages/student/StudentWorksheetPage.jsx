@@ -59,12 +59,42 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
     return () => clearTimeout(timer);
   }, [bai1Selections, bai2Arrangements, bai3BaiLam, bai3GiaiThich, bai4Answers, worksheetId, user?.uid, worksheetData]);
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount and initialize state
   useEffect(() => {
     if (!worksheetData || !user?.uid) return;
 
     const cacheKey = `worksheet_${worksheetId}_student_${user.uid}`;
     const savedData = localStorage.getItem(cacheKey);
+
+    const initializeDefaults = () => {
+      // Initialize Bài 2 arrangements
+      if (worksheetData.bai_2?.so_cach_giai) {
+        const arrangements = {};
+        for (let i = 1; i <= parseInt(worksheetData.bai_2.so_cach_giai); i++) {
+          arrangements[`cach_${i}`] = [];
+        }
+        setBai2Arrangements(arrangements);
+      }
+
+      // Initialize Bài 4 answers
+      if (worksheetData.bai_4?.questions) {
+        const answers = {};
+        worksheetData.bai_4.questions.forEach((q) => {
+          if (q.type === "so_cach_giai") {
+            const arrangementsArray = [];
+            for (let i = 1; i <= parseInt(q.content); i++) {
+              arrangementsArray.push([]);
+            }
+            answers[q.id] = arrangementsArray;
+          } else if (q.type === "cau_hoi_nho") {
+            answers[q.id] = (q.subQuestions || []).map(() => "");
+          } else {
+            answers[q.id] = "";
+          }
+        });
+        setBai4Answers(answers);
+      }
+    };
 
     if (savedData) {
       try {
@@ -76,7 +106,12 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
         setBai4Answers(data.bai4Answers || {});
       } catch (error) {
         console.error("Error loading from localStorage:", error);
+        // If loading fails, initialize with defaults
+        initializeDefaults();
       }
+    } else {
+      // No saved data, initialize with defaults
+      initializeDefaults();
     }
   }, [worksheetData, worksheetId, user?.uid]);
 
@@ -100,34 +135,6 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
         } catch (error) {
           // No submission found, which is fine
         }
-      }
-
-      // Initialize Bài 2 arrangements
-      if (data.bai_2?.so_cach_giai) {
-        const arrangements = {};
-        for (let i = 1; i <= parseInt(data.bai_2.so_cach_giai); i++) {
-          arrangements[`cach_${i}`] = [];
-        }
-        setBai2Arrangements(arrangements);
-      }
-
-      // Initialize Bài 4 answers
-      if (data.bai_4?.questions) {
-        const answers = {};
-        data.bai_4.questions.forEach((q) => {
-          if (q.type === "so_cach_giai") {
-            const arrangementsArray = [];
-            for (let i = 1; i <= parseInt(q.content); i++) {
-              arrangementsArray.push([]);
-            }
-            answers[q.id] = arrangementsArray;
-          } else if (q.type === "cau_hoi_nho") {
-            answers[q.id] = (q.subQuestions || []).map(() => "");
-          } else {
-            answers[q.id] = "";
-          }
-        });
-        setBai4Answers(answers);
       }
     } catch (error) {
       console.error("Error loading worksheet:", error);
@@ -185,17 +192,43 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
     try {
       setSubmitting(true);
 
+      // Convert arrays to objects to avoid Firestore nested array error
+      const convertArraysToObjects = (obj) => {
+        return Object.keys(obj).reduce((acc, key) => {
+          const value = obj[key];
+          if (Array.isArray(value)) {
+            // Convert array to object with index keys
+            acc[key] = value.reduce((arrAcc, item, idx) => {
+              arrAcc[idx.toString()] = item;
+              return arrAcc;
+            }, {});
+          } else if (typeof value === 'object' && value !== null) {
+            // Recursively process nested objects
+            acc[key] = convertArraysToObjects(value);
+          } else {
+            acc[key] = value;
+          }
+          return acc;
+        }, {});
+      };
+
+      // Convert flat array to object format (for Firestore compatibility)
+      const selectionsObj = bai1Selections.reduce((acc, id, idx) => {
+        acc[idx.toString()] = id;
+        return acc;
+      }, {});
+
       const result = {
         studentId: user.uid,
         studentName: user.displayName || user.email,
         worksheetId,
         classId,
         bai_1: {
-          selections: bai1Selections,
+          selections: selectionsObj,
           evaluation: {},
         },
         bai_2: {
-          arrangements: bai2Arrangements,
+          arrangements: convertArraysToObjects(bai2Arrangements),
           evaluation: {},
         },
         bai_3: {
@@ -204,7 +237,7 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
           evaluation: {},
         },
         bai_4: {
-          answers: bai4Answers,
+          answers: convertArraysToObjects(bai4Answers),
           evaluation: {},
         },
         submittedAt: new Date(),
@@ -341,14 +374,14 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                 {(worksheetData.bai_1.questions || []).map((question) => (
                   <label
                     key={question.id}
-                    className="flex items-start gap-3 p-4 bg-white hover:bg-purple-50 rounded-xl cursor-pointer transition-all border-2 border-purple-300 hover:border-purple-500 font-semibold shadow-sm hover:shadow-md disabled:opacity-50"
+                    className="flex items-center gap-3 p-4 bg-white hover:bg-purple-50 rounded-xl cursor-pointer transition-all border-2 border-purple-300 hover:border-purple-500 font-semibold shadow-sm hover:shadow-md disabled:opacity-50"
                   >
                     <input
                       type="checkbox"
                       checked={bai1Selections.includes(question.id)}
                       onChange={() => handleBai1Change(question.id)}
                       disabled={isAlreadySubmitted}
-                      className="w-6 h-6 mt-1 text-purple-600 rounded cursor-pointer disabled:cursor-not-allowed"
+                      className="w-6 h-6 flex-shrink-0 text-purple-600 rounded cursor-pointer disabled:cursor-not-allowed"
                     />
                     <span className="text-purple-900 text-lg">{question.text}</span>
                   </label>
@@ -400,7 +433,13 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
 
               {/* Arrangements */}
               <div className="space-y-4">
-                {Object.keys(bai2Arrangements).map((cach) => (
+                {Object.keys(bai2Arrangements)
+                  .sort((a, b) => {
+                    const numA = parseInt(a.replace('cach_', ''));
+                    const numB = parseInt(b.replace('cach_', ''));
+                    return numA - numB;
+                  })
+                  .map((cach) => (
                   <div
                     key={cach}
                     className="p-4 bg-gradient-to-r from-blue-100 to-blue-50 rounded-2xl border-3 border-dashed border-blue-300"

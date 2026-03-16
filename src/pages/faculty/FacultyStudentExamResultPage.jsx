@@ -1295,19 +1295,19 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
 
                 const tcNames = {
                   TC1: {
-                    name: "Nhận biết vấn đề",
+                    name: "Nhận biết được vấn đề cần giải quyết",
                     description: "Xác định dữ kiện, yêu cầu bài toán",
                   },
                   TC2: {
-                    name: "Nêu cách giải",
+                    name: "Nêu được cách thức giải quyết vấn đề",
                     description: "Đề xuất giải pháp, lựa chọn phép tính",
                   },
                   TC3: {
-                    name: "Trình bày giải",
+                    name: "Trình bày được cách thức giải quyết vấn đề",
                     description: "Thực hiện các bước giải, trình bày rõ ràng",
                   },
                   TC4: {
-                    name: "Kiểm tra & mở rộng",
+                    name: "Kiểm tra được giải pháp đã thực hiện",
                     description: "Kiểm tra lại kết quả, vận dụng mở rộng",
                   },
                 };

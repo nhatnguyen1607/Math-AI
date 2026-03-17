@@ -121,7 +121,7 @@
   }
 
   .selection-content {
-    @apply p-8 max-w-6xl mx-auto;
+    @apply w-full px-4 py-6 md:p-8 md:max-w-6xl md:mx-auto;
   }
 
   .join-form {
@@ -254,7 +254,7 @@
   }
 
   .lobby-content {
-    @apply p-8 max-w-6xl mx-auto;
+    @apply w-full px-4 py-6 md:p-8 md:max-w-6xl md:mx-auto;
   }
 
   .lobby-main {
@@ -359,7 +359,7 @@
   }
 
   .result-container {
-    @apply max-w-4xl mx-auto p-8;
+    @apply w-full px-4 py-6 md:p-8 md:max-w-4xl md:mx-auto;
   }
 
   .result-header {
@@ -1133,7 +1133,8 @@ body {
   border-radius: 24px;
   font-size: 18px;
   font-weight: 700;
-  padding: 20px 40px;
+  padding: 16px 20px;
+  min-height: 44px;
   border: 3px solid;
   cursor: pointer;
   transition: all 0.2s ease;

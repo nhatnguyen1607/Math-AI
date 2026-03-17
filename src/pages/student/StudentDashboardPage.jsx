@@ -395,7 +395,7 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
 
       {/* Nội dung chính */}
       <div className="app-shell section-shell">
-        <div className="mx-auto max-w-5xl">
+        <div>
           <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:gap-4 lg:mb-10">
             <button
               onClick={() => navigate(-1)}

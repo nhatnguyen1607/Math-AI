@@ -298,18 +298,20 @@ const StudentPracticePage = ({ user, onSignOut }) => {
 
       {/* Compact Sticky Header with Title & Progress */}
       <div className="sticky top-16 z-40 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-sm sm:top-20">
-        <div className="app-shell py-[clamp(0.6rem,2.2vw,0.9rem)]">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h1 className="font-quicksand text-[clamp(1.3rem,4vw,1.65rem)] font-bold text-gray-800">📖 Luyện tập</h1>
+        <div className="app-shell flex flex-wrap items-center justify-between gap-3 py-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
+            <h1 className="truncate text-xl font-bold text-gray-800 font-quicksand sm:text-2xl">
+              📚 Luyện tập
+            </h1>
             <button
               onClick={() => navigate(-1)}
-              className="touch-btn rounded-xl bg-gray-500 px-4 text-sm font-bold text-white font-quicksand transition-all hover:bg-gray-600"
+              className="touch-btn rounded-lg bg-gray-500 px-4 text-xs font-bold text-white font-quicksand transition-all hover:bg-gray-600 sm:text-sm"
             >
               ← Quay lại
             </button>
           </div>
           {/* Progress Steps - Horizontal & Compact */}
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 py-[clamp(0.6rem,2.2vw,0.9rem)]">
             {['bai1', 'bai2'].map((bai, idx) => {
               const baiData = practiceData.luyenTap?.[bai];
               const status = baiData?.status;
@@ -348,17 +350,17 @@ const StudentPracticePage = ({ user, onSignOut }) => {
       {/* Main Content Grid with Natural Scroll */}
       <div className="app-shell grid grid-cols-1 gap-[clamp(1rem,2.8vw,1.5rem)] py-[clamp(0.9rem,2.6vw,1.5rem)] pb-20 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_350px]">
         {/* Main Content Column - Flex and grow */}
-        <main className="flex flex-col gap-6">
+        <main className="flex min-w-0 flex-col gap-6" ref={leftColRef}>
           {currentBai ? (
             <>
               {/* STICKY PROBLEM STATEMENT */}
-              <div className="sticky top-[7rem] z-30 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 p-[clamp(0.8rem,2.4vw,1rem)] shadow-sm sm:top-[8rem]">
+              <div className="sticky top-[7.2rem] z-30 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 p-[clamp(0.8rem,2.4vw,1rem)] shadow-sm sm:top-[8.2rem]">
                 <h3 className="mb-2 font-quicksand text-[clamp(0.9rem,2.7vw,1rem)] font-bold text-blue-900">📝 Đề Bài</h3>
                 <p className="font-quicksand text-[clamp(0.95rem,2.8vw,1.05rem)] leading-relaxed text-blue-800 [overflow-wrap:anywhere]">{currentBai.deBai}</p>
               </div>
 
               {/* SCROLLABLE CHAT */}
-              <div className="flex-1">
+              <div className="flex-1 pb-32">
                 <PracticeChat
                   userId={user?.uid}
                   examId={examId}

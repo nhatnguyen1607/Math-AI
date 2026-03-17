@@ -271,9 +271,9 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
 
       {/* Compact Sticky Header with Title & Progress */}
       <div className="sticky top-16 z-40 border-b border-gray-200 bg-white shadow-sm sm:top-20">
-        <div className="app-shell py-3">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h1 className="text-xl font-bold text-gray-800 font-quicksand sm:text-2xl">🌟 Vận dụng</h1>
+        <div className="app-shell flex flex-wrap items-center justify-between gap-3 py-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
+            <h1 className="truncate text-xl font-bold text-gray-800 font-quicksand sm:text-2xl">🌟 Vận dụng</h1>
             <button
               onClick={() => navigate(-1)}
               className="touch-btn rounded-lg bg-gray-500 px-4 text-xs font-bold text-white font-quicksand transition-all hover:bg-gray-600 sm:text-sm"
@@ -328,7 +328,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
               </div>
 
               {/* SCROLLABLE CHAT */}
-              <div className="flex-1">
+              <div className="flex-1 pb-32">
                 {console.log('📖 [StudentVanDungPage] Creating PracticeChat with topicName:', vanDungData.examTitle || examTitle)}
                 <PracticeChat
                   userId={user?.uid}

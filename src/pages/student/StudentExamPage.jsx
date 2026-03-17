@@ -853,61 +853,39 @@ const StudentExamPage = ({ user, onSignOut }) => {
           </div>
         </div>
 
-        {/* Header Bar with Timer */}
-        <div className="game-card mb-6 flex flex-wrap items-center justify-between gap-4 rounded-[2rem] bg-white p-4 shadow-lg sm:mb-8 sm:gap-5 sm:p-6 md:flex-nowrap md:gap-6">
-          {/* Timer or Loading State */}
-          {isSubmitting ? (
-            <div className="flex items-center gap-3 rounded-[2rem] bg-blue-200 px-4 py-3 text-base font-bold text-blue-700 sm:px-6 sm:text-lg">
-              <span className="text-2xl animate-spin sm:text-3xl">⏳</span>
-              <div className="font-quicksand">
-                <div className="text-xl sm:text-2xl">Đang nộp bài...</div>
-                <div className="text-xs opacity-75">Vui lòng chờ</div>
+        {/* Sticky Exam Control Header */}
+        <div className="sticky top-16 z-40 -mx-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:top-20 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 lg:-mx-10 lg:px-10">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
+              <h2 className="truncate text-lg font-bold text-gray-800 font-quicksand sm:text-xl">
+                {exam.title}
+              </h2>
+              <div className="hidden h-6 w-px bg-gray-300 sm:block"></div>
+              <div className="flex items-center gap-2 text-sm text-gray-600 font-quicksand sm:text-base">
+                <span className="font-bold text-blue-600">
+                  {currentQuestionIndex + 1}/{questions.length}
+                </span>
+                <span>Câu hỏi</span>
               </div>
             </div>
-          ) : (
-            <div
-              className={`flex items-center gap-3 rounded-[2rem] px-4 py-3 text-base font-bold transition-all sm:px-6 sm:text-lg ${
-                isTimeRunningOut
-                  ? 'bg-red-200 text-red-700 animate-pulse'
-                  : isTimeWarning
-                  ? 'bg-yellow-200 text-yellow-700'
-                  : 'bg-blue-200 text-blue-700'
-              }`}
-            >
-              <span className="text-2xl sm:text-3xl">⏱️</span>
-              <div className="font-quicksand">
-                <div className="text-xl sm:text-2xl">{timeText}</div>
-                <div className="text-xs opacity-75">Thời gian còn lại</div>
-              </div>
-            </div>
-          )}
 
-          {/* Stats */}
-          <div className="flex gap-4 sm:gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600 font-quicksand">{correctCount}</div>
-              <div className="text-sm text-gray-600 font-quicksand">Câu đúng</div>
-            </div>
-            <div className="border-l border-gray-300"></div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600 font-quicksand">
-                {Object.values(answers).reduce((sum, answer) => sum + (answer.points || 0), 0)}
+            <div className="flex items-center gap-3 sm:gap-6">
+              <div className="flex items-center gap-2 text-red-500">
+                <span className="text-xl sm:text-2xl">⏱️</span>
+                <span className="text-lg font-bold font-quicksand sm:text-xl">{timeText}</span>
               </div>
-              <div className="text-sm text-gray-600 font-quicksand">Điểm</div>
+              <button
+                onClick={() => handleAutoSubmit()}
+                disabled={isSubmitting}
+                className="touch-btn rounded-lg bg-gradient-to-r from-orange-400 to-red-500 px-4 text-xs font-bold text-white font-quicksand transition-all hover:shadow-lg sm:px-6 sm:text-sm"
+              >
+                {isSubmitting ? '...' : 'Nộp bài ✓'}
+              </button>
             </div>
           </div>
-
-          {/* Submit Button */}
-          <button
-            onClick={handleAutoSubmit}
-            disabled={isSubmitting}
-            className="touch-btn btn-3d rounded-[2rem] bg-gradient-to-r from-green-400 to-emerald-500 px-6 text-sm font-bold text-white font-quicksand transition-all hover:shadow-lg disabled:opacity-50 sm:text-base"
-          >
-            {isSubmitting ? '⏳ Đang nộp...' : '✓ Nộp bài'}
-          </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
           {/* Sidebar - Question List */}
           <aside className="game-card rounded-[2rem] bg-white p-4 shadow-lg sm:p-5 lg:col-span-1 lg:p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-6 font-quicksand">Danh sách câu hỏi</h3>
@@ -1035,11 +1013,11 @@ const StudentExamPage = ({ user, onSignOut }) => {
                         disabled={isAnswered}
                         className={jellyButtonClass}
                       >
-                        <div className="flex items-center gap-4 flex-1">
+                        <div className="flex min-w-0 items-center gap-4 flex-1">
                           <span className="w-10 h-10 flex-shrink-0 rounded-full bg-white font-bold text-lg flex items-center justify-center">
                             {String.fromCharCode(65 + idx)}
                           </span>
-                          <span className="text-left text-base sm:text-lg">{option}</span>
+                          <span className="min-w-0 text-left text-base sm:text-lg break-words [overflow-wrap:anywhere]">{option}</span>
                         </div>
                         <div className="flex-shrink-0 ml-4">
                           {isAnswered && isCorrectAnswer && (

@@ -2,6 +2,60 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --shell-max-width: 80rem;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [role='button']:focus-visible {
+    @apply outline-none ring-2 ring-offset-2 ring-indigo-500 ring-offset-white;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 2xl:px-10;
+  }
+
+  .section-shell {
+    @apply py-4 sm:py-6 lg:py-8;
+  }
+
+  .touch-btn {
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200;
+  }
+
+  .glass-panel {
+    @apply rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md;
+  }
+}
+
 /* Custom animations */
 @layer components {
   .animate-float {

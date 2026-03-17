@@ -28,11 +28,11 @@ function AdminLoginPage({ onLoginSuccess }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-800 via-gray-900 to-black flex items-center justify-center p-5">
-      <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-md w-full">
+    <div className="min-h-screen bg-gradient-to-br from-gray-800 via-gray-900 to-black flex items-center justify-center p-4 sm:p-5">
+      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-8 lg:p-10">
         <div className="text-center mb-8">
-          <div className="text-6xl mb-4">🔐</div>
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-700 to-gray-900 mb-2">
+          <div className="mb-3 text-5xl sm:mb-4 sm:text-6xl">🔐</div>
+          <h1 className="mb-2 bg-gradient-to-r from-gray-700 to-gray-900 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl">
             Admin Panel
           </h1>
           <p className="text-gray-500">Đăng nhập để quản trị hệ thống</p>
@@ -76,7 +76,7 @@ function AdminLoginPage({ onLoginSuccess }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white font-bold py-4 px-6 rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="touch-btn w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white font-bold px-6 rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>

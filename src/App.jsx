@@ -132,9 +132,11 @@ function App() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500"></div>
-        <p className="mt-4 text-gray-600 text-lg">Đang tải...</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+        <div className="glass-panel w-full max-w-sm p-6 text-center shadow-soft sm:p-8">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-4 border-t-4 border-indigo-500 sm:h-14 sm:w-14"></div>
+          <p className="mt-4 text-base font-semibold text-slate-700 sm:text-lg">Đang tải...</p>
+        </div>
       </div>
     );
   }
@@ -142,12 +144,12 @@ function App() {
   // Hiển thị thông báo khóa tài khoản
   if (lockError) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-red-50">
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md text-center">
-          <p className="text-3xl mb-4">🔒</p>
-          <h2 className="text-2xl font-bold text-red-600 mb-2">Tài khoản bị khóa</h2>
-          <p className="text-gray-600 mb-6">{lockError}</p>
-          <p className="text-sm text-gray-500">Vui lòng liên hệ với quản trị viên để được mở khóa</p>
+      <div className="flex min-h-screen items-center justify-center bg-rose-50 px-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-soft-md sm:p-8">
+          <p className="mb-3 text-3xl sm:text-4xl">🔒</p>
+          <h2 className="mb-2 text-xl font-bold text-rose-700 sm:text-2xl">Tài khoản bị khóa</h2>
+          <p className="mb-5 text-sm text-slate-600 sm:text-base">{lockError}</p>
+          <p className="text-xs text-slate-500 sm:text-sm">Vui lòng liên hệ với quản trị viên để được mở khóa</p>
         </div>
       </div>
     );

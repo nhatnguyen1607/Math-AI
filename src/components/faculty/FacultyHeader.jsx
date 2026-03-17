@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const FacultyHeader = ({ user, onLogout, onBack, navItems = [], breadcrumbs = [] }) => {
   const navigate = useNavigate();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -23,38 +24,84 @@ const FacultyHeader = ({ user, onLogout, onBack, navItems = [], breadcrumbs = []
   return (
     <>
       {/* Main Header */}
-      <header className="flex justify-between items-center px-8 lg:px-12 py-4 lg:py-6 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 backdrop-blur-md border-b-4 border-purple-400 sticky top-0 z-50 shadow-soft-lg">
-        {/* Logo và Title bên trái */}
-        <div className="flex items-center cursor-pointer transition-all duration-300 hover:scale-105" onClick={() => navigate('/faculty')}>
-          <span className="text-2xl lg:text-3xl animate-float">📐</span>
-          <span className="text-xl lg:text-2xl font-bold text-white drop-shadow-lg tracking-wide ml-3 hidden sm:inline">Trợ lí học tập ảo</span>
+      <header className="sticky top-0 z-50 border-b-4 border-purple-300/80 bg-gradient-to-r from-indigo-700 via-purple-700 to-indigo-600 shadow-soft-lg">
+        <div className="app-shell flex min-h-16 items-center justify-between gap-3 py-2 sm:min-h-20 sm:py-3">
+          {/* Logo và Title bên trái */}
+          <button className="flex items-center rounded-xl px-2 py-2 text-left transition-all duration-300 hover:bg-white/10" onClick={() => navigate('/faculty')}>
+            <span className="text-xl sm:text-2xl lg:text-3xl animate-float">📐</span>
+            <span className="ml-2 text-base font-bold text-white drop-shadow-lg tracking-wide sm:text-lg lg:text-2xl">Trợ lí học tập ảo</span>
+          </button>
+
+          {/* Desktop User Info */}
+          <div className="hidden items-center gap-3 lg:flex">
+            <span className="text-sm font-semibold text-indigo-50 lg:text-base">
+              Xin chào, {user?.displayName || user?.email || 'Giáo viên'}
+            </span>
+            {user?.photoURL && (
+              <img
+                src={user.photoURL}
+                alt="Avatar"
+                className="h-11 w-11 rounded-full border-2 border-white/60 object-cover"
+              />
+            )}
+            <button
+              className="touch-btn bg-rose-600/90 text-white hover:bg-rose-700"
+              onClick={handleLogout}
+            >
+              Đăng xuất
+            </button>
+          </div>
+
+          {/* Mobile menu trigger */}
+          <div className="lg:hidden">
+            <button
+              className="touch-btn bg-white/15 text-white hover:bg-white/25"
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              aria-expanded={isMenuOpen}
+              aria-label="Mở menu giáo viên"
+            >
+              {isMenuOpen ? '✕' : '☰'}
+            </button>
+          </div>
         </div>
 
-        {/* User Info và Logout bên phải */}
-        <div className="flex items-center gap-3 lg:gap-5 flex-shrink-0">
-          <span className="text-white text-sm lg:text-base font-semibold whitespace-nowrap drop-shadow-md hidden sm:inline">
-            Xin chào, {user?.displayName || user?.email || 'Giáo viên'}
-          </span>
-          {user?.photoURL && (
-            <img 
-              src={user.photoURL} 
-              alt="Avatar" 
-              className="w-10 h-10 rounded-full border-2 border-white border-opacity-40 shadow-md hover:border-opacity-80 object-cover transition-all duration-300 hover:shadow-lg hover:shadow-purple-400/50" 
-            />
-          )}
-          <button 
-            className="px-4 lg:px-8 py-2 lg:py-3 bg-red-600 bg-opacity-80 text-white border-none rounded-xl font-semibold cursor-pointer transition-all duration-300 text-sm lg:text-base backdrop-blur-md shadow-soft hover:bg-opacity-100 hover:-translate-y-1 hover:shadow-soft-lg active:translate-y-0" 
-            onClick={handleLogout}
-          >
-            Đăng xuất
-          </button>
-        </div>
+        {isMenuOpen && (
+          <div className="border-t border-white/20 bg-indigo-900/85 px-4 pb-4 pt-3 lg:hidden">
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-2">
+              <p className="text-sm font-semibold text-indigo-50">
+                Xin chào, {user?.displayName || user?.email || 'Giáo viên'}
+              </p>
+
+              {onBack && (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onBack();
+                  }}
+                  className="touch-btn w-full bg-white/15 text-white hover:bg-white/25"
+                >
+                  ← Quay lại
+                </button>
+              )}
+
+              <button
+                className="touch-btn w-full bg-rose-600/90 text-white hover:bg-rose-700"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  handleLogout();
+                }}
+              >
+                Đăng xuất
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Breadcrumbs Navigation */}
       {breadcrumbs.length > 0 && (
-        <nav className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-200 px-8 lg:px-12 py-3 sticky top-20 z-40 shadow-soft">
-          <div className="flex items-center gap-2 text-sm">
+        <nav className={`${isMenuOpen ? 'hidden lg:block' : ''} sticky top-16 z-40 border-b border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-soft sm:top-20`}>
+          <div className="app-shell flex flex-wrap items-center gap-1 py-2 text-xs sm:gap-2 sm:text-sm">
             {breadcrumbs.map((item, index) => (
               <React.Fragment key={index}>
                 {index > 0 && <span className="text-gray-400 mx-1">/</span>}
@@ -76,17 +123,27 @@ const FacultyHeader = ({ user, onLogout, onBack, navItems = [], breadcrumbs = []
 
       {/* Navigation Bar */}
       {navItems.length > 0 && (
-        <nav className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 border-b-2 border-purple-400 border-opacity-50 p-0 sticky top-24 lg:top-32 z-40 shadow-soft-md overflow-x-auto">
-          <div className="flex items-center gap-0 px-8 lg:px-12 max-w-7xl mx-auto flex-wrap min-h-16 lg:min-h-20">
-            <div className="flex gap-0 flex-1 overflow-x-auto">
+        <nav className={`${isMenuOpen ? 'hidden lg:block' : ''} sticky top-[6.5rem] z-40 border-b-2 border-purple-300/70 bg-gradient-to-r from-indigo-700 via-purple-700 to-indigo-600 shadow-soft-md sm:top-[8.75rem]`}>
+          <div className="app-shell flex items-center gap-2 py-1 sm:py-2">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="hidden touch-btn border border-white/30 bg-white/10 text-white hover:bg-white/20 lg:inline-flex"
+              >
+                ← Quay lại
+              </button>
+            )}
+
+            <div className="flex flex-1 gap-2 overflow-x-auto pb-1">
               {navItems.map((item, index) => (
-                <div 
+                <button
                   key={index} 
+                  onClick={item.action}
                   className="flex items-center gap-2.5 px-4 lg:px-6 py-3 lg:py-4 text-white text-opacity-90 font-bold text-xs lg:text-sm cursor-pointer transition-all duration-300 border-b-4 border-transparent hover:text-white hover:border-yellow-300 hover:bg-purple-500 hover:bg-opacity-20 uppercase tracking-widest whitespace-nowrap"
                 >
                   {item.icon && <span className="text-lg">{item.icon}</span>}
                   <span>{item.label}</span>
-                </div>
+                </button>
               ))}
             </div>
           </div>

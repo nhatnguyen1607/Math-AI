@@ -70,10 +70,10 @@ const FacultyExamResultsListPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 px-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Đang tải kết quả...</p>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-4 border-t-4 border-purple-500 sm:h-16 sm:w-16"></div>
+          <p className="text-base text-gray-600 sm:text-lg">Đang tải kết quả...</p>
         </div>
       </div>
     );
@@ -81,9 +81,9 @@ const FacultyExamResultsListPage = () => {
 
   if (!exam) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 px-4">
         <div className="text-center">
-          <p className="text-gray-600 text-lg">Không tìm thấy đề thi</p>
+          <p className="text-base text-gray-600 sm:text-lg">Không tìm thấy đề thi</p>
         </div>
       </div>
     );
@@ -95,37 +95,81 @@ const FacultyExamResultsListPage = () => {
       <FacultyHeader user={user} onLogout={() => navigate('/login')} />
       
       {/* Back Button */}
-      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 px-8 lg:px-12 py-3 shadow-soft-md">
+      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 shadow-soft-md">
+        <div className="app-shell py-2 sm:py-3">
         <button
           onClick={() => navigate('/faculty/exam-management')}
-          className="px-4 lg:px-6 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold rounded-lg transition-all duration-300 flex items-center gap-2"
+          className="touch-btn bg-white/20 text-sm font-semibold text-white transition-all duration-300 hover:bg-white/30 sm:text-base"
         >
           ← Quay lại
         </button>
+        </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-5 py-8">
+      <div className="app-shell py-5 sm:py-6 lg:py-8">
         {/* Page Title */}
-        <div className="mb-8 p-6 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl shadow-lg">
-          <h2 className="text-3xl font-bold mb-2 flex items-center gap-3">
+        <div className="mb-6 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 p-4 text-white shadow-lg sm:mb-8 sm:p-6">
+          <h2 className="mb-2 flex items-center gap-2 text-xl font-bold sm:gap-3 sm:text-2xl lg:text-3xl">
             <span>📊</span>
             Kết quả {exam.title}
           </h2>
-          <p className="text-purple-100">
+          <p className="text-sm text-purple-100 sm:text-base">
             Tổng cộng: <strong>{leaderboard.length}</strong> học sinh đã hoàn thành
           </p>
         </div>
 
         {/* Results List */}
         {leaderboard.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-xl shadow-md">
-            <span className="text-6xl mb-4 block">📋</span>
-            <p className="text-xl text-gray-500 mb-4">Chưa có kết quả nào</p>
-            <p className="text-gray-400">Đề thi này chưa được hoàn thành bởi học sinh nào</p>
+          <div className="rounded-xl bg-white py-14 text-center shadow-md sm:py-20">
+            <span className="mb-4 block text-5xl sm:text-6xl">📋</span>
+            <p className="mb-3 text-lg text-gray-500 sm:mb-4 sm:text-xl">Chưa có kết quả nào</p>
+            <p className="px-4 text-sm text-gray-400 sm:text-base">Đề thi này chưa được hoàn thành bởi học sinh nào</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="overflow-x-auto">
+          <div className="overflow-hidden rounded-xl bg-white shadow-lg">
+            {/* Mobile cards */}
+            <div className="space-y-3 p-3 sm:p-4 md:hidden">
+              {leaderboard.map((student, index) => (
+                <div key={student.uid || index} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {student.medal && <span className="text-xl">{student.medal}</span>}
+                      <span className="text-sm font-bold text-gray-700">#{student.rank || index + 1}</span>
+                    </div>
+                    <button
+                      onClick={() => navigate(`/faculty/student-exam-result/${examId}/${student.uid}`)}
+                      className="touch-btn rounded-lg bg-gradient-to-r from-purple-500 to-purple-700 px-3 text-xs font-semibold text-white"
+                    >
+                      📋 Chi tiết
+                    </button>
+                  </div>
+
+                  <p className="mb-3 text-sm font-semibold text-gray-800">{student.name || 'Unknown'}</p>
+
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="rounded-lg bg-purple-50 px-3 py-2 text-center">
+                      <p className="text-xs text-purple-700">KĐ</p>
+                      <p className="text-base font-bold text-purple-600">{student.khoiDongCompetencyScore || 0}</p>
+                    </div>
+                    <div className="rounded-lg bg-blue-50 px-3 py-2 text-center">
+                      <p className="text-xs text-blue-700">LT Bài 1</p>
+                      <p className="text-base font-bold text-blue-600">{student.luyenTapBai1TongDiem || 0}</p>
+                    </div>
+                    <div className="rounded-lg bg-blue-50 px-3 py-2 text-center">
+                      <p className="text-xs text-blue-700">LT Bài 2</p>
+                      <p className="text-base font-bold text-blue-600">{student.luyenTapBai2TongDiem || 0}</p>
+                    </div>
+                    <div className="rounded-lg bg-green-50 px-3 py-2 text-center">
+                      <p className="text-xs text-green-700">VD</p>
+                      <p className="text-base font-bold text-green-600">{student.vanDungTongDiem || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full">
                 <thead>
                   <tr className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
@@ -175,7 +219,7 @@ const FacultyExamResultsListPage = () => {
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => navigate(`/faculty/student-exam-result/${examId}/${student.uid}`)}
-                          className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300 text-sm"
+                          className="touch-btn rounded-lg bg-gradient-to-r from-purple-500 to-purple-700 px-4 text-sm font-semibold text-white transition-all duration-300 hover:shadow-lg"
                         >
                           📋 Xem chi tiết
                         </button>

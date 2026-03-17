@@ -141,8 +141,11 @@ function AdminPage({ onLogout }) {
 
   if (loading) {
     return (
-      <div className="admin-page">
-        <div className="loading">Đang tải dữ liệu...</div>
+      <div className="admin-page flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4">
+        <div className="rounded-2xl bg-white px-6 py-5 text-center shadow-soft sm:px-8 sm:py-6">
+          <div className="mb-3 h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-500 sm:h-12 sm:w-12"></div>
+          <div className="text-base font-semibold text-slate-700 sm:text-lg">Đang tải dữ liệu...</div>
+        </div>
       </div>
     );
   }
@@ -153,10 +156,10 @@ function AdminPage({ onLogout }) {
 
       {/* Statistics */}
       {statistics && (
-        <div className="px-8 py-6">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">📊 Thống Kê</h2>
-            <div className="statistics-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="app-shell pt-5 sm:pt-6">
+          <div className="mx-auto w-full max-w-7xl">
+            <h2 className="mb-3 text-lg font-bold text-gray-800 sm:mb-4 sm:text-xl">📊 Thống Kê</h2>
+            <div className="statistics-grid grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
               <div className="stat-card bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-all">
                 <div className="stat-value text-3xl font-bold text-blue-600">{statistics.totalUsers}</div>
                 <div className="stat-label text-gray-600 mt-2">👥 Tổng người dùng</div>
@@ -179,22 +182,22 @@ function AdminPage({ onLogout }) {
       )}
 
       {/* Search and Filter */}
-      <div className="px-8 py-6">
-        <div className="max-w-6xl mx-auto">
+      <div className="app-shell py-5 sm:py-6">
+        <div className="mx-auto w-full max-w-7xl">
           <div className="admin-controls">
-            <div className="search-box mb-6">
+            <div className="search-box mb-4 sm:mb-6">
               <input
                 type="text"
                 placeholder="🔍 Tìm kiếm theo email hoặc tên..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="h-11 w-full rounded-xl border border-gray-300 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-base"
               />
             </div>
 
-            <div className="filter-tabs flex flex-wrap gap-3">
+            <div className="filter-tabs flex flex-wrap gap-2 sm:gap-3">
               <button
-                className={`tab px-4 py-2 rounded-lg font-semibold transition-all ${
+                className={`touch-btn tab rounded-xl px-4 text-sm font-semibold transition-all sm:text-base ${
                   activeTab === 'all'
                     ? 'bg-blue-500 text-white shadow-lg'
                     : 'bg-white text-gray-700 border border-gray-300 hover:border-gray-400'
@@ -204,7 +207,7 @@ function AdminPage({ onLogout }) {
                 Tất cả ({users.length})
               </button>
               <button
-                className={`tab px-4 py-2 rounded-lg font-semibold transition-all ${
+                className={`touch-btn tab rounded-xl px-4 text-sm font-semibold transition-all sm:text-base ${
                   activeTab === 'students'
                     ? 'bg-green-500 text-white shadow-lg'
                     : 'bg-white text-gray-700 border border-gray-300 hover:border-gray-400'
@@ -214,7 +217,7 @@ function AdminPage({ onLogout }) {
                 🎓 Học sinh
               </button>
               <button
-                className={`tab px-4 py-2 rounded-lg font-semibold transition-all ${
+                className={`touch-btn tab rounded-xl px-4 text-sm font-semibold transition-all sm:text-base ${
                   activeTab === 'faculty'
                     ? 'bg-purple-500 text-white shadow-lg'
                     : 'bg-white text-gray-700 border border-gray-300 hover:border-gray-400'
@@ -224,7 +227,7 @@ function AdminPage({ onLogout }) {
                 👨‍🏫 Giáo viên
               </button>
               <button
-                className={`tab px-4 py-2 rounded-lg font-semibold transition-all ${
+                className={`touch-btn tab rounded-xl px-4 text-sm font-semibold transition-all sm:text-base ${
                   activeTab === 'locked'
                     ? 'bg-red-500 text-white shadow-lg'
                     : 'bg-white text-gray-700 border border-gray-300 hover:border-gray-400'
@@ -239,10 +242,48 @@ function AdminPage({ onLogout }) {
       </div>
 
       {/* Users Table */}
-      <div className="px-8 pb-8">
-        <div className="max-w-6xl mx-auto">
+      <div className="app-shell pb-8">
+        <div className="mx-auto w-full max-w-7xl">
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {filteredUsers.map((user) => (
+              <div key={user.id} className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm ${user.isLocked ? 'opacity-80' : ''}`}>
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-800 break-all">{user.email}</p>
+                  <button
+                    className="touch-btn rounded-lg bg-blue-500 px-3 text-xs font-semibold text-white hover:bg-blue-600"
+                    onClick={() => {
+                      setSelectedUser(user);
+                      setShowUserDetail(true);
+                    }}
+                  >
+                    Chi tiết
+                  </button>
+                </div>
+                <p className="mb-2 text-sm text-slate-700">{user.displayName}</p>
+                <div className="flex flex-wrap gap-2">
+                  <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+                    user.role === 'student' ? 'bg-blue-100 text-blue-800' :
+                    user.role === 'faculty' ? 'bg-purple-100 text-purple-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {user.role === 'student' ? '🎓 Học sinh' : user.role === 'faculty' ? '👨‍🏫 Giáo viên' : '🔐 Admin'}
+                  </span>
+                  <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+                    user.isLocked ? 'bg-red-100 text-red-800' :
+                    user.isActive ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {user.isLocked ? '🔒 Bị khóa' : user.isActive ? '✅ Hoạt động' : '⏸️ Không hoạt động'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
           <div className="users-container bg-white rounded-lg shadow-md overflow-hidden">
-            <table className="users-table w-full">
+            <table className="users-table hidden w-full md:table">
               <thead className="bg-gray-100 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
@@ -277,7 +318,7 @@ function AdminPage({ onLogout }) {
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <button
-                        className="action-btn px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all font-semibold text-xs"
+                        className="action-btn touch-btn rounded-lg bg-blue-500 px-4 text-xs font-semibold text-white transition-all hover:bg-blue-600"
                         onClick={() => {
                           setSelectedUser(user);
                           setShowUserDetail(true);
@@ -292,9 +333,9 @@ function AdminPage({ onLogout }) {
             </table>
 
             {filteredUsers.length === 0 && (
-              <div className="no-results text-center py-12">
+              <div className="no-results text-center py-10 sm:py-12">
                 <div className="text-4xl mb-3">🔍</div>
-                <p className="text-gray-500 text-lg">Không tìm thấy người dùng nào</p>
+                <p className="text-gray-500 text-base sm:text-lg">Không tìm thấy người dùng nào</p>
               </div>
             )}
           </div>
@@ -304,9 +345,9 @@ function AdminPage({ onLogout }) {
       {/* User Detail Modal */}
       {showUserDetail && selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowUserDetail(false)}>
-          <div className="modal-content bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md max-h-screen overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">👤 Chi tiết người dùng</h2>
+          <div className="modal-content max-h-screen w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-7" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-5 flex items-center justify-between sm:mb-6">
+              <h2 className="text-xl font-bold text-gray-800 sm:text-2xl">👤 Chi tiết người dùng</h2>
               <button className="close-btn text-gray-400 hover:text-gray-600 text-2xl font-bold transition-colors" onClick={() => setShowUserDetail(false)}>×</button>
             </div>
 
@@ -352,7 +393,7 @@ function AdminPage({ onLogout }) {
             <div className="modal-actions flex flex-col gap-3">
               {selectedUser.isLocked ? (
                 <button
-                  className="action-btn unlock px-4 py-3 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 transition-all disabled:opacity-50"
+                  className="action-btn unlock touch-btn bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 transition-all disabled:opacity-50"
                   onClick={() => handleUnlockUser(selectedUser.id)}
                   disabled={actionInProgress}
                 >
@@ -362,7 +403,7 @@ function AdminPage({ onLogout }) {
                 <>
                   {selectedUser.isStudent() && (
                     <button
-                      className="action-btn promote px-4 py-3 bg-purple-500 text-white font-bold rounded-lg hover:bg-purple-600 transition-all disabled:opacity-50"
+                      className="action-btn promote touch-btn bg-purple-500 text-white font-bold rounded-lg hover:bg-purple-600 transition-all disabled:opacity-50"
                       onClick={() => handlePromoteToFaculty(selectedUser.id)}
                       disabled={actionInProgress}
                     >
@@ -371,7 +412,7 @@ function AdminPage({ onLogout }) {
                   )}
                   {selectedUser.isFaculty() && (
                     <button
-                      className="action-btn demote px-4 py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition-all disabled:opacity-50"
+                      className="action-btn demote touch-btn bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition-all disabled:opacity-50"
                       onClick={() => handleDemoteToStudent(selectedUser.id)}
                       disabled={actionInProgress}
                     >
@@ -383,7 +424,7 @@ function AdminPage({ onLogout }) {
 
               {!selectedUser.isLocked && (
                 <button
-                  className="action-btn lock px-4 py-3 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition-all disabled:opacity-50"
+                  className="action-btn lock touch-btn bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition-all disabled:opacity-50"
                   onClick={() => {
                     const reason = prompt('Nhập lý do khóa tài khoản:');
                     if (reason !== null) {
@@ -397,7 +438,7 @@ function AdminPage({ onLogout }) {
               )}
 
               <button
-                className="px-4 py-3 bg-gray-300 text-gray-800 font-bold rounded-lg hover:bg-gray-400 transition-all"
+                className="touch-btn bg-gray-300 text-gray-800 font-bold rounded-lg hover:bg-gray-400 transition-all"
                 onClick={() => setShowUserDetail(false)}
               >
                 ❌ Đóng

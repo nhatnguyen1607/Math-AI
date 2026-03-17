@@ -280,9 +280,9 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
 
   if (!worksheetData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 px-4">
         <div className="text-center">
-          <p className="text-2xl font-bold text-gray-700">
+          <p className="text-xl font-bold text-gray-700 sm:text-2xl">
             Không tìm thấy phiếu bài tập
           </p>
         </div>
@@ -292,17 +292,17 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
 
   if (isAlreadySubmitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-100 via-emerald-100 to-teal-100 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-100 via-emerald-100 to-teal-100 px-4">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
         <div className="text-center py-20">
-          <div className="text-8xl mb-4 animate-bounce">✅</div>
-          <h1 className="text-5xl font-bold text-green-700 mb-4">Tuyệt vời!</h1>
-          <p className="text-2xl text-green-600 mb-8 font-semibold">Bạn đã hoàn thành phiếu bài tập này rồi! 🎉</p>
-          <p className="text-lg text-gray-700 mb-8">Mỗi phiếu chỉ làm được một lần thôi.</p>
+          <div className="mb-4 text-6xl animate-bounce sm:text-8xl">✅</div>
+          <h1 className="mb-4 text-3xl font-bold text-green-700 sm:text-5xl">Tuyệt vời!</h1>
+          <p className="mb-6 text-lg font-semibold text-green-600 sm:mb-8 sm:text-2xl">Bạn đã hoàn thành phiếu bài tập này rồi! 🎉</p>
+          <p className="mb-6 text-base text-gray-700 sm:mb-8 sm:text-lg">Mỗi phiếu chỉ làm được một lần thôi.</p>
           <div className="space-x-4">
             <button
               onClick={() => navigate(`/student/${classId}`)}
-              className="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg transition-all transform hover:scale-105"
+              className="touch-btn rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-6 text-sm font-bold text-white transition-all hover:from-blue-600 hover:to-blue-700 sm:text-base"
             >
               ← Quay lại Trang Chủ
             </button>
@@ -316,20 +316,20 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
       <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
 
-      <div className="px-8 py-8">
+      <div className="app-shell section-shell">
         {/* Two Column Layout: Problem on left, Homework on right */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
           {/* Left Column: Fixed Problem/Context */}
           <div className="lg:col-span-1">
-            <div className="sticky top-20 z-20 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-3xl shadow-lg p-6 border-4 border-blue-300">
+            <div className="sticky top-[7.2rem] z-20 rounded-3xl border-4 border-blue-300 bg-gradient-to-br from-blue-50 to-cyan-50 p-5 shadow-lg sm:top-[8.2rem] sm:p-6">
               <div className="text-center mb-4">
-                <div className="text-5xl mb-2">🔍</div>
-                <h1 className="text-2xl font-bold text-blue-800 mb-2">
+                <div className="mb-2 text-4xl sm:text-5xl">🔍</div>
+                <h1 className="mb-2 text-xl font-bold text-blue-800 sm:text-2xl">
                   {worksheetData.name}
                 </h1>
               </div>
               <div className="bg-blue-100 p-5 rounded-2xl border-2 border-blue-300">
-                <p className="text-gray-800 text-base text-justify font-semibold leading-relaxed">{worksheetData.context}</p>
+                <p className="text-justify text-sm font-semibold leading-relaxed text-gray-800 sm:text-base">{worksheetData.context}</p>
               </div>
               
               {/* Auto-save Status */}
@@ -415,7 +415,7 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
               </div>
 
               {/* Available items - Sticky */}
-              <div className="sticky top-56 z-30 mb-6 bg-white pt-4 pb-4 rounded-2xl border-3 border-dashed border-blue-400">
+              <div className="sticky top-[14.5rem] z-30 mb-6 rounded-2xl border-2 border-dashed border-blue-400 bg-white pb-4 pt-4 sm:top-[15.5rem]">
                 <p className="font-bold text-blue-800 mb-3 text-lg">🎨 Các bước có sẵn:</p>
                 <div className="flex flex-wrap gap-3">
                   {(worksheetData.bai_2.questions || []).map((q) => (
@@ -648,17 +648,17 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
           )}
 
           {/* Submit Button */}
-          <div className="flex gap-4 justify-end mb-8 sticky bottom-0 bg-gradient-to-t from-white via-white to-transparent pt-6 pb-2">
+          <div className="sticky bottom-0 mb-8 flex flex-wrap justify-end gap-3 bg-gradient-to-t from-white via-white to-transparent pb-2 pt-5 sm:gap-4 sm:pt-6">
             <button
               onClick={() => navigate(`/student/${classId}`)}
-              className="px-8 py-3 bg-gray-400 hover:bg-gray-500 text-white font-bold rounded-2xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-2"
+              className="touch-btn rounded-2xl bg-gray-400 px-6 text-sm font-bold text-white shadow-lg transition-all hover:bg-gray-500 sm:text-base"
             >
               <span className="text-lg">🔙</span> Quay lại
             </button>
             <button
               onClick={handleSubmit}
               disabled={submitting || isAlreadySubmitted}
-              className="px-8 py-3 bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white font-bold rounded-2xl transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="touch-btn rounded-2xl bg-gradient-to-r from-green-400 to-green-500 px-6 text-sm font-bold text-white shadow-lg transition-all hover:from-green-500 hover:to-green-600 disabled:cursor-not-allowed disabled:opacity-50 sm:text-base"
             >
               <span className="text-lg">{submitting ? "⏳" : "✅"}</span> {submitting ? "Đang nộp..." : "Nộp bài"}
             </button>

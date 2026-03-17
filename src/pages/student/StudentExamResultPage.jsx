@@ -130,10 +130,10 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 px-4">
         <div className="flex flex-col items-center gap-6">
-          <div className="text-6xl animate-bounce-gentle">🏆</div>
-          <p className="text-2xl font-bold text-gray-700 font-quicksand">Đang tải kết quả...</p>
+          <div className="text-5xl animate-bounce-gentle sm:text-6xl">🏆</div>
+          <p className="text-xl font-bold text-gray-700 font-quicksand sm:text-2xl">Đang tải kết quả...</p>
         </div>
       </div>
     );
@@ -145,11 +145,11 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
         <div className="flex flex-col items-center justify-center gap-8 px-5 py-20">
-          <div className="text-8xl">⚠️</div>
-          <h2 className="text-gray-800 text-3xl font-bold font-quicksand text-center">{error || 'Không thể tải kết quả'}</h2>
+          <div className="text-6xl sm:text-8xl">⚠️</div>
+          <h2 className="text-center text-2xl font-bold text-gray-800 font-quicksand sm:text-3xl">{error || 'Không thể tải kết quả'}</h2>
           <button
             onClick={() => navigate(-1)}
-            className="btn-3d px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-quicksand rounded-max hover:shadow-lg transition-all"
+            className="touch-btn btn-3d rounded-[2rem] bg-gradient-to-r from-blue-500 to-blue-600 px-6 text-white font-quicksand transition-all hover:shadow-lg"
           >
             Quay lại
           </button>
@@ -170,12 +170,12 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
         <div className="flex flex-col items-center justify-center gap-8 px-5 py-20">
-          <div className="text-8xl">📝</div>
-          <h2 className="text-gray-800 text-3xl font-bold font-quicksand">Bạn chưa làm bài học này</h2>
-          <p className="text-gray-600 text-lg">Quay lại để chọn bài khác hoặc bắt đầu làm bài mới</p>
+          <div className="text-6xl sm:text-8xl">📝</div>
+          <h2 className="text-center text-2xl font-bold text-gray-800 font-quicksand sm:text-3xl">Bạn chưa làm bài học này</h2>
+          <p className="text-center text-base text-gray-600 sm:text-lg">Quay lại để chọn bài khác hoặc bắt đầu làm bài mới</p>
           <button
             onClick={() => navigate(-1)}
-            className="btn-3d px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-quicksand rounded-max hover:shadow-lg transition-all"
+            className="touch-btn btn-3d rounded-[2rem] bg-gradient-to-r from-blue-500 to-blue-600 px-6 text-white font-quicksand transition-all hover:shadow-lg"
           >
             ← Quay lại
           </button>
@@ -217,21 +217,21 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
         {showCongrats && (
           <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 animate-bounce-gentle game-card">
             <div
-              className={`p-12 text-center text-white relative overflow-hidden ${
+              className={`relative overflow-hidden p-6 text-center text-white sm:p-8 lg:p-12 ${
                 isPassed
                   ? 'bg-gradient-to-br from-green-400 to-emerald-500'
                   : 'bg-gradient-to-br from-orange-400 to-yellow-500'
               }`}
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
-              <div className="text-7xl mb-4 block animate-bounce-gentle relative z-10">{isPassed ? '🎉' : '💪'}</div>
-              <h1 className="text-5xl font-bold mb-3 relative z-10 font-quicksand">
+              <div className="relative z-10 mb-4 block text-5xl animate-bounce-gentle sm:text-6xl lg:text-7xl">{isPassed ? '🎉' : '💪'}</div>
+              <h1 className="relative z-10 mb-3 text-3xl font-bold font-quicksand sm:text-4xl lg:text-5xl">
                 {isPassed ? 'Chúc mừng!' : 'Cố gắng thêm lần tới!'}
               </h1>
-              <p className="text-xl opacity-95 relative z-10 font-quicksand">{exam?.title || 'Bài thi'}</p>
+              <p className="relative z-10 text-base opacity-95 font-quicksand sm:text-lg lg:text-xl">{exam?.title || 'Bài thi'}</p>
               <button
                 onClick={() => setShowCongrats(false)}
-                className="mt-6 px-6 py-2 bg-white/30 text-white rounded-full font-bold hover:bg-white/50 transition-all"
+                className="touch-btn mt-5 rounded-full bg-white/30 px-5 text-white hover:bg-white/50 sm:mt-6 sm:px-6"
               >
                 Đóng ✕
               </button>
@@ -242,20 +242,20 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
         {/* Khởi động Results */}
         <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 game-card">
           {/* Result Header */}
-          <div className={`p-10 text-center text-white ${isPassed ? 'bg-gradient-to-br from-green-400 to-emerald-500' : 'bg-gradient-to-br from-orange-400 to-yellow-500'}`}>
-            <h2 className="text-4xl font-bold mb-2 font-quicksand">🚀 Phần Khởi động</h2>
-            <p className="text-lg opacity-90">{exam?.title || 'Bài thi'}</p>
+          <div className={`p-6 text-center text-white sm:p-8 lg:p-10 ${isPassed ? 'bg-gradient-to-br from-green-400 to-emerald-500' : 'bg-gradient-to-br from-orange-400 to-yellow-500'}`}>
+            <h2 className="mb-2 text-2xl font-bold font-quicksand sm:text-3xl lg:text-4xl">🚀 Phần Khởi động</h2>
+            <p className="text-base opacity-90 sm:text-lg">{exam?.title || 'Bài thi'}</p>
           </div>
 
           {/* Score Display */}
-          <div className="grid grid-cols-3 gap-6 px-12 py-12 md:grid-cols-3 sm:grid-cols-1">
+          <div className="grid grid-cols-1 gap-5 px-5 py-6 sm:px-8 sm:py-8 md:grid-cols-3 md:gap-6 lg:px-12 lg:py-12">
             <div className="flex flex-col items-center gap-3 p-6 bg-green-100 rounded-max">
-              <div className="text-5xl font-bold text-green-600 font-quicksand">{correctCount}</div>
+              <div className="text-4xl font-bold text-green-600 font-quicksand sm:text-5xl">{correctCount}</div>
               <div className="text-gray-700 font-bold font-quicksand">Câu đúng</div>
               <div className="text-sm text-gray-600">({percentage}%)</div>
             </div>
 
-            <div className="relative w-48 h-48 mx-auto">
+            <div className="relative mx-auto h-40 w-40 sm:h-44 sm:w-44 lg:h-48 lg:w-48">
               <svg viewBox="0 0 120 120" className="w-full h-full transform -rotate-90">
                 <circle cx="60" cy="60" r="50" fill="none" stroke="#e5e7eb" strokeWidth="10" />
                 <circle
@@ -273,13 +273,13 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-5xl font-bold text-gray-800 font-quicksand">{percentage}%</div>
+                <div className="text-4xl font-bold text-gray-800 font-quicksand sm:text-5xl">{percentage}%</div>
               </div>
             </div>
 
             {/* Score Box */}
             <div className="flex flex-col items-center gap-3 p-6 bg-blue-100 rounded-max">
-              <div className="text-5xl font-bold text-blue-600 font-quicksand">
+              <div className="text-4xl font-bold text-blue-600 font-quicksand sm:text-5xl">
                 {(() => {
                   const myEntry = exam?.finalLeaderboard?.find(entry => entry.uid === user?.uid);
                   return myEntry?.score ?? correctCount * 10;
@@ -302,7 +302,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
           <div className="border-t-4 border-gray-200">
             <button
               onClick={() => setShowLeaderboard(!showLeaderboard)}
-              className="btn-3d w-full p-6 bg-white border-b-3 border-yellow-400 rounded-none text-lg font-bold text-gray-800 cursor-pointer transition-all hover:bg-yellow-50 font-quicksand"
+              className="btn-3d w-full rounded-none border-b-2 border-yellow-400 bg-white p-4 text-base font-bold text-gray-800 transition-all hover:bg-yellow-50 font-quicksand sm:p-6 sm:text-lg"
             >
               {showLeaderboard ? '▼' : '▶'} 🏆 Bảng xếp hạng
             </button>
@@ -374,7 +374,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
           <div className="border-t-4 border-gray-200">
             <button
               onClick={() => setShowDetails(!showDetails)}
-              className="btn-3d w-full p-6 bg-white border-b-3 border-purple-400 rounded-none text-lg font-bold text-gray-800 cursor-pointer transition-all hover:bg-purple-50 font-quicksand"
+              className="btn-3d w-full rounded-none border-b-2 border-purple-400 bg-white p-4 text-base font-bold text-gray-800 transition-all hover:bg-purple-50 font-quicksand sm:p-6 sm:text-lg"
             >
               {showDetails ? '▼' : '▶'} Xem chi tiết câu trả lời 
             </button>
@@ -576,9 +576,9 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
 
     return (
       <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 game-card">
-        <div className="p-10 text-center text-white bg-gradient-to-br from-blue-400 to-blue-500">
-          <h2 className="text-4xl font-bold mb-2 font-quicksand">📚 Phần Luyện tập</h2>
-          <p className="text-lg opacity-90">
+        <div className="bg-gradient-to-br from-blue-400 to-blue-500 p-6 text-center text-white sm:p-8 lg:p-10">
+          <h2 className="mb-2 text-2xl font-bold font-quicksand sm:text-3xl lg:text-4xl">📚 Phần Luyện tập</h2>
+          <p className="text-base opacity-90 sm:text-lg">
             {bothCompleted ? '✅ Đã hoàn thành!' : anyProgress ? '⏳ Đang làm' : '🆕 Chưa thực hiện'}
           </p>
         </div>
@@ -609,7 +609,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
             <p className="text-lg text-gray-600 mb-8 font-quicksand">Xem lại các đoạn chat và kết quả đánh giá:</p>
             <button
               onClick={() => navigate(`/student/practice/${exam?.id}`)}
-              className="btn-3d px-12 py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xl font-bold rounded-full hover:shadow-lg transition-all font-quicksand"
+              className="touch-btn btn-3d rounded-full bg-gradient-to-r from-green-500 to-emerald-600 px-8 text-base font-bold text-white transition-all hover:shadow-lg font-quicksand sm:px-12 sm:text-xl"
             >
               📖 Xem lại đoạn chat →
             </button>
@@ -623,7 +623,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
             <p className="text-lg text-gray-600 mb-8 font-quicksand">hãy thử sức với các bài toán tương tự!</p>
             <button
               onClick={() => navigate(`/student/practice/${exam?.id}`)}
-              className="btn-3d px-12 py-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xl font-bold rounded-full hover:shadow-lg transition-all font-quicksand"
+              className="touch-btn btn-3d rounded-full bg-gradient-to-r from-blue-500 to-blue-600 px-8 text-base font-bold text-white transition-all hover:shadow-lg font-quicksand sm:px-12 sm:text-xl"
             >
               🚀 Bắt đầu Luyện tập →
             </button>
@@ -669,7 +669,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
             <p className="text-lg text-gray-600 mb-8 font-quicksand">Tiếp tục làm bài của bạn:</p>
             <button
               onClick={() => navigate(`/student/practice/${exam?.id}`)}
-              className="btn-3d px-12 py-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xl font-bold rounded-full hover:shadow-lg transition-all font-quicksand"
+              className="touch-btn btn-3d rounded-full bg-gradient-to-r from-blue-500 to-blue-600 px-8 text-base font-bold text-white transition-all hover:shadow-lg font-quicksand sm:px-12 sm:text-xl"
             >
               ⏭️ Tiếp tục Luyện tập →
             </button>
@@ -687,9 +687,9 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
 
     return (
       <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 game-card">
-        <div className="p-10 text-center text-white bg-gradient-to-br from-yellow-400 to-orange-500">
-          <h2 className="text-4xl font-bold mb-2 font-quicksand">🌟 Phần Vận dụng</h2>
-          <p className="text-lg opacity-90">
+        <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-6 text-center text-white sm:p-8 lg:p-10">
+          <h2 className="mb-2 text-2xl font-bold font-quicksand sm:text-3xl lg:text-4xl">🌟 Phần Vận dụng</h2>
+          <p className="text-base opacity-90 sm:text-lg">
             {vanDungData?.status === 'completed' ? '✅ Đã hoàn thành!' : 
              vanDungData?.status === 'in_progress' ? '⏳ Đang làm' : 
              '🆕 Sẵn sàng bắt đầu'}
@@ -706,7 +706,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                 <p className="text-lg text-gray-600 mb-8 font-quicksand">Bạn cần hoàn thành cả 2 bài Luyện tập trước khi vào Vận dụng</p>
                 <button
                   disabled
-                  className="btn-3d px-12 py-5 bg-gray-400 text-white text-xl font-bold rounded-full cursor-not-allowed font-quicksand opacity-50"
+                  className="touch-btn btn-3d rounded-full bg-gray-400 px-8 text-base font-bold text-white font-quicksand opacity-50 sm:px-12 sm:text-xl"
                 >
                   🔒 Mở khóa sau Luyện tập
                 </button>
@@ -718,7 +718,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                 <p className="text-lg text-gray-600 mb-8 font-quicksand">thực tế được tạo riêng dựa trên những điểm yếu của bạn</p>
                 <button
                   onClick={() => navigate(`/student/van-dung/${exam?.id}`)}
-                  className="btn-3d px-12 py-5 bg-gradient-to-r from-orange-400 to-red-500 text-white text-xl font-bold rounded-full hover:shadow-lg transition-all font-quicksand"
+                  className="touch-btn btn-3d rounded-full bg-gradient-to-r from-orange-400 to-red-500 px-8 text-base font-bold text-white transition-all hover:shadow-lg font-quicksand sm:px-12 sm:text-xl"
                 >
                   🚀 Bắt đầu Vận dụng →
                 </button>
@@ -746,7 +746,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
             <p className="text-lg text-gray-600 mb-8 font-quicksand">Xem lại bài làm của bạn:</p>
             <button
               onClick={() => navigate(`/student/van-dung/${exam?.id}`)}
-              className="btn-3d px-12 py-5 bg-gradient-to-r from-orange-400 to-red-500 text-white text-xl font-bold rounded-full hover:shadow-lg transition-all font-quicksand"
+              className="touch-btn btn-3d rounded-full bg-gradient-to-r from-orange-400 to-red-500 px-8 text-base font-bold text-white transition-all hover:shadow-lg font-quicksand sm:px-12 sm:text-xl"
             >
               📖 Xem lại bài làm →
             </button>
@@ -759,7 +759,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
             <p className="text-lg text-gray-600 mb-8 font-quicksand">Tiếp tục giải bài toán của bạn:</p>
             <button
               onClick={() => navigate(`/student/van-dung/${exam?.id}`)}
-              className="btn-3d px-12 py-5 bg-gradient-to-r from-orange-400 to-red-500 text-white text-xl font-bold rounded-full hover:shadow-lg transition-all font-quicksand"
+              className="touch-btn btn-3d rounded-full bg-gradient-to-r from-orange-400 to-red-500 px-8 text-base font-bold text-white transition-all hover:shadow-lg font-quicksand sm:px-12 sm:text-xl"
             >
               ⏭️ Tiếp tục Vận dụng →
             </button>
@@ -773,19 +773,19 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 pb-10">
       <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
 
-      <div className="max-w-5xl mx-auto px-5 pt-10">
+      <div className="app-shell pt-6 sm:pt-8 lg:pt-10">
         {/* Back Button */}
         <div className="mb-6">
           <button
             onClick={() => navigate(-1)}
-            className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-max transition-all font-quicksand"
+            className="touch-btn rounded-[2rem] bg-gray-500 px-4 text-sm font-bold text-white transition-all hover:bg-gray-600 font-quicksand"
           >
             ← Quay lại
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex justify-center gap-4 mb-10 flex-wrap">
+        <div className="mb-8 flex flex-wrap justify-center gap-2 sm:mb-10 sm:gap-4">
           {[
             { id: 'khoiDong', label: '🚀 Khởi động', icon: '🚀' },
             { id: 'luyenTap', label: '📚 Luyện tập', icon: '📚' },
@@ -797,7 +797,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                 setActiveTab(tab.id);
                 setShowDetails(false);
               }}
-              className={`px-8 py-3 rounded-full font-bold text-lg transition-all font-quicksand ${
+              className={`touch-btn rounded-full px-4 text-sm font-bold transition-all font-quicksand sm:px-7 sm:text-base lg:px-8 lg:text-lg ${
                 activeTab === tab.id
                   ? 'bg-yellow-400 shadow-3d text-gray-900'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'

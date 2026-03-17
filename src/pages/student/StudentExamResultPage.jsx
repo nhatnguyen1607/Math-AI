@@ -478,7 +478,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                                         return (
                                           <div
                                             key={oIdx}
-                                            className={`flex items-center gap-4 p-5 rounded-max border-3 transition-all ${
+                                            className={`grid grid-cols-[auto_minmax(0,1fr)] items-start gap-[clamp(0.65rem,2vw,1rem)] rounded-max border-3 p-[clamp(0.75rem,2.8vw,1.25rem)] transition-all sm:grid-cols-[auto_minmax(0,1fr)_auto] ${
                                               showAsCorrect
                                                 ? 'border-green-500 bg-green-100'
                                                 : showAsWrong
@@ -489,7 +489,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                                             }`}
                                           >
                                             <span
-                                              className={`flex items-center justify-center w-12 h-12 rounded-full font-bold text-white text-lg flex-shrink-0 ${
+                                              className={`flex h-11 w-11 items-center justify-center rounded-full text-[clamp(0.95rem,2.8vw,1.1rem)] font-bold text-white flex-shrink-0 ${
                                                 showAsCorrect
                                                   ? 'bg-gradient-to-br from-green-500 to-emerald-600'
                                                   : showAsWrong
@@ -501,19 +501,21 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                                             >
                                               {String.fromCharCode(65 + oIdx)}
                                             </span>
-                                            <span className="flex-1 text-gray-800 text-base leading-relaxed">{option}</span>
+                                            <span className="min-w-0 text-[clamp(0.95rem,2.8vw,1.05rem)] leading-[1.55] text-gray-800 [overflow-wrap:anywhere] break-words">
+                                              {option}
+                                            </span>
                                             {showAsCorrect && (
-                                              <span className="px-4 py-2 bg-green-600 text-white rounded-max text-sm font-bold flex-shrink-0">
+                                              <span className="col-span-2 inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-max bg-green-600 px-4 py-2 text-sm font-bold text-white sm:col-span-1 sm:self-start">
                                                 ✓ Bạn chọn
                                               </span>
                                             )}
                                             {showAsWrong && (
-                                              <span className="px-4 py-2 bg-red-600 text-white rounded-max text-sm font-bold flex-shrink-0">
+                                              <span className="col-span-2 inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-max bg-red-600 px-4 py-2 text-sm font-bold text-white sm:col-span-1 sm:self-start">
                                                 ✓ Bạn chọn
                                               </span>
                                             )}
                                             {isCorrectAnswer && !isSelected && !answerData.isCorrect && (
-                                              <span className="px-4 py-2 bg-green-600 text-white rounded-max text-sm font-bold flex-shrink-0">
+                                              <span className="col-span-2 inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-max bg-green-600 px-4 py-2 text-sm font-bold text-white sm:col-span-1 sm:self-start">
                                                 ✓ Đúng
                                               </span>
                                             )}

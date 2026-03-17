@@ -297,19 +297,19 @@ const StudentPracticePage = ({ user, onSignOut }) => {
       <StudentHeader user={user} onLogout={onSignOut} />
 
       {/* Compact Sticky Header with Title & Progress */}
-      <div className="sticky top-16 z-40 border-b border-gray-200 bg-white shadow-sm sm:top-20">
-        <div className="app-shell py-3">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h1 className="text-xl font-bold text-gray-800 font-quicksand sm:text-2xl">📖 Luyện tập</h1>
+      <div className="sticky top-16 z-40 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-sm sm:top-20">
+        <div className="app-shell py-[clamp(0.6rem,2.2vw,0.9rem)]">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <h1 className="font-quicksand text-[clamp(1.3rem,4vw,1.65rem)] font-bold text-gray-800">📖 Luyện tập</h1>
             <button
               onClick={() => navigate(-1)}
-              className="touch-btn rounded-lg bg-gray-500 px-4 text-xs font-bold text-white font-quicksand transition-all hover:bg-gray-600 sm:text-sm"
+              className="touch-btn rounded-xl bg-gray-500 px-4 text-sm font-bold text-white font-quicksand transition-all hover:bg-gray-600"
             >
               ← Quay lại
             </button>
           </div>
           {/* Progress Steps - Horizontal & Compact */}
-          <div className="flex items-center justify-start space-x-2 sm:space-x-3">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
             {['bai1', 'bai2'].map((bai, idx) => {
               const baiData = practiceData.luyenTap?.[bai];
               const status = baiData?.status;
@@ -324,7 +324,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
                   <button
                     onClick={() => setActiveTab(bai)}
                     disabled={isDisabled}
-                    className={`touch-btn h-11 rounded-full px-3 text-xs font-bold font-quicksand transition-all sm:text-sm ${
+                    className={`touch-btn min-h-11 rounded-full px-4 text-sm font-bold font-quicksand transition-all ${
                       isDisabled
                         ? 'bg-gray-200 text-gray-400 cursor-not-allowed line-through'
                         : activeTab === bai
@@ -346,15 +346,15 @@ const StudentPracticePage = ({ user, onSignOut }) => {
       </div>
 
       {/* Main Content Grid with Natural Scroll */}
-      <div className="app-shell grid grid-cols-1 gap-6 py-6 pb-20 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_350px]">
+      <div className="app-shell grid grid-cols-1 gap-[clamp(1rem,2.8vw,1.5rem)] py-[clamp(0.9rem,2.6vw,1.5rem)] pb-20 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_350px]">
         {/* Main Content Column - Flex and grow */}
         <main className="flex flex-col gap-6">
           {currentBai ? (
             <>
               {/* STICKY PROBLEM STATEMENT */}
-              <div className="sticky top-[7.2rem] z-30 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 p-4 shadow-sm sm:top-[8.2rem]">
-                <h3 className="text-sm font-bold text-blue-900 font-quicksand mb-2">📝 Đề Bài</h3>
-                <p className="text-sm leading-relaxed text-blue-800 font-quicksand sm:text-base">{currentBai.deBai}</p>
+              <div className="sticky top-[7rem] z-30 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 p-[clamp(0.8rem,2.4vw,1rem)] shadow-sm sm:top-[8rem]">
+                <h3 className="mb-2 font-quicksand text-[clamp(0.9rem,2.7vw,1rem)] font-bold text-blue-900">📝 Đề Bài</h3>
+                <p className="font-quicksand text-[clamp(0.95rem,2.8vw,1.05rem)] leading-relaxed text-blue-800 [overflow-wrap:anywhere]">{currentBai.deBai}</p>
               </div>
 
               {/* SCROLLABLE CHAT */}
@@ -384,11 +384,11 @@ const StudentPracticePage = ({ user, onSignOut }) => {
               </div>
 
               {/* Submit Button */}
-              <div className="flex gap-3 flex-wrap">
+              <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => handleSubmitPractice(activeTab)}
                   disabled={submitting || currentBai?.status === 'completed'}
-                  className="touch-btn h-11 min-w-[200px] flex-1 rounded-lg bg-gradient-to-r from-green-400 to-emerald-500 px-6 text-sm font-bold text-white font-quicksand transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 sm:text-base"
+                  className="touch-btn min-h-11 min-w-[220px] flex-1 rounded-xl bg-gradient-to-r from-green-400 to-emerald-500 px-6 text-[clamp(0.95rem,2.7vw,1.05rem)] font-bold text-white font-quicksand transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? '⏳ Đang chấm điểm...' : '✓ Nộp bài & Chấm điểm'}
                 </button>
@@ -396,7 +396,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
                 {activeTab === 'bai2' && bai2?.status === 'completed' && (
                   <button
                     onClick={() => navigate(-1)}
-                    className="touch-btn rounded-lg bg-green-500 px-6 text-sm font-bold text-white font-quicksand transition-all hover:bg-green-600 hover:shadow-lg sm:text-base"
+                    className="touch-btn min-h-11 rounded-xl bg-green-500 px-6 text-[clamp(0.95rem,2.7vw,1.05rem)] font-bold text-white font-quicksand transition-all hover:bg-green-600 hover:shadow-lg"
                   >
                     ← Hoàn thành
                   </button>

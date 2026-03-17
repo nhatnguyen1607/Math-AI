@@ -306,14 +306,14 @@ const handleSendMessage = async (e) => {
   };
 
   return (
-    <div className="practice-chat flex flex-col bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="practice-chat flex min-w-0 flex-col rounded-xl border border-gray-200 bg-white shadow-sm">
       {/* Header (sticky within the left column scroll container) */}
-      <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-t-lg">
-        <h3 className="text-lg font-bold font-quicksand">💬 Chat</h3>
+      <div className="sticky top-0 z-10 rounded-t-xl bg-gradient-to-r from-blue-500 to-purple-500 px-[clamp(0.9rem,2.8vw,1.2rem)] py-[clamp(0.7rem,2vw,1rem)] text-white">
+        <h3 className="font-quicksand text-[clamp(1rem,3vw,1.15rem)] font-bold">💬 Chat</h3>
       </div>
 
       {/* Chat Messages (body flows inside page left-column scroll container) */}
-      <div className="p-6 space-y-4 bg-gray-50">
+      <div className="space-y-[clamp(0.7rem,2vw,1rem)] bg-gray-50 p-[clamp(0.8rem,2.6vw,1.2rem)]">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center py-12 text-gray-500">
             <p className="text-center font-quicksand">
@@ -324,16 +324,16 @@ const handleSendMessage = async (e) => {
           messages.map((msg, idx) => (
             <div
               key={idx}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex min-w-0 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`w-fit max-w-[85%] px-4 py-3 rounded-lg font-quicksand ${
+                className={`min-w-0 max-w-[min(92%,44rem)] rounded-xl px-[clamp(0.75rem,2.2vw,1rem)] py-[clamp(0.6rem,1.8vw,0.85rem)] font-quicksand shadow-sm ${
                   msg.role === 'user'
                     ? 'bg-blue-500 text-white rounded-br-none'
                     : 'bg-gray-200 text-gray-800 rounded-bl-none'
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{msg.parts[0].text}</p>
+                <p className="whitespace-pre-wrap text-[clamp(0.9rem,2.8vw,1rem)] leading-relaxed [overflow-wrap:anywhere] break-words">{msg.parts[0].text}</p>
               </div>
             </div>
           ))
@@ -361,7 +361,7 @@ const handleSendMessage = async (e) => {
 
       {/* Input Area (sticky at bottom of left column) */}
       {!isCompleted && (
-        <form onSubmit={handleSendMessage} className="sticky bottom-0 z-20 bg-white border-t p-4">
+        <form onSubmit={handleSendMessage} className="sticky bottom-0 z-20 border-t bg-white p-[clamp(0.75rem,2.6vw,1rem)]">
           {isInitializing && (
             <div className="text-center text-gray-500 py-2 text-sm font-quicksand">
               ⏳ Đang khởi tạo bài toán...
@@ -372,7 +372,7 @@ const handleSendMessage = async (e) => {
               {error}
             </div>
           )}
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
             <textarea
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
@@ -391,29 +391,33 @@ const handleSendMessage = async (e) => {
               }}
               placeholder="Nhập câu trả lời của bạn... (Shift+Enter để xuống dòng, Enter để gửi)"
               disabled={isLoading || isInitializing || error?.includes('khởi tạo bài toán')}
-              className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-quicksand disabled:bg-gray-100 resize-none"
+              className="min-h-24 w-full rounded-xl border-2 border-gray-300 px-4 py-3 font-quicksand leading-relaxed focus:border-blue-500 focus:outline-none disabled:bg-gray-100 resize-none"
               style={{ minHeight: '80px', maxHeight: '150px', lineHeight: '1.5' }}
             />
-            {/* 🆕 Speaker Button - TTS Toggle */}
-            <button
-              type="button"
-              onClick={() => setIsTTSEnabled(!isTTSEnabled)}
-              className={`px-4 py-2 rounded-lg font-bold transition-all font-quicksand h-fit ${
-                isTTSEnabled
-                  ? 'bg-green-500 text-white hover:bg-green-600'
-                  : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
-              }`}
-              title={isTTSEnabled ? 'Tắt giọng nói' : 'Bật giọng nói'}
-            >
-              {isTTSEnabled ? '🔊' : '🔇'}
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading || isInitializing || !inputValue.trim() || error?.includes('khởi tạo bài toán')}
-              className="px-6 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-quicksand h-fit"
-            >
-              {isLoading ? '⏳' : '➤'}
-            </button>
+            <div className="flex items-center justify-end gap-2 sm:contents">
+              {/* 🆕 Speaker Button - TTS Toggle */}
+              <button
+                type="button"
+                onClick={() => setIsTTSEnabled(!isTTSEnabled)}
+                className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl px-4 py-2.5 font-quicksand font-bold transition-all active:scale-[0.98] ${
+                  isTTSEnabled
+                    ? 'bg-green-500 text-white hover:bg-green-600'
+                    : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                }`}
+                title={isTTSEnabled ? 'Tắt giọng nói' : 'Bật giọng nói'}
+                aria-label={isTTSEnabled ? 'Tắt giọng nói AI' : 'Bật giọng nói AI'}
+              >
+                {isTTSEnabled ? '🔊' : '🔇'}
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading || isInitializing || !inputValue.trim() || error?.includes('khởi tạo bài toán')}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-blue-500 px-6 py-2.5 font-quicksand font-bold text-white transition-all hover:bg-blue-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-400"
+                aria-label="Gửi tin nhắn"
+              >
+                {isLoading ? '⏳' : '➤'}
+              </button>
+            </div>
           </div>
         </form>
       )}

@@ -325,6 +325,17 @@ const AdminWorksheetEditorPage = ({ user, onSignOut }) => {
     ));
   };
 
+  const addBai4Type = (questionId, type) => {
+    setBai4Questions(bai4Questions.map(q =>
+      q.id === questionId ? { 
+        ...q, 
+        type: type,
+        ...(type === 'so_cach_giai' ? { content: '' } : {}),
+        ...(type === 'cau_hoi_nho' ? { subQuestions: [] } : {})
+      } : q
+    ));
+  };
+
   const handleFinish = async () => {
     if (!worksheetName.trim()) {
       alert('Vui lòng nhập tên phiếu bài tập');
@@ -939,19 +950,13 @@ const AdminWorksheetEditorPage = ({ user, onSignOut }) => {
                     {!q.type && (
                       <div className="flex gap-2 mb-3">
                         <button
-                          onClick={() => {
-                            updateBai4Question(q.id, 'type', 'so_cach_giai');
-                            updateBai4Question(q.id, 'content', '');
-                          }}
+                          onClick={() => addBai4Type(q.id, 'so_cach_giai')}
                           className="flex-1 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold rounded-lg transition-all duration-300"
                         >
                           ➕ Thêm cách giải
                         </button>
                         <button
-                          onClick={() => {
-                            updateBai4Question(q.id, 'type', 'cau_hoi_nho');
-                            updateBai4Question(q.id, 'subQuestions', []);
-                          }}
+                          onClick={() => addBai4Type(q.id, 'cau_hoi_nho')}
                           className="flex-1 px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 font-semibold rounded-lg transition-all duration-300"
                         >
                           ➕ Thêm câu hỏi nhỏ

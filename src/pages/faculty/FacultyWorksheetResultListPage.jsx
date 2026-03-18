@@ -281,7 +281,7 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
         // Add rows to table
         for (const row of detailData) {
           const [label, value] = row;
-          const valueHtml = String(value || '').replace(/\n/g, '<br/>');
+          const valueHtml = String(value ?? '').replace(/\n/g, '<br/>');
           
           if (label === '' && value === '') {
             htmlContent += '<tr><td colspan="2" style="height: 8px;"></td></tr>';

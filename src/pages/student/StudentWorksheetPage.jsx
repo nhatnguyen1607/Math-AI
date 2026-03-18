@@ -533,7 +533,7 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                   <span className="text-xl mr-2">📌</span>
                   <strong>Có {worksheetData.bai_2.so_cach_giai} cách giải</strong>
                 </p>
-                <p className="text-sm text-yellow-700 mt-2 font-semibold">Máy tính: kéo thả. Điện thoại: nhấn [ ➕ Thêm ] để chọn bước. 👆</p>
+                <p className="text-sm text-yellow-700 mt-2 font-semibold">Máy tính: kéo thả. Điện thoại: nhấn [ ➕ Thêm bước ] để chọn bước. 👆</p>
               </div>
 
               {/* Available items - Desktop only sticky */}
@@ -608,7 +608,7 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                       onClick={() => handleOpenBai2BottomSheet(cach)}
                       className="mt-3 w-full md:hidden rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 px-4 text-sm font-bold shadow-md active:scale-[0.99]"
                     >
-                      [ ➕ Add Step ]
+                      [ ➕ Thêm bước ]
                     </button>
                   </div>
                 ))}
@@ -667,7 +667,7 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
               {/* Remove confirmation dialog */}
               {bai2StepToRemove && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-                  <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
+                  <div className="w-full max-w-sm rounded-2xl bg-white p-5 dshadow-xl">
                     <h3 className="text-lg font-bold text-gray-800">Xóa bước</h3>
                     <p className="mt-2 text-sm text-gray-600">Bạn có muốn xóa bước này không?</p>
                     <div className="mt-5 flex gap-3">

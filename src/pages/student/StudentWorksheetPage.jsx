@@ -669,21 +669,21 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
                   <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
                     <h3 className="text-lg font-bold text-gray-800">Xóa bước</h3>
-                    <p className="mt-2 text-sm text-gray-600">Do you want to remove this step?</p>
+                    <p className="mt-2 text-sm text-gray-600">Bạn có muốn xóa bước này không?</p>
                     <div className="mt-5 flex gap-3">
                       <button
                         type="button"
                         onClick={handleCancelRemoveFromArrangement}
                         className="flex-1 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-200"
                       >
-                        Cancel
+                        Không
                       </button>
                       <button
                         type="button"
                         onClick={handleConfirmRemoveFromArrangement}
                         className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-600"
                       >
-                        Remove
+                        Có
                       </button>
                     </div>
                   </div>

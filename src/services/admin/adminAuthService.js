@@ -8,7 +8,7 @@ import { User } from "../../models";
  */
 class AdminAuthService {
   constructor() {
-    this.ADMIN_SESSION_KEY = 'admin_session';
+    this.ADMIN_SESSION_KEY = 'admin_session_key';
   }
 
   /**
@@ -216,7 +216,8 @@ class AdminAuthService {
    * @param {object} sessionData 
    */
   setAdminSession(sessionData) {
-    sessionStorage.setItem(this.ADMIN_SESSION_KEY, JSON.stringify(sessionData));
+    localStorage.setItem(this.ADMIN_SESSION_KEY, JSON.stringify(sessionData));
+    console.log('Admin session saved:', sessionData);
   }
 
   /**
@@ -224,12 +225,14 @@ class AdminAuthService {
    * @returns {object|null}
    */
   getAdminSession() {
-    const session = sessionStorage.getItem(this.ADMIN_SESSION_KEY);
+    const session = localStorage.getItem(this.ADMIN_SESSION_KEY);
+    console.log('Getting admin session:', session);
     if (!session) return null;
     
     try {
       return JSON.parse(session);
-    } catch {
+    } catch (e) {
+      console.error('Error parsing admin session:', e);
       return null;
     }
   }
@@ -238,7 +241,8 @@ class AdminAuthService {
    * Xóa session admin
    */
   clearAdminSession() {
-    sessionStorage.removeItem(this.ADMIN_SESSION_KEY);
+    localStorage.removeItem(this.ADMIN_SESSION_KEY);
+    console.log('Admin session cleared');
   }
 
   /**
@@ -266,6 +270,8 @@ class AdminAuthService {
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
       const session = {
         isAdmin: true,
+        uid: 'admin_user_' + Date.now(), // Generate a unique admin uid
+        username: username,
         loginTime: new Date().toISOString()
       };
       this.setAdminSession(session);

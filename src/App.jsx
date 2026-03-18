@@ -125,10 +125,20 @@ function App() {
   const handleAdminLogout = () => {
     adminAuthService.logout();
     setIsAdminAuthenticated(false);
+    setUser(null);
     window.history.pushState({}, '', '/');
   };
 
   const handleAdminLoginSuccess = () => {
+    // Tạo user object cho admin
+    const adminSession = adminAuthService.getAdminSession();
+    if (adminSession && adminSession.uid) {
+      setUser({
+        uid: adminSession.uid,
+        email: adminSession.username + '@admin.local',
+        displayName: 'Admin'
+      });
+    }
     setIsAdminAuthenticated(true);
   };
 

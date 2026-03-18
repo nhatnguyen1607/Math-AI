@@ -2,12 +2,29 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as worksheetService from '../../services/faculty/worksheetService';
 import AdminHeader from '../../components/admin/AdminHeader';
+import adminAuthService from '../../services/admin/adminAuthService';
 
 const AdminWorksheetEditorPage = ({ user, onSignOut }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const worksheetType = location.state?.worksheetType; // 'input' or 'output'
   const worksheetId = location.state?.worksheetId; // ID nếu edit
+  
+  // Get admin uid - từ user prop hoặc từ admin session
+  const getAdminUid = () => {
+    if (user?.uid) {
+      console.log('✅ Admin uid from user prop:', user.uid);
+      return user.uid;
+    }
+    const adminSession = adminAuthService.getAdminSession();
+    const uid = adminSession?.uid;
+    console.log('📋 Admin session:', adminSession);
+    console.log('✅ Admin uid from session:', uid);
+    if (!uid) {
+      console.error('❌ Could not get admin uid from user or session');
+    }
+    return uid || null;
+  };
   
   const [worksheetName, setWorksheetName] = useState('');
   const [context, setContext] = useState('');
@@ -150,8 +167,12 @@ const AdminWorksheetEditorPage = ({ user, onSignOut }) => {
         } catch (error) {
           // Nếu update fail vì document không tồn tại, tạo mới
           if (error.message?.includes('No document to update')) {
+            const adminUid = getAdminUid();
+            if (!adminUid) {
+              throw new Error('Không thể lấy uid admin');
+            }
             const newWorksheet = await worksheetService.createWorksheet(
-              user.uid,
+              adminUid,
               worksheetData
             );
             savedData = newWorksheet;
@@ -161,8 +182,12 @@ const AdminWorksheetEditorPage = ({ user, onSignOut }) => {
         }
       } else {
         // Create new
+        const adminUid = getAdminUid();
+        if (!adminUid) {
+          throw new Error('Không thể lấy uid admin');
+        }
         const newWorksheet = await worksheetService.createWorksheet(
-          user.uid,
+          adminUid,
           worksheetData
         );
         savedData = newWorksheet;
@@ -373,8 +398,12 @@ const AdminWorksheetEditorPage = ({ user, onSignOut }) => {
       let finalWorksheet = savedWorksheet;
 
       if (!savedWorksheet) {
+        const adminUid = getAdminUid();
+        if (!adminUid) {
+          throw new Error('Không thể lấy uid admin');
+        }
         finalWorksheet = await worksheetService.createWorksheet(
-          user.uid,
+          adminUid,
           worksheetData
         );
       } else {
@@ -382,8 +411,12 @@ const AdminWorksheetEditorPage = ({ user, onSignOut }) => {
           await worksheetService.updateWorksheet(savedWorksheet.id, worksheetData);
         } catch (error) {
           if (error.message?.includes('No document to update')) {
+            const adminUid = getAdminUid();
+            if (!adminUid) {
+              throw new Error('Không thể lấy uid admin');
+            }
             finalWorksheet = await worksheetService.createWorksheet(
-              user.uid,
+              adminUid,
               worksheetData
             );
           } else {

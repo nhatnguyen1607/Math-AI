@@ -19,8 +19,6 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
 
   // Bài 2: Drag-drop arrangements
   const [bai2Arrangements, setBai2Arrangements] = useState({});
-  const [bai2AvailableSteps, setBai2AvailableSteps] = useState([]);
-  const [bai2SelectedSteps, setBai2SelectedSteps] = useState([]);
   const [isBai2BottomSheetOpen, setIsBai2BottomSheetOpen] = useState(false);
   const [activeBai2Cach, setActiveBai2Cach] = useState(null);
   const [bai2StepToRemove, setBai2StepToRemove] = useState(null);
@@ -137,19 +135,8 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
 
   useEffect(() => {
     if (!worksheetData?.bai_2?.questions) {
-      setBai2AvailableSteps([]);
-      setBai2SelectedSteps([]);
       return;
     }
-
-    const selectedSet = new Set(
-      Object.values(bai2Arrangements || {})
-        .flat()
-        .filter(Boolean),
-    );
-
-    setBai2SelectedSteps(Array.from(selectedSet));
-    setBai2AvailableSteps((worksheetData.bai_2.questions || []).map((q) => q.id));
   }, [worksheetData?.bai_2?.questions, bai2Arrangements]);
 
   const loadWorksheet = useCallback(async () => {
@@ -210,7 +197,7 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
     e.preventDefault();
     const questionId = e.dataTransfer.getData("questionId");
 
-    if (questionId && !bai2SelectedSteps.includes(questionId)) {
+    if (questionId) {
       setBai2Arrangements((prev) => ({
         ...prev,
         [cach]: [...(prev[cach] || []), questionId],
@@ -229,7 +216,7 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
   };
 
   const handleTapAddBai2Step = (questionId) => {
-    if (!activeBai2Cach || bai2SelectedSteps.includes(questionId)) return;
+    if (!activeBai2Cach) return;
 
     setBai2Arrangements((prev) => ({
       ...prev,
@@ -543,13 +530,9 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                   {(worksheetData.bai_2.questions || []).map((q) => (
                     <div
                       key={q.id}
-                      draggable={!bai2SelectedSteps.includes(q.id)}
+                      draggable
                       onDragStart={(e) => handleDragStart(e, q.id)}
-                      className={`px-4 py-2 rounded-full text-sm font-bold transition shadow-lg ${
-                        bai2SelectedSteps.includes(q.id)
-                          ? "bg-gray-300 text-gray-600 cursor-not-allowed opacity-60"
-                          : "bg-gradient-to-br from-blue-400 to-blue-500 text-white cursor-move hover:from-blue-500 hover:to-blue-600 active:opacity-50 transform hover:scale-110"
-                      }`}
+                      className="px-4 py-2 rounded-full text-sm font-bold transition shadow-lg bg-gradient-to-br from-blue-400 to-blue-500 text-white cursor-move hover:from-blue-500 hover:to-blue-600 active:opacity-50 transform hover:scale-110"
                     >
                       <FractionRenderer text={q.text} />
                     </div>
@@ -639,26 +622,16 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                       {activeBai2Cach ? `Thêm bước vào ${activeBai2Cach.replace("cach_", "Cách ")}` : "Chọn cách giải trước khi thêm bước"}
                     </p>
                     <div className="space-y-2">
-                      {(worksheetData.bai_2.questions || [])
-                        .filter((q) => bai2AvailableSteps.includes(q.id))
-                        .map((q) => {
-                          const isDisabled = bai2SelectedSteps.includes(q.id);
-                          return (
-                            <button
-                              key={q.id}
-                              type="button"
-                              disabled={isDisabled}
-                              onClick={() => handleTapAddBai2Step(q.id)}
-                              className={`w-full rounded-xl px-4 py-3 text-left text-sm font-bold transition ${
-                                isDisabled
-                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                  : "bg-blue-50 text-blue-800 border border-blue-200 active:scale-[0.99]"
-                              }`}
-                            >
-                              <FractionRenderer text={q.text} />
-                            </button>
-                          );
-                        })}
+                      {(worksheetData.bai_2.questions || []).map((q) => (
+                        <button
+                          key={q.id}
+                          type="button"
+                          onClick={() => handleTapAddBai2Step(q.id)}
+                          className="w-full rounded-xl px-4 py-3 text-left text-sm font-bold transition bg-blue-50 text-blue-800 border border-blue-200 active:scale-[0.99]"
+                        >
+                          <FractionRenderer text={q.text} />
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>

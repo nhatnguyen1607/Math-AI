@@ -165,41 +165,41 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={navItems} />
 
-        <div className="px-8 py-8 max-w-7xl mx-auto w-full flex flex-col items-center justify-center min-h-[80vh]">
+        <div className="app-shell section-shell flex min-h-[75vh] w-full flex-col items-center justify-center">
           <div className="text-center">
-            <h1 className="text-5xl font-bold text-gray-800 mb-4 font-quicksand">
+            <h1 className="mb-3 text-3xl font-bold text-gray-800 font-quicksand sm:text-4xl lg:text-5xl">
               Chào mừng, {user?.displayName || "Bạn"}! 👋
             </h1>
-            <p className="text-xl text-gray-600 mb-12 font-quicksand">
+            <p className="mb-8 text-base text-gray-600 font-quicksand sm:mb-10 sm:text-lg lg:mb-12 lg:text-xl">
               Vui lòng chọn lớp học của bạn để bắt đầu
             </p>
 
-            <div className="game-card bg-white rounded-max shadow-lg p-12 max-w-md">
-              <div className="text-7xl mb-6">🎓</div>
-              <h2 className="text-3xl font-bold text-gray-800 mb-6 font-quicksand">
+            <div className="game-card mx-auto w-full max-w-md rounded-[2rem] bg-white p-6 shadow-lg sm:p-8 lg:p-10">
+              <div className="mb-4 text-5xl sm:text-6xl lg:text-7xl">🎓</div>
+              <h2 className="mb-4 text-2xl font-bold text-gray-800 font-quicksand sm:text-3xl">
                 Chọn lớp học
               </h2>
               {studentClasses && studentClasses.length > 0 ? (
                 <>
-                  <p className="text-gray-600 mb-6 font-quicksand">
+                  <p className="mb-5 text-sm text-gray-600 font-quicksand sm:text-base">
                     Bạn đã tham gia {studentClasses.length} lớp
                   </p>
                   <button
                     onClick={handleChangeClass}
-                    className="btn-3d w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-4 px-6 rounded-max font-quicksand text-lg"
+                    className="touch-btn btn-3d w-full rounded-[2rem] bg-gradient-to-r from-blue-500 to-blue-600 text-base font-bold text-white font-quicksand sm:text-lg"
                   >
                     Chọn lớp →
                   </button>
                 </>
               ) : (
                 <>
-                  <p className="text-gray-600 mb-6 font-quicksand">
+                  <p className="mb-5 text-sm text-gray-600 font-quicksand sm:text-base">
                     Bạn chưa tham gia lớp nào. Hãy tham gia lớp của bạn bằng mã
                     lớp.
                   </p>
                   <button
                     onClick={handleChangeClass}
-                    className="btn-3d w-full bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-4 px-6 rounded-max font-quicksand text-lg"
+                    className="touch-btn btn-3d w-full rounded-[2rem] bg-gradient-to-r from-green-500 to-green-600 text-base font-bold text-white font-quicksand sm:text-lg"
                   >
                     Tham gia lớp →
                   </button>
@@ -254,10 +254,10 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 px-4">
         <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce-gentle">✨</div>
-          <div className="text-2xl font-bold text-gray-700 font-quicksand">
+          <div className="mb-4 text-5xl animate-bounce-gentle sm:text-6xl">✨</div>
+          <div className="text-xl font-bold text-gray-700 font-quicksand sm:text-2xl">
             Đang tải dữ liệu...
           </div>
         </div>
@@ -271,12 +271,12 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
 
-        <div className="px-8 py-8 max-w-7xl mx-auto w-full">
+        <div className="app-shell section-shell w-full">
           {/* Change Class Button */}
-          <div className="mb-8 flex gap-4">
+          <div className="mb-6 flex gap-3 sm:mb-8">
             <button
               onClick={handleChangeClass}
-              className="btn-3d bg-blue-500 text-white py-3 px-6 rounded-max font-quicksand hover:shadow-lg transition-all font-bold"
+              className="touch-btn btn-3d rounded-[2rem] bg-blue-500 px-4 text-sm font-bold text-white font-quicksand transition-all hover:shadow-lg sm:px-6 sm:text-base"
               title="Chọn lớp khác"
             >
               🔄 Chọn lớp khác
@@ -284,11 +284,11 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
           </div>
 
           {/* Welcome Section */}
-          <div className="mb-12">
-            <h1 className="text-5xl font-bold text-gray-800 mb-2 font-quicksand">
+          <div className="mb-8 sm:mb-10 lg:mb-12">
+            <h1 className="mb-2 text-3xl font-bold text-gray-800 font-quicksand sm:text-4xl lg:text-5xl">
               Chào mừng, {user?.displayName || "Bạn"}! 👋
             </h1>
-            <p className="text-xl text-gray-600 font-quicksand">
+            <p className="text-base text-gray-600 font-quicksand sm:text-lg lg:text-xl">
               Lớp:{" "}
               <span className="font-bold text-gray-800">
                 {selectedClass?.name}
@@ -297,43 +297,43 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
           </div>
 
           {/* Stats Section - Card Style */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <div className="game-card bg-gradient-to-br from-blue-300 to-cyan-300 rounded-max p-6 shadow-lg hover:shadow-2xl">
-              <div className="flex items-center gap-4">
-                <div className="text-5xl">🏆</div>
+          <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:mb-12 lg:grid-cols-3 lg:gap-6">
+            <div className="game-card rounded-[2rem] bg-gradient-to-br from-blue-300 to-cyan-300 p-5 shadow-lg transition-all hover:shadow-2xl sm:p-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="text-4xl sm:text-5xl">🏆</div>
                 <div>
-                  <div className="text-4xl font-bold text-gray-800 font-quicksand">
+                  <div className="text-3xl font-bold text-gray-800 font-quicksand sm:text-4xl">
                     {userStats?.completedExams || 0}
                   </div>
-                  <div className="text-gray-700 font-quicksand">
+                  <div className="text-sm text-gray-700 font-quicksand sm:text-base">
                     Đề thi hoàn thành
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="game-card bg-gradient-to-br from-purple-300 to-pink-300 rounded-max p-6 shadow-lg hover:shadow-2xl">
-              <div className="flex items-center gap-4">
-                <div className="text-5xl">⭐</div>
+            <div className="game-card rounded-[2rem] bg-gradient-to-br from-purple-300 to-pink-300 p-5 shadow-lg transition-all hover:shadow-2xl sm:p-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="text-4xl sm:text-5xl">⭐</div>
                 <div>
-                  <div className="text-4xl font-bold text-gray-800 font-quicksand">
+                  <div className="text-3xl font-bold text-gray-800 font-quicksand sm:text-4xl">
                     {userStats?.averageScore || 0}%
                   </div>
-                  <div className="text-gray-700 font-quicksand">
+                  <div className="text-sm text-gray-700 font-quicksand sm:text-base">
                     Điểm trung bình
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="game-card bg-gradient-to-br from-green-300 to-emerald-300 rounded-max p-6 shadow-lg hover:shadow-2xl">
-              <div className="flex items-center gap-4">
-                <div className="text-5xl">🗺️</div>
+            <div className="game-card rounded-[2rem] bg-gradient-to-br from-green-300 to-emerald-300 p-5 shadow-lg transition-all hover:shadow-2xl sm:p-6 sm:col-span-2 lg:col-span-1">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="text-4xl sm:text-5xl">🗺️</div>
                 <div>
-                  <div className="text-4xl font-bold text-gray-800 font-quicksand">
+                  <div className="text-3xl font-bold text-gray-800 font-quicksand sm:text-4xl">
                     {topics.length}
                   </div>
-                  <div className="text-gray-700 font-quicksand">
+                  <div className="text-sm text-gray-700 font-quicksand sm:text-base">
                     Chủ đề khả dụng
                   </div>
                 </div>
@@ -342,24 +342,24 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
           </div>
 
           {/* Main Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6 lg:gap-8">
             {/* Khởi động Card */}
             <div
-              className="group game-card bg-gradient-to-br from-yellow-300 to-orange-300 rounded-max shadow-lg p-10 cursor-pointer transition-all duration-300 transform hover:-translate-y-4 hover:shadow-2xl"
+              className="group game-card rounded-[2rem] bg-gradient-to-br from-yellow-300 to-orange-300 p-6 shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl sm:p-8 lg:p-10"
             >
-              <div className="text-7xl mb-6 text-center animate-bounce-gentle">
+              <div className="mb-4 text-center text-5xl animate-bounce-gentle sm:mb-5 sm:text-6xl lg:mb-6 lg:text-7xl">
                 🚀
               </div>
-              <h2 className="text-3xl font-bold text-gray-800 mb-3 font-quicksand text-center">
+              <h2 className="mb-3 text-center text-2xl font-bold text-gray-800 font-quicksand sm:text-3xl">
                 🗺️ Trò chơi
               </h2>
-              <p className="text-gray-700 mb-8 font-quicksand text-center">
+              <p className="mb-6 text-center text-sm text-gray-700 font-quicksand sm:mb-8 sm:text-base">
                 Chọn chủ đề và bắt đầu hành trình học tập của bạn
               </p>
               <button 
                 onClick={handleStartupClick}
                 type="button"
-                className="btn-3d w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-4 px-6 rounded-max font-quicksand text-lg"
+                className="touch-btn btn-3d w-full rounded-[2rem] bg-gradient-to-r from-blue-500 to-blue-600 text-base font-bold text-white font-quicksand sm:text-lg"
               >
                 Khám phá Bản đồ →
               </button>
@@ -368,18 +368,18 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
             {/* Phiếu bài tập Card */}
             <div
               onClick={handleWorksheetClick}
-              className="group game-card bg-gradient-to-br from-pink-300 to-rose-300 rounded-max shadow-lg p-10 cursor-pointer transition-all duration-300 transform hover:-translate-y-4 hover:shadow-2xl"
+              className="group game-card cursor-pointer rounded-[2rem] bg-gradient-to-br from-pink-300 to-rose-300 p-6 shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl sm:p-8 lg:p-10"
             >
-              <div className="text-7xl mb-6 text-center animate-bounce-gentle">
+              <div className="mb-4 text-center text-5xl animate-bounce-gentle sm:mb-5 sm:text-6xl lg:mb-6 lg:text-7xl">
                 📋
               </div>
-              <h2 className="text-3xl font-bold text-gray-800 mb-3 font-quicksand text-center">
+              <h2 className="mb-3 text-center text-2xl font-bold text-gray-800 font-quicksand sm:text-3xl">
                 📝 Phiếu bài tập
               </h2>
-              <p className="text-gray-700 mb-8 font-quicksand text-center">
+              <p className="mb-6 text-center text-sm text-gray-700 font-quicksand sm:mb-8 sm:text-base">
                 Làm các bài thi hoàn chỉnh và kiểm tra kiến thức
               </p>
-              <button className="btn-3d w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold py-4 px-6 rounded-max font-quicksand text-lg">
+              <button className="touch-btn btn-3d w-full rounded-[2rem] bg-gradient-to-r from-purple-500 to-purple-600 text-base font-bold text-white font-quicksand sm:text-lg">
                 Tham gia bài thi →
               </button>
             </div>
@@ -394,22 +394,22 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
       <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
 
       {/* Nội dung chính */}
-      <div className="p-8">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex items-center gap-4 mb-10">
+      <div className="app-shell section-shell">
+        <div>
+          <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:gap-4 lg:mb-10">
             <button
               onClick={() => navigate(-1)}
-              className="btn-3d bg-white text-gray-800 py-3 px-6 rounded-max font-quicksand hover:shadow-lg transition-all"
+              className="touch-btn btn-3d w-full rounded-[2rem] bg-white px-5 text-sm text-gray-800 font-quicksand transition-all hover:shadow-lg sm:w-auto sm:text-base"
             >
               ← Quay lại
             </button>
-            <h2 className="text-4xl font-bold text-gray-800 font-quicksand">
+            <h2 className="text-2xl font-bold text-gray-800 font-quicksand sm:text-3xl lg:text-4xl">
               Không tìm thấy trang
             </h2>
           </div>
-          <div className="bg-white rounded-max shadow-lg p-16 text-center game-card">
-            <p className="text-5xl mb-4">🔍</p>
-            <p className="text-gray-600 text-lg font-quicksand">
+          <div className="game-card rounded-[2rem] bg-white p-8 text-center shadow-lg sm:p-12 lg:p-16">
+            <p className="mb-3 text-4xl sm:mb-4 sm:text-5xl">🔍</p>
+            <p className="text-base text-gray-600 font-quicksand sm:text-lg">
               Trang này không tồn tại.
             </p>
           </div>

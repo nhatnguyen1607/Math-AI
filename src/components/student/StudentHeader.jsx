@@ -7,6 +7,7 @@ const StudentHeader = ({ user, onLogout, onBack, navItems = [] }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.displayName || '');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -52,81 +53,147 @@ const StudentHeader = ({ user, onLogout, onBack, navItems = [] }) => {
   return (
     <>
       {/* Main Header */}
-      <header className="flex justify-between items-center px-12 py-6 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 backdrop-blur-md border-b-4 border-cyan-400 sticky top-0 z-50 shadow-lg shadow-black/20">
-        {/* Logo và Title bên trái */}
-        <div className="flex items-center">
-          <div className="flex items-center gap-3 cursor-pointer transition-all duration-300 hover:-translate-y-0.5">
-            <span className="text-2xl animate-float">📐</span>
-            <span className="text-2xl font-bold text-white drop-shadow-lg tracking-wide">Trợ lí học tập ảo</span>
+      <header className="sticky top-0 z-50 border-b-4 border-cyan-300/80 bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-500 shadow-lg shadow-cyan-900/20">
+        <div className="app-shell flex min-h-16 items-center justify-between gap-3 py-2 sm:min-h-20 sm:py-3">
+          {/* Logo và Title bên trái */}
+          <div className="flex items-center">
+            <div className="flex items-center gap-2.5 transition-all duration-300 hover:-translate-y-0.5">
+              <span className="text-xl animate-float sm:text-2xl">📐</span>
+              <span className="text-base font-bold text-white drop-shadow-lg tracking-wide sm:text-xl lg:text-2xl">Trợ lí học tập ảo</span>
+            </div>
+          </div>
+
+          {/* Desktop User Area */}
+          <div className="hidden items-center gap-3 lg:flex">
+            {isEditingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="h-11 rounded-xl border-2 border-white/50 bg-white/20 px-3 text-white placeholder-white/70 focus:outline-none focus:border-white"
+                  placeholder="Nhập tên mới"
+                  autoFocus
+                />
+                <button
+                  onClick={handleSaveName}
+                  disabled={isUpdating}
+                  className="touch-btn bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50"
+                >
+                  {isUpdating ? '...' : '✓'}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditingName(false);
+                    setNewName(user?.displayName || '');
+                  }}
+                  className="touch-btn bg-rose-500/80 text-white hover:bg-rose-600"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsEditingName(true)}
+                className="touch-btn bg-white/15 text-white hover:bg-white/25"
+                title="Bấm để đổi tên"
+              >
+                Xin chào, {user?.displayName || user?.email || 'Học sinh'} ✏️
+              </button>
+            )}
+            {user?.photoURL && (
+              <img src={user.photoURL} alt="Avatar" className="h-11 w-11 rounded-full border-2 border-white/50 object-cover shadow-md" />
+            )}
+            <button className="touch-btn bg-rose-600/90 text-white hover:bg-rose-700" onClick={handleLogout}>
+              Đăng xuất
+            </button>
+          </div>
+
+          {/* Mobile quick actions */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <button
+              className="touch-btn bg-white/15 text-white hover:bg-white/25"
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              aria-expanded={isMenuOpen}
+              aria-label="Mở menu"
+            >
+              {isMenuOpen ? '✕' : '☰'}
+            </button>
           </div>
         </div>
 
-        {/* User Info và Logout bên phải */}
-        <div className="flex items-center gap-5 flex-shrink-0">
-          {isEditingName ? (
-            <div className="flex items-center gap-3">
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                className="px-3 py-2 rounded-lg border-2 border-white/50 bg-white/20 text-white placeholder-white/70 focus:outline-none focus:border-white"
-                placeholder="Nhập tên mới"
-                autoFocus
-              />
+        {/* Mobile dropdown menu */}
+        {isMenuOpen && (
+          <div className="border-t border-white/20 bg-cyan-700/95 px-4 pb-4 pt-3 lg:hidden">
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-3">
+              <p className="text-sm font-semibold text-cyan-50">Xin chào, {user?.displayName || user?.email || 'Học sinh'}</p>
+
+              {isEditingName ? (
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="h-11 rounded-xl border-2 border-white/50 bg-white/20 px-3 text-white placeholder-white/70 focus:outline-none focus:border-white"
+                    placeholder="Nhập tên mới"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleSaveName}
+                    disabled={isUpdating}
+                    className="touch-btn bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50"
+                  >
+                    {isUpdating ? '...' : 'Lưu tên'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsEditingName(false);
+                      setNewName(user?.displayName || '');
+                    }}
+                    className="touch-btn bg-rose-500/80 text-white hover:bg-rose-600"
+                  >
+                    Hủy
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsEditingName(true)}
+                  className="touch-btn w-full bg-white/15 text-white hover:bg-white/25"
+                >
+                  Đổi tên hiển thị
+                </button>
+              )}
+
               <button
-                onClick={handleSaveName}
-                disabled={isUpdating}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold text-sm transition-all hover:bg-green-600 disabled:opacity-50"
+                className="touch-btn w-full bg-rose-600/90 text-white hover:bg-rose-700"
+                onClick={handleLogout}
               >
-                {isUpdating ? '...' : '✓'}
-              </button>
-              <button
-                onClick={() => {
-                  setIsEditingName(false);
-                  setNewName(user?.displayName || '');
-                }}
-                className="px-4 py-2 bg-red-500/70 text-white rounded-lg font-semibold text-sm transition-all hover:bg-red-600"
-              >
-                ✕
+                Đăng xuất
               </button>
             </div>
-          ) : (
-            <span
-              onClick={() => setIsEditingName(true)}
-              className="text-white text-base font-semibold whitespace-nowrap drop-shadow-md cursor-pointer hover:opacity-70 transition-opacity"
-              title="Bấm để đổi tên"
-            >
-              Xin chào, {user?.displayName || user?.email || 'Học sinh'} ✏️
-            </span>
-          )}
-          {user?.photoURL && (
-            <img src={user.photoURL} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-white border-opacity-40 shadow-md hover:border-opacity-80 object-cover transition-all duration-300 hover:shadow-lg hover:shadow-black/30" />
-          )}
-          <button className="px-8 py-3 bg-red-600 bg-opacity-80 text-white border-none rounded-lg font-semibold cursor-pointer transition-all duration-300 text-base backdrop-blur-md shadow-lg shadow-red-600/30 whitespace-nowrap hover:bg-opacity-100 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-red-600/40 active:translate-y-0" onClick={handleLogout}>
-            Đăng xuất
-          </button>
-        </div>
+          </div>
+        )}
       </header>
 
       {/* Navigation Bar */}
       {navItems.length > 0 && (
-        <nav className="bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 border-b-2 border-cyan-400 border-opacity-50 p-0 sticky top-24 z-49 shadow-md shadow-black/20">
-          <div className="flex items-center gap-0 px-12 max-w-7xl mx-auto flex-wrap">
+        <nav className={`${isMenuOpen ? 'hidden lg:block' : ''} sticky top-16 z-40 border-b-2 border-cyan-300/70 bg-gradient-to-r from-cyan-600 to-blue-600 shadow-md sm:top-20`}>
+          <div className="app-shell flex items-center gap-2 py-1">
             {onBack && (
-              <button className="px-6 py-4 bg-none border-none text-white text-opacity-90 font-semibold text-sm cursor-pointer transition-all duration-300 border-r-2 border-cyan-400 border-opacity-30 whitespace-nowrap hover:text-white hover:bg-cyan-400 hover:bg-opacity-20 hover:-translate-x-1" onClick={onBack} title="Quay lại">
+              <button className="touch-btn border border-white/30 bg-white/10 text-white hover:bg-white/20" onClick={onBack} title="Quay lại">
                 ← Quay lại
               </button>
             )}
-            <div className="flex gap-0 flex-1">
+            <div className="flex flex-1 gap-2 overflow-x-auto pb-1">
               {navItems.map((item, index) => (
-                <div
+                <button
                   key={index}
                   onClick={item.action}
-                  className="flex items-center gap-2.5 px-6 py-4 text-white text-opacity-90 font-bold text-xs cursor-pointer transition-all duration-300 border-b-4 border-transparent hover:text-white hover:border-cyan-400 hover:bg-cyan-400 hover:bg-opacity-10 uppercase tracking-widest"
+                  className="touch-btn whitespace-nowrap border border-white/25 bg-white/10 text-white hover:bg-white/20"
                 >
                   {item.icon && <span className="text-lg">{item.icon}</span>}
                   <span>{item.label}</span>
-                </div>
+                </button>
               ))}
             </div>
           </div>

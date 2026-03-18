@@ -91,10 +91,10 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="text-6xl mb-4">❌</div>
-            <p className="text-2xl font-bold text-gray-700 mb-6">Không tìm thấy kết quả</p>
+            <p className="mb-6 text-xl font-bold text-gray-700 sm:text-2xl">Không tìm thấy kết quả</p>
             <button
               onClick={() => navigate(`/student/${classId}`)}
-              className="px-8 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg"
+              className="touch-btn rounded-lg bg-blue-500 px-6 text-white font-bold hover:bg-blue-600"
             >
               ← Quay lại trang chủ
             </button>
@@ -108,19 +108,19 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
       <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
 
-      <div className="px-8 py-8 max-w-7xl mx-auto">
+      <div className="app-shell section-shell">
         <button
           onClick={() => navigate(`/student/${classId}`)}
-          className="mb-6 px-4 py-2 bg-white hover:bg-gray-100 rounded-full font-semibold text-gray-700 transition-all shadow-md hover:shadow-lg"
+          className="touch-btn mb-5 rounded-full bg-white px-4 text-sm font-semibold text-gray-700 transition-all shadow-md hover:bg-gray-100 hover:shadow-lg sm:mb-6"
         >
           ← Quay lại
         </button>
 
         {/* Header */}
-        <div className="text-center mb-12">
-          <div className="text-8xl mb-4 animate-bounce">📋</div>
-          <h1 className="text-5xl font-bold text-gray-800">{worksheet.name}</h1>
-          <p className="text-xl text-gray-600 mt-2">Chi tiết bài làm của em</p>
+        <div className="mb-8 text-center sm:mb-10 lg:mb-12">
+          <div className="mb-3 text-6xl animate-bounce sm:mb-4 sm:text-8xl">📋</div>
+          <h1 className="text-3xl font-bold text-gray-800 sm:text-4xl lg:text-5xl">{worksheet.name}</h1>
+          <p className="mt-2 text-base text-gray-600 sm:text-lg lg:text-xl">Chi tiết bài làm của em</p>
         </div>
 
         {/* Context - Câu hỏi chung */}
@@ -383,10 +383,10 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
         )}
 
         {/* Action buttons */}
-        <div className="flex gap-4 justify-center mt-12 mb-8">
+        <div className="mb-8 mt-10 flex justify-center gap-4 sm:mt-12">
           <button
             onClick={() => navigate(`/student/${classId}`)}
-            className="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-2xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-2"
+            className="touch-btn rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 px-6 text-sm font-bold text-white shadow-lg transition-all hover:from-blue-600 hover:to-blue-700 sm:text-base"
           >
             <span className="text-lg">🏠</span> Quay lại trang chủ
           </button>

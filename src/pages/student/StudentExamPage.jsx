@@ -719,10 +719,10 @@ const StudentExamPage = ({ user, onSignOut }) => {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 px-4">
         <div className="flex flex-col items-center gap-6">
-          <div className="text-6xl animate-bounce-gentle">🚀</div>
-          <p className="text-2xl font-bold text-gray-700 font-quicksand">Đang tải bài thi...</p>
+          <div className="text-5xl animate-bounce-gentle sm:text-6xl">🚀</div>
+          <p className="text-xl font-bold text-gray-700 font-quicksand sm:text-2xl">Đang tải bài thi...</p>
         </div>
       </div>
     );
@@ -734,11 +734,11 @@ const StudentExamPage = ({ user, onSignOut }) => {
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
         <div className="flex flex-col items-center justify-center gap-8 px-5 py-20">
-          <div className="text-8xl">⚠️</div>
-          <h2 className="text-gray-800 text-3xl font-bold font-quicksand">{error}</h2>
+          <div className="text-6xl sm:text-8xl">⚠️</div>
+          <h2 className="text-center text-2xl font-bold text-gray-800 font-quicksand sm:text-3xl">{error}</h2>
           <button
             onClick={() => navigate(-1)}
-            className="btn-3d px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-quicksand rounded-max hover:shadow-lg transition-all"
+            className="touch-btn btn-3d rounded-[2rem] bg-gradient-to-r from-blue-500 to-blue-600 px-6 text-white font-quicksand transition-all hover:shadow-lg"
           >
             Quay lại
           </button>
@@ -763,11 +763,11 @@ const StudentExamPage = ({ user, onSignOut }) => {
   // Completed state
   if (isCompleted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-8 bg-white rounded-max p-12 shadow-2xl game-card">
-          <div className="text-8xl animate-bounce-gentle">✅</div>
-          <h2 className="text-4xl font-bold text-gray-800 font-quicksand text-center">Bài thi của bạn đã hoàn thành!</h2>
-          <p className="text-xl text-gray-600 font-quicksand">Đang chuyển đến trang kết quả...</p>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 px-4">
+        <div className="game-card flex w-full max-w-xl flex-col items-center gap-6 rounded-[2rem] bg-white p-8 text-center shadow-2xl sm:p-12">
+          <div className="text-6xl animate-bounce-gentle sm:text-8xl">✅</div>
+          <h2 className="text-2xl font-bold text-gray-800 font-quicksand sm:text-4xl">Bài thi của bạn đã hoàn thành!</h2>
+          <p className="text-base text-gray-600 font-quicksand sm:text-xl">Đang chuyển đến trang kết quả...</p>
           <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
         </div>
       </div>
@@ -837,9 +837,9 @@ const StudentExamPage = ({ user, onSignOut }) => {
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
       <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
 
-      <div className="max-w-7xl mx-auto px-5 py-8">
+      <div className="app-shell section-shell">
         {/* Rocket Progress Bar */}
-        <div className="mb-10 game-card">
+        <div className="mb-6 game-card sm:mb-8 lg:mb-10">
           <div className="rocket-progress">
             <div
               className="rocket-progress-fill"
@@ -853,66 +853,44 @@ const StudentExamPage = ({ user, onSignOut }) => {
           </div>
         </div>
 
-        {/* Header Bar with Timer */}
-        <div className="bg-white rounded-max shadow-lg p-6 mb-8 flex items-center justify-between gap-6 flex-wrap md:flex-nowrap game-card">
-          {/* Timer or Loading State */}
-          {isSubmitting ? (
-            <div className="flex items-center gap-3 px-6 py-3 rounded-max font-bold text-lg bg-blue-200 text-blue-700">
-              <span className="text-3xl animate-spin">⏳</span>
-              <div className="font-quicksand">
-                <div className="text-2xl">Đang nộp bài...</div>
-                <div className="text-xs opacity-75">Vui lòng chờ</div>
+        {/* Sticky Exam Control Header */}
+        <div className="sticky top-16 z-40 -mx-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:top-20 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 lg:-mx-10 lg:px-10">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
+              <h2 className="truncate text-lg font-bold text-gray-800 font-quicksand sm:text-xl">
+                {exam.title}
+              </h2>
+              <div className="hidden h-6 w-px bg-gray-300 sm:block"></div>
+              <div className="flex items-center gap-2 text-sm text-gray-600 font-quicksand sm:text-base">
+                <span className="font-bold text-blue-600">
+                  {currentQuestionIndex + 1}/{questions.length}
+                </span>
+                <span>Câu hỏi</span>
               </div>
             </div>
-          ) : (
-            <div
-              className={`flex items-center gap-3 px-6 py-3 rounded-max font-bold text-lg transition-all ${
-                isTimeRunningOut
-                  ? 'bg-red-200 text-red-700 animate-pulse'
-                  : isTimeWarning
-                  ? 'bg-yellow-200 text-yellow-700'
-                  : 'bg-blue-200 text-blue-700'
-              }`}
-            >
-              <span className="text-3xl">⏱️</span>
-              <div className="font-quicksand">
-                <div className="text-2xl">{timeText}</div>
-                <div className="text-xs opacity-75">Thời gian còn lại</div>
-              </div>
-            </div>
-          )}
 
-          {/* Stats */}
-          <div className="flex gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600 font-quicksand">{correctCount}</div>
-              <div className="text-sm text-gray-600 font-quicksand">Câu đúng</div>
-            </div>
-            <div className="border-l border-gray-300"></div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600 font-quicksand">
-                {Object.values(answers).reduce((sum, answer) => sum + (answer.points || 0), 0)}
+            <div className="flex items-center gap-3 sm:gap-6">
+              <div className="flex items-center gap-2 text-red-500">
+                <span className="text-xl sm:text-2xl">⏱️</span>
+                <span className="text-lg font-bold font-quicksand sm:text-xl">{timeText}</span>
               </div>
-              <div className="text-sm text-gray-600 font-quicksand">Điểm</div>
+              <button
+                onClick={() => handleAutoSubmit()}
+                disabled={isSubmitting}
+                className="touch-btn rounded-lg bg-gradient-to-r from-orange-400 to-red-500 px-4 text-xs font-bold text-white font-quicksand transition-all hover:shadow-lg sm:px-6 sm:text-sm"
+              >
+                {isSubmitting ? '...' : 'Nộp bài ✓'}
+              </button>
             </div>
           </div>
-
-          {/* Submit Button */}
-          <button
-            onClick={handleAutoSubmit}
-            disabled={isSubmitting}
-            className="btn-3d px-8 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-max font-quicksand hover:shadow-lg transition-all disabled:opacity-50"
-          >
-            {isSubmitting ? '⏳ Đang nộp...' : '✓ Nộp bài'}
-          </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
           {/* Sidebar - Question List */}
-          <aside className="lg:col-span-1 bg-white rounded-max shadow-lg p-6 game-card">
+          <aside className="game-card rounded-[2rem] bg-white p-4 shadow-lg sm:p-5 lg:col-span-1 lg:p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-6 font-quicksand">Danh sách câu hỏi</h3>
 
-            <div className="grid grid-cols-5 gap-2 mb-8">
+            <div className="mb-8 grid grid-cols-4 gap-2 sm:grid-cols-5">
               {questions.map((_, idx) => {
                 const isCurrentQuestion = idx === currentQuestionIndex;
                 const answerData = answers[idx];
@@ -930,7 +908,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
                     }}
                     disabled={isAnswered}
                     title={`Câu ${idx + 1}${isAnswered ? ' (Đã trả lời)' : ''}`}
-                    className={`w-10 h-10 rounded-lg font-bold text-sm transition-all flex items-center justify-center relative ${
+                    className={`relative flex h-11 w-11 items-center justify-center rounded-lg text-sm font-bold transition-all ${
                       isCurrentQuestion
                         ? 'bg-gradient-to-br from-purple-600 to-purple-700 text-white scale-110 shadow-lg'
                         : isAnswered
@@ -978,11 +956,11 @@ const StudentExamPage = ({ user, onSignOut }) => {
           {/* Main Question Area */}
           <main className="lg:col-span-3">
             {currentQuestion && (
-              <div className="bg-white rounded-max shadow-lg p-10 game-card">
+              <div className="game-card rounded-[2rem] bg-white p-5 shadow-lg sm:p-7 lg:p-10">
                 {/* Exercise Context (if available) */}
                 {currentQuestion.exerciseContext && (
-                  <div className="mb-8 p-6 bg-blue-100 border-l-4 border-blue-500 rounded-max">
-                    <p className="text-blue-900 leading-relaxed whitespace-pre-wrap font-quicksand">
+                  <div className="mb-6 rounded-[1.5rem] border-l-4 border-blue-500 bg-blue-100 p-4 sm:mb-8 sm:p-6">
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-blue-900 font-quicksand sm:text-base">
                       {currentQuestion.exerciseContext}
                     </p>
                   </div>
@@ -990,7 +968,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
                 {/* Question Text */}
                 <div className="mb-10">
-                  <h2 className="text-3xl font-bold text-gray-800 leading-relaxed font-quicksand">
+                  <h2 className="text-xl font-bold leading-relaxed text-gray-800 font-quicksand sm:text-2xl lg:text-3xl">
                     {currentQuestion.text || currentQuestion.question || currentQuestion.content}
                   </h2>
                 </div>
@@ -1035,11 +1013,11 @@ const StudentExamPage = ({ user, onSignOut }) => {
                         disabled={isAnswered}
                         className={jellyButtonClass}
                       >
-                        <div className="flex items-center gap-4 flex-1">
+                        <div className="flex min-w-0 items-center gap-4 flex-1">
                           <span className="w-10 h-10 flex-shrink-0 rounded-full bg-white font-bold text-lg flex items-center justify-center">
                             {String.fromCharCode(65 + idx)}
                           </span>
-                          <span className="text-left text-lg">{option}</span>
+                          <span className="min-w-0 text-left text-base sm:text-lg break-words [overflow-wrap:anywhere]">{option}</span>
                         </div>
                         <div className="flex-shrink-0 ml-4">
                           {isAnswered && isCorrectAnswer && (
@@ -1096,7 +1074,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
                   <div className="mb-6">
                     <button
                       onClick={handleSubmitMultipleChoice}
-                      className="btn-3d w-full px-6 py-4 bg-gradient-to-r from-blue-400 to-blue-500 text-white font-bold rounded-max font-quicksand text-lg"
+                      className="touch-btn btn-3d w-full rounded-[2rem] bg-gradient-to-r from-blue-400 to-blue-500 px-6 text-base font-bold text-white font-quicksand sm:text-lg"
                     >
                       ✓ Xác nhận đáp án
                     </button>
@@ -1105,11 +1083,11 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
                 {/* Navigation */}
                 {isAnswered && (
-                  <div className="grid grid-cols-2 gap-4 font-quicksand">
+                  <div className="grid grid-cols-1 gap-3 font-quicksand sm:grid-cols-2 sm:gap-4">
                     <button
                       onClick={handlePrevQuestion}
                       disabled={!canGoPrev}
-                      className="btn-3d px-6 py-4 bg-gray-200 text-gray-800 font-bold rounded-max hover:bg-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="touch-btn btn-3d rounded-[2rem] bg-gray-200 px-6 text-sm font-bold text-gray-800 transition-all hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 sm:text-base"
                     >
                       ← Câu trước
                     </button>
@@ -1117,14 +1095,14 @@ const StudentExamPage = ({ user, onSignOut }) => {
                     {currentQuestionIndex < questions.length - 1 ? (
                       <button
                         onClick={handleNextQuestion}
-                        className="btn-3d px-6 py-4 bg-gradient-to-r from-purple-400 to-purple-500 text-white font-bold rounded-max hover:shadow-lg transition-all"
+                        className="touch-btn btn-3d rounded-[2rem] bg-gradient-to-r from-purple-400 to-purple-500 px-6 text-sm font-bold text-white transition-all hover:shadow-lg sm:text-base"
                       >
                         Câu tiếp theo →
                       </button>
                     ) : (
                       <button
                         onClick={handleAutoSubmit}
-                        className="btn-3d px-6 py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-max hover:shadow-lg transition-all"
+                        className="touch-btn btn-3d rounded-[2rem] bg-gradient-to-r from-green-400 to-emerald-500 px-6 text-sm font-bold text-white transition-all hover:shadow-lg sm:text-base"
                       >
                         Nộp bài ✓
                       </button>
@@ -1138,7 +1116,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
         {/* Error Message */}
         {error && (
-          <div className="fixed bottom-6 right-6 bg-red-500 text-white px-6 py-4 rounded-max shadow-lg flex items-center gap-3 max-w-xs animate-in font-quicksand">
+          <div className="fixed bottom-4 left-4 right-4 max-w-none rounded-[2rem] bg-red-500 px-4 py-3 text-white shadow-lg animate-in font-quicksand sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-xs sm:px-6 sm:py-4">
             <span>⚠️ {error}</span>
             <button onClick={() => setError(null)} className="text-2xl font-bold">
               ✕
@@ -1148,13 +1126,13 @@ const StudentExamPage = ({ user, onSignOut }) => {
 
         {/* Time Warning */}
         {isTimeWarning && !isTimeRunningOut && (
-          <div className="fixed bottom-6 left-6 bg-yellow-500 text-white px-6 py-4 rounded-max shadow-lg flex items-center gap-2 max-w-xs animate-in font-quicksand">
+          <div className="fixed bottom-4 left-4 right-4 max-w-none rounded-[2rem] bg-yellow-500 px-4 py-3 text-white shadow-lg animate-in font-quicksand sm:bottom-6 sm:left-6 sm:right-auto sm:max-w-xs sm:px-6 sm:py-4">
             <span>⏰ Thời gian sắp hết! Vui lòng hoàn thành bài thi nhanh chóng.</span>
           </div>
         )}
 
         {isTimeRunningOut && (
-          <div className="fixed bottom-6 left-6 bg-red-600 text-white px-6 py-4 rounded-max shadow-lg flex items-center gap-2 max-w-xs animate-in animate-pulse font-quicksand">
+          <div className="fixed bottom-4 left-4 right-4 max-w-none rounded-[2rem] bg-red-600 px-4 py-3 text-white shadow-lg animate-in animate-pulse font-quicksand sm:bottom-6 sm:left-6 sm:right-auto sm:max-w-xs sm:px-6 sm:py-4">
             <span>🚨 Hết giờ! Bài thi sẽ được nộp tự động.</span>
           </div>
         )}

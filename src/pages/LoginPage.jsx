@@ -209,14 +209,14 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-400 to-blue-400 flex items-center justify-center p-5">
-      <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-md w-full">
+    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-400 to-blue-400 flex items-center justify-center p-4 sm:p-5">
+      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-8 lg:p-10">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 mb-3">
+          <h1 className="mb-3 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-4xl font-bold text-transparent sm:text-5xl">
             🎓 AI Math
           </h1>
-          <p className="text-xl font-semibold text-gray-700 mb-2">
+          <p className="mb-2 text-lg font-semibold text-gray-700 sm:text-xl">
             Trợ lý học toán thông minh
           </p>
           <p className="text-sm text-gray-500">

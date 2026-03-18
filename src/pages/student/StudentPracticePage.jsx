@@ -250,10 +250,10 @@ const StudentPracticePage = ({ user, onSignOut }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 px-4">
         <div className="flex flex-col items-center gap-6">
-          <div className="text-6xl animate-bounce-gentle">📚</div>
-          <p className="text-2xl font-bold text-gray-700 font-quicksand">Đang tải phiên luyện tập...</p>
+          <div className="text-5xl animate-bounce-gentle sm:text-6xl">📚</div>
+          <p className="text-xl font-bold text-gray-700 font-quicksand sm:text-2xl">Đang tải phiên luyện tập...</p>
         </div>
       </div>
     );
@@ -265,10 +265,10 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         <StudentHeader user={user} onLogout={onSignOut} />
         <div className="flex flex-col items-center justify-center gap-8 px-5 py-20">
           <div className="text-8xl">⚠️</div>
-          <h2 className="text-gray-800 text-3xl font-bold font-quicksand text-center">{error}</h2>
+          <h2 className="text-center text-2xl font-bold text-gray-800 font-quicksand sm:text-3xl">{error}</h2>
           <button
             onClick={() => navigate(-1)}
-            className="btn-3d px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-quicksand rounded-max hover:shadow-lg transition-all"
+            className="touch-btn btn-3d rounded-[2rem] bg-gradient-to-r from-blue-500 to-blue-600 px-6 text-white font-quicksand transition-all hover:shadow-lg"
           >
             ← Quay lại
           </button>
@@ -297,19 +297,21 @@ const StudentPracticePage = ({ user, onSignOut }) => {
       <StudentHeader user={user} onLogout={onSignOut} />
 
       {/* Compact Sticky Header with Title & Progress */}
-      <div className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between mb-3">
-            <h1 className="text-2xl font-bold text-gray-800 font-quicksand">📖 Luyện tập</h1>
+      <div className="sticky top-16 z-40 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-sm sm:top-20">
+        <div className="app-shell flex flex-wrap items-center justify-between gap-3 py-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
+            <h1 className="truncate text-xl font-bold text-gray-800 font-quicksand sm:text-2xl">
+              📚 Luyện tập
+            </h1>
             <button
               onClick={() => navigate(-1)}
-              className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-lg transition-all font-quicksand text-sm"
+              className="touch-btn rounded-lg bg-gray-500 px-4 text-xs font-bold text-white font-quicksand transition-all hover:bg-gray-600 sm:text-sm"
             >
               ← Quay lại
             </button>
           </div>
           {/* Progress Steps - Horizontal & Compact */}
-          <div className="flex items-center justify-start space-x-3">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 py-[clamp(0.6rem,2.2vw,0.9rem)]">
             {['bai1', 'bai2'].map((bai, idx) => {
               const baiData = practiceData.luyenTap?.[bai];
               const status = baiData?.status;
@@ -324,7 +326,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
                   <button
                     onClick={() => setActiveTab(bai)}
                     disabled={isDisabled}
-                    className={`flex items-center px-3 py-1 rounded-full font-bold font-quicksand transition-all text-sm ${
+                    className={`touch-btn min-h-11 rounded-full px-4 text-sm font-bold font-quicksand transition-all ${
                       isDisabled
                         ? 'bg-gray-200 text-gray-400 cursor-not-allowed line-through'
                         : activeTab === bai
@@ -346,19 +348,19 @@ const StudentPracticePage = ({ user, onSignOut }) => {
       </div>
 
       {/* Main Content Grid with Natural Scroll */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 px-4 py-6 pb-20">
+      <div className="app-shell grid grid-cols-1 gap-[clamp(1rem,2.8vw,1.5rem)] py-[clamp(0.9rem,2.6vw,1.5rem)] pb-20 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_350px]">
         {/* Main Content Column - Flex and grow */}
-        <main className="flex flex-col gap-6">
+        <main className="flex min-w-0 flex-col gap-6" ref={leftColRef}>
           {currentBai ? (
             <>
               {/* STICKY PROBLEM STATEMENT */}
-              <div className="sticky top-[70px] z-30 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 p-4 rounded-xl shadow-sm">
-                <h3 className="text-sm font-bold text-blue-900 font-quicksand mb-2">📝 Đề Bài</h3>
-                <p className="text-base text-blue-800 font-quicksand leading-relaxed">{currentBai.deBai}</p>
+              <div className="sticky top-[7.2rem] z-30 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 p-[clamp(0.8rem,2.4vw,1rem)] shadow-sm sm:top-[8.2rem]">
+                <h3 className="mb-2 font-quicksand text-[clamp(0.9rem,2.7vw,1rem)] font-bold text-blue-900">📝 Đề Bài</h3>
+                <p className="font-quicksand text-[clamp(0.95rem,2.8vw,1.05rem)] leading-relaxed text-blue-800 [overflow-wrap:anywhere]">{currentBai.deBai}</p>
               </div>
 
               {/* SCROLLABLE CHAT */}
-              <div className="flex-1">
+              <div className="flex-1 pb-32">
                 <PracticeChat
                   userId={user?.uid}
                   examId={examId}
@@ -384,11 +386,11 @@ const StudentPracticePage = ({ user, onSignOut }) => {
               </div>
 
               {/* Submit Button */}
-              <div className="flex gap-3 flex-wrap">
+              <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => handleSubmitPractice(activeTab)}
                   disabled={submitting || currentBai?.status === 'completed'}
-                  className="flex-1 min-w-[200px] px-6 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-quicksand"
+                  className="touch-btn min-h-11 min-w-[220px] flex-1 rounded-xl bg-gradient-to-r from-green-400 to-emerald-500 px-6 text-[clamp(0.95rem,2.7vw,1.05rem)] font-bold text-white font-quicksand transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? '⏳ Đang chấm điểm...' : '✓ Nộp bài & Chấm điểm'}
                 </button>
@@ -396,7 +398,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
                 {activeTab === 'bai2' && bai2?.status === 'completed' && (
                   <button
                     onClick={() => navigate(-1)}
-                    className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg hover:shadow-lg transition-all font-quicksand"
+                    className="touch-btn min-h-11 rounded-xl bg-green-500 px-6 text-[clamp(0.95rem,2.7vw,1.05rem)] font-bold text-white font-quicksand transition-all hover:bg-green-600 hover:shadow-lg"
                   >
                     ← Hoàn thành
                   </button>
@@ -412,7 +414,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
 
         {/* Sticky Robot Sidebar - Fixed 350px width, no shrink */}
         <aside className="hidden lg:flex lg:flex-col lg:w-[350px] lg:flex-none">
-          <div className="sticky top-[70px] h-fit bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+          <div className="sticky top-[7.2rem] h-fit rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:top-[8.2rem]">
             <RobotCompanion status={robotStatus} message={robotMessage} />
           </div>
         </aside>
@@ -423,7 +425,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
 
       {/* Error Message */}
       {error && (
-        <div className="fixed bottom-6 right-6 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 max-w-xs font-quicksand z-50">
+        <div className="fixed bottom-4 left-4 right-4 z-50 flex max-w-none items-center gap-3 rounded-lg bg-red-500 px-4 py-3 text-white shadow-lg font-quicksand sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-xs sm:px-6 sm:py-4">
           <span>⚠️ {error}</span>
           <button onClick={() => setError(null)} className="text-2xl font-bold">✕</button>
         </div>

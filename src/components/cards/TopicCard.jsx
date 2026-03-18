@@ -14,35 +14,35 @@ const TopicCard = ({ topic, onEdit, onDelete, onCreateExam, showActions = true }
 
   return (
     <div 
-      className="flex flex-col bg-white rounded-lg p-4 border-l-4 shadow-md hover:shadow-lg hover:-translate-y-1 overflow-hidden transition-all duration-300"
+      className="flex h-full flex-col overflow-hidden rounded-2xl border-l-4 bg-white p-4 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg sm:p-5"
       style={{borderLeftColor: topic.color}}
     >
       {/* Header */}
-      <div className="mb-2">
-        <div className="flex items-start gap-2">
-          <span className="text-2xl flex-shrink-0 flex items-center justify-center w-10 h-10 bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg">{topic.icon}</span>
+      <div className="mb-3">
+        <div className="flex items-start gap-2.5 sm:gap-3">
+          <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-100 to-blue-100 text-2xl">{topic.icon}</span>
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-bold text-gray-800 line-clamp-2">{topic.name}</h3>
-            <p className="text-xs text-gray-400 mt-0.5">{formatDate(topic.createdAt)}</p>
+            <h3 className="line-clamp-2 text-sm font-bold text-gray-800 sm:text-base">{topic.name}</h3>
+            <p className="mt-0.5 text-xs text-gray-400">{formatDate(topic.createdAt)}</p>
           </div>
         </div>
       </div>
 
       {/* Description */}
-      <p className="text-gray-600 text-xs mb-2 line-clamp-2">{topic.description || 'Không có mô tả'}</p>
+      <p className="mb-3 line-clamp-2 text-xs text-gray-600 sm:text-sm">{topic.description || 'Không có mô tả'}</p>
 
       {/* Stats */}
-      <div className="flex gap-4 py-2 border-t border-b border-gray-100 text-xs">
-        <span className="text-gray-600 flex items-center gap-1">📘 <strong>{topic.sampleExams?.length || 0}</strong> đề mẫu</span>
-        <span className="text-gray-600 flex items-center gap-1">📚 Lớp {topic.gradeLevel}</span>
+      <div className="my-1 flex flex-wrap gap-2 border-y border-gray-100 py-2 text-xs sm:gap-3 sm:text-sm">
+        <span className="flex items-center gap-1 text-gray-600">📘 <strong>{topic.sampleExams?.length || 0}</strong> đề mẫu</span>
+        <span className="flex items-center gap-1 text-gray-600">📚 Lớp {topic.gradeLevel}</span>
       </div>
 
       {/* Actions */}
       {showActions && (
-        <div className="flex gap-2 mt-auto pt-3 flex-wrap">
+        <div className="mt-auto flex flex-wrap gap-2 pt-3">
           {onCreateExam && (
             <button 
-              className="flex-1 px-2 py-2 text-xs font-semibold border-none rounded-lg cursor-pointer transition-all duration-300 bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:scale-105 hover:shadow-lg"
+              className="touch-btn flex-1 rounded-xl border-none bg-gradient-to-r from-purple-500 to-blue-500 px-3 text-xs font-semibold text-white transition-all duration-300 hover:shadow-lg sm:text-sm"
               onClick={() => onCreateExam(topic.id)}
             >
               ✏️ Đề thi
@@ -50,7 +50,7 @@ const TopicCard = ({ topic, onEdit, onDelete, onCreateExam, showActions = true }
           )}
           {onEdit && (
             <button 
-              className="flex-1 px-2 py-2 text-xs font-semibold border-none rounded-lg cursor-pointer transition-all duration-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
+              className="touch-btn flex-1 rounded-xl border-none bg-blue-50 px-3 text-xs font-semibold text-blue-700 transition-all duration-300 hover:bg-blue-100 sm:text-sm"
               onClick={() => onEdit(topic)}
             >
               ✏️ Sửa
@@ -58,7 +58,7 @@ const TopicCard = ({ topic, onEdit, onDelete, onCreateExam, showActions = true }
           )}
           {onDelete && (
             <button 
-              className="flex-1 px-2 py-2 text-xs font-semibold border-none rounded-lg cursor-pointer transition-all duration-300 bg-red-100 text-red-900 hover:bg-red-200"
+              className="touch-btn flex-1 rounded-xl border-none bg-red-100 px-3 text-xs font-semibold text-red-900 transition-all duration-300 hover:bg-red-200 sm:text-sm"
               onClick={() => onDelete(topic.id)}
             >
               🗑️ Xóa

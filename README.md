@@ -121,6 +121,23 @@ errors – only `Mood` variable is safe.
 
 ---
 
+## ✅ Responsive UI Checklist
+
+Use this quick checklist before merging UI changes:
+
+- Mobile first by default: start with base classes, then add `sm:`, `md:`, `lg:` overrides.
+- Touch targets: primary actions should be at least 44x44 pixels (`min-h-11`, `min-w-11`).
+- Layout containers: use `app-shell` and `section-shell` for consistent spacing and max width.
+- Tables: provide mobile card fallback for dense data; keep full table at `md` or `lg`.
+- Typography: avoid fixed large headings; prefer responsive scales like `text-2xl sm:text-3xl lg:text-4xl`.
+- Sticky elements: account for header height (`top-16` / `top-20`) to avoid overlap.
+- Focus states: keyboard users must see focus rings (`:focus-visible` is enabled globally).
+- Motion: avoid excessive animation on critical flows and support reduced motion.
+- Ultra-wide screens: constrain content with `max-w-7xl` and center to prevent stretched layouts.
+- QA sweep: test key pages at ~375px, 768px, 1280px, and 1536px widths.
+
+---
+
 ## 💬 Contributors
 
 - Original developer: [Your Name]

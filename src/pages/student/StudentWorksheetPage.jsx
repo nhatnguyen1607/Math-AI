@@ -19,6 +19,11 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
 
   // Bài 2: Drag-drop arrangements
   const [bai2Arrangements, setBai2Arrangements] = useState({});
+  const [bai2AvailableSteps, setBai2AvailableSteps] = useState([]);
+  const [bai2SelectedSteps, setBai2SelectedSteps] = useState([]);
+  const [isBai2BottomSheetOpen, setIsBai2BottomSheetOpen] = useState(false);
+  const [activeBai2Cach, setActiveBai2Cach] = useState(null);
+  const [bai2StepToRemove, setBai2StepToRemove] = useState(null);
 
   // Bài 3: Free text
   const [bai3BaiLam, setBai3BaiLam] = useState("");
@@ -130,6 +135,23 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
     }
   }, [worksheetData, worksheetId, user?.uid]);
 
+  useEffect(() => {
+    if (!worksheetData?.bai_2?.questions) {
+      setBai2AvailableSteps([]);
+      setBai2SelectedSteps([]);
+      return;
+    }
+
+    const selectedSet = new Set(
+      Object.values(bai2Arrangements || {})
+        .flat()
+        .filter(Boolean),
+    );
+
+    setBai2SelectedSteps(Array.from(selectedSet));
+    setBai2AvailableSteps((worksheetData.bai_2.questions || []).map((q) => q.id));
+  }, [worksheetData?.bai_2?.questions, bai2Arrangements]);
+
   const loadWorksheet = useCallback(async () => {
     try {
       setLoading(true);
@@ -188,7 +210,7 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
     e.preventDefault();
     const questionId = e.dataTransfer.getData("questionId");
 
-    if (questionId) {
+    if (questionId && !bai2SelectedSteps.includes(questionId)) {
       setBai2Arrangements((prev) => ({
         ...prev,
         [cach]: [...(prev[cach] || []), questionId],
@@ -196,11 +218,45 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
     }
   };
 
-  const handleRemoveFromArrangement = (cach, index) => {
+  const handleOpenBai2BottomSheet = (cach) => {
+    setActiveBai2Cach(cach);
+    setIsBai2BottomSheetOpen(true);
+  };
+
+  const handleCloseBai2BottomSheet = () => {
+    setIsBai2BottomSheetOpen(false);
+    setActiveBai2Cach(null);
+  };
+
+  const handleTapAddBai2Step = (questionId) => {
+    if (!activeBai2Cach || bai2SelectedSteps.includes(questionId)) return;
+
+    setBai2Arrangements((prev) => ({
+      ...prev,
+      [activeBai2Cach]: [...(prev[activeBai2Cach] || []), questionId],
+    }));
+
+    handleCloseBai2BottomSheet();
+  };
+
+  const requestRemoveFromArrangement = (cach, index, questionId) => {
+    setBai2StepToRemove({ cach, index, questionId });
+  };
+
+  const handleCancelRemoveFromArrangement = () => {
+    setBai2StepToRemove(null);
+  };
+
+  const handleConfirmRemoveFromArrangement = () => {
+    if (!bai2StepToRemove) return;
+
+    const { cach, index } = bai2StepToRemove;
     setBai2Arrangements((prev) => ({
       ...prev,
       [cach]: prev[cach].filter((_, i) => i !== index),
     }));
+
+    setBai2StepToRemove(null);
   };
 
   // Fraction input handlers for Bài 3
@@ -477,19 +533,23 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                   <span className="text-xl mr-2">📌</span>
                   <strong>Có {worksheetData.bai_2.so_cach_giai} cách giải</strong>
                 </p>
-                <p className="text-sm text-yellow-700 mt-2 font-semibold">Kéo các bước và sắp xếp theo thứ tự cho từng cách! 👆</p>
+                <p className="text-sm text-yellow-700 mt-2 font-semibold">Máy tính: kéo thả. Điện thoại: nhấn [ ➕ Add Step ] để chọn bước. 👆</p>
               </div>
 
-              {/* Available items - Sticky */}
-              <div className="sticky top-[14.5rem] z-30 mb-6 rounded-2xl border-2 border-dashed border-blue-400 bg-white pb-4 pt-4 sm:top-[15.5rem]">
+              {/* Available items - Desktop only sticky */}
+              <div className="hidden md:block sticky top-[14.5rem] z-30 mb-6 rounded-2xl border-2 border-dashed border-blue-400 bg-white pb-4 pt-4 sm:top-[15.5rem]">
                 <p className="font-bold text-blue-800 mb-3 text-lg">🎨 Các bước có sẵn:</p>
                 <div className="flex flex-wrap gap-3">
                   {(worksheetData.bai_2.questions || []).map((q) => (
                     <div
                       key={q.id}
-                      draggable
+                      draggable={!bai2SelectedSteps.includes(q.id)}
                       onDragStart={(e) => handleDragStart(e, q.id)}
-                      className="bg-gradient-to-br from-blue-400 to-blue-500 text-white px-4 py-2 rounded-full text-sm font-bold cursor-move hover:from-blue-500 hover:to-blue-600 active:opacity-50 transition shadow-lg transform hover:scale-110"
+                      className={`px-4 py-2 rounded-full text-sm font-bold transition shadow-lg ${
+                        bai2SelectedSteps.includes(q.id)
+                          ? "bg-gray-300 text-gray-600 cursor-not-allowed opacity-60"
+                          : "bg-gradient-to-br from-blue-400 to-blue-500 text-white cursor-move hover:from-blue-500 hover:to-blue-600 active:opacity-50 transform hover:scale-110"
+                      }`}
                     >
                       <FractionRenderer text={q.text} />
                     </div>
@@ -526,22 +586,15 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                               (q) => q.id === questionId,
                             );
                             return (
-                              <div
+                              <button
+                                type="button"
                                 key={`${cach}-${index}`}
-                                className="bg-gradient-to-br from-green-400 to-green-500 text-white px-3 py-2 rounded-full text-sm font-bold flex items-center gap-2 group shadow-md"
+                                onClick={() => requestRemoveFromArrangement(cach, index, questionId)}
+                                className="bg-gradient-to-br from-green-400 to-green-500 text-white px-3 py-2 rounded-full text-sm font-bold flex items-center gap-2 shadow-md hover:from-green-500 hover:to-green-600 transition text-left"
                               >
                                 <span className="bg-white text-green-600 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">{index + 1}</span>
                                 <span><FractionRenderer text={question?.text || ''} /></span>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleRemoveFromArrangement(cach, index)
-                                  }
-                                  className="ml-auto text-white hover:text-red-200 opacity-0 group-hover:opacity-100 transition text-lg"
-                                >
-                                  ✕
-                                </button>
-                              </div>
+                              </button>
                             );
                           })}
                         </div>
@@ -549,9 +602,93 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                         <p className="text-gray-400 text-lg font-semibold">👇 Kéo các bước vào đây...</p>
                       )}
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenBai2BottomSheet(cach)}
+                      className="mt-3 w-full md:hidden rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 px-4 text-sm font-bold shadow-md active:scale-[0.99]"
+                    >
+                      [ ➕ Add Step ]
+                    </button>
                   </div>
                 ))}
               </div>
+
+              {/* Mobile bottom sheet */}
+              {isBai2BottomSheetOpen && (
+                <div className="fixed inset-0 z-50 md:hidden">
+                  <button
+                    type="button"
+                    aria-label="Đóng danh sách bước"
+                    onClick={handleCloseBai2BottomSheet}
+                    className="absolute inset-0 bg-black/40"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 max-h-[70vh] overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl animate-in slide-in-from-bottom duration-200">
+                    <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-gray-300" />
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="text-lg font-bold text-blue-800">🎨 Các bước có sẵn</h3>
+                      <button
+                        type="button"
+                        onClick={handleCloseBai2BottomSheet}
+                        className="rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-100"
+                      >
+                        Đóng
+                      </button>
+                    </div>
+                    <p className="mb-4 text-sm font-semibold text-blue-700">
+                      {activeBai2Cach ? `Thêm bước vào ${activeBai2Cach.replace("cach_", "Cách ")}` : "Chọn cách giải trước khi thêm bước"}
+                    </p>
+                    <div className="space-y-2">
+                      {(worksheetData.bai_2.questions || [])
+                        .filter((q) => bai2AvailableSteps.includes(q.id))
+                        .map((q) => {
+                          const isDisabled = bai2SelectedSteps.includes(q.id);
+                          return (
+                            <button
+                              key={q.id}
+                              type="button"
+                              disabled={isDisabled}
+                              onClick={() => handleTapAddBai2Step(q.id)}
+                              className={`w-full rounded-xl px-4 py-3 text-left text-sm font-bold transition ${
+                                isDisabled
+                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                  : "bg-blue-50 text-blue-800 border border-blue-200 active:scale-[0.99]"
+                              }`}
+                            >
+                              <FractionRenderer text={q.text} />
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Remove confirmation dialog */}
+              {bai2StepToRemove && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+                  <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
+                    <h3 className="text-lg font-bold text-gray-800">Xóa bước</h3>
+                    <p className="mt-2 text-sm text-gray-600">Do you want to remove this step?</p>
+                    <div className="mt-5 flex gap-3">
+                      <button
+                        type="button"
+                        onClick={handleCancelRemoveFromArrangement}
+                        className="flex-1 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-200"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConfirmRemoveFromArrangement}
+                        className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-600"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

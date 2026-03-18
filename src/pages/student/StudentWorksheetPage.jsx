@@ -533,7 +533,7 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                   <span className="text-xl mr-2">📌</span>
                   <strong>Có {worksheetData.bai_2.so_cach_giai} cách giải</strong>
                 </p>
-                <p className="text-sm text-yellow-700 mt-2 font-semibold">Máy tính: kéo thả. Điện thoại: nhấn [ ➕ Add Step ] để chọn bước. 👆</p>
+                <p className="text-sm text-yellow-700 mt-2 font-semibold">Máy tính: kéo thả. Điện thoại: nhấn [ ➕ Thêm ] để chọn bước. 👆</p>
               </div>
 
               {/* Available items - Desktop only sticky */}

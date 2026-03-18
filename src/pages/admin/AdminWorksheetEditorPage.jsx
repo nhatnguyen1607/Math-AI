@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as worksheetService from '../../services/faculty/worksheetService';
-import FacultyHeader from '../../components/faculty/FacultyHeader';
+import AdminHeader from '../../components/admin/AdminHeader';
 
-const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
+const AdminWorksheetEditorPage = ({ user, onSignOut }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const worksheetType = location.state?.worksheetType; // 'input' or 'output'
-  const selectedClass = location.state?.selectedClass;
   const worksheetId = location.state?.worksheetId; // ID nếu edit
   
   const [worksheetName, setWorksheetName] = useState('');
@@ -80,7 +79,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
       }
     } catch (error) {
       console.error('Error loading worksheet:', error);
-      // Không show alert, chỉ log error - có thể user muốn tạo mới thay vì edit
       console.warn('Failed to load worksheet - may be creating new one');
     } finally {
       setLoading(false);
@@ -90,7 +88,7 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
   // Validate inputs
   useEffect(() => {
     if (!worksheetType) {
-      navigate('/faculty/worksheet/management', { replace: true });
+      navigate('/admin/worksheet', { replace: true });
       return;
     }
 
@@ -338,9 +336,8 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
       }
 
       if (finalWorksheet?.id) {
-        navigate('/faculty/worksheet/management', {
+        navigate('/admin/worksheet', {
           state: {
-            selectedClass,
             worksheetType
           }
         });
@@ -355,7 +352,7 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <FacultyHeader user={user} onLogout={onSignOut} />
+      <AdminHeader user={user} onLogout={onSignOut} />
 
       {loading && !worksheetName && worksheetId ? (
         <div className="flex items-center justify-center min-h-screen">
@@ -371,7 +368,7 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
             <div className="mb-8 flex items-center justify-between">
               <div>
                 <h1 className="text-4xl font-bold text-gray-800 mb-2">
-                  Tạo phiếu bài tập
+                  Tạo phiếu bài tập chung
                 </h1>
                 <p className="text-gray-600">
                   Loại: <span className="font-bold text-blue-600">
@@ -380,14 +377,14 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                 </p>
               </div>
               <button
-                onClick={() => navigate('/faculty/worksheet/management', { state: { selectedClass } })}
+                onClick={() => navigate('/admin/worksheet')}
                 className="px-4 py-2 hover:bg-purple-100 hover:text-purple-700 rounded-lg transition-all duration-300 text-gray-700 flex items-center gap-2 font-semibold"
               >
                 <span className="text-lg">←</span> Quay lại
               </button>
             </div>
 
-            {/* Main Form */}
+            {/* Main Form - see FacultyWorksheetEditorPage for full UI */}
             <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
             {/* Tên phiếu bài tập */}
             <div className="mb-8">
@@ -409,7 +406,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                 Câu hỏi chung (Context)
               </label>
               
-              {/* Toolbar for math symbols */}
               <div className="mb-3 flex flex-wrap gap-2">
                 <button
                   onClick={() => setShowFractionDialog(true)}
@@ -494,7 +490,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                     />
                   </div>
 
-                  {/* Preview */}
                   {(fractionNumerator || fractionDenominator) && (
                     <div className="mb-6 p-4 bg-gray-100 rounded-lg text-center">
                       <div className="text-sm text-gray-600 mb-2">Xem trước:</div>
@@ -517,9 +512,8 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                     </button>
                     <button
                       onClick={() => {
-                        if (fractionNumerator.trim() || fractionDenominator.trim()) {
-                          const fraction = `(${fractionNumerator || '?'})/(${fractionDenominator || '?'})`;
-                          setContext(context + fraction);
+                        if (fractionNumerator && fractionDenominator) {
+                          setContext(context + `(${fractionNumerator})/(${fractionDenominator})`);
                           setShowFractionDialog(false);
                           setFractionNumerator('');
                           setFractionDenominator('');
@@ -534,7 +528,8 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
               </div>
             )}
 
-            {/* Bài 1 */}
+            {/* Bài 1, 2, 3, 4 sections - same as FacultyWorksheetEditorPage */}
+            {/* For brevity, showing simplified version - copy all sections from FacultyWorksheetEditorPage */}
             <div className="mb-8 p-6 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl border-2 border-purple-200">
               <h3 className="text-2xl font-bold text-gray-800 mb-3">📋 Bài 1</h3>
               <p className="text-gray-700 mb-4 p-3 bg-white rounded-lg border-l-4 border-purple-500">
@@ -563,7 +558,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                 </div>
               </div>
 
-              {/* Danh sách câu hỏi Bài 1 */}
               <div className="space-y-2 mb-4">
                 {bai1Questions.map((q, idx) => (
                   <div key={q.id} className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm">
@@ -579,7 +573,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                 ))}
               </div>
 
-              {/* Explanation cho Bài 1 */}
               <div className="mt-4 p-4 bg-purple-50 rounded-lg border-l-4 border-purple-400">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   📝 Hướng dẫn cho AI nhận xét:
@@ -637,7 +630,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                 </div>
               </div>
 
-              {/* Danh sách câu hỏi Bài 2 */}
               <div className="space-y-2 mb-4">
                 {bai2Questions.map((q, idx) => (
                   <div key={q.id} className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm">
@@ -653,7 +645,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                 ))}
               </div>
 
-              {/* Explanation cho Bài 2 */}
               <div className="mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   📝 Hướng dẫn cho AI nhận xét:
@@ -678,7 +669,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                 (Học sinh sẽ tự do trình bày bài giải của mình)
               </p>
 
-              {/* Explanation cho Bài 3 */}
               <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-400">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   📝 Hướng dẫn cho AI nhận xét:
@@ -704,7 +694,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                 ➕ Thêm câu hỏi (a, b, c, ...)
               </button>
 
-              {/* Danh sách câu hỏi Bài 4 */}
               <div className="space-y-4">
                 {bai4Questions.map((q) => (
                   <div key={q.id} className="p-4 bg-white rounded-lg shadow-md border-l-4 border-orange-400">
@@ -725,12 +714,12 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                       </button>
                     </div>
 
-                    {/* Type selector */}
                     {!q.type && (
                       <div className="flex gap-2 mb-3">
                         <button
                           onClick={() => {
                             updateBai4Question(q.id, 'type', 'so_cach_giai');
+                            updateBai4Question(q.id, 'content', '');
                           }}
                           className="flex-1 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold rounded-lg transition-all duration-300"
                         >
@@ -739,6 +728,7 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                         <button
                           onClick={() => {
                             updateBai4Question(q.id, 'type', 'cau_hoi_nho');
+                            updateBai4Question(q.id, 'subQuestions', []);
                           }}
                           className="flex-1 px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 font-semibold rounded-lg transition-all duration-300"
                         >
@@ -747,7 +737,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                       </div>
                     )}
 
-                    {/* Type content */}
                     {q.type === 'so_cach_giai' && (
                       <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500 mb-3">
                         <label className="block text-sm font-semibold text-blue-700 mb-2">
@@ -784,7 +773,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                           </button>
                         </div>
 
-                        {/* Danh sách câu hỏi nhỏ */}
                         <div className="space-y-2 mb-3">
                           {(q.subQuestions || []).map((sq, idx) => (
                             <div key={sq.id} className="flex items-center gap-2 p-2 bg-white rounded border border-green-300">
@@ -818,7 +806,6 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
                 ))}
               </div>
 
-              {/* Explanation cho Bài 4 */}
               <div className="mt-4 p-4 bg-orange-50 rounded-lg border-l-4 border-orange-400">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   📝 Hướng dẫn cho AI nhận xét:
@@ -836,7 +823,7 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
             {/* Action Buttons */}
             <div className="flex gap-4 justify-end">
               <button
-                onClick={() => navigate('/faculty', { state: { selectedClass } })}
+                onClick={() => navigate('/admin/worksheet')}
                 className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-lg transition-all duration-300"
               >
                 ❌ Hủy
@@ -864,4 +851,4 @@ const FacultyWorksheetEditorPage = ({ user, onSignOut }) => {
   );
 };
 
-export default FacultyWorksheetEditorPage;
+export default AdminWorksheetEditorPage;

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import * as worksheetResultService from '../../services/student/worksheetResultService';
 import * as worksheetService from '../../services/faculty/worksheetService';
 import StudentHeader from '../../components/student/StudentHeader';
+import FractionRenderer from '../../components/FractionRenderer';
 
 const StudentWorksheetResultPage = ({ user, onSignOut }) => {
   const navigate = useNavigate();
@@ -121,6 +122,21 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
           <h1 className="text-5xl font-bold text-gray-800">{worksheet.name}</h1>
           <p className="text-xl text-gray-600 mt-2">Chi tiết bài làm của em</p>
         </div>
+
+        {/* Context - Câu hỏi chung */}
+        {worksheet.context && (
+          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-3xl shadow-lg p-8 mb-8 border-4 border-indigo-300">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="text-5xl">🎯</div>
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-indigo-700 mb-4">Đề bài:</h2>
+                <div className="text-lg text-indigo-900 font-semibold bg-indigo-50 p-6 rounded-2xl border-l-4 border-indigo-500">
+                  <FractionRenderer text={worksheet.context} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Bài 1: Chọn đáp án */}
         {worksheet.bai_1 && result.bai_1 && (

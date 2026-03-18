@@ -36,6 +36,12 @@ const AdminHeader = ({ onLogout }) => {
           >
             📚 Quản Lý Chủ Đề
           </button>
+          <button
+            onClick={() => navigate('/admin/worksheet')}
+            className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg transition-all duration-300"
+          >
+            📋 Quản Lý Phiếu Bài Tập
+          </button>
         </div>
       </div>
     </>

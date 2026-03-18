@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+// import { useNavigate } from 'react-router-dom';
 import adminService from '../../services/admin/adminService';
 import AdminHeader from '../../components/admin/AdminHeader';
 import './AdminPage.css';
@@ -8,6 +9,7 @@ import './AdminPage.css';
  * Quản lý tài khoản, khóa/mở tài khoản, gán role
  */
 function AdminPage({ onLogout }) {
+  // const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [statistics, setStatistics] = useState(null);

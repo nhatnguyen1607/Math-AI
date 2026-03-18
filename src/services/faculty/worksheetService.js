@@ -13,12 +13,11 @@ import {
 import { db } from "../../firebase";
 import { Worksheet } from "../../models";
 
-// Tạo phiếu bài tập mới
-export const createWorksheet = async (classId, userId, worksheetData) => {
+// Tạo phiếu bài tập mới (chung cho tất cả lớp, không có classId)
+export const createWorksheet = async (userId, worksheetData) => {
   try {
     const worksheet = new Worksheet({
       ...worksheetData,
-      classId,
       createdBy: userId,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -72,12 +71,35 @@ export const getWorksheetsByClass = async (classId) => {
   }
 };
 
-// Lấy phiếu bài tập theo loại (input/output) và lớp
+// Lấy phiếu bài tập theo loại (input/output) và lớp - để lọc kết quả
 export const getWorksheetsByClassAndType = async (classId, type) => {
   try {
     const q = query(
       collection(db, "worksheets"),
       where("classId", "==", classId),
+      where("type", "==", type),
+      orderBy("createdAt", "desc")
+    );
+    
+    const worksheetSnap = await getDocs(q);
+    const worksheets = [];
+    
+    worksheetSnap.forEach((doc) => {
+      worksheets.push({ id: doc.id, ...doc.data() });
+    });
+    
+    return worksheets;
+  } catch (error) {
+    console.error('Error getting worksheets by type:', error);
+    throw error;
+  }
+};
+
+// Lấy tất cả phiếu bài tập theo loại (input/output) - dùng cho Faculty và Student
+export const getWorksheetsByType = async (type) => {
+  try {
+    const q = query(
+      collection(db, "worksheets"),
       where("type", "==", type),
       orderBy("createdAt", "desc")
     );

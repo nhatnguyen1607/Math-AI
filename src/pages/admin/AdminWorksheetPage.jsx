@@ -1,0 +1,213 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import * as worksheetService from '../../services/faculty/worksheetService';
+import AdminHeader from '../../components/admin/AdminHeader';
+import FractionRenderer from '../../components/FractionRenderer';
+
+const AdminWorksheetPage = ({ user, onLogout }) => {
+  const navigate = useNavigate();
+  const [worksheets, setWorksheets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('input'); // 'input' or 'output'
+
+  const loadWorksheets = useCallback(async (type) => {
+    try {
+      setLoading(true);
+      const data = await worksheetService.getWorksheetsByType(type);
+      setWorksheets(data);
+    } catch (error) {
+      console.error('Error loading worksheets:', error);
+      alert('Lỗi khi tải danh sách phiếu bài tập');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadWorksheets(activeTab);
+  }, [activeTab, loadWorksheets]);
+
+  const handleCreateNew = () => {
+    navigate('/admin/worksheet/editor', {
+      state: {
+        worksheetType: activeTab
+      }
+    });
+  };
+
+  const handleEdit = (worksheetId) => {
+    navigate('/admin/worksheet/editor', {
+      state: {
+        worksheetType: activeTab,
+        worksheetId: worksheetId
+      }
+    });
+  };
+
+  const handleDelete = async (worksheetId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa phiếu bài tập này? Điều này sẽ ảnh hưởng đến tất cả các lớp.')) {
+      return;
+    }
+
+    try {
+      await worksheetService.deleteWorksheet(worksheetId);
+      setWorksheets(worksheets.filter(w => w.id !== worksheetId));
+      alert('Phiếu bài tập đã được xóa');
+    } catch (error) {
+      console.error('Error deleting worksheet:', error);
+      alert('Lỗi khi xóa phiếu bài tập');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <AdminHeader user={user} onLogout={onLogout} />
+
+      <div className="px-4 lg:px-8 py-8">
+        <div className="max-w-6xl mx-auto w-full">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">
+              📋 Quản lý Phiếu Bài Tập
+            </h1>
+            <p className="text-gray-600">
+              Tạo phiếu bài tập chung cho tất cả các lớp
+            </p>
+          </div>
+
+          {/* Type Tabs */}
+          <div className="mb-8 flex gap-4 border-b border-gray-300">
+            <button
+              onClick={() => setActiveTab('input')}
+              className={`px-6 py-3 font-bold transition-all duration-300 ${
+                activeTab === 'input'
+                  ? 'text-blue-600 border-b-4 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              📥 Phiếu Đầu Vào
+            </button>
+            <button
+              onClick={() => setActiveTab('output')}
+              className={`px-6 py-3 font-bold transition-all duration-300 ${
+                activeTab === 'output'
+                  ? 'text-green-600 border-b-4 border-green-600'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              📤 Phiếu Đầu Ra
+            </button>
+          </div>
+
+          {/* Create New Button */}
+          <div className="mb-8">
+            <button
+              onClick={handleCreateNew}
+              className="px-8 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+            >
+              ➕ Tạo phiếu bài tập mới
+            </button>
+          </div>
+
+          {/* Worksheets Grid */}
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">⏳</div>
+              <p className="text-xl text-gray-600">Đang tải dữ liệu...</p>
+            </div>
+          ) : worksheets.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+              <div className="text-6xl mb-4">📋</div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Chưa có phiếu bài tập</h3>
+              <p className="text-gray-600 mb-6">
+                Hãy tạo phiếu bài tập đầu tiên
+              </p>
+              <button
+                onClick={handleCreateNew}
+                className="px-8 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+              >
+                ➕ Tạo phiếu bài tập mới
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {worksheets.map((worksheet) => (
+                <div
+                  key={worksheet.id}
+                  className="h-full flex flex-col bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 overflow-hidden border-t-4 border-blue-500"
+                >
+                  {/* Card Header */}
+                  <div className="p-6 bg-gradient-to-r from-blue-50 to-blue-100">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-1">
+                      {worksheet.name}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Tạo ngày: {worksheet.createdAt?.toDate?.() ? new Date(worksheet.createdAt.toDate()).toLocaleDateString('vi-VN') : new Date(worksheet.createdAt).toLocaleDateString('vi-VN')}
+                    </p>
+                  </div>
+
+                  {/* Card Content */}
+                  <div className="p-6 flex-1">
+                    <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-700 font-semibold mb-2">Context:</p>
+                      <p className="text-sm text-gray-600 line-clamp-2">
+                        {worksheet.context ? (
+                          <FractionRenderer text={worksheet.context} />
+                        ) : (
+                          'Chưa nhập context'
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="p-2 bg-purple-50 rounded">
+                        <p className="text-gray-600">Bài 1</p>
+                        <p className="font-bold text-purple-600">
+                          {worksheet.bai_1?.questions?.length || 0} câu
+                        </p>
+                      </div>
+                      <div className="p-2 bg-blue-50 rounded">
+                        <p className="text-gray-600">Bài 2</p>
+                        <p className="font-bold text-blue-600">
+                          {worksheet.bai_2?.questions?.length || 0} câu
+                        </p>
+                      </div>
+                      <div className="p-2 bg-green-50 rounded">
+                        <p className="text-gray-600">Bài 3</p>
+                        <p className="font-bold text-green-600">Tự do</p>
+                      </div>
+                      <div className="p-2 bg-orange-50 rounded">
+                        <p className="text-gray-600">Bài 4</p>
+                        <p className="font-bold text-orange-600">
+                          {worksheet.bai_4?.questions?.length || 0} câu
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Actions */}
+                  <div className="mt-auto p-6 bg-gray-50 border-t border-gray-200 space-y-2">
+                    <button
+                      onClick={() => handleEdit(worksheet.id)}
+                      className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2"
+                    >
+                      ✏️ Điều chỉnh
+                    </button>
+                    <button
+                      onClick={() => handleDelete(worksheet.id)}
+                      className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2"
+                    >
+                      🗑️ Xóa
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminWorksheetPage;

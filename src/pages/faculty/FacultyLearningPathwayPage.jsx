@@ -57,7 +57,7 @@ const FacultyLearningPathwayPage = ({ onSignOut }) => {
       <FacultyHeader />
 
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-8 lg:px-12 py-6 border-b-4 border-purple-400">
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-4 lg:px-8 py-6 border-b-4 border-purple-400">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <div>

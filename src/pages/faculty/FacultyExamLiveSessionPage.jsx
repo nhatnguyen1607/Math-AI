@@ -177,7 +177,7 @@ const FacultyExamLiveSessionPage = () => {
       <FacultyHeader user={user} onLogout={() => navigate('/login')} />
       
       {/* Back Button */}
-      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 px-8 lg:px-12 py-3 shadow-soft-md">
+      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 px-4 lg:px-8 py-3 shadow-soft-md">
         <button
           onClick={() => navigate(-1)}
           className="px-4 lg:px-6 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold rounded-lg transition-all duration-300 flex items-center gap-2"

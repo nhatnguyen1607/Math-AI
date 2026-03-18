@@ -8,6 +8,8 @@ import LoginPage from './pages/LoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminPage from './pages/admin/AdminPage';
 import AdminTopicPage from './pages/admin/AdminTopicPage';
+import AdminWorksheetPage from './pages/admin/AdminWorksheetPage';
+import AdminWorksheetEditorPage from './pages/admin/AdminWorksheetEditorPage';
 import StudentDashboardPage from './pages/student/StudentDashboardPage';
 // import StudentTopicPage from './pages/student/StudentTopicPage';
 import StudentLearningPathwayPage from './pages/student/StudentLearningPathwayPage';
@@ -159,6 +161,8 @@ function App() {
         {/* Admin routes */}
         <Route path="/admin" element={!isAdminAuthenticated ? <AdminLoginPage onLoginSuccess={handleAdminLoginSuccess} /> : <AdminPage onLogout={handleAdminLogout} />} />
         <Route path="/admin/topic-management" element={!isAdminAuthenticated ? <AdminLoginPage onLoginSuccess={handleAdminLoginSuccess} /> : <AdminTopicPage onLogout={handleAdminLogout} />} />
+        <Route path="/admin/worksheet" element={!isAdminAuthenticated ? <AdminLoginPage onLoginSuccess={handleAdminLoginSuccess} /> : <AdminWorksheetPage user={user} onLogout={handleAdminLogout} />} />
+        <Route path="/admin/worksheet/editor" element={!isAdminAuthenticated ? <AdminLoginPage onLoginSuccess={handleAdminLoginSuccess} /> : <AdminWorksheetEditorPage user={user} onLogout={handleAdminLogout} />} />
         
         {/* Login route */}
         <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={userData?.isFaculty?.() === true ? '/faculty' : '/student'} replace />} />

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as worksheetService from '../../services/faculty/worksheetService';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
+import FractionRenderer from '../../components/FractionRenderer';
 
 const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {
   const navigate = useNavigate();
@@ -17,7 +18,8 @@ const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {
   const loadWorksheets = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await worksheetService.getWorksheetsByClassAndType(classId, worksheetType);
+      // Load all worksheets by type (không lọc classId)
+      const data = await worksheetService.getWorksheetsByType(worksheetType);
       setWorksheets(data);
     } catch (error) {
       console.error('Error loading worksheets:', error);
@@ -25,7 +27,7 @@ const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {
     } finally {
       setLoading(false);
     }
-  }, [classId, worksheetType]);
+  }, [worksheetType]);
 
   useEffect(() => {
     if (!classId) {
@@ -49,20 +51,9 @@ const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {
     });
   };
 
-  const handleCreateNew = () => {
-    navigate('/faculty/worksheet/editor', {
-      state: {
-        classId,
-        selectedClass,
-        worksheetType: worksheetType
-      }
-    });
-  };
-
   const handleEdit = (worksheetId) => {
     navigate('/faculty/worksheet/editor', {
       state: {
-        classId,
         selectedClass,
         worksheetType: worksheetType,
         worksheetId: worksheetId
@@ -100,7 +91,7 @@ const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <FacultyHeader user={user} onLogout={onSignOut} />
 
-        <div className="px-8 lg:px-12 py-8">
+        <div className="px-4 lg:px-8 py-8">
           <div className="max-w-4xl mx-auto w-full">
             <div className="mb-8 flex items-center justify-between">
               <div>
@@ -157,7 +148,7 @@ const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <FacultyHeader user={user} onLogout={onSignOut} />
 
-      <div className="px-8 lg:px-12 py-8">
+      <div className="px-4 lg:px-8 py-8">
         <div className="max-w-6xl mx-auto w-full">
           {/* Header */}
           <div className="mb-8 flex items-center justify-between">
@@ -187,12 +178,10 @@ const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {
 
           {/* Create New Button */}
           <div className="mb-8">
-            <button
-              onClick={handleCreateNew}
-              className="px-8 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-            >
-              ➕ Tạo phiếu bài tập mới
-            </button>
+            {/* Phiếu bài tập giờ được tạo bởi Admin */}
+            <p className="text-gray-600 italic text-sm">
+              💡 Phiếu bài tập được tạo bởi Admin và dùng chung cho tất cả các lớp
+            </p>
           </div>
 
           {/* Worksheets Grid */}
@@ -206,14 +195,8 @@ const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {
               <div className="text-6xl mb-4">📋</div>
               <h3 className="text-2xl font-bold text-gray-800 mb-2">Chưa có phiếu bài tập</h3>
               <p className="text-gray-600 mb-6">
-                Hãy tạo phiếu bài tập đầu tiên để bắt đầu
+                Admin sẽ tạo phiếu bài tập chung cho tất cả các lớp
               </p>
-              <button
-                onClick={handleCreateNew}
-                className="px-8 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-              >
-                ➕ Tạo phiếu bài tập mới
-              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -224,7 +207,7 @@ const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {
                 >
                   {/* Card Header */}
                   <div className="p-6 bg-gradient-to-r from-blue-50 to-blue-100">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-2">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-1">
                       {worksheet.name}
                     </h3>
                     <p className="text-sm text-gray-600">
@@ -237,7 +220,11 @@ const FacultyWorksheetManagementPage = ({ user, onSignOut }) => {
                     <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                       <p className="text-sm text-gray-700 font-semibold mb-2">Context:</p>
                       <p className="text-sm text-gray-600 line-clamp-2">
-                        {worksheet.context || 'Chưa nhập context'}
+                        {worksheet.context ? (
+                          <FractionRenderer text={worksheet.context} />
+                        ) : (
+                          'Chưa nhập context'
+                        )}
                       </p>
                     </div>
 

@@ -52,7 +52,7 @@ const FacultyPage = ({ user, userData, onSignOut }) => {
       <FacultyHeader user={user} onLogout={onSignOut} />
 
       {/* Welcome Section */}
-      <div className="px-8 lg:px-12 py-8">
+      <div className="px-4 lg:px-8 py-8">
         <div className="max-w-7xl mx-auto w-full">
           <div className="mb-8 flex items-center justify-between">
             <div>

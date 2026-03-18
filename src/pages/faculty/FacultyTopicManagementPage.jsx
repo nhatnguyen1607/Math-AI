@@ -119,7 +119,7 @@ const FacultyTopicManagementPage = () => {
 
       {/* Warning Message */}
       {!selectedClassId && (
-        <div className="px-8 lg:px-12 py-6">
+        <div className="px-4 lg:px-8 py-6">
           <div className="max-w-7xl mx-auto">
             <div className="p-4 bg-red-100 border-l-4 border-red-500 text-red-800 rounded-lg">
               <p className="font-semibold">⚠️ Chưa chọn lớp học</p>
@@ -136,7 +136,7 @@ const FacultyTopicManagementPage = () => {
       )}
 
       {/* Topics Grid */}
-      <div className="px-8 lg:px-12 py-8">
+      <div className="px-4 lg:px-8 py-8">
         <div className="max-w-7xl mx-auto w-full">
           {/* Pathway Title */}
           {learningPathway && (

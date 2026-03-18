@@ -42,7 +42,7 @@ const StudentTopicSelectionPage = ({
       <StudentHeader user={user} onLogout={onSignOut} navItems={[]} />
 
       <div className="p-8">
-        <div className="px-8 py-8 max-w-7xl mx-auto w-full">
+        <div className="px-4 py-8 max-w-7xl mx-auto w-full">
           {/* Back Button */}
           <div className="mb-10">
             <button 

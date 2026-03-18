@@ -592,7 +592,7 @@ const FacultyExamManagementPage = () => {
       <FacultyHeader user={user} onLogout={() => navigate('/login')} />
 
       {/* Header Section with Background */}
-      <div className="bg-gradient-to-r from-purple-100 to-blue-100 border-b-2 border-purple-200 px-8 lg:px-12 py-6">
+      <div className="bg-gradient-to-r from-purple-100 to-blue-100 border-b-2 border-purple-200 px-4 lg:px-8 py-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold text-gray-800">📝 Quản lí Bài Ôn</h1>
@@ -606,7 +606,7 @@ const FacultyExamManagementPage = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-8 lg:px-12 py-8">
+      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-8">
 
        {/* Class & Topic Selection */}
         {!selectedClassId || !selectedTopicId ? (

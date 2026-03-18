@@ -1,36 +1,42 @@
 import geminiModelManager from '../gemini/geminiModelManager';
 
-// Evaluate worksheet answers using 4-criteria rubric
+// Hàm hỗ trợ bóc tách JSON an toàn từ phản hồi của AI
+const extractJSON = (text) => {
+  try {
+    const startIndex = text.indexOf('{');
+    const endIndex = text.lastIndexOf('}');
+    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+      const jsonString = text.substring(startIndex, endIndex + 1);
+      return JSON.parse(jsonString);
+    }
+    return null;
+  } catch (error) {
+    console.warn('Lỗi khi parse JSON:', error);
+    return null;
+  }
+};
+
 export const evaluateWorksheet = async (studentAnswers, worksheet) => {
   try {
-    // Evaluate based on 4 criteria (gợi ý từ rubric)
-    const tieuchis = {
-      tieuchi_1: await evaluateTieuChi1(studentAnswers, worksheet), // Nhận biết được vấn đề
-      tieuchi_2: await evaluateTieuChi2(studentAnswers, worksheet), // Nêu được cách thức GQVĐ
-      tieuchi_3: await evaluateTieuChi3(studentAnswers, worksheet), // Trình bày được cách thức GQVĐ
-      tieuchi_4: await evaluateTieuChi4(studentAnswers, worksheet)  // Kiểm tra được giải pháp
+    const evaluations = {
+      bai_1: await evaluateBai1(studentAnswers, worksheet),
+      bai_2: await evaluateBai2(studentAnswers, worksheet),
+      bai_3: await evaluateBai3(studentAnswers, worksheet),
+      bai_4: await evaluateBai4(studentAnswers, worksheet)
     };
 
-    // Calculate overall score (max 8 points: 4 criteria x 2 points each)
     const tongDiem =
-      (tieuchis.tieuchi_1?.diem || 0) +
-      (tieuchis.tieuchi_2?.diem || 0) +
-      (tieuchis.tieuchi_3?.diem || 0) +
-      (tieuchis.tieuchi_4?.diem || 0);
+      (evaluations.bai_1?.evaluation?.diem || 0) +
+      (evaluations.bai_2?.evaluation?.diem || 0) +
+      (evaluations.bai_3?.evaluation?.diem || 0) +
+      (evaluations.bai_4?.evaluation?.diem || 0);
 
-    // Determine overall competency level
-    const mucNangLucChung = calculateOverallLevel([
-      tieuchis.tieuchi_1?.muc_nang_luc,
-      tieuchis.tieuchi_2?.muc_nang_luc,
-      tieuchis.tieuchi_3?.muc_nang_luc,
-      tieuchis.tieuchi_4?.muc_nang_luc
-    ].filter(Boolean));
+    const mucNangLucChung = calculateOverallLevel(tongDiem);
 
-    // Generate detailed overall comment
-    const nhanXetChung = await generateOverallComment(tieuchis, tongDiem, mucNangLucChung);
+    const nhanXetChung = await generateOverallComment(evaluations, tongDiem, mucNangLucChung);
 
     return {
-      tieuchis,
+      ...evaluations,
       tongDiem,
       mucNangLucChung,
       nhanXetChung
@@ -38,328 +44,235 @@ export const evaluateWorksheet = async (studentAnswers, worksheet) => {
   } catch (error) {
     console.error('Error evaluating worksheet:', error);
     return {
-      tieuchis: {
-        tieuchi_1: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: '' },
-        tieuchi_2: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: '' },
-        tieuchi_3: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: '' },
-        tieuchi_4: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: '' }
-      },
+      bai_1: { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi hệ thống' } },
+      bai_2: { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi hệ thống' } },
+      bai_3: { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi hệ thống' } },
+      bai_4: { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi hệ thống' } },
       tongDiem: 0,
       mucNangLucChung: 'Chưa đánh giá',
-      nhanXetChung: 'Có lỗi khi đánh giá. Vui lòng thử lại.'
+      nhanXetChung: 'Đã xảy ra lỗi trong quá trình chấm bài.'
     };
   }
 };
 
-// Tiêu chí 1: Nhận biết được vấn đề cần giải quyết
-// Đánh giá: xác định được thông tin đã cho, yêu cầu, mối quan hệ
-const evaluateTieuChi1 = async (studentAnswers, worksheet) => {
+const evaluateBai1 = async (studentAnswers, worksheet) => {
   try {
-    // Collect all student answers to understand comprehension
-    const allAnswers = formatAllAnswers(studentAnswers, worksheet);
+    let selections = studentAnswers?.bai_1?.selections || [];
+    if (typeof selections === 'object' && !Array.isArray(selections)) {
+      selections = Object.values(selections);
+    }
     
-    const prompt = `
-TIÊU CHÍ 1: NHẬN BIẾT ĐƯỢC VẤN ĐỀ CẦN GIẢI QUYẾT
-
-Bài toán: ${worksheet.bai_3?.text || worksheet.bai_1?.text || 'N/A'}
-
-Bài làm của học sinh:
-${allAnswers}
-
-HƯỚNG DẪN ĐÁNH GIÁ:
-- 0 điểm (Cần cố gắng): Học sinh chưa xác định được các thông tin đã cho, yêu cầu của bài toán, mối quan hệ giữa cái đã cho và cái cần tìm. Bài làm thiếu logic hoặc không phù hợp.
-- 1 điểm (Đạt): Học sinh đã xác định được các thông tin đã cho, yêu cầu của bài toán, nhưng chưa chỉ ra được mối quan hệ giữa cái đã cho và cái cần tìm một cách rõ ràng.
-- 2 điểm (Tốt): Học sinh đã xác định được đầy đủ các thông tin đã cho, yêu cầu của bài toán, mối quan hệ giữa cái đã cho và cái cần tìm một cách rõ ràng và chính xác.
-
-Vui lòng:
-1. Đánh giá xem học sinh có hiểu được bài toán không
-2. Cho điểm (0, 1 hoặc 2)
-3. Ghi mức năng lực: "cần cố gắng", "đạt", hoặc "tốt"
-4. Viết nhận xét ngắn (1-2 câu) về điểm mạnh/hạn chế
-
-Trả lời dưới dạng JSON (KHÔNG có markdown):
-{"diem": number, "muc_nang_luc": "string", "nhan_xet": "string"}`;
-
-    return await parseEvaluationResponse(prompt);
-  } catch (error) {
-    console.error('Error evaluating Tiêu chí 1:', error);
-    return { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi khi đánh giá' };
-  }
-};
-
-// Tiêu chí 2: Nêu được cách thức giải quyết vấn đề
-// Đánh giá: lựa chọn,sắp xếp các bước, nhận dạng dạng toán, số cách giải
-const evaluateTieuChi2 = async (studentAnswers, worksheet) => {
-  try {
-    const bai2Info = formatBai2Info(studentAnswers, worksheet);
-    const allAnswers = formatAllAnswers(studentAnswers, worksheet);
+    // MAPPING: Dịch ID sang nội dung Text để AI hiểu
+    const questionsList = worksheet.bai_1.questions || [];
+    const selectedTexts = selections.map((id) => {
+      const matchedQ = questionsList.find((item) => item.id === id);
+      return matchedQ ? matchedQ.text : id; // Trả về nội dung câu văn, nếu không tìm thấy thì giữ id
+    });
     
-    const prompt = `
-TIÊU CHÍ 2: NÊU ĐƯỢC CÁCH THỨC GIẢI QUYẾT VẤN ĐỀ
+    const prompt = `Bạn là một giáo viên chuyên môn cao đang chấm bài. PHẢI ĐÁNH GIÁ CHÍNH XÁC NĂNG LỰC DỰA VÀO CÂU TRẢ LỜI CỦA HỌC SINH.
 
-Bài toán: ${worksheet.bai_3?.text || worksheet.bai_1?.text || 'N/A'}
+[BAREM CHẤM ĐIỂM]
+${worksheet.bai_1.explanation}
 
-Phương pháp sắp xếp (Bài 2):
-${bai2Info}
+[BÀI LÀM THỰC TẾ CỦA HỌC SINH]
+Học sinh đã đánh dấu vào các phát biểu sau:
+${selectedTexts.length > 0 ? selectedTexts.map(t => `- ${t}`).join('\n') : 'Không chọn gì'}
 
-Tất cả bài làm của học sinh:
-${allAnswers}
+[YÊU CẦU ĐẦU RA]
+Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
+{
+  "suy_luan": "Bước 1: Liệt kê các nội dung HS đã chọn. Bước 2: So sánh xem các nội dung đó có đủ các ý 1, 2, 3, 4 như Barem yêu cầu không. Kết luận điểm (Nếu thiếu hoặc sai -> 0 điểm, đúng 1,2,3 -> 1 điểm, đúng cả 4 -> 2 điểm).",
+  "diem": (0, 1 hoặc 2),
+  "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
+  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên. Dùng ngôi thứ 3 ('học sinh', 'em ấy'). Chỉ rõ mức độ nhận diện vấn đề, thông tin nào em ấy đã tìm đúng, thông tin/mối quan hệ nào còn bỏ sót. TUYỆT ĐỐI KHÔNG dùng các từ: 'barem', 'mã định danh', 'ID', 'tiêu chí', 'như máy tính'."
+}`;
 
-HƯỚNG DẪN ĐÁNH GIÁ:
-- 0 điểm (Cần cố gắng): Học sinh không lựa chọn chính xác, sắp xếp sai thứ tự. Không nhận dạng được dạng toán.
-- 1 điểm (Đạt): Học sinh lựa chọn đúng các bước và sắp xếp đúng 1 cách giải phù hợp. Nhận dạng được dạng toán và áp dụng vào bài toán.
-- 2 điểm (Tốt): Học sinh lựa chọn đúng, hiểu được đầy đủ quá trình giải bài toán, sắp xếp đúng từ 2 cách giải trở lên. Đề xuất được các cách giải khác nhau.
-
-Vui lòng:
-1. Đánh giá chiến lược giải của học sinh
-2. Cho điểm (0, 1 hoặc 2)
-3. Ghi mức năng lực: "cần cố gắng", "đạt", hoặc "tốt"
-4. Viết nhận xét ngắn (1-2 câu)
-
-Trả lời dưới dạng JSON (KHÔNG có markdown):
-{"diem": number, "muc_nang_luc": "string", "nhan_xet": "string"}`;
-
-    return await parseEvaluationResponse(prompt);
-  } catch (error) {
-    console.error('Error evaluating Tiêu chí 2:', error);
-    return { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi khi đánh giá' };
-  }
-};
-
-// Tiêu chí 3: Trình bày được cách thức giải quyết vấn đề
-// Đánh giá: thực hiện đúng các bước, phép tính, trình bày rõ ràng, giải thích logic
-const evaluateTieuChi3 = async (studentAnswers, worksheet) => {
-  try {
-    const allAnswers = formatAllAnswers(studentAnswers, worksheet);
-    
-    const prompt = `
-TIÊU CHÍ 3: TRÌNH BÀY ĐƯỢC CÁCH THỨC GIẢI QUYẾT VẤN ĐỀ
-
-Bài toán: ${worksheet.bai_3?.text || worksheet.bai_1?.text || 'N/A'}
-
-Lời giải của học sinh (Bài 3 - Tự do):
-${studentAnswers.bai_3?.bai_lam || 'Không có'}
-
-Giải thích của học sinh:
-${studentAnswers.bai_3?.giai_thich || 'Không có'}
-
-Tất cả bài làm:
-${allAnswers}
-
-HƯỚNG DẪN ĐÁNH GIÁ:
-- 0 điểm (Cần cố gắng): Tính toán sai nhiều, lời giải thiếu logic hoặc chưa đầy đủ, trình bày không rõ ràng.
-- 1 điểm (Đạt): Thực hiện đúng các bước giải và phép tính cơ bản, trình bày lời giải rõ ràng và đầy đủ.
-- 2 điểm (Tốt): Thực hiện đúng và đầy đủ các bước giải, phép tính chính xác, trình bày lời giải mạch lạc, có giải thích hợp lý cho các bước giải.
-
-Vui lòng:
-1. Đánh giá chất lượng trình bày và phép tính
-2. Cho điểm (0, 1 hoặc 2)
-3. Ghi mức năng lực: "cần cố gắng", "đạt", hoặc "tốt"
-4. Viết nhận xét ngắn (1-2 câu)
-
-Trả lời dưới dạng JSON (KHÔNG có markdown):
-{"diem": number, "muc_nang_luc": "string", "nhan_xet": "string"}`;
-
-    return await parseEvaluationResponse(prompt);
-  } catch (error) {
-    console.error('Error evaluating Tiêu chí 3:', error);
-    return { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi khi đánh giá' };
-  }
-};
-
-// Tiêu chí 4: Kiểm tra được giải pháp đã thực hiện
-// Đánh giá: kiểm tra tính đúng, vận dụng vào bài mở rộng, so sánh các cách giải
-const evaluateTieuChi4 = async (studentAnswers, worksheet) => {
-  try {
-    const allAnswers = formatAllAnswers(studentAnswers, worksheet);
-    
-    const prompt = `
-TIÊU CHÍ 4: KIỂM TRA ĐƯỢC GIẢI PHÁP ĐÃ THỰC HIỆN
-
-Bài toán: ${worksheet.bai_3?.text || worksheet.bai_1?.text || 'N/A'}
-
-Bài làm của học sinh:
-${allAnswers}
-
-Bài 4 (Kiểm tra & mở rộng):
-${formatBai4Info(studentAnswers, worksheet)}
-
-HƯỚNG DẪN ĐÁNH GIÁ:
-- 0 điểm (Cần cố gắng): Không kiểm tra kết quả bài toán, không vận dụng được vào bài toán mở rộng, thiếu suy luận logic.
-- 1 điểm (Đạt): Thực hiện được một trong hai: (a) Kiểm tra được kết quả bài toán bằng phép tính, hoặc (b) Giải được bài toán mở rộng bằng cách cơ bản.
-- 2 điểm (Tốt): Kiểm tra đúng kết quả bài toán, giải đúng bài toán mở rộng, so sánh hoặc giải thích được cách giải nào hợp lý hơn.
-
-Vui lòng:
-1. Đánh giá khả năng kiểm tra và vận dụng
-2. Cho điểm (0, 1 hoặc 2)
-3. Ghi mức năng lực: "cần cố gắng", "đạt", hoặc "tốt"
-4. Viết nhận xét ngắn (1-2 câu)
-
-Trả lời dưới dạng JSON (KHÔNG có markdown):
-{"diem": number, "muc_nang_luc": "string", "nhan_xet": "string"}`;
-
-    return await parseEvaluationResponse(prompt);
-  } catch (error) {
-    console.error('Error evaluating Tiêu chí 4:', error);
-    return { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi khi đánh giá' };
-  }
-};
-
-// Helper function to parse evaluation response
-const parseEvaluationResponse = async (prompt) => {
-  try {
     const result = await geminiModelManager.generateContent(prompt);
-    const responseText = result.response.text();
+    const parsed = extractJSON(result.response.text());
     
-    const jsonMatch = responseText.match(/\{[\s\S]*?\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        diem: Math.min(2, Math.max(0, Number(parsed.diem) || 0)),
-        muc_nang_luc: normalizeLevel(String(parsed.muc_nang_luc || 'cần cố gắng')),
-        nhan_xet: String(parsed.nhan_xet || '')
-      };
-    }
+    if (parsed) return { evaluation: { ...parsed, muc_nang_luc: String(parsed.muc_nang_luc || 'cần cố gắng').toLowerCase() } };
+    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi không thể phân tích kết quả.' } };
   } catch (error) {
-    console.warn('Error parsing evaluation response:', error);
+    console.error('Error evaluating Bài 1:', error);
+    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi trong quá trình chấm.' } };
   }
-  
-  return { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: '' };
 };
 
-// Helper function to normalize level names
-const normalizeLevel = (level) => {
-  const normalized = level.toLowerCase().trim();
-  if (normalized.includes('tốt')) return 'tốt';
-  if (normalized.includes('đạt')) return 'đạt';
-  return 'cần cố gắng';
-};
-
-// Helper function to format all answers for context
-const formatAllAnswers = (studentAnswers, worksheet) => {
-  let formatted = '';
-  
-  if (studentAnswers.bai_1?.selections) {
-    const selections = Array.isArray(studentAnswers.bai_1.selections) 
-      ? studentAnswers.bai_1.selections 
-      : Object.values(studentAnswers.bai_1.selections);
-    formatted += `Bài 1 (Nhận biết): ${selections.join(', ') || 'không chọn'}\n`;
-  }
-  
-  if (studentAnswers.bai_2?.arrangements) {
-    formatted += `Bài 2 (Sắp xếp): Xem chi tiết dưới đây\n`;
-  }
-  
-  if (studentAnswers.bai_3?.bai_lam) {
-    formatted += `Bài 3 (Tự do): ${studentAnswers.bai_3.bai_lam}\n`;
-  }
-  
-  if (studentAnswers.bai_4?.answers) {
-    formatted += `Bài 4 (Kiểm tra & mở rộng): Xem chi tiết dưới đây\n`;
-  }
-  
-  return formatted || 'Không có bài làm';
-};
-
-// Helper function to format Bài 2 info
-const formatBai2Info = (studentAnswers, worksheet) => {
-  if (!studentAnswers.bai_2?.arrangements || !worksheet.bai_2) {
-    return 'Không có dữ liệu';
-  }
-  
-  let formatted = '';
-  Object.entries(studentAnswers.bai_2.arrangements).forEach(([key, arr]) => {
-    const items = Array.isArray(arr) ? arr : Object.values(arr);
-    formatted += `${key}: ${items.join(' → ') || 'trống'}\n`;
-  });
-  
-  return formatted;
-};
-
-// Helper function to format Bài 4 info
-const formatBai4Info = (studentAnswers, worksheet) => {
-  if (!studentAnswers.bai_4?.answers || !worksheet.bai_4) {
-    return 'Không có dữ liệu';
-  }
-  
-  let formatted = '';
-  (worksheet.bai_4.questions || []).forEach((q) => {
-    formatted += `${q.label}. ${q.text}\n`;
-    
-    if (q.type === 'cau_hoi_nho') {
-      (q.subQuestions || []).forEach((sq, idx) => {
-        const answer = studentAnswers.bai_4.answers[q.id]?.[idx] || '';
-        formatted += `  - Câu ${idx + 1}: ${answer}\n`;
-      });
-    } else if (q.type === 'so_cach_giai') {
-      for (let i = 0; i < q.content; i++) {
-        const answer = studentAnswers.bai_4.answers[q.id]?.[i] || '';
-        formatted += `  - Cách ${i + 1}: ${answer}\n`;
-      }
-    } else {
-      const answer = studentAnswers.bai_4.answers[q.id] || '';
-      formatted += `  Câu trả lời: ${answer}\n`;
-    }
-  });
-  
-  return formatted;
-};
-
-const calculateOverallLevel = (levels) => {
-  const levelPriority = { tốt: 3, đạt: 2, 'cần cố gắng': 1 };
-  
-  let maxPriority = 0;
-  let overallLevel = 'cần cố gắng';
-
-  levels.forEach((level) => {
-    const priority = levelPriority[level?.toLowerCase()] || 0;
-    if (priority > maxPriority) {
-      maxPriority = priority;
-      overallLevel = level;
-    }
-  });
-
-  return overallLevel;
-};
-
-// Generate detailed overall comment based on 4 criteria
-const generateOverallComment = async (tieuchis, tongDiem, mucNangLucChung) => {
+const evaluateBai2 = async (studentAnswers, worksheet) => {
   try {
-    const tieuchi1_feedback = tieuchis.tieuchi_1?.nhan_xet || '';
-    const tieuchi2_feedback = tieuchis.tieuchi_2?.nhan_xet || '';
-    const tieuchi3_feedback = tieuchis.tieuchi_3?.nhan_xet || '';
-    const tieuchi4_feedback = tieuchis.tieuchi_4?.nhan_xet || '';
+    const arrangements = studentAnswers?.bai_2?.arrangements || {};
+    const questionsList = worksheet.bai_2.questions || [];
+    
+    // MAPPING: Dịch ID sang nội dung Text các bước tính toán
+    const arrangementText = Object.keys(arrangements).length > 0 
+      ? Object.entries(arrangements).map(([key, arr]) => {
+          const items = Array.isArray(arr) ? arr : Object.values(arr || {});
+          const textItems = items.map(id => {
+            const matchedQ = questionsList.find(q => q.id === id);
+            return matchedQ ? matchedQ.text : id;
+          });
+          return `${key}:\n  -> ${textItems.join('\n  -> ')}`;
+        }).join('\n\n')
+      : 'Học sinh không có sắp xếp nào.';
 
-    const tieuchi1_level = tieuchis.tieuchi_1?.muc_nang_luc || 'Chưa đánh giá';
-    const tieuchi2_level = tieuchis.tieuchi_2?.muc_nang_luc || 'Chưa đánh giá';
-    const tieuchi3_level = tieuchis.tieuchi_3?.muc_nang_luc || 'Chưa đánh giá';
-    const tieuchi4_level = tieuchis.tieuchi_4?.muc_nang_luc || 'Chưa đánh giá';
+    const prompt = `Bạn là một giáo viên chuyên môn cao. CẤM BỊA ĐÁP ÁN, PHẢI ĐỌC KỸ TRÌNH TỰ CÁC BƯỚC MÀ HỌC SINH ĐÃ XẾP.
 
-    const prompt = `Dựa vào kết quả đánh giá của học sinh theo 4 tiêu chí, viết một nhận xét chung chi tiết và khuyến khích:
+[BAREM CHẤM ĐIỂM]
+${worksheet.bai_2.explanation}
+
+[BÀI LÀM THỰC TẾ CỦA HỌC SINH]
+Các cách sắp xếp học sinh đã gửi:
+${arrangementText}
+
+[YÊU CẦU ĐẦU RA]
+Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
+{
+  "suy_luan": "Đọc từng nội dung bước tính mà HS đã xếp. So sánh trình tự các phép tính này với trình tự trong Barem. Đếm số cách mà HS xếp đúng hoàn toàn trình tự logic (Từ 2 cách đúng -> 2 điểm, 1 cách đúng -> 1 điểm).",
+  "diem": (0, 1 hoặc 2),
+  "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
+  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Nhận xét năng lực nhận dạng dạng toán, khả năng sắp xếp logic các phép tính. Ghi rõ học sinh làm tốt chỗ nào và xếp sai logic ở chỗ nào (dựa trên nội dung phép tính). TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'ID'."
+}`;
+
+    const result = await geminiModelManager.generateContent(prompt);
+    const parsed = extractJSON(result.response.text());
+    
+    if (parsed) return { evaluation: { ...parsed, muc_nang_luc: String(parsed.muc_nang_luc || 'cần cố gắng').toLowerCase() } };
+    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi không thể phân tích kết quả.' } };
+  } catch (error) {
+    console.error('Error evaluating Bài 2:', error);
+    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi trong quá trình chấm.' } };
+  }
+};
+
+const evaluateBai3 = async (studentAnswers, worksheet) => {
+  try {
+    const bai_lam = studentAnswers?.bai_3?.bai_lam || 'Không có';
+    const giai_thich = studentAnswers?.bai_3?.giai_thich || 'Không có';
+
+    const prompt = `Bạn là một giáo viên chuyên môn cao.
+
+[BAREM CHẤM ĐIỂM]
+${worksheet.bai_3.explanation}
+
+[BÀI LÀM CỦA HỌC SINH]
+Bài giải:
+${bai_lam}
+Giải thích:
+${giai_thich}
+
+[YÊU CẦU ĐẦU RA]
+Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
+{
+  "suy_luan": "Đọc kỹ các phép tính cơ bản trong bài giải và tính hợp lý của lời giải thích. Đối chiếu với yêu cầu điểm số.",
+  "diem": (0, 1 hoặc 2),
+  "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
+  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Nhận xét trực tiếp năng lực tính toán và tư duy lập luận của em ấy. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'quy định'."
+}`;
+
+    const result = await geminiModelManager.generateContent(prompt);
+    const parsed = extractJSON(result.response.text());
+    
+    if (parsed) return { evaluation: { ...parsed, muc_nang_luc: String(parsed.muc_nang_luc || 'cần cố gắng').toLowerCase() } };
+    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi không thể phân tích kết quả.' } };
+  } catch (error) {
+    console.error('Error evaluating Bài 3:', error);
+    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi trong quá trình chấm.' } };
+  }
+};
+
+const evaluateBai4 = async (studentAnswers, worksheet) => {
+  try {
+    const getAnswerValue = (answers, idx) => {
+      if (Array.isArray(answers)) return answers[idx] || '';
+      if (typeof answers === 'object' && answers !== null) return answers[idx.toString()] || answers[idx] || '';
+      return '';
+    };
+
+    const bai4Answers = studentAnswers?.bai_4?.answers || {};
+    let questionsInfo = '';
+    
+    (worksheet.bai_4.questions || []).forEach((q) => {
+      questionsInfo += `\n${q.label}. ${q.text}\n`;
+      if (q.type === 'cau_hoi_nho') {
+        (q.subQuestions || []).forEach((sq, idx) => {
+          const answer = getAnswerValue(bai4Answers[q.id], idx);
+          questionsInfo += `  - Câu ${idx + 1}: ${sq.text}\n    Trả lời: ${answer || 'trống'}\n`;
+        });
+      } else if (q.type === 'so_cach_giai') {
+        for (let i = 0; i < q.content; i++) {
+          const answer = getAnswerValue(bai4Answers[q.id], i);
+          questionsInfo += `  - Cách ${i + 1}: ${answer || 'trống'}\n`;
+        }
+      } else {
+        const answer = bai4Answers[q.id];
+        questionsInfo += `  Trả lời: ${answer || 'trống'}\n`;
+      }
+    });
+
+    const prompt = `Bạn là một giáo viên chuyên môn cao.
+
+[BAREM CHẤM ĐIỂM]
+${worksheet.bai_4.explanation}
+
+[BÀI LÀM CỦA HỌC SINH]
+${questionsInfo || 'Học sinh không làm bài.'}
+
+[YÊU CẦU ĐẦU RA]
+Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
+{
+  "suy_luan": "Xác định HS đã làm được phần nào (kiểm tra kết quả, giải toán mở rộng, nhận xét). Quy chiếu sang điểm.",
+  "diem": (0, 1 hoặc 2),
+  "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
+  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Chỉ rõ HS đã vận dụng được kiến thức mở rộng đến mức độ nào. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'tiêu chí'."
+}`;
+
+    const result = await geminiModelManager.generateContent(prompt);
+    const parsed = extractJSON(result.response.text());
+    
+    if (parsed) return { evaluation: { ...parsed, muc_nang_luc: String(parsed.muc_nang_luc || 'cần cố gắng').toLowerCase() } };
+    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi không thể phân tích kết quả.' } };
+  } catch (error) {
+    console.error('Error evaluating Bài 4:', error);
+    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi trong quá trình chấm.' } };
+  }
+};
+
+const calculateOverallLevel = (score) => {
+  if (score >= 7) {
+    return 'tốt';
+  } else if (score >= 4) {
+    return 'đạt';
+  } else {
+    return 'cần cố gắng';
+  }
+};
+
+const generateOverallComment = async (evaluations, tongDiem, mucNangLucChung) => {
+  try {
+    const bai_1_feedback = evaluations.bai_1?.evaluation?.nhan_xet || '';
+    const bai_2_feedback = evaluations.bai_2?.evaluation?.nhan_xet || '';
+    const bai_3_feedback = evaluations.bai_3?.evaluation?.nhan_xet || '';
+    const bai_4_feedback = evaluations.bai_4?.evaluation?.nhan_xet || '';
+
+    const prompt = `Bạn là một trợ lý tổng hợp báo cáo đánh giá năng lực học sinh.
 
 TỔNG ĐIỂM: ${tongDiem}/8
 MỨC NĂNG LỰC CHUNG: ${mucNangLucChung}
+CHI TIẾT:
+- Bài 1: ${bai_1_feedback}
+- Bài 2: ${bai_2_feedback}
+- Bài 3: ${bai_3_feedback}
+- Bài 4: ${bai_4_feedback}
 
-CHI TIẾT 4 TIÊU CHÍ:
-1. Nhận biết được vấn đề (${tieuchi1_level}): ${tieuchi1_feedback}
-2. Nêu được cách thức GQVĐ (${tieuchi2_level}): ${tieuchi2_feedback}
-3. Trình bày được cách thức GQVĐ (${tieuchi3_level}): ${tieuchi3_feedback}
-4. Kiểm tra được giải pháp (${tieuchi4_level}): ${tieuchi4_feedback}
-
-HÃY VIẾT MỘT NHẬN XÉT CHUNG CHI TIẾT (5-7 câu) THEO TIÊU CHÍ bao gồm:
-1. Tổng hợp mức độ hiểu biết (Tiêu chí 1-2) và khả năng trình bày (Tiêu chí 3-4)
-2. Điểm mạnh chính: ở tiêu chí nào học sinh có điểm cao nhất
-3. Hạn chế chính: ở tiêu chí nào học sinh cần cải thiện  
-4. Lời khuyến khích cụ thể dựa vào điểm yếu nhất
-
-Trả lời chỉ nhận xét (không có markdown, không có JSON).`;
+YÊU CẦU: 
+- Viết một đoạn văn 4-6 câu tổng hợp tình hình làm bài để BÁO CÁO CHO GIÁO VIÊN.
+- NGÔI XƯNG: Bắt buộc dùng ngôi thứ ba ('học sinh', 'em ấy'). TUYỆT ĐỐI KHÔNG xưng 'con', 'cô/thầy'.
+- Nêu rõ các kỹ năng em ấy nắm vững và những kỹ năng/kiến thức nào giáo viên cần chú ý bồi dưỡng thêm. KHÔNG dùng từ 'barem'.`;
 
     const result = await geminiModelManager.generateContent(prompt);
-    const responseText = result.response.text().trim();
-    
-    return responseText || `Học sinh đạt tổng điểm ${tongDiem}/8 với mức năng lực ${mucNangLucChung}. Cần tiếp tục cố gắng để nâng cao độ hiểu biết và khả năng trình bày.`;
+    return result.response.text().trim() || `Học sinh đạt tổng điểm ${tongDiem}/8 với mức năng lực ${mucNangLucChung}.`;
   } catch (error) {
     console.error('Error generating overall comment:', error);
-    return `Học sinh đạt tổng điểm ${tongDiem}/8 với mức năng lực ${mucNangLucChung}`;
+    return `Học sinh đạt tổng điểm ${tongDiem}/8 với mức năng lực ${mucNangLucChung}.`;
   }
 };

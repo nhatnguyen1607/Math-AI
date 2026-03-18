@@ -165,7 +165,7 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{isSelected ? '✅' : '⭕'}</span>
                       <span className={`text-lg font-semibold ${isSelected ? 'text-green-700' : 'text-gray-700'}`}>
-                        {question.text}
+                        <FractionRenderer text={question.text} />
                       </span>
                     </div>
                   </div>
@@ -223,7 +223,7 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
                               <span className="bg-white text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
                                 {idx + 1}
                               </span>
-                              <span>{question?.text}</span>
+                              <span><FractionRenderer text={question?.text || ''} /></span>
                             </div>
                           );
                         })}
@@ -266,7 +266,7 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
                   Bài làm:
                 </p>
                 <div className="bg-green-50 p-4 rounded-xl max-h-40 overflow-y-auto border-l-4 border-green-500 text-gray-700 whitespace-pre-wrap">
-                  {result.bai_3.bai_lam || '(không có)'}
+                  {result.bai_3.bai_lam ? <FractionRenderer text={result.bai_3.bai_lam} /> : '(không có)'}
                 </div>
               </div>
 
@@ -277,7 +277,7 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
                   Giải thích:
                 </p>
                 <div className="bg-green-50 p-4 rounded-xl max-h-40 overflow-y-auto border-l-4 border-green-500 text-gray-700 whitespace-pre-wrap">
-                  {result.bai_3.giai_thich || '(không có)'}
+                  {result.bai_3.giai_thich ? <FractionRenderer text={result.bai_3.giai_thich} /> : '(không có)'}
                 </div>
               </div>
             </div>
@@ -315,9 +315,9 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
                       </span>
                       <div className="flex-1">
                         <p className="text-lg text-orange-800 font-semibold">
-                          {question.label}. {question.text}
+                          {question.label}. <FractionRenderer text={question.text} />
                         </p>
-                        <p className="text-base text-gray-600 mt-1">{question.content}</p>
+                        <p className="text-base text-gray-600 mt-1"><FractionRenderer text={question.content} /></p>
                       </div>
                     </div>
 
@@ -330,10 +330,10 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
                             className="p-3 bg-orange-50 rounded-xl border-2 border-orange-200"
                           >
                             <p className="font-semibold text-orange-700 text-sm mb-2">
-                              Câu {subIdx + 1}: {subQ.text}
+                              Câu {subIdx + 1}: <FractionRenderer text={subQ.text} />
                             </p>
                             <p className="text-gray-700 bg-white p-2 rounded border-l-4 border-orange-500">
-                              {studentAnswer?.[subIdx] || '(không có đáp án)'}
+                              {studentAnswer?.[subIdx] ? <FractionRenderer text={studentAnswer[subIdx]} /> : '(không có đáp án)'}
                             </p>
                           </div>
                         ))}
@@ -352,7 +352,7 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
                                 🌟 Cách {cacheIdx + 1}:
                               </p>
                               <p className="text-gray-700 bg-white p-2 rounded border-l-4 border-orange-500 whitespace-pre-wrap">
-                                {studentAnswer?.[cacheIdx] || '(không có đáp án)'}
+                                {studentAnswer?.[cacheIdx] ? <FractionRenderer text={studentAnswer[cacheIdx]} /> : '(không có đáp án)'}
                               </p>
                             </div>
                           )
@@ -363,7 +363,7 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
                     {!question.type && (
                       <div className="mt-4 p-3 bg-orange-50 rounded-xl border-2 border-orange-200">
                         <p className="text-gray-700 bg-white p-2 rounded border-l-4 border-orange-500">
-                          {studentAnswer || '(không có đáp án)'}
+                          {studentAnswer ? <FractionRenderer text={studentAnswer} /> : '(không có đáp án)'}
                         </p>
                       </div>
                     )}

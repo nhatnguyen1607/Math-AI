@@ -60,6 +60,16 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
     loadData();
   }, [worksheetId, classId]);
 
+  // Function to capitalize level names
+  const capitalizeLevelName = (level) => {
+    if (!level) return 'Chưa đánh giá';
+    const lower = level.toLowerCase().trim();
+    if (lower === 'tốt') return 'Tốt';
+    if (lower === 'đạt') return 'Đạt';
+    if (lower === 'cần cố gắng') return 'Cần cố gắng';
+    return level;
+  };
+
   // Function to format detail data
   const getDetailData = (result) => {
     const detailData = [
@@ -69,12 +79,12 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
       ['Ngày nộp', result.submittedAt?.toDate?.()?.toLocaleDateString?.('vi-VN') || 'N/A'],
       [''],
       ['Tổng điểm', (result.tongDiem || 0) + '/8'],
-      ['Mức năng lực chung', result.mucNangLucChung || 'Chưa đánh giá'],
+      ['Mức năng lực chung', capitalizeLevelName(result.mucNangLucChung) || 'Chưa đánh giá'],
       ['Nhận xét chung', result.nhanXetChung || ''],
       [''],
     ];
 
-    // Bài 1
+    // Bài 1 - Tiêu chí 1
     if (result.bai_1) {
       detailData.push(['BÀI 1: CHỌN ĐÁP ÁN ĐÚNG']);
       if (result.bai_1.selections) {
@@ -92,13 +102,14 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
           detailData.push(['Đã chọn:', selectedAnswers || 'Không có đáp án']);
         }
       }
-      detailData.push(['Điểm', result.bai_1.evaluation?.diem || 0]);
-      detailData.push(['Mức năng lực', result.bai_1.evaluation?.muc_nang_luc || 'N/A']);
-      detailData.push(['Nhận xét', result.bai_1.evaluation?.nhan_xet || 'N/A']);
+      detailData.push(['Tiêu chí 1: Nhận biết được vấn đề', '']);
+      detailData.push(['  Điểm', result.bai_1?.evaluation?.diem || 0]);
+      detailData.push(['  Mức năng lực', capitalizeLevelName(result.bai_1?.evaluation?.muc_nang_luc) || 'N/A']);
+      detailData.push(['  Nhận xét', result.bai_1?.evaluation?.nhan_xet || 'N/A']);
       detailData.push(['']);
     }
 
-    // Bài 2
+    // Bài 2 - Tiêu chí 2
     if (result.bai_2) {
       detailData.push(['BÀI 2: SẮP XẾP CÁC BƯỚC']);
       if (result.bai_2.arrangements) {
@@ -126,20 +137,22 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
           detailData.push([`Cách ${cachNum}:`, arrangementText || 'Không có']);
         }
       }
-      detailData.push(['Điểm', result.bai_2.evaluation?.diem || 0]);
-      detailData.push(['Mức năng lực', result.bai_2.evaluation?.muc_nang_luc || 'N/A']);
-      detailData.push(['Nhận xét', result.bai_2.evaluation?.nhan_xet || 'N/A']);
+      detailData.push(['Tiêu chí 2: Nêu được cách thức giải quyết vấn đề', '']);
+      detailData.push(['  Điểm', result.bai_2?.evaluation?.diem || 0]);
+      detailData.push(['  Mức năng lực', capitalizeLevelName(result.bai_2?.evaluation?.muc_nang_luc) || 'N/A']);
+      detailData.push(['  Nhận xét', result.bai_2?.evaluation?.nhan_xet || 'N/A']);
       detailData.push(['']);
     }
 
-    // Bài 3
+    // Bài 3 - Tiêu chí 3
     if (result.bai_3) {
       detailData.push(['BÀI 3: TỰ LUẬN']);
       detailData.push(['Bài làm', result.bai_3.bai_lam || '(không có)']);
       detailData.push(['Giải thích', result.bai_3.giai_thich || '(không có)']);
-      detailData.push(['Điểm', result.bai_3.evaluation?.diem || 0]);
-      detailData.push(['Mức năng lực', result.bai_3.evaluation?.muc_nang_luc || 'N/A']);
-      detailData.push(['Nhận xét', result.bai_3.evaluation?.nhan_xet || 'N/A']);
+      detailData.push(['Tiêu chí 3: Trình bày được cách thức giải quyết vấn đề', '']);
+      detailData.push(['  Điểm', result.bai_3?.evaluation?.diem || 0]);
+      detailData.push(['  Mức năng lực', capitalizeLevelName(result.bai_3?.evaluation?.muc_nang_luc) || 'N/A']);
+      detailData.push(['  Nhận xét', result.bai_3?.evaluation?.nhan_xet || 'N/A']);
       detailData.push(['']);
     }
 
@@ -180,9 +193,10 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
           }
         }
       }
-      detailData.push(['Điểm', result.bai_4.evaluation?.diem || 0]);
-      detailData.push(['Mức năng lực', result.bai_4.evaluation?.muc_nang_luc || 'N/A']);
-      detailData.push(['Nhận xét', result.bai_4.evaluation?.nhan_xet || 'N/A']);
+      detailData.push(['Tiêu chí 4: Kiểm tra và vận dụng giải pháp', '']);
+      detailData.push(['  Điểm', result.bai_4?.evaluation?.diem || 0]);
+      detailData.push(['  Mức năng lực', capitalizeLevelName(result.bai_4?.evaluation?.muc_nang_luc) || 'N/A']);
+      detailData.push(['  Nhận xét', result.bai_4?.evaluation?.nhan_xet || 'N/A']);
       detailData.push(['']);
     }
 
@@ -479,12 +493,12 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`px-4 py-2 rounded-full font-bold text-white ${
-                          result.mucNangLucChung === 'Tốt' ? 'bg-green-500' :
-                          result.mucNangLucChung === 'Khá' ? 'bg-blue-500' :
-                          result.mucNangLucChung === 'Trung bình' ? 'bg-yellow-500' :
-                          'bg-red-500'
+                          result.mucNangLucChung === 'tốt' || result.mucNangLucChung === 'Tốt' ? 'bg-green-500' :
+                          result.mucNangLucChung === 'đạt' || result.mucNangLucChung === 'Đạt' ? 'bg-blue-500' :
+                          result.mucNangLucChung === 'cần cố gắng' || result.mucNangLucChung === 'Cần cố gắng' ? 'bg-red-500' :
+                          'bg-gray-500'
                         }`}>
-                          {result.mucNangLucChung || 'Chưa đánh giá'}
+                          {result.mucNangLucChung ? (result.mucNangLucChung.charAt(0).toUpperCase() + result.mucNangLucChung.slice(1)) : 'Chưa đánh giá'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center text-gray-600">

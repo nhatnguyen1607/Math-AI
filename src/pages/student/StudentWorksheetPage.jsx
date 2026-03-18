@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import * as worksheetService from "../../services/faculty/worksheetService";
 import * as worksheetResultService from "../../services/student/worksheetResultService";
 import StudentHeader from "../../components/student/StudentHeader";
+import FractionRenderer from "../../components/FractionRenderer";
 
 const StudentWorksheetPage = ({ user, onSignOut }) => {
   const navigate = useNavigate();
@@ -25,6 +26,20 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
 
   // Bài 4: Various types
   const [bai4Answers, setBai4Answers] = useState({});
+
+  // Fraction input state for Bài 3
+  const [showBai3BaiLamFractionDialog, setShowBai3BaiLamFractionDialog] = useState(false);
+  const [showBai3GiaiThichFractionDialog, setShowBai3GiaiThichFractionDialog] = useState(false);
+  const [bai3BaiLamFractionNum, setBai3BaiLamFractionNum] = useState("");
+  const [bai3BaiLamFractionDen, setBai3BaiLamFractionDen] = useState("");
+  const [bai3GiaiThichFractionNum, setBai3GiaiThichFractionNum] = useState("");
+  const [bai3GiaiThichFractionDen, setBai3GiaiThichFractionDen] = useState("");
+
+  // Fraction input state for Bài 4
+  const [showBai4FractionDialog, setShowBai4FractionDialog] = useState(false);
+  const [currentBai4EditField, setCurrentBai4EditField] = useState(null); // { questionId, fieldType, fieldIndex }
+  const [bai4FractionNum, setBai4FractionNum] = useState("");
+  const [bai4FractionDen, setBai4FractionDen] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [saveStatus, setSaveStatus] = useState("saved"); // saved, saving, error
@@ -188,6 +203,57 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
     }));
   };
 
+  // Fraction input handlers for Bài 3
+  const insertBai3BaiLamFraction = () => {
+    if (bai3BaiLamFractionNum && bai3BaiLamFractionDen) {
+      setBai3BaiLam(prev => prev + `(${bai3BaiLamFractionNum})/(${bai3BaiLamFractionDen})`);
+      setBai3BaiLamFractionNum("");
+      setBai3BaiLamFractionDen("");
+      setShowBai3BaiLamFractionDialog(false);
+    }
+  };
+
+  const insertBai3GiaiThichFraction = () => {
+    if (bai3GiaiThichFractionNum && bai3GiaiThichFractionDen) {
+      setBai3GiaiThich(prev => prev + `(${bai3GiaiThichFractionNum})/(${bai3GiaiThichFractionDen})`);
+      setBai3GiaiThichFractionNum("");
+      setBai3GiaiThichFractionDen("");
+      setShowBai3GiaiThichFractionDialog(false);
+    }
+  };
+
+  // Fraction input handlers for Bài 4
+  const openBai4FractionDialog = (questionId, fieldType, fieldIndex) => {
+    setCurrentBai4EditField({ questionId, fieldType, fieldIndex });
+    setShowBai4FractionDialog(true);
+  };
+
+  const insertBai4Fraction = () => {
+    if (bai4FractionNum && bai4FractionDen && currentBai4EditField) {
+      const { questionId, fieldType, fieldIndex } = currentBai4EditField;
+      const fraction = `(${bai4FractionNum})/(${bai4FractionDen})`;
+
+      setBai4Answers(prev => {
+        const newAnswers = { ...prev };
+        if (fieldType === "subquestion") {
+          if (!newAnswers[questionId]) newAnswers[questionId] = [];
+          newAnswers[questionId][fieldIndex] = (newAnswers[questionId][fieldIndex] || "") + fraction;
+        } else if (fieldType === "solution") {
+          if (!newAnswers[questionId]) newAnswers[questionId] = [];
+          newAnswers[questionId][fieldIndex] = (newAnswers[questionId][fieldIndex] || "") + fraction;
+        } else {
+          newAnswers[questionId] = (newAnswers[questionId] || "") + fraction;
+        }
+        return newAnswers;
+      });
+
+      setBai4FractionNum("");
+      setBai4FractionDen("");
+      setShowBai4FractionDialog(false);
+      setCurrentBai4EditField(null);
+    }
+  };
+
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
@@ -329,7 +395,7 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                 </h1>
               </div>
               <div className="bg-blue-100 p-5 rounded-2xl border-2 border-blue-300">
-                <p className="text-justify text-sm font-semibold leading-relaxed text-gray-800 sm:text-base">{worksheetData.context}</p>
+                <p className="text-justify text-sm font-semibold leading-relaxed text-gray-800 sm:text-base"><FractionRenderer text={worksheetData.context} /></p>
               </div>
               
               {/* Auto-save Status */}
@@ -383,7 +449,7 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                       disabled={isAlreadySubmitted}
                       className="w-6 h-6 flex-shrink-0 text-purple-600 rounded cursor-pointer disabled:cursor-not-allowed"
                     />
-                    <span className="text-purple-900 text-lg">{question.text}</span>
+                    <span className="text-purple-900 text-lg"><FractionRenderer text={question.text} /></span>
                   </label>
                 ))}
               </div>
@@ -425,7 +491,7 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                       onDragStart={(e) => handleDragStart(e, q.id)}
                       className="bg-gradient-to-br from-blue-400 to-blue-500 text-white px-4 py-2 rounded-full text-sm font-bold cursor-move hover:from-blue-500 hover:to-blue-600 active:opacity-50 transition shadow-lg transform hover:scale-110"
                     >
-                      {q.text}
+                      <FractionRenderer text={q.text} />
                     </div>
                   ))}
                 </div>
@@ -465,7 +531,7 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                                 className="bg-gradient-to-br from-green-400 to-green-500 text-white px-3 py-2 rounded-full text-sm font-bold flex items-center gap-2 group shadow-md"
                               >
                                 <span className="bg-white text-green-600 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">{index + 1}</span>
-                                <span>{question?.text}</span>
+                                <span><FractionRenderer text={question?.text || ''} /></span>
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -502,10 +568,20 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="p-4 bg-white rounded-2xl border-3 border-green-300 shadow-md">
-                  <label className="block font-bold text-green-700 mb-3 text-lg flex items-center gap-2">
-                    <span className="text-2xl">🎯</span>
-                    Bài làm:
-                  </label>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block font-bold text-green-700 text-lg flex items-center gap-2">
+                      <span className="text-2xl">🎯</span>
+                      Bài làm:
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowBai3BaiLamFractionDialog(true)}
+                      disabled={isAlreadySubmitted}
+                      className="text-sm font-bold text-white bg-gradient-to-r from-green-500 to-green-600 px-3 py-1 rounded-lg hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      ➗ Phân số
+                    </button>
+                  </div>
                   <textarea
                     value={bai3BaiLam}
                     onChange={(e) => setBai3BaiLam(e.target.value)}
@@ -517,10 +593,20 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                 </div>
 
                 <div className="p-4 bg-white rounded-2xl border-3 border-green-300 shadow-md">
-                  <label className="block font-bold text-green-700 mb-3 text-lg flex items-center gap-2">
-                    <span className="text-2xl">💭</span>
-                    Giải thích:
-                  </label>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block font-bold text-green-700 text-lg flex items-center gap-2">
+                      <span className="text-2xl">💭</span>
+                      Giải thích:
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowBai3GiaiThichFractionDialog(true)}
+                      disabled={isAlreadySubmitted}
+                      className="text-sm font-bold text-white bg-gradient-to-r from-green-500 to-green-600 px-3 py-1 rounded-lg hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      ➗ Phân số
+                    </button>
+                  </div>
                   <textarea
                     value={bai3GiaiThich}
                     onChange={(e) => setBai3GiaiThich(e.target.value)}
@@ -536,6 +622,114 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                 <span className="text-xl">⭐</span>
                 <span>Hãy viết rõ ràng để thầy/cô hiểu được cách em suy nghĩ nhé!</span>
               </div>
+
+              {/* Bài 3 - Bài Làm Fraction Dialog */}
+              {showBai3BaiLamFractionDialog && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+                    <h3 className="text-xl font-bold text-green-700 mb-4">➗ Nhập phân số</h3>
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={bai3BaiLamFractionNum}
+                        onChange={(e) => setBai3BaiLamFractionNum(e.target.value)}
+                        placeholder="Tử số"
+                        className="w-full px-4 py-2 border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                      <input
+                        type="text"
+                        value={bai3BaiLamFractionDen}
+                        onChange={(e) => setBai3BaiLamFractionDen(e.target.value)}
+                        placeholder="Mẫu số"
+                        className="w-full px-4 py-2 border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                      {(bai3BaiLamFractionNum || bai3BaiLamFractionDen) && (
+                        <div className="p-3 bg-green-50 rounded-lg border-2 border-green-200">
+                          <p className="text-sm text-gray-600 mb-1">Preview:</p>
+                          <p className="text-lg font-bold text-green-700">
+                            ({bai3BaiLamFractionNum || '?'})/({bai3BaiLamFractionDen || '?'})
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowBai3BaiLamFractionDialog(false);
+                          setBai3BaiLamFractionNum("");
+                          setBai3BaiLamFractionDen("");
+                        }}
+                        className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-400 transition-all"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={insertBai3BaiLamFraction}
+                        disabled={!bai3BaiLamFractionNum || !bai3BaiLamFractionDen}
+                        className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-lg hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Chèn
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Bài 3 - Giải Thích Fraction Dialog */}
+              {showBai3GiaiThichFractionDialog && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+                    <h3 className="text-xl font-bold text-green-700 mb-4">➗ Nhập phân số</h3>
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={bai3GiaiThichFractionNum}
+                        onChange={(e) => setBai3GiaiThichFractionNum(e.target.value)}
+                        placeholder="Tử số"
+                        className="w-full px-4 py-2 border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                      <input
+                        type="text"
+                        value={bai3GiaiThichFractionDen}
+                        onChange={(e) => setBai3GiaiThichFractionDen(e.target.value)}
+                        placeholder="Mẫu số"
+                        className="w-full px-4 py-2 border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                      {(bai3GiaiThichFractionNum || bai3GiaiThichFractionDen) && (
+                        <div className="p-3 bg-green-50 rounded-lg border-2 border-green-200">
+                          <p className="text-sm text-gray-600 mb-1">Preview:</p>
+                          <p className="text-lg font-bold text-green-700">
+                            ({bai3GiaiThichFractionNum || '?'})/({bai3GiaiThichFractionDen || '?'})
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowBai3GiaiThichFractionDialog(false);
+                          setBai3GiaiThichFractionNum("");
+                          setBai3GiaiThichFractionDen("");
+                        }}
+                        className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-400 transition-all"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={insertBai3GiaiThichFraction}
+                        disabled={!bai3GiaiThichFractionNum || !bai3GiaiThichFractionDen}
+                        className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-lg hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Chèn
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -555,10 +749,10 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                   >
                     <h3 className="text-2xl font-bold text-orange-700 mb-4 flex items-center gap-2">
                       <span className="bg-orange-300 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold">{idx + 1}</span>
-                      {question.content}
+                      <FractionRenderer text={question.content} />
                     </h3>
                     <p className="text-lg text-orange-800 font-semibold mb-4">
-                      {question.label}. {question.text}
+                      {question.label}. <FractionRenderer text={question.text} />
                     </p>
 
                     {question.type === "cau_hoi_nho" && (
@@ -568,10 +762,20 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                             key={subQ.id}
                             className="p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border-2 border-orange-200 hover:border-orange-400 transition"
                           >
-                            <label className="block font-bold text-orange-700 mb-3 flex items-center gap-2">
-                              <span className="bg-orange-200 text-orange-700 px-2 py-1 rounded-full text-sm font-bold">Câu {subIdx + 1}</span>
-                              {subQ.text}
-                            </label>
+                            <div className="flex items-center justify-between gap-2 mb-3">
+                              <label className="block font-bold text-orange-700 flex items-center gap-2 flex-1">
+                                <span className="bg-orange-200 text-orange-700 px-2 py-1 rounded-full text-sm font-bold">Câu {subIdx + 1}</span>
+                                <FractionRenderer text={subQ.text} />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => openBai4FractionDialog(question.id, "subquestion", subIdx)}
+                                disabled={isAlreadySubmitted}
+                                className="text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 px-2 py-1 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                              >
+                                ➗
+                              </button>
+                            </div>
                             <input
                               type="text"
                               value={bai4Answers[question.id]?.[subIdx] || ""}
@@ -600,9 +804,19 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                               key={cacheIdx}
                               className="p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border-2 border-orange-200 hover:border-orange-400 transition"
                             >
-                              <label className="block font-bold text-orange-700 mb-3 flex items-center gap-2">
-                                <span className="bg-orange-200 text-orange-700 px-3 py-1 rounded-full text-sm font-bold">🌟 Cách {cacheIdx + 1}</span>
-                              </label>
+                              <div className="flex items-center justify-between gap-2 mb-3">
+                                <label className="block font-bold text-orange-700 flex items-center gap-2">
+                                  <span className="bg-orange-200 text-orange-700 px-3 py-1 rounded-full text-sm font-bold">🌟 Cách {cacheIdx + 1}</span>
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => openBai4FractionDialog(question.id, "solution", cacheIdx)}
+                                  disabled={isAlreadySubmitted}
+                                  className="text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 px-2 py-1 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                                >
+                                  ➗
+                                </button>
+                              </div>
                               <textarea
                                 value={
                                   bai4Answers[question.id]?.[cacheIdx] || ""
@@ -627,22 +841,90 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
                     )}
 
                     {!question.type && (
-                      <input
-                        type="text"
-                        value={bai4Answers[question.id] || ""}
-                        onChange={(e) => {
-                          setBai4Answers({
-                            ...bai4Answers,
-                            [question.id]: e.target.value,
-                          });
-                        }}
-                        disabled={isAlreadySubmitted}
-                        placeholder="✍️ Nhập đáp án của em..."
-                        className="w-full px-4 py-3 border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent font-medium disabled:bg-gray-100"
-                      />
+                      <div className="p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border-2 border-orange-200 hover:border-orange-400 transition">
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <label className="block font-bold text-orange-700">Đáp án:</label>
+                          <button
+                            type="button"
+                            onClick={() => openBai4FractionDialog(question.id, "default", 0)}
+                            disabled={isAlreadySubmitted}
+                            className="text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 px-2 py-1 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                          >
+                            ➗
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={bai4Answers[question.id] || ""}
+                          onChange={(e) => {
+                            setBai4Answers({
+                              ...bai4Answers,
+                              [question.id]: e.target.value,
+                            });
+                          }}
+                          disabled={isAlreadySubmitted}
+                          placeholder="✍️ Nhập đáp án của em..."
+                          className="w-full px-4 py-3 border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent font-medium disabled:bg-gray-100"
+                        />
+                      </div>
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Bài 4 Fraction Dialog */}
+          {showBai4FractionDialog && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+                <h3 className="text-xl font-bold text-orange-700 mb-4">➗ Nhập phân số</h3>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={bai4FractionNum}
+                    onChange={(e) => setBai4FractionNum(e.target.value)}
+                    placeholder="Tử số"
+                    className="w-full px-4 py-2 border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                  <input
+                    type="text"
+                    value={bai4FractionDen}
+                    onChange={(e) => setBai4FractionDen(e.target.value)}
+                    placeholder="Mẫu số"
+                    className="w-full px-4 py-2 border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                  {(bai4FractionNum || bai4FractionDen) && (
+                    <div className="p-3 bg-orange-50 rounded-lg border-2 border-orange-200">
+                      <p className="text-sm text-gray-600 mb-1">Preview:</p>
+                      <p className="text-lg font-bold text-orange-700">
+                        ({bai4FractionNum || '?'})/({bai4FractionDen || '?'})
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowBai4FractionDialog(false);
+                      setBai4FractionNum("");
+                      setBai4FractionDen("");
+                      setCurrentBai4EditField(null);
+                    }}
+                    className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-400 transition-all"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={insertBai4Fraction}
+                    disabled={!bai4FractionNum || !bai4FractionDen}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Chèn
+                  </button>
+                </div>
               </div>
             </div>
           )}

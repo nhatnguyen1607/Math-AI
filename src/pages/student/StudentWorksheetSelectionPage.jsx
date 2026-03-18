@@ -195,12 +195,20 @@ const StudentWorksheetSelectionPage = ({ user, onSignOut }) => {
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => handleSelectWorksheet(worksheet)}
-                      className="touch-btn w-full rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 px-4 text-sm font-bold text-white shadow-lg transition-all hover:from-blue-600 hover:to-purple-600 hover:shadow-xl sm:text-lg"
-                    >
-                      🚀 Bắt đầu →
-                    </button>
+                    <div className="space-y-3">
+                      <div className="bg-amber-100 border-2 border-amber-400 rounded-lg p-3 text-center">
+                        <div className="text-3xl mb-2">📝</div>
+                        <p className="text-sm font-bold text-amber-700">
+                          Chưa làm
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleSelectWorksheet(worksheet)}
+                        className="touch-btn w-full rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 px-4 text-sm font-bold text-white shadow-lg transition-all hover:from-blue-600 hover:to-purple-600 hover:shadow-xl sm:text-lg"
+                      >
+                        🚀 Bắt đầu →
+                      </button>
+                    </div>
                   )}
                 </div>
               );

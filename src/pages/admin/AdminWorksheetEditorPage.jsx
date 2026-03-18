@@ -21,12 +21,20 @@ const AdminWorksheetEditorPage = ({ user, onSignOut }) => {
   const [bai1Questions, setBai1Questions] = useState([]);
   const [bai1Input, setBai1Input] = useState('');
   const [bai1Explanation, setBai1Explanation] = useState('');
+  const [editingBai1Id, setEditingBai1Id] = useState(null);
+  const [showBai1FractionDialog, setShowBai1FractionDialog] = useState(false);
+  const [bai1FractionNum, setBai1FractionNum] = useState('');
+  const [bai1FractionDen, setBai1FractionDen] = useState('');
 
   // Bài 2
   const [bai2Questions, setBai2Questions] = useState([]);
   const [bai2Input, setBai2Input] = useState('');
   const [bai2Solutions, setBai2Solutions] = useState('');
   const [bai2Explanation, setBai2Explanation] = useState('');
+  const [editingBai2Id, setEditingBai2Id] = useState(null);
+  const [showBai2FractionDialog, setShowBai2FractionDialog] = useState(false);
+  const [bai2FractionNum, setBai2FractionNum] = useState('');
+  const [bai2FractionDen, setBai2FractionDen] = useState('');
 
   // Bài 3
   const [bai3Explanation, setBai3Explanation] = useState('');
@@ -175,34 +183,72 @@ const AdminWorksheetEditorPage = ({ user, onSignOut }) => {
   const addBai1Question = () => {
     if (!bai1Input.trim()) return;
     
-    const newQuestion = {
-      id: `q_${Date.now()}_${Math.random()}`,
-      text: bai1Input
-    };
-    
-    setBai1Questions([...bai1Questions, newQuestion]);
+    if (editingBai1Id) {
+      // Update existing
+      setBai1Questions(bai1Questions.map(q =>
+        q.id === editingBai1Id ? { ...q, text: bai1Input } : q
+      ));
+      setEditingBai1Id(null);
+    } else {
+      // Add new
+      const newQuestion = {
+        id: `q_${Date.now()}_${Math.random()}`,
+        text: bai1Input
+      };
+      setBai1Questions([...bai1Questions, newQuestion]);
+    }
+    setBai1Input('');
+  };
+
+  const editBai1Question = (id, text) => {
+    setEditingBai1Id(id);
+    setBai1Input(text);
+  };
+
+  const cancelEditBai1 = () => {
+    setEditingBai1Id(null);
     setBai1Input('');
   };
 
   const removeBai1Question = (id) => {
     setBai1Questions(bai1Questions.filter(q => q.id !== id));
+    if (editingBai1Id === id) cancelEditBai1();
   };
 
   // Bài 2 functions
   const addBai2Question = () => {
     if (!bai2Input.trim()) return;
     
-    const newQuestion = {
-      id: `q_${Date.now()}_${Math.random()}`,
-      text: bai2Input
-    };
-    
-    setBai2Questions([...bai2Questions, newQuestion]);
+    if (editingBai2Id) {
+      // Update existing
+      setBai2Questions(bai2Questions.map(q =>
+        q.id === editingBai2Id ? { ...q, text: bai2Input } : q
+      ));
+      setEditingBai2Id(null);
+    } else {
+      // Add new
+      const newQuestion = {
+        id: `q_${Date.now()}_${Math.random()}`,
+        text: bai2Input
+      };
+      setBai2Questions([...bai2Questions, newQuestion]);
+    }
+    setBai2Input('');
+  };
+
+  const editBai2Question = (id, text) => {
+    setEditingBai2Id(id);
+    setBai2Input(text);
+  };
+
+  const cancelEditBai2 = () => {
+    setEditingBai2Id(null);
     setBai2Input('');
   };
 
   const removeBai2Question = (id) => {
     setBai2Questions(bai2Questions.filter(q => q.id !== id));
+    if (editingBai2Id === id) cancelEditBai2();
   };
 
   // Bài 4 functions
@@ -540,7 +586,7 @@ const AdminWorksheetEditorPage = ({ user, onSignOut }) => {
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Nhập câu hỏi:
                 </label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 mb-2">
                   <input
                     type="text"
                     value={bai1Input}
@@ -550,19 +596,107 @@ const AdminWorksheetEditorPage = ({ user, onSignOut }) => {
                     placeholder="Nhập câu hỏi"
                   />
                   <button
+                    onClick={() => setShowBai1FractionDialog(true)}
+                    className="px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 font-semibold rounded-lg transition-all duration-300 text-sm"
+                    title="Chèn phân số"
+                  >
+                    ➕ Phân số
+                  </button>
+                  <button
                     onClick={addBai1Question}
                     className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold rounded-lg transition-all duration-300"
                   >
-                    ➕ Thêm
+                    {editingBai1Id ? '✏️ Cập nhật' : '➕ Thêm'}
                   </button>
+                  {editingBai1Id && (
+                    <button
+                      onClick={cancelEditBai1}
+                      className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold rounded-lg transition-all duration-300"
+                    >
+                      ✖️ Hủy
+                    </button>
+                  )}
                 </div>
               </div>
+
+              {/* Modal phân số cho Bài 1 */}
+              {showBai1FractionDialog && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+                    <h3 className="text-xl font-bold mb-4 text-gray-800">Chèn phân số</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Tử số
+                        </label>
+                        <input
+                          type="text"
+                          value={bai1FractionNum}
+                          onChange={(e) => setBai1FractionNum(e.target.value)}
+                          className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                          placeholder="Nhập tử số"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Mẫu số
+                        </label>
+                        <input
+                          type="text"
+                          value={bai1FractionDen}
+                          onChange={(e) => setBai1FractionDen(e.target.value)}
+                          className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                          placeholder="Nhập mẫu số"
+                        />
+                      </div>
+                      {(bai1FractionNum || bai1FractionDen) && (
+                        <div className="text-sm text-gray-600 mb-2">Xem trước:</div>
+                      )}
+                      {(bai1FractionNum || bai1FractionDen) && (
+                        <div className="text-xl font-semibold">({bai1FractionNum || '?'})/({bai1FractionDen || '?'})</div>
+                      )}
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => {
+                            setShowBai1FractionDialog(false);
+                            setBai1FractionNum('');
+                            setBai1FractionDen('');
+                          }}
+                          className="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold rounded-lg transition-all"
+                        >
+                          Hủy
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (bai1FractionNum.trim() || bai1FractionDen.trim()) {
+                              const fraction = `(${bai1FractionNum || '?'})/(${bai1FractionDen || '?'})`;
+                              setBai1Input(bai1Input + fraction);
+                              setShowBai1FractionDialog(false);
+                              setBai1FractionNum('');
+                              setBai1FractionDen('');
+                            }
+                          }}
+                          className="flex-1 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold rounded-lg transition-all"
+                        >
+                          Chèn
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2 mb-4">
                 {bai1Questions.map((q, idx) => (
                   <div key={q.id} className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm">
                     <span className="font-bold text-purple-600 min-w-fit">{idx + 1}.</span>
                     <span className="flex-1 text-gray-700">{q.text}</span>
+                    <button
+                      onClick={() => editBai1Question(q.id, q.text)}
+                      className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded transition-all duration-300 text-sm font-semibold"
+                    >
+                      ✏️ Sửa
+                    </button>
                     <button
                       onClick={() => removeBai1Question(q.id)}
                       className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-600 rounded transition-all duration-300 text-sm font-semibold"
@@ -612,7 +746,7 @@ const AdminWorksheetEditorPage = ({ user, onSignOut }) => {
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Nhập câu hỏi:
                 </label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 mb-2">
                   <input
                     type="text"
                     value={bai2Input}
@@ -622,19 +756,107 @@ const AdminWorksheetEditorPage = ({ user, onSignOut }) => {
                     placeholder="Nhập câu hỏi"
                   />
                   <button
+                    onClick={() => setShowBai2FractionDialog(true)}
+                    className="px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold rounded-lg transition-all duration-300 text-sm"
+                    title="Chèn phân số"
+                  >
+                    ➕ Phân số
+                  </button>
+                  <button
                     onClick={addBai2Question}
                     className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-all duration-300"
                   >
-                    ➕ Thêm
+                    {editingBai2Id ? '✏️ Cập nhật' : '➕ Thêm'}
                   </button>
+                  {editingBai2Id && (
+                    <button
+                      onClick={cancelEditBai2}
+                      className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold rounded-lg transition-all duration-300"
+                    >
+                      ✖️ Hủy
+                    </button>
+                  )}
                 </div>
               </div>
+
+              {/* Modal phân số cho Bài 2 */}
+              {showBai2FractionDialog && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+                    <h3 className="text-xl font-bold mb-4 text-gray-800">Chèn phân số</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Tử số
+                        </label>
+                        <input
+                          type="text"
+                          value={bai2FractionNum}
+                          onChange={(e) => setBai2FractionNum(e.target.value)}
+                          className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                          placeholder="Nhập tử số"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Mẫu số
+                        </label>
+                        <input
+                          type="text"
+                          value={bai2FractionDen}
+                          onChange={(e) => setBai2FractionDen(e.target.value)}
+                          className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                          placeholder="Nhập mẫu số"
+                        />
+                      </div>
+                      {(bai2FractionNum || bai2FractionDen) && (
+                        <div className="text-sm text-gray-600 mb-2">Xem trước:</div>
+                      )}
+                      {(bai2FractionNum || bai2FractionDen) && (
+                        <div className="text-xl font-semibold">({bai2FractionNum || '?'})/({bai2FractionDen || '?'})</div>
+                      )}
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => {
+                            setShowBai2FractionDialog(false);
+                            setBai2FractionNum('');
+                            setBai2FractionDen('');
+                          }}
+                          className="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold rounded-lg transition-all"
+                        >
+                          Hủy
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (bai2FractionNum.trim() || bai2FractionDen.trim()) {
+                              const fraction = `(${bai2FractionNum || '?'})/(${bai2FractionDen || '?'})`;
+                              setBai2Input(bai2Input + fraction);
+                              setShowBai2FractionDialog(false);
+                              setBai2FractionNum('');
+                              setBai2FractionDen('');
+                            }
+                          }}
+                          className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-all"
+                        >
+                          Chèn
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2 mb-4">
                 {bai2Questions.map((q, idx) => (
                   <div key={q.id} className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm">
                     <span className="font-bold text-blue-600 min-w-fit">{idx + 1}.</span>
                     <span className="flex-1 text-gray-700">{q.text}</span>
+                    <button
+                      onClick={() => editBai2Question(q.id, q.text)}
+                      className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded transition-all duration-300 text-sm font-semibold"
+                    >
+                      ✏️ Sửa
+                    </button>
                     <button
                       onClick={() => removeBai2Question(q.id)}
                       className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-600 rounded transition-all duration-300 text-sm font-semibold"

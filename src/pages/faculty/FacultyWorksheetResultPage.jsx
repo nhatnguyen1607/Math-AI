@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import * as worksheetResultService from '../../services/student/worksheetResultService';
 import * as worksheetService from '../../services/faculty/worksheetService';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
+import FractionRenderer from '../../components/FractionRenderer';
 
 const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
   const navigate = useNavigate();
@@ -111,24 +112,22 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
   }
 
   const getNormalizedLevel = (level) => {
-    if (!level) return 'Chưa đạt';
+    if (!level) return 'cần cố gắng';
     const normalized = level.toLowerCase().trim();
     
-    if (normalized.includes('tốt')) return 'Tốt';
-    if (normalized.includes('đạt') && !normalized.includes('chưa')) return 'Đạt';
-    if (normalized.includes('trung bình') || normalized.includes('trung')) return 'Trung bình';
-    if (normalized.includes('chưa') || normalized.includes('cần')) return 'Chưa đạt';
+    if (normalized.includes('tốt')) return 'tốt';
+    if (normalized.includes('đạt') && !normalized.includes('chưa') && !normalized.includes('cần')) return 'đạt';
+    if (normalized.includes('cần') || normalized.includes('chưa')) return 'cần cố gắng';
     
-    return 'Chưa đạt';
+    return 'cần cố gắng';
   };
 
   const getCompetencyColor = (level) => {
     const normalized = getNormalizedLevel(level);
     switch(normalized) {
-      case 'Tốt': return 'from-green-400 to-green-500';
-      case 'Đạt': return 'from-blue-400 to-blue-500';
-      case 'Trung bình': return 'from-yellow-400 to-yellow-500';
-      case 'Chưa đạt': return 'from-red-400 to-red-500';
+      case 'tốt': return 'from-green-400 to-green-500';
+      case 'đạt': return 'from-blue-400 to-blue-500';
+      case 'cần cố gắng': return 'from-red-400 to-red-500';
       default: return 'from-gray-400 to-gray-500';
     }
   };
@@ -136,10 +135,9 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
   const getCompetencyBgColor = (level) => {
     const normalized = getNormalizedLevel(level);
     switch(normalized) {
-      case 'Tốt': return 'bg-green-50 border-green-300';
-      case 'Đạt': return 'bg-blue-50 border-blue-300';
-      case 'Trung bình': return 'bg-yellow-50 border-yellow-300';
-      case 'Chưa đạt': return 'bg-red-50 border-red-300';
+      case 'tốt': return 'bg-green-50 border-green-300';
+      case 'đạt': return 'bg-blue-50 border-blue-300';
+      case 'cần cố gắng': return 'bg-red-50 border-red-300';
       default: return 'bg-gray-50 border-gray-300';
     }
   };
@@ -179,7 +177,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
             <div className="text-center">
               <p className="text-lg font-semibold text-gray-700 mb-3">Mức năng lực</p>
               <span className={`inline-block px-6 py-3 rounded-full font-bold text-white text-2xl bg-gradient-to-r ${getCompetencyColor(result.mucNangLucChung)}`}>
-                {result.mucNangLucChung || 'Chưa đánh giá'}
+                {result.mucNangLucChung ? (result.mucNangLucChung.charAt(0).toUpperCase() + result.mucNangLucChung.slice(1)) : 'Chưa đánh giá'}
               </span>
             </div>
 
@@ -220,7 +218,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{isSelected ? '✅' : '⭕'}</span>
                       <span className={`text-lg font-semibold ${isSelected ? 'text-green-700' : 'text-gray-700'}`}>
-                        {question.text}
+                        <FractionRenderer text={question.text} />
                       </span>
                     </div>
                   </div>
@@ -228,20 +226,21 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
               })}
             </div>
 
-            {/* Bài 1 Evaluation */}
-            {result.bai_1.evaluation && (
+            {/* Bài 1 Evaluation - Tiêu chí 1 */}
+            {result.bai_1?.evaluation && Object.keys(result.bai_1.evaluation).length > 0 && (
               <div className={`p-4 rounded-2xl border-2 ${getCompetencyBgColor(result.bai_1.evaluation.muc_nang_luc)}`}>
+                <p className="font-semibold text-purple-700 mb-3 text-sm">📌 Tiêu chí 1: Nhận biết được vấn đề</p>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-3">
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Điểm</p>
                     <p className="text-2xl font-bold text-gray-800">
-                      {result.bai_1.evaluation.diem}/2
+                      {result.bai_1.evaluation.diem || 0}/2
                     </p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Mức năng lực</p>
                     <span className={`inline-block px-4 py-1 rounded-full font-bold text-white text-sm bg-gradient-to-r ${getCompetencyColor(result.bai_1.evaluation.muc_nang_luc)}`}>
-                      {result.bai_1.evaluation.muc_nang_luc || 'N/A'}
+                      {result.bai_1.evaluation.muc_nang_luc ? (result.bai_1.evaluation.muc_nang_luc.charAt(0).toUpperCase() + result.bai_1.evaluation.muc_nang_luc.slice(1)) : 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -295,7 +294,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
                               <span className="bg-white text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
                                 {idx + 1}
                               </span>
-                              <span>{question?.text}</span>
+                              <span><FractionRenderer text={question?.text || ''} /></span>
                             </div>
                           );
                         })}
@@ -308,20 +307,21 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
               })}
             </div>
 
-            {/* Bài 2 Evaluation */}
-            {result.bai_2.evaluation && (
+            {/* Bài 2 Evaluation - Tiêu chí 2 */}
+            {result.bai_2?.evaluation && Object.keys(result.bai_2.evaluation).length > 0 && (
               <div className={`p-4 rounded-2xl border-2 ${getCompetencyBgColor(result.bai_2.evaluation.muc_nang_luc)}`}>
+                <p className="font-semibold text-blue-700 mb-3 text-sm">📌 Tiêu chí 2: Nêu được cách thức giải quyết vấn đề</p>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-3">
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Điểm</p>
                     <p className="text-2xl font-bold text-gray-800">
-                      {result.bai_2.evaluation.diem}/2
+                      {result.bai_2.evaluation.diem || 0}/2
                     </p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Mức năng lực</p>
                     <span className={`inline-block px-4 py-1 rounded-full font-bold text-white text-sm bg-gradient-to-r ${getCompetencyColor(result.bai_2.evaluation.muc_nang_luc)}`}>
-                      {result.bai_2.evaluation.muc_nang_luc || 'N/A'}
+                      {result.bai_2.evaluation.muc_nang_luc ? (result.bai_2.evaluation.muc_nang_luc.charAt(0).toUpperCase() + result.bai_2.evaluation.muc_nang_luc.slice(1)) : 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -354,7 +354,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
                   Bài làm:
                 </p>
                 <div className="bg-green-50 p-4 rounded-xl max-h-40 overflow-y-auto border-l-4 border-green-500 text-gray-700 whitespace-pre-wrap">
-                  {result.bai_3.bai_lam || '(không có)'}
+                  {result.bai_3.bai_lam ? <FractionRenderer text={result.bai_3.bai_lam} /> : '(không có)'}
                 </div>
               </div>
 
@@ -364,25 +364,26 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
                   Giải thích:
                 </p>
                 <div className="bg-green-50 p-4 rounded-xl max-h-40 overflow-y-auto border-l-4 border-green-500 text-gray-700 whitespace-pre-wrap">
-                  {result.bai_3.giai_thich || '(không có)'}
+                  {result.bai_3.giai_thich ? <FractionRenderer text={result.bai_3.giai_thich} /> : '(không có)'}
                 </div>
               </div>
             </div>
 
-            {/* Bài 3 Evaluation */}
-            {result.bai_3.evaluation && (
+            {/* Bài 3 Evaluation - Tiêu chí 3 */}
+            {result.bai_3?.evaluation && Object.keys(result.bai_3.evaluation).length > 0 && (
               <div className={`p-4 rounded-2xl border-2 ${getCompetencyBgColor(result.bai_3.evaluation.muc_nang_luc)}`}>
+                <p className="font-semibold text-green-700 mb-3 text-sm">📌 Tiêu chí 3: Trình bày được cách thức giải quyết vấn đề</p>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-3">
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Điểm</p>
                     <p className="text-2xl font-bold text-gray-800">
-                      {result.bai_3.evaluation.diem}/2
+                      {result.bai_3.evaluation.diem || 0}/2
                     </p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Mức năng lực</p>
                     <span className={`inline-block px-4 py-1 rounded-full font-bold text-white text-sm bg-gradient-to-r ${getCompetencyColor(result.bai_3.evaluation.muc_nang_luc)}`}>
-                      {result.bai_3.evaluation.muc_nang_luc || 'N/A'}
+                      {result.bai_3.evaluation.muc_nang_luc ? (result.bai_3.evaluation.muc_nang_luc.charAt(0).toUpperCase() + result.bai_3.evaluation.muc_nang_luc.slice(1)) : 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -419,9 +420,9 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
                       </span>
                       <div className="flex-1">
                         <p className="text-lg text-orange-800 font-semibold">
-                          {question.label}. {question.text}
+                          {question.label}. <FractionRenderer text={question.text} />
                         </p>
-                        <p className="text-base text-gray-600 mt-1">{question.content}</p>
+                        <p className="text-base text-gray-600 mt-1"><FractionRenderer text={question.content} /></p>
                       </div>
                     </div>
 
@@ -434,10 +435,10 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
                             className="p-3 bg-orange-50 rounded-xl border-2 border-orange-200"
                           >
                             <p className="font-semibold text-orange-700 text-sm mb-2">
-                              Câu {subIdx + 1}: {subQ.text}
+                              Câu {subIdx + 1}: <FractionRenderer text={subQ.text} />
                             </p>
                             <p className="text-gray-700 bg-white p-2 rounded border-l-4 border-orange-500">
-                              {studentAnswer?.[subIdx] || '(không có đáp án)'}
+                              {studentAnswer?.[subIdx] ? <FractionRenderer text={studentAnswer[subIdx]} /> : '(không có đáp án)'}
                             </p>
                           </div>
                         ))}
@@ -456,7 +457,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
                                 🌟 Cách {cacheIdx + 1}:
                               </p>
                               <p className="text-gray-700 bg-white p-2 rounded border-l-4 border-orange-500 whitespace-pre-wrap">
-                                {studentAnswer?.[cacheIdx] || '(không có đáp án)'}
+                                {studentAnswer?.[cacheIdx] ? <FractionRenderer text={studentAnswer[cacheIdx]} /> : '(không có đáp án)'}
                               </p>
                             </div>
                           )
@@ -467,7 +468,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
                     {!question.type && (
                       <div className="mt-4 mb-4 p-3 bg-orange-50 rounded-xl border-2 border-orange-200">
                         <p className="text-gray-700 bg-white p-2 rounded border-l-4 border-orange-500">
-                          {studentAnswer || '(không có đáp án)'}
+                          {studentAnswer ? <FractionRenderer text={studentAnswer} /> : '(không có đáp án)'}
                         </p>
                       </div>
                     )}
@@ -476,20 +477,21 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
               })}
             </div>
 
-            {/* Bài 4 Evaluation */}
-            {result.bai_4.evaluation && (
+            {/* Bài 4 Evaluation - Tiêu chí 4 */}
+            {result.bai_4?.evaluation && Object.keys(result.bai_4.evaluation).length > 0 && (
               <div className={`p-4 rounded-2xl border-2 mt-8 ${getCompetencyBgColor(result.bai_4.evaluation.muc_nang_luc)}`}>
+                <p className="font-semibold text-orange-700 mb-3 text-sm">📌 Tiêu chí 4: Kiểm tra và vận dụng giải pháp</p>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-3">
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Điểm</p>
                     <p className="text-2xl font-bold text-gray-800">
-                      {result.bai_4.evaluation.diem}/2
+                      {result.bai_4.evaluation.diem || 0}/2
                     </p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Mức năng lực</p>
                     <span className={`inline-block px-4 py-1 rounded-full font-bold text-white text-sm bg-gradient-to-r ${getCompetencyColor(result.bai_4.evaluation.muc_nang_luc)}`}>
-                      {result.bai_4.evaluation.muc_nang_luc || 'N/A'}
+                      {result.bai_4.evaluation.muc_nang_luc ? (result.bai_4.evaluation.muc_nang_luc.charAt(0).toUpperCase() + result.bai_4.evaluation.muc_nang_luc.slice(1)) : 'N/A'}
                     </span>
                   </div>
                 </div>

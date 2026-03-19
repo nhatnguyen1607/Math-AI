@@ -10,6 +10,9 @@ const FacultyClassManagementPage = ({ user, onSelectClass, onSignOut }) => {
   const [className, setClassName] = useState('');
   const [classGrade, setClassGrade] = useState('5');
   const [error, setError] = useState(null);
+  const [editingClassId, setEditingClassId] = useState(null);
+  const [editClassName, setEditClassName] = useState('');
+  const [editClassGrade, setEditClassGrade] = useState('5');
   const navigate = useNavigate();
 
   // Ensure onSelectClass is a function
@@ -71,6 +74,40 @@ const FacultyClassManagementPage = ({ user, onSelectClass, onSignOut }) => {
     }
   };
 
+  const handleUpdateClass = async (e) => {
+    e.preventDefault();
+    if (!editClassName.trim()) {
+      setError('Vui lòng nhập tên lớp');
+      return;
+    }
+
+    try {
+      await classService.updateClass(editingClassId, {
+        name: editClassName,
+        grade: editClassGrade
+      });
+      setEditingClassId(null);
+      setEditClassName('');
+      setEditClassGrade('5');
+      setError(null);
+      await loadClasses();
+    } catch (err) {
+      setError('Lỗi khi cập nhật lớp');
+    }
+  };
+
+  const handleStartEdit = (cls) => {
+    setEditingClassId(cls.id);
+    setEditClassName(cls.name);
+    setEditClassGrade(cls.grade || '5');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingClassId(null);
+    setEditClassName('');
+    setEditClassGrade('5');
+  };
+
   if (loading) {
     return <div className="text-center py-12 text-purple-500 text-xl">Đang tải...</div>;
   }
@@ -127,6 +164,40 @@ const FacultyClassManagementPage = ({ user, onSelectClass, onSignOut }) => {
         </div>
       )}
 
+      {editingClassId && (
+        <div className="px-12 max-w-6xl mx-auto w-full bg-white bg-opacity-95 rounded-3xl mb-8 shadow-xl p-8 border-2 border-blue-500">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Chỉnh sửa thông tin lớp</h3>
+          <form onSubmit={handleUpdateClass} className="flex gap-4 flex-wrap">
+            <input
+              type="text"
+              placeholder="Tên lớp"
+              value={editClassName}
+              onChange={(e) => setEditClassName(e.target.value)}
+              className="flex-1 min-w-52 px-3.5 py-3.5 border-2 border-gray-300 rounded-lg text-base transition-colors duration-300 focus:outline-none focus:border-blue-500 focus:shadow-md focus:shadow-blue-500/20"
+            />
+            <select
+              value={editClassGrade}
+              onChange={(e) => setEditClassGrade(e.target.value)}
+              className="flex-1 min-w-52 px-3.5 py-3.5 border-2 border-gray-300 rounded-lg text-base transition-colors duration-300 focus:outline-none focus:border-blue-500 focus:shadow-md focus:shadow-blue-500/20"
+            >
+              <option value="3">Lớp 3</option>
+              <option value="4">Lớp 4</option>
+              <option value="5">Lớp 5</option>
+            </select>
+            <div className="flex gap-2">
+              <button type="submit" className="px-6 py-3.5 border-none rounded-lg font-semibold cursor-pointer transition-all duration-300 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/50">✓ Cập nhật</button>
+              <button
+                type="button"
+                className="px-6 py-3.5 border-none rounded-lg font-semibold cursor-pointer transition-all duration-300 bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-lg shadow-gray-500/30 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-gray-500/50"
+                onClick={handleCancelEdit}
+              >
+                ✕ Hủy
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {error && (
         <div className="bg-red-100 text-red-800 px-6 py-4 rounded-lg mb-4 border-l-4 border-red-800 shadow-md shadow-red-800/15 mx-12 max-w-6xl">
           {error}
@@ -144,9 +215,6 @@ const FacultyClassManagementPage = ({ user, onSelectClass, onSignOut }) => {
             <div
               key={cls.id}
               className="bg-white bg-opacity-95 rounded-xl p-8 shadow-lg hover:shadow-2xl text-center cursor-pointer transition-all duration-300 border-2 border-transparent hover:border-purple-500 hover:-translate-y-2 bg-white"
-              onClick={() => {
-                handleSelectClassSafely(cls);
-              }}
             >
               <div className="text-5xl mb-4 block">🎓</div>
               <h3 className="text-2xl text-gray-900 my-2 font-bold">{cls.name}</h3>
@@ -166,7 +234,25 @@ const FacultyClassManagementPage = ({ user, onSelectClass, onSignOut }) => {
                   📋 Sao chép
                 </button>
               </div>
-              <button className="w-full px-3.5 py-3.5 bg-gradient-to-r from-purple-500 to-purple-700 text-white border-none rounded-lg font-semibold cursor-pointer transition-all duration-300 shadow-lg shadow-purple-500/30 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/50">Chọn lớp</button>
+              <div className="flex gap-2">
+                <button 
+                  className="flex-1 px-3.5 py-3.5 bg-gradient-to-r from-purple-500 to-purple-700 text-white border-none rounded-lg font-semibold cursor-pointer transition-all duration-300 shadow-lg shadow-purple-500/30 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/50"
+                  onClick={() => {
+                    handleSelectClassSafely(cls);
+                  }}
+                >
+                  Chọn lớp
+                </button>
+                <button
+                  className="px-3.5 py-3.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white border-none rounded-lg font-semibold cursor-pointer transition-all duration-300 shadow-lg shadow-blue-500/30 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStartEdit(cls);
+                  }}
+                >
+                  ✏️ Sửa
+                </button>
+              </div>
             </div>
           ))}
         </div>

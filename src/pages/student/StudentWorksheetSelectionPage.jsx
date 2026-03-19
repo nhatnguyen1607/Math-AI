@@ -13,9 +13,9 @@ const StudentWorksheetSelectionPage = ({ user, onSignOut }) => {
   const [loading, setLoading] = useState(false);
   const [submittedWorksheets, setSubmittedWorksheets] = useState({});
 
-  // Kiểm tra classId - nếu không có thì redirect sang dashboard để chọn lớp
+  // Kiểm tra classId - nếu không có hoặc là "undefined" thì redirect sang dashboard để chọn lớp
   useEffect(() => {
-    if (!classId) {
+    if (!classId || classId === 'undefined') {
       navigate("/student", { replace: true });
     }
   }, [classId, navigate]);

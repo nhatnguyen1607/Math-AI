@@ -48,9 +48,9 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
   const [saveStatus, setSaveStatus] = useState("saved"); // saved, saving, error
   const [isAlreadySubmitted, setIsAlreadySubmitted] = useState(false);
 
-  // Kiểm tra classId - nếu không có thì redirect sang dashboard
+  // Kiểm tra classId - nếu không có hoặc là "undefined" thì redirect sang dashboard
   useEffect(() => {
-    if (!classId) {
+    if (!classId || classId === 'undefined') {
       navigate("/student", { replace: true });
     }
   }, [classId, navigate]);

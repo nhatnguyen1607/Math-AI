@@ -131,10 +131,30 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
   };
 
   const handleStartupClick = useCallback(() => {
+    if (!selectedClass?.id) {
+      alert('Vui lòng chọn lớp trước!');
+      setShowClassSelector(true);
+      return;
+    }
+    if (!selectedClass?.id) {
+      alert('Vui lòng chọn lớp trước!');
+      setShowClassSelector(true);
+      return;
+    }
     navigate(`/student/${selectedClass?.id}/pathways`);
   }, [navigate, selectedClass?.id]);
 
   const handleWorksheetClick = useCallback(() => {
+    if (!selectedClass?.id) {
+      alert('Vui lòng chọn lớp trước!');
+      setShowClassSelector(true);
+      return;
+    }
+    if (!selectedClass?.id) {
+      alert('Vui lòng chọn lớp trước!');
+      setShowClassSelector(true);
+      return;
+    }
     navigate(`/student/${selectedClass?.id}/worksheets`);
   }, [navigate, selectedClass?.id]);
 

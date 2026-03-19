@@ -1,28 +1,27 @@
-// Sử dụng Vertex AI REST API từ browser
-// Không cần import Google Generative AI SDK vì giờ dùng REST API trực tiếp
 
-// Model names hỗ trợ trong Vertex AI
-// Có thể cấu hình rpdLimit qua environment variables:
-// REACT_APP_GEMINI_2_5_FLASH_RPD_LIMIT
-// REACT_APP_GEMINI_2_0_FLASH_RPD_LIMIT
-// REACT_APP_GEMINI_1_5_PRO_RPD_LIMIT
 const MODELS = [
   {
-    name: "gemini-2.5-flash",
+    name: "gemini-2.5-flash", 
     displayName: "Gemini 2.5 Flash",
-    rpdLimit: parseInt(process.env.REACT_APP_GEMINI_2_5_FLASH_RPD_LIMIT || '999'),
+    rpdLimit: 2000, 
     type: "text"
   },
   {
-    name: "gemini-2.0-flash",
-    displayName: "Gemini 2.0 Flash",
-    rpdLimit: parseInt(process.env.REACT_APP_GEMINI_2_0_FLASH_RPD_LIMIT || '999'),
+    name: "gemini-1.5-flash-002", 
+    displayName: "Gemini 1.5 Flash (Stable)",
+    rpdLimit: 5000, 
     type: "text"
   },
   {
-    name: "gemini-1.5-pro",
-    displayName: "Gemini 1.5 Pro",
-    rpdLimit: parseInt(process.env.REACT_APP_GEMINI_1_5_PRO_RPD_LIMIT || '999'),
+    name: "gemini-1.5-pro-002", 
+    displayName: "Gemini 1.5 Pro (High Intelligence)",
+    rpdLimit: 1000,
+    type: "text"
+  },
+  {
+    name: "gemini-1.0-pro-001", 
+    displayName: "Gemini 1.0 Pro (Fallback)",
+    rpdLimit: 1000,
     type: "text"
   }
 ];
@@ -46,10 +45,7 @@ class GeminiModelManager {
     this._initializeVertexAI();
   }
 
-  /**
-   * Khởi tạo Vertex AI instance với API key từ env
-   * Sử dụng Vertex AI REST API thay vì SDK vì SDK không tương thích với browser
-   */
+
   _initializeVertexAI() {
     try {
       const apiKey = process.env.REACT_APP_VERTEX_AI_API_KEY;
@@ -71,9 +67,6 @@ class GeminiModelManager {
     }
   }
 
-  /**
-   * Lấy Vertex AI instance hoặc khởi tạo lại nếu cần
-   */
   _getVertexAIInstance() {
     if (!this.vertexAIInstance) {
       this._initializeVertexAI();
@@ -81,10 +74,7 @@ class GeminiModelManager {
     return this.vertexAIInstance;
   }
 
-  /**
-   * Gọi Backend API (sử dụng Vertex AI service account credentials)
-   * Endpoint có thể là local (http://localhost:3001) hoặc production (Vercel)
-   */
+
   async _callVertexAIAPI(modelName, prompt) {
     // Get API endpoint - local dev hoặc production
     const apiEndpoint = process.env.REACT_APP_BACKEND_API_URL || 'http://localhost:8080';
@@ -172,9 +162,6 @@ class GeminiModelManager {
     return this._wrapModelInterface(MODELS[0].name);
   }
 
-  /**
-   * Tạo wrapper interface tương thích với GenerativeModel
-   */
   _wrapModelInterface(modelName) {
     const manager = this;
     return {

@@ -148,6 +148,26 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
     }
   };
 
+  // Helper: Convert arrays to objects for Firestore (no nested arrays allowed)
+  const convertArraysToObjects = (obj) => {
+    return Object.keys(obj).reduce((acc, key) => {
+      const value = obj[key];
+      if (Array.isArray(value)) {
+        // Convert array to object with index keys
+        acc[key] = value.reduce((arrAcc, item, idx) => {
+          arrAcc[idx.toString()] = item;
+          return arrAcc;
+        }, {});
+      } else if (typeof value === 'object' && value !== null) {
+        // Recursively process nested objects
+        acc[key] = convertArraysToObjects(value);
+      } else {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+  };
+
   // Tính toán mức năng lực chung từ điểm
   const calculateOverallLevel = (score) => {
     if (score >= 7) {
@@ -185,7 +205,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
       // Save to database
       const resultId = result.id;
       await worksheetResultService.updateWorksheetResult(resultId, {
-        bai_1: updatedResult.bai_1,
+        bai_1: convertArraysToObjects(updatedResult.bai_1),
         tongDiem: updatedResult.tongDiem,
         mucNangLucChung: updatedResult.mucNangLucChung
       });
@@ -224,7 +244,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
       // Save to database
       const resultId = result.id;
       await worksheetResultService.updateWorksheetResult(resultId, {
-        bai_2: updatedResult.bai_2,
+        bai_2: convertArraysToObjects(updatedResult.bai_2),
         tongDiem: updatedResult.tongDiem,
         mucNangLucChung: updatedResult.mucNangLucChung
       });
@@ -263,7 +283,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
       // Save to database
       const resultId = result.id;
       await worksheetResultService.updateWorksheetResult(resultId, {
-        bai_3: updatedResult.bai_3,
+        bai_3: convertArraysToObjects(updatedResult.bai_3),
         tongDiem: updatedResult.tongDiem,
         mucNangLucChung: updatedResult.mucNangLucChung
       });
@@ -302,7 +322,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
       // Save to database
       const resultId = result.id;
       await worksheetResultService.updateWorksheetResult(resultId, {
-        bai_4: updatedResult.bai_4,
+        bai_4: convertArraysToObjects(updatedResult.bai_4),
         tongDiem: updatedResult.tongDiem,
         mucNangLucChung: updatedResult.mucNangLucChung
       });

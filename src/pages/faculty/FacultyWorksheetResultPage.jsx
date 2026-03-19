@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import * as worksheetResultService from '../../services/student/worksheetResultService';
 import * as worksheetService from '../../services/faculty/worksheetService';
+import { evaluateBai1, evaluateBai2, evaluateBai3, evaluateBai4, generateOverallComment } from '../../services/student/worksheetEvaluationService';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 import FractionRenderer from '../../components/FractionRenderer';
 
@@ -14,6 +15,11 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState(null);
   const [worksheet, setWorksheet] = useState(null);
+  const [evaluatingBai1, setEvaluatingBai1] = useState(false);
+  const [evaluatingBai2, setEvaluatingBai2] = useState(false);
+  const [evaluatingBai3, setEvaluatingBai3] = useState(false);
+  const [evaluatingBai4, setEvaluatingBai4] = useState(false);
+  const [evaluatingOverall, setEvaluatingOverall] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -142,6 +148,209 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
     }
   };
 
+  // Tính toán mức năng lực chung từ điểm
+  const calculateOverallLevel = (score) => {
+    if (score >= 7) {
+      return 'tốt';
+    } else if (score >= 4) {
+      return 'đạt';
+    } else {
+      return 'cần cố gắng';
+    }
+  };
+
+  // Re-evaluate Bài 1
+  const handleReEvaluateBai1 = async () => {
+    try {
+      setEvaluatingBai1(true);
+      const evaluation = await evaluateBai1(result, worksheet);
+      
+      // Update result
+      const updatedResult = { ...result };
+      updatedResult.bai_1 = {
+        ...result.bai_1,
+        evaluation: evaluation.evaluation || {}
+      };
+
+      // Recalculate overall score
+      const newTongDiem = 
+        (updatedResult.bai_1.evaluation.diem || 0) +
+        (result.bai_2?.evaluation?.diem || 0) +
+        (result.bai_3?.evaluation?.diem || 0) +
+        (result.bai_4?.evaluation?.diem || 0);
+      
+      updatedResult.tongDiem = newTongDiem;
+      updatedResult.mucNangLucChung = calculateOverallLevel(newTongDiem);
+
+      // Save to database
+      const resultId = result.id;
+      await worksheetResultService.updateWorksheetResult(resultId, {
+        bai_1: updatedResult.bai_1,
+        tongDiem: updatedResult.tongDiem,
+        mucNangLucChung: updatedResult.mucNangLucChung
+      });
+
+      setResult(updatedResult);
+      alert('✅ Đánh giá lại Bài 1 thành công và đã lưu!');
+    } catch (error) {
+      console.error('Error re-evaluating Bài 1:', error);
+      alert('❌ Lỗi khi đánh giá lại Bài 1');
+    } finally {
+      setEvaluatingBai1(false);
+    }
+  };
+
+  // Re-evaluate Bài 2
+  const handleReEvaluateBai2 = async () => {
+    try {
+      setEvaluatingBai2(true);
+      const evaluation = await evaluateBai2(result, worksheet);
+      
+      const updatedResult = { ...result };
+      updatedResult.bai_2 = {
+        ...result.bai_2,
+        evaluation: evaluation.evaluation || {}
+      };
+
+      const newTongDiem = 
+        (result.bai_1?.evaluation?.diem || 0) +
+        (updatedResult.bai_2.evaluation.diem || 0) +
+        (result.bai_3?.evaluation?.diem || 0) +
+        (result.bai_4?.evaluation?.diem || 0);
+      
+      updatedResult.tongDiem = newTongDiem;
+      updatedResult.mucNangLucChung = calculateOverallLevel(newTongDiem);
+
+      // Save to database
+      const resultId = result.id;
+      await worksheetResultService.updateWorksheetResult(resultId, {
+        bai_2: updatedResult.bai_2,
+        tongDiem: updatedResult.tongDiem,
+        mucNangLucChung: updatedResult.mucNangLucChung
+      });
+
+      setResult(updatedResult);
+      alert('✅ Đánh giá lại Bài 2 thành công và đã lưu!');
+    } catch (error) {
+      console.error('Error re-evaluating Bài 2:', error);
+      alert('❌ Lỗi khi đánh giá lại Bài 2');
+    } finally {
+      setEvaluatingBai2(false);
+    }
+  };
+
+  // Re-evaluate Bài 3
+  const handleReEvaluateBai3 = async () => {
+    try {
+      setEvaluatingBai3(true);
+      const evaluation = await evaluateBai3(result, worksheet);
+      
+      const updatedResult = { ...result };
+      updatedResult.bai_3 = {
+        ...result.bai_3,
+        evaluation: evaluation.evaluation || {}
+      };
+
+      const newTongDiem = 
+        (result.bai_1?.evaluation?.diem || 0) +
+        (result.bai_2?.evaluation?.diem || 0) +
+        (updatedResult.bai_3.evaluation.diem || 0) +
+        (result.bai_4?.evaluation?.diem || 0);
+      
+      updatedResult.tongDiem = newTongDiem;
+      updatedResult.mucNangLucChung = calculateOverallLevel(newTongDiem);
+
+      // Save to database
+      const resultId = result.id;
+      await worksheetResultService.updateWorksheetResult(resultId, {
+        bai_3: updatedResult.bai_3,
+        tongDiem: updatedResult.tongDiem,
+        mucNangLucChung: updatedResult.mucNangLucChung
+      });
+
+      setResult(updatedResult);
+      alert('✅ Đánh giá lại Bài 3 thành công và đã lưu!');
+    } catch (error) {
+      console.error('Error re-evaluating Bài 3:', error);
+      alert('❌ Lỗi khi đánh giá lại Bài 3');
+    } finally {
+      setEvaluatingBai3(false);
+    }
+  };
+
+  // Re-evaluate Bài 4
+  const handleReEvaluateBai4 = async () => {
+    try {
+      setEvaluatingBai4(true);
+      const evaluation = await evaluateBai4(result, worksheet);
+      
+      const updatedResult = { ...result };
+      updatedResult.bai_4 = {
+        ...result.bai_4,
+        evaluation: evaluation.evaluation || {}
+      };
+
+      const newTongDiem = 
+        (result.bai_1?.evaluation?.diem || 0) +
+        (result.bai_2?.evaluation?.diem || 0) +
+        (result.bai_3?.evaluation?.diem || 0) +
+        (updatedResult.bai_4.evaluation.diem || 0);
+      
+      updatedResult.tongDiem = newTongDiem;
+      updatedResult.mucNangLucChung = calculateOverallLevel(newTongDiem);
+
+      // Save to database
+      const resultId = result.id;
+      await worksheetResultService.updateWorksheetResult(resultId, {
+        bai_4: updatedResult.bai_4,
+        tongDiem: updatedResult.tongDiem,
+        mucNangLucChung: updatedResult.mucNangLucChung
+      });
+
+      setResult(updatedResult);
+      alert('✅ Đánh giá lại Bài 4 thành công và đã lưu!');
+    } catch (error) {
+      console.error('Error re-evaluating Bài 4:', error);
+      alert('❌ Lỗi khi đánh giá lại Bài 4');
+    } finally {
+      setEvaluatingBai4(false);
+    }
+  };
+
+  // Re-evaluate Overall Comment
+  const handleReEvaluateOverall = async () => {
+    try {
+      setEvaluatingOverall(true);
+      const nhanXetChung = await generateOverallComment(
+        {
+          bai_1: result.bai_1,
+          bai_2: result.bai_2,
+          bai_3: result.bai_3,
+          bai_4: result.bai_4
+        },
+        result.tongDiem,
+        result.mucNangLucChung
+      );
+      
+      // Save to database
+      const resultId = result.id;
+      await worksheetResultService.updateWorksheetResult(resultId, {
+        nhanXetChung: nhanXetChung
+      });
+
+      setResult(prev => ({
+        ...prev,
+        nhanXetChung: nhanXetChung
+      }));
+      alert('✅ Đánh giá lại nhận xét chung thành công và đã lưu!');
+    } catch (error) {
+      console.error('Error re-evaluating overall comment:', error);
+      alert('❌ Lỗi khi đánh giá lại nhận xét chung');
+    } finally {
+      setEvaluatingOverall(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
       <FacultyHeader user={user} onLogout={onSignOut} navItems={[]} />
@@ -229,7 +438,17 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
             {/* Bài 1 Evaluation - Tiêu chí 1 */}
             {result.bai_1?.evaluation && Object.keys(result.bai_1.evaluation).length > 0 && (
               <div className={`p-4 rounded-2xl border-2 ${getCompetencyBgColor(result.bai_1.evaluation.muc_nang_luc)}`}>
-                <p className="font-semibold text-purple-700 mb-3 text-sm">📌 Tiêu chí 1: Nhận biết được vấn đề</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-semibold text-purple-700 text-sm">📌 Tiêu chí 1: Nhận biết được vấn đề</p>
+                  <button
+                    onClick={handleReEvaluateBai1}
+                    disabled={evaluatingBai1}
+                    className="px-3 py-1 bg-gradient-to-r from-purple-400 to-purple-500 hover:from-purple-500 hover:to-purple-600 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold text-xs rounded-lg transition-all flex items-center gap-1"
+                    title="Đánh giá lại bài 1 nếu API bị lỗi"
+                  >
+                    {evaluatingBai1 ? '⏳' : '🔄'} {evaluatingBai1 ? 'Đánh giá...' : 'Đánh giá lại'}
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-3">
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Điểm</p>
@@ -310,7 +529,17 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
             {/* Bài 2 Evaluation - Tiêu chí 2 */}
             {result.bai_2?.evaluation && Object.keys(result.bai_2.evaluation).length > 0 && (
               <div className={`p-4 rounded-2xl border-2 ${getCompetencyBgColor(result.bai_2.evaluation.muc_nang_luc)}`}>
-                <p className="font-semibold text-blue-700 mb-3 text-sm">📌 Tiêu chí 2: Nêu được cách thức giải quyết vấn đề</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-semibold text-blue-700 text-sm">📌 Tiêu chí 2: Nêu được cách thức giải quyết vấn đề</p>
+                  <button
+                    onClick={handleReEvaluateBai2}
+                    disabled={evaluatingBai2}
+                    className="px-3 py-1 bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold text-xs rounded-lg transition-all flex items-center gap-1"
+                    title="Đánh giá lại bài 2 nếu API bị lỗi"
+                  >
+                    {evaluatingBai2 ? '⏳' : '🔄'} {evaluatingBai2 ? 'Đánh giá...' : 'Đánh giá lại'}
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-3">
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Điểm</p>
@@ -372,7 +601,17 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
             {/* Bài 3 Evaluation - Tiêu chí 3 */}
             {result.bai_3?.evaluation && Object.keys(result.bai_3.evaluation).length > 0 && (
               <div className={`p-4 rounded-2xl border-2 ${getCompetencyBgColor(result.bai_3.evaluation.muc_nang_luc)}`}>
-                <p className="font-semibold text-green-700 mb-3 text-sm">📌 Tiêu chí 3: Trình bày được cách thức giải quyết vấn đề</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-semibold text-green-700 text-sm">📌 Tiêu chí 3: Trình bày được cách thức giải quyết vấn đề</p>
+                  <button
+                    onClick={handleReEvaluateBai3}
+                    disabled={evaluatingBai3}
+                    className="px-3 py-1 bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold text-xs rounded-lg transition-all flex items-center gap-1"
+                    title="Đánh giá lại bài 3 nếu API bị lỗi"
+                  >
+                    {evaluatingBai3 ? '⏳' : '🔄'} {evaluatingBai3 ? 'Đánh giá...' : 'Đánh giá lại'}
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-3">
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Điểm</p>
@@ -480,7 +719,17 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
             {/* Bài 4 Evaluation - Tiêu chí 4 */}
             {result.bai_4?.evaluation && Object.keys(result.bai_4.evaluation).length > 0 && (
               <div className={`p-4 rounded-2xl border-2 mt-8 ${getCompetencyBgColor(result.bai_4.evaluation.muc_nang_luc)}`}>
-                <p className="font-semibold text-orange-700 mb-3 text-sm">📌 Tiêu chí 4: Kiểm tra và vận dụng giải pháp</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-semibold text-orange-700 text-sm">📌 Tiêu chí 4: Kiểm tra và vận dụng giải pháp</p>
+                  <button
+                    onClick={handleReEvaluateBai4}
+                    disabled={evaluatingBai4}
+                    className="px-3 py-1 bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold text-xs rounded-lg transition-all flex items-center gap-1"
+                    title="Đánh giá lại bài 4 nếu API bị lỗi"
+                  >
+                    {evaluatingBai4 ? '⏳' : '🔄'} {evaluatingBai4 ? 'Đánh giá...' : 'Đánh giá lại'}
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-3">
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Điểm</p>
@@ -508,12 +757,22 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
         {/* General Comment */}
         {result.nhanXetChung && (
           <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl shadow-lg p-8 border-4 border-indigo-300 mb-8">
-            <div className="flex items-start gap-3">
-              <div className="text-5xl">📝</div>
-              <div className="flex-1">
-                <p className="text-2xl font-bold text-indigo-700 mb-4">Nhận xét chung</p>
-                <p className="text-lg text-gray-700 leading-relaxed">{result.nhanXetChung}</p>
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex items-start gap-3 flex-1">
+                <div className="text-5xl flex-shrink-0">📝</div>
+                <div className="flex-1">
+                  <p className="text-2xl font-bold text-indigo-700 mb-4">Nhận xét chung</p>
+                  <p className="text-lg text-gray-700 leading-relaxed">{result.nhanXetChung}</p>
+                </div>
               </div>
+              <button
+                onClick={handleReEvaluateOverall}
+                disabled={evaluatingOverall}
+                className="px-3 py-1 bg-gradient-to-r from-indigo-400 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold text-xs rounded-lg transition-all flex items-center gap-1 flex-shrink-0"
+                title="Đánh giá lại nhận xét chung nếu API bị lỗi"
+              >
+                {evaluatingOverall ? '⏳' : '🔄'} {evaluatingOverall ? 'Đánh giá...' : 'Đánh giá'}
+              </button>
             </div>
           </div>
         )}

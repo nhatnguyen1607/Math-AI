@@ -48,6 +48,13 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
   const [saveStatus, setSaveStatus] = useState("saved"); // saved, saving, error
   const [isAlreadySubmitted, setIsAlreadySubmitted] = useState(false);
 
+  // Kiểm tra classId - nếu không có thì redirect sang dashboard
+  useEffect(() => {
+    if (!classId) {
+      navigate("/student", { replace: true });
+    }
+  }, [classId, navigate]);
+
   // Auto-save to localStorage
   useEffect(() => {
     if (!worksheetData || !user?.uid) return;

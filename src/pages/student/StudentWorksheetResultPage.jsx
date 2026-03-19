@@ -12,6 +12,13 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
   const [result, setResult] = useState(null);
   const [worksheet, setWorksheet] = useState(null);
 
+  // Kiểm tra classId - nếu không có thì redirect sang dashboard
+  useEffect(() => {
+    if (!classId) {
+      navigate("/student", { replace: true });
+    }
+  }, [classId, navigate]);
+
   useEffect(() => {
     const loadData = async () => {
       try {

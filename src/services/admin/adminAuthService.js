@@ -217,7 +217,6 @@ class AdminAuthService {
    */
   setAdminSession(sessionData) {
     localStorage.setItem(this.ADMIN_SESSION_KEY, JSON.stringify(sessionData));
-    console.log('Admin session saved:', sessionData);
   }
 
   /**
@@ -226,7 +225,6 @@ class AdminAuthService {
    */
   getAdminSession() {
     const session = localStorage.getItem(this.ADMIN_SESSION_KEY);
-    console.log('Getting admin session:', session);
     if (!session) return null;
     
     try {
@@ -242,7 +240,6 @@ class AdminAuthService {
    */
   clearAdminSession() {
     localStorage.removeItem(this.ADMIN_SESSION_KEY);
-    console.log('Admin session cleared');
   }
 
   /**

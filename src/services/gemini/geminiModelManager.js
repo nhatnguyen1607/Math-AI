@@ -2,23 +2,27 @@
 // Không cần import Google Generative AI SDK vì giờ dùng REST API trực tiếp
 
 // Model names hỗ trợ trong Vertex AI
+// Có thể cấu hình rpdLimit qua environment variables:
+// REACT_APP_GEMINI_2_5_FLASH_RPD_LIMIT
+// REACT_APP_GEMINI_2_0_FLASH_RPD_LIMIT
+// REACT_APP_GEMINI_1_5_PRO_RPD_LIMIT
 const MODELS = [
   {
     name: "gemini-2.5-flash",
     displayName: "Gemini 2.5 Flash",
-    rpdLimit: 20,
+    rpdLimit: parseInt(process.env.REACT_APP_GEMINI_2_5_FLASH_RPD_LIMIT || '999'),
     type: "text"
   },
   {
     name: "gemini-2.0-flash",
     displayName: "Gemini 2.0 Flash",
-    rpdLimit: 20,
+    rpdLimit: parseInt(process.env.REACT_APP_GEMINI_2_0_FLASH_RPD_LIMIT || '999'),
     type: "text"
   },
   {
     name: "gemini-1.5-pro",
     displayName: "Gemini 1.5 Pro",
-    rpdLimit: 10,
+    rpdLimit: parseInt(process.env.REACT_APP_GEMINI_1_5_PRO_RPD_LIMIT || '999'),
     type: "text"
   }
 ];

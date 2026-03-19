@@ -55,7 +55,7 @@ export const evaluateWorksheet = async (studentAnswers, worksheet) => {
   }
 };
 
-const evaluateBai1 = async (studentAnswers, worksheet) => {
+export const evaluateBai1 = async (studentAnswers, worksheet) => {
   try {
     let selections = studentAnswers?.bai_1?.selections || [];
     if (typeof selections === 'object' && !Array.isArray(selections)) {
@@ -98,7 +98,7 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
   }
 };
 
-const evaluateBai2 = async (studentAnswers, worksheet) => {
+export const evaluateBai2 = async (studentAnswers, worksheet) => {
   try {
     const arrangements = studentAnswers?.bai_2?.arrangements || {};
     const questionsList = worksheet.bai_2.questions || [];
@@ -144,7 +144,7 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
   }
 };
 
-const evaluateBai3 = async (studentAnswers, worksheet) => {
+export const evaluateBai3 = async (studentAnswers, worksheet) => {
   try {
     const bai_lam = studentAnswers?.bai_3?.bai_lam || 'Không có';
     const giai_thich = studentAnswers?.bai_3?.giai_thich || 'Không có';
@@ -180,7 +180,7 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
   }
 };
 
-const evaluateBai4 = async (studentAnswers, worksheet) => {
+export const evaluateBai4 = async (studentAnswers, worksheet) => {
   try {
     const getAnswerValue = (answers, idx) => {
       if (Array.isArray(answers)) return answers[idx] || '';
@@ -247,7 +247,7 @@ const calculateOverallLevel = (score) => {
   }
 };
 
-const generateOverallComment = async (evaluations, tongDiem, mucNangLucChung) => {
+export const generateOverallComment = async (evaluations, tongDiem, mucNangLucChung) => {
   try {
     const bai_1_feedback = evaluations.bai_1?.evaluation?.nhan_xet || '';
     const bai_2_feedback = evaluations.bai_2?.evaluation?.nhan_xet || '';

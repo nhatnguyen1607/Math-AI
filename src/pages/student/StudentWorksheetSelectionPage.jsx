@@ -13,6 +13,13 @@ const StudentWorksheetSelectionPage = ({ user, onSignOut }) => {
   const [loading, setLoading] = useState(false);
   const [submittedWorksheets, setSubmittedWorksheets] = useState({});
 
+  // Kiểm tra classId - nếu không có thì redirect sang dashboard để chọn lớp
+  useEffect(() => {
+    if (!classId) {
+      navigate("/student", { replace: true });
+    }
+  }, [classId, navigate]);
+
   const loadWorksheets = useCallback(async () => {
     try {
       setLoading(true);

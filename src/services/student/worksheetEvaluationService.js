@@ -180,6 +180,51 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
   }
 };
 
+// Helper function: Kiểm tra xem câu hỏi có yêu cầu "phép tính/trình bày" không
+const requiresCalculation = (questionText) => {
+  if (!questionText) return false;
+  const keywords = [
+    'trình bày',
+    'phép tính',
+    'cách giải',
+    'chi tiết',
+    'bước',
+    'giải',
+    'tính',
+    'biểu diễn',
+    'thể hiện',
+    'mô tả',
+    'theo các bước'
+  ];
+  const lowerText = questionText.toLowerCase();
+  return keywords.some(keyword => lowerText.includes(keyword));
+};
+
+// Helper function: Kiểm tra xem đáp án có vẻ chỉ là kết quả (quá ngắn/chỉ định dạng đơn giản)
+const isAnswerOnlyResult = (answer) => {
+  if (!answer || typeof answer !== 'string') return false;
+  const trimmed = answer.trim();
+  
+  // Nếu đáp án quá ngắn (< 5 ký tự hoặc quá ít từ)
+  if (trimmed.length < 5) return true;
+  
+  // Nếu chỉ là "có/không" hoặc "yes/no" hay số đơn giản
+  const shortAnswers = ['có', 'không', 'yes', 'no', 'đúng', 'sai', 'a', 'b', 'c', 'd'];
+  if (shortAnswers.includes(trimmed.toLowerCase())) return true;
+  
+  // Nếu chỉ là số
+  if (/^\d+(\.\d+)?$/.test(trimmed)) return true;
+  
+  // Nếu quá ít dấu ngăn cách (không có bước, không có phép tính)
+  const calculationMarkers = ['+', '-', '×', '*', '÷', '/', '=', '→', 'x'];
+  const hasMarkers = calculationMarkers.some(marker => trimmed.includes(marker));
+  
+  // Nếu không có dấu phép tính và quá ngắn
+  if (!hasMarkers && trimmed.split(/\s+/).length < 3) return true;
+  
+  return false;
+};
+
 export const evaluateBai4 = async (studentAnswers, worksheet) => {
   try {
     const getAnswerValue = (answers, idx) => {
@@ -190,6 +235,7 @@ export const evaluateBai4 = async (studentAnswers, worksheet) => {
 
     const bai4Answers = studentAnswers?.bai_4?.answers || {};
     let questionsInfo = '';
+    let validationWarnings = '';
     
     (worksheet.bai_4.questions || []).forEach((q) => {
       questionsInfo += `\n${q.label}. ${q.text}\n`;
@@ -197,17 +243,32 @@ export const evaluateBai4 = async (studentAnswers, worksheet) => {
         (q.subQuestions || []).forEach((sq, idx) => {
           const answer = getAnswerValue(bai4Answers[q.id], idx);
           questionsInfo += `  - Câu ${idx + 1}: ${sq.text}\n    Trả lời: ${answer || 'trống'}\n`;
+          
+          // Kiểm tra: Nếu câu hỏi yêu cầu phép tính nhưng học sinh chỉ ghi kết quả
+          if (requiresCalculation(sq.text) && isAnswerOnlyResult(answer)) {
+            validationWarnings += `⚠️ Câu ${q.label}.${idx + 1}: Yêu cầu trình bày phép tính nhưng HS chỉ ghi kết quả/đáp án đơn giản.\n`;
+          }
         });
       } else if (q.type === 'so_cach_giai') {
         for (let i = 0; i < q.content; i++) {
           const answer = getAnswerValue(bai4Answers[q.id], i);
           questionsInfo += `  - Cách ${i + 1}: ${answer || 'trống'}\n`;
+          
+          if (requiresCalculation(q.text) && isAnswerOnlyResult(answer)) {
+            validationWarnings += `⚠️ Câu ${q.label} - Cách ${i + 1}: Yêu cầu trình bày chi tiết nhưng HS chỉ ghi tóm tắt.\n`;
+          }
         }
       } else {
         const answer = bai4Answers[q.id];
         questionsInfo += `  Trả lời: ${answer || 'trống'}\n`;
+        
+        if (requiresCalculation(q.text) && isAnswerOnlyResult(answer)) {
+          validationWarnings += `⚠️ Câu ${q.label}: Yêu cầu trình bày phép tính nhưng HS chỉ ghi kết quả.\n`;
+        }
       }
     });
+
+    const warningContext = validationWarnings ? `\n[CẢNH BÁO KIỂM TRA]\n${validationWarnings}\n` : '';
 
     const prompt = `Bạn là một giáo viên chuyên môn cao.
 
@@ -216,14 +277,15 @@ ${worksheet.bai_4.explanation}
 
 [BÀI LÀM CỦA HỌC SINH]
 ${questionsInfo || 'Học sinh không làm bài.'}
+${warningContext}
 
 [YÊU CẦU ĐẦU RA]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
-  "suy_luan": "Xác định HS đã làm được phần nào (kiểm tra kết quả, giải toán mở rộng, nhận xét). Quy chiếu sang điểm.",
+  "suy_luan": "Xác định HS đã làm được phần nào (kiểm tra kết quả, giải toán mở rộng, nhận xét). QUY CHIẾU CHẶT: Nếu câu hỏi yêu cầu trình bày phép tính mà HS chỉ ghi kết quả/đáp án → chưa hoàn thành, tính điểm thấp hơn. Quy chiếu sang điểm.",
   "diem": (0, 1 hoặc 2),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
-  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Chỉ rõ HS đã vận dụng được kiến thức mở rộng đến mức độ nào. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'tiêu chí'."
+  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Chỉ rõ HS đã vận dụng được kiến thức mở rộng đến mức độ nào, và nêu rõ những chỗ HS chưa trình bày đầy đủ bước giải. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'tiêu chí'."
 }`;
 
     const result = await geminiModelManager.generateContent(prompt);

@@ -71,9 +71,6 @@ export const evaluateBai1 = async (studentAnswers, worksheet) => {
     
     const prompt = `Bạn là một giáo viên chuyên môn cao đang chấm bài. PHẢI ĐÁNH GIÁ CHÍNH XÁC NĂNG LỰC DỰA VÀO CÂU TRẢ LỜI CỦA HỌC SINH.
 
-[BAREM CHẤM ĐIỂM]
-${worksheet.bai_1.explanation}
-
 [BÀI LÀM THỰC TẾ CỦA HỌC SINH]
 Học sinh đã đánh dấu vào các phát biểu sau:
 ${selectedTexts.length > 0 ? selectedTexts.map(t => `- ${t}`).join('\n') : 'Không chọn gì'}
@@ -81,7 +78,7 @@ ${selectedTexts.length > 0 ? selectedTexts.map(t => `- ${t}`).join('\n') : 'Khô
 [YÊU CẦU ĐẦU RA]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
-  "suy_luan": "Bước 1: Liệt kê các nội dung HS đã chọn. Bước 2: So sánh xem các nội dung đó có đủ các ý 1, 2, 3, 4 như Barem yêu cầu không. Kết luận điểm (Nếu thiếu hoặc sai -> 0 điểm, đúng 1,2,3 -> 1 điểm, đúng cả 4 -> 2 điểm).",
+  "suy_luan": "Bước 1: So sánh đúng/sai. BẮT BUỘC ÁP DỤNG LUẬT SAU: Chọn đúng 3 ý đầu (1, 2, 3) -> 1 điểm. Chọn đúng đủ 4 ý (1, 2, 3, 4) -> 2 điểm. TẤT CẢ các trường hợp còn lại (chỉ chọn 1-2 ý, hoặc chọn sai ý) -> 0 điểm. Không du di.",
   "diem": (0, 1 hoặc 2),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
   "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên. Dùng ngôi thứ 3 ('học sinh', 'em ấy'). Chỉ rõ mức độ nhận diện vấn đề, thông tin nào em ấy đã tìm đúng, thông tin/mối quan hệ nào còn bỏ sót. TUYỆT ĐỐI KHÔNG dùng các từ: 'barem', 'mã định danh', 'ID', 'tiêu chí', 'như máy tính'."
@@ -103,7 +100,6 @@ export const evaluateBai2 = async (studentAnswers, worksheet) => {
     const arrangements = studentAnswers?.bai_2?.arrangements || {};
     const questionsList = worksheet.bai_2.questions || [];
     
-    // MAPPING: Dịch ID sang nội dung Text các bước tính toán
     const arrangementText = Object.keys(arrangements).length > 0 
       ? Object.entries(arrangements).map(([key, arr]) => {
           const items = Array.isArray(arr) ? arr : Object.values(arr || {});
@@ -127,7 +123,7 @@ ${arrangementText}
 [YÊU CẦU ĐẦU RA]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
-  "suy_luan": "Đọc từng nội dung bước tính mà HS đã xếp. So sánh trình tự các phép tính này với trình tự trong Barem. Đếm số cách mà HS xếp đúng hoàn toàn trình tự logic (Từ 2 cách đúng -> 2 điểm, 1 cách đúng -> 1 điểm).",
+  "suy_luan": "Đọc từng nội dung bước tính mà HS đã xếp. So sánh trình tự các phép tính này với trình tự trong Barem. Đếm số cách mà HS xếp đúng hoàn toàn trình tự logic (Từ 2 cách đúng trở lên -> 2 điểm, 1 cách đúng -> 1 điểm).",
   "diem": (0, 1 hoặc 2),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
   "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Nhận xét năng lực nhận dạng dạng toán, khả năng sắp xếp logic các phép tính. Ghi rõ học sinh làm tốt chỗ nào và xếp sai logic ở chỗ nào (dựa trên nội dung phép tính). TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'ID'."
@@ -151,9 +147,6 @@ export const evaluateBai3 = async (studentAnswers, worksheet) => {
 
     const prompt = `Bạn là một giáo viên chuyên môn cao.
 
-[BAREM CHẤM ĐIỂM]
-${worksheet.bai_3.explanation}
-
 [BÀI LÀM CỦA HỌC SINH]
 Bài giải:
 ${bai_lam}
@@ -163,10 +156,10 @@ ${giai_thich}
 [YÊU CẦU ĐẦU RA]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
-  "suy_luan": "Đọc kỹ các phép tính cơ bản trong bài giải và tính hợp lý của lời giải thích. Đối chiếu với yêu cầu điểm số.",
+  "suy_luan": "Đọc kỹ phần bài làm và giải thích. LƯU Ý QUAN TRỌNG: Học sinh BẮT BUỘC phải giải thích được chi tiết ý nghĩa các bước tính toán (Ví dụ: tại sao phải tìm tổng số phần, tại sao dùng phép chia/nhân đó...). Nếu giải thích hời hợt kiểu 'vì nó dễ/ngắn hơn' hoặc không có giải thích toán học cụ thể -> KHÔNG ĐƯỢC 2 ĐIỂM (chỉ cho tối đa 1 điểm nếu phép tính bài giải đúng). Đánh giá điểm chính xác (0, 1 hoặc 2).",
   "diem": (0, 1 hoặc 2),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
-  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Nhận xét trực tiếp năng lực tính toán và tư duy lập luận của em ấy. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'quy định'."
+  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Nhận xét trực tiếp năng lực tính toán và đánh giá xem phần lập luận/giải thích của em ấy có thực sự hiểu bản chất không. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'quy định'."
 }`;
 
     const result = await geminiModelManager.generateContent(prompt);
@@ -180,46 +173,27 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
   }
 };
 
-// Helper function: Kiểm tra xem câu hỏi có yêu cầu "phép tính/trình bày" không
 const requiresCalculation = (questionText) => {
   if (!questionText) return false;
   const keywords = [
-    'trình bày',
-    'phép tính',
-    'cách giải',
-    'chi tiết',
-    'bước',
-    'giải',
-    'tính',
-    'biểu diễn',
-    'thể hiện',
-    'mô tả',
-    'theo các bước'
+    'trình bày', 'phép tính', 'cách giải', 'chi tiết', 
+    'bước', 'giải', 'tính', 'biểu diễn', 'thể hiện', 'mô tả', 'theo các bước'
   ];
   const lowerText = questionText.toLowerCase();
   return keywords.some(keyword => lowerText.includes(keyword));
 };
 
-// Helper function: Kiểm tra xem đáp án có vẻ chỉ là kết quả (quá ngắn/chỉ định dạng đơn giản)
 const isAnswerOnlyResult = (answer) => {
   if (!answer || typeof answer !== 'string') return false;
   const trimmed = answer.trim();
   
-  // Nếu đáp án quá ngắn (< 5 ký tự hoặc quá ít từ)
   if (trimmed.length < 5) return true;
-  
-  // Nếu chỉ là "có/không" hoặc "yes/no" hay số đơn giản
   const shortAnswers = ['có', 'không', 'yes', 'no', 'đúng', 'sai', 'a', 'b', 'c', 'd'];
   if (shortAnswers.includes(trimmed.toLowerCase())) return true;
-  
-  // Nếu chỉ là số
   if (/^\d+(\.\d+)?$/.test(trimmed)) return true;
   
-  // Nếu quá ít dấu ngăn cách (không có bước, không có phép tính)
   const calculationMarkers = ['+', '-', '×', '*', '÷', '/', '=', '→', 'x'];
   const hasMarkers = calculationMarkers.some(marker => trimmed.includes(marker));
-  
-  // Nếu không có dấu phép tính và quá ngắn
   if (!hasMarkers && trimmed.split(/\s+/).length < 3) return true;
   
   return false;
@@ -243,49 +217,50 @@ export const evaluateBai4 = async (studentAnswers, worksheet) => {
         (q.subQuestions || []).forEach((sq, idx) => {
           const answer = getAnswerValue(bai4Answers[q.id], idx);
           questionsInfo += `  - Câu ${idx + 1}: ${sq.text}\n    Trả lời: ${answer || 'trống'}\n`;
-          
-          // Kiểm tra: Nếu câu hỏi yêu cầu phép tính nhưng học sinh chỉ ghi kết quả
           if (requiresCalculation(sq.text) && isAnswerOnlyResult(answer)) {
-            validationWarnings += `⚠️ Câu ${q.label}.${idx + 1}: Yêu cầu trình bày phép tính nhưng HS chỉ ghi kết quả/đáp án đơn giản.\n`;
+            validationWarnings += `⚠️ LỖI NGHIÊM TRỌNG Câu ${q.label}.${idx + 1}: Học sinh CHỈ ghi kết quả, thiếu phép tính.\n`;
           }
         });
       } else if (q.type === 'so_cach_giai') {
         for (let i = 0; i < q.content; i++) {
           const answer = getAnswerValue(bai4Answers[q.id], i);
           questionsInfo += `  - Cách ${i + 1}: ${answer || 'trống'}\n`;
-          
           if (requiresCalculation(q.text) && isAnswerOnlyResult(answer)) {
-            validationWarnings += `⚠️ Câu ${q.label} - Cách ${i + 1}: Yêu cầu trình bày chi tiết nhưng HS chỉ ghi tóm tắt.\n`;
+            validationWarnings += `⚠️ LỖI NGHIÊM TRỌNG Câu ${q.label} - Cách ${i + 1}: Yêu cầu trình bày chi tiết nhưng HS chỉ ghi kết quả.\n`;
           }
         }
       } else {
         const answer = bai4Answers[q.id];
         questionsInfo += `  Trả lời: ${answer || 'trống'}\n`;
-        
         if (requiresCalculation(q.text) && isAnswerOnlyResult(answer)) {
-          validationWarnings += `⚠️ Câu ${q.label}: Yêu cầu trình bày phép tính nhưng HS chỉ ghi kết quả.\n`;
+          validationWarnings += `⚠️ LỖI NGHIÊM TRỌNG Câu ${q.label}: Yêu cầu trình bày phép tính nhưng HS chỉ ghi kết quả.\n`;
         }
       }
     });
 
-    const warningContext = validationWarnings ? `\n[CẢNH BÁO KIỂM TRA]\n${validationWarnings}\n` : '';
+    const warningContext = validationWarnings ? `\n[CẢNH BÁO KIỂM TRA ĐỊNH DẠNG ĐÁP ÁN]\n${validationWarnings}\n` : '';
 
     const prompt = `Bạn là một giáo viên chuyên môn cao.
-
-[BAREM CHẤM ĐIỂM]
-${worksheet.bai_4.explanation}
 
 [BÀI LÀM CỦA HỌC SINH]
 ${questionsInfo || 'Học sinh không làm bài.'}
 ${warningContext}
 
+[LUẬT CHẤM ĐIỂM BẮT BUỘC (QUAN TRỌNG)]
+- Câu a: Bắt buộc học sinh phải trình bày ĐẦY ĐỦ phép tính (VD: 28+56=84, 28/56=1/2). NẾU CHỈ GHI MỖI KẾT QUẢ (như 84, 1/2) HOẶC BỊ ĐÁNH DẤU "LỖI NGHIÊM TRỌNG" BÊN TRÊN -> TÍNH LÀ LÀM SAI CÂU A.
+- Câu b: Bắt buộc trình bày CẢ 2 CÁCH giải chi tiết từng bước. NẾU CHỈ GHI ĐÁP ÁN -> TÍNH LÀ LÀM SAI CÂU B.
+- TIÊU CHÍ ĐIỂM:
+  + Mức Tốt (2 điểm): Làm đúng câu a (có phép tính) VÀ làm đúng câu b (trình bày đủ các bước cho 2 cách) VÀ giải thích/nhận xét được câu c.
+  + Mức Đạt (1 điểm): CHỈ làm đúng câu a (có phép tính) HOẶC CHỈ làm đúng câu b (trình bày đủ bước).
+  + Mức Cần cố gắng (0 điểm): Không làm được bài HOẶC làm sai cả a và b HOẶC chỉ ghi kết quả mà không có phép tính/bước giải cho cả a và b.
+
 [YÊU CẦU ĐẦU RA]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
-  "suy_luan": "Xác định HS đã làm được phần nào (kiểm tra kết quả, giải toán mở rộng, nhận xét). QUY CHIẾU CHẶT: Nếu câu hỏi yêu cầu trình bày phép tính mà HS chỉ ghi kết quả/đáp án → chưa hoàn thành, tính điểm thấp hơn. Quy chiếu sang điểm.",
+  "suy_luan": "Đối chiếu bài làm với [LUẬT CHẤM ĐIỂM BẮT BUỘC]. Kiểm tra chặt chẽ việc ghi phép tính câu a và ghi đủ các bước câu b. Từ đó đưa ra quyết định điểm cuối cùng.",
   "diem": (0, 1 hoặc 2),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
-  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Chỉ rõ HS đã vận dụng được kiến thức mở rộng đến mức độ nào, và nêu rõ những chỗ HS chưa trình bày đầy đủ bước giải. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'tiêu chí'."
+  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Chỉ rõ HS đã vận dụng được kiến thức mở rộng đến mức độ nào, và ĐẶC BIỆT lưu ý nhắc nhở nếu em ấy có thói quen chỉ ghi đáp án mà không trình bày phép tính. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'tiêu chí'."
 }`;
 
     const result = await geminiModelManager.generateContent(prompt);

@@ -5,7 +5,7 @@ import PracticeChat from '../../components/PracticeChat';
 import RobotCompanion from '../../components/common/RobotCompanion';
 import MobileRobotAvatar from '../../components/common/MobileRobotAvatar';
 import geminiService from '../../services/gemini/geminiService';
-import { GeminiPracticeServiceTimeVelocity } from '../../services/gemini/geminiPracticeServiceTimeVelocity';
+import { practiceServiceRouter } from '../../services/serviceRouter';
 import resultService from '../../services/faculty/resultService';
 import examService from '../../services/faculty/examService';
 
@@ -17,6 +17,9 @@ import examService from '../../services/faculty/examService';
 const StudentPracticePage = ({ user, onSignOut }) => {
   const navigate = useNavigate();
   const { examId } = useParams();
+  
+  console.log('🔵 [StudentPracticePage] Component mounted - examId:', examId, 'user.uid:', user?.uid);
+  
   const [practiceData, setPracticeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,6 +33,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
   // Khởi tạo dữ liệu luyện tập
   useEffect(() => {
     const initializePractice = async () => {
+      console.log('🔵 [StudentPracticePage.initializePractice] Starting...');
       try {
         if (!user?.uid || !examId) {
           setError('Thiếu thông tin học sinh hoặc đề thi');
@@ -68,92 +72,62 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         const exercise1 = examData.exercises[0];
         const exercise2 = examData.exercises[1];
 
-        // Lấy đánh giá năng lực của học sinh từ phần khởi động -> Lấy evaluation.competence level
+        // Lấy đánh giá năng lực của học sinh từ phần khởi động
         const examProgress = await resultService.getExamProgress(user.uid, examId);
-        const competencyEvaluation = examProgress?.parts?.khoiDong?.evaluation;
+        const competencyEvaluation = examProgress?.parts?.khoiDong?.competencyEvaluation;
         
-        // Xác định mức năng lực dựa trên competency scores
         let competencyLevel = 'Đạt'; // Default value
-        if (competencyEvaluation) {
-          // Tính trung bình điểm năng lực
-          const scores = [
-            competencyEvaluation.TC1?.score || 0,
-            competencyEvaluation.TC2?.score || 0,
-            competencyEvaluation.TC3?.score || 0,
-            competencyEvaluation.TC4?.score || 0
-          ].filter(s => s > 0);
-          
-          if (scores.length > 0) {
-            const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+        if (competencyEvaluation) {          
+          if (competencyEvaluation.totalCompetencyScore !== undefined && competencyEvaluation.totalCompetencyScore !== null) {
+            const totalScore = competencyEvaluation.totalCompetencyScore;
             
-            if (avgScore <= 5) {
+            if (totalScore <= 3) {
               competencyLevel = 'Cần cố gắng';
-            } else if (avgScore >= 8) {
-              competencyLevel = 'Tốt';
-            } else {
+            } else if (totalScore <= 6) {
               competencyLevel = 'Đạt';
+            } else {
+              competencyLevel = 'Tốt';
             }
+          } else {
+            console.log('⚠️ [StudentPracticePage] totalCompetencyScore is undefined/null, using default "Đạt"');
           }
+        } else {
+          console.log('❌ [StudentPracticePage] competencyEvaluation does NOT exist, using default "Đạt"');
         }
-
-        // Xây dựng context từ các câu hỏi trong bài tập
-        const buildExerciseContext = (exercise) => {
-          let context = `Chủ đề bài thi: ${topicNameFromExam}\n\n`;
-          context += `Bài tập: ${exercise.name || 'Bài tập'}\n\n`;
-          
-          if (exercise.questions && exercise.questions.length > 0) {
-            // Lấy 1-2 câu hỏi đầu tiên để cung cấp context về chủ đề
-            const sampleQuestions = exercise.questions.slice(0, 2);
-            context += `Các câu hỏi mẫu trong bài tập này:\n`;
-            sampleQuestions.forEach((q, idx) => {
-              context += `${idx + 1}. ${q.text || q.content || q.question || 'Câu hỏi'}\n`;
-            });
-          }
-          
-          return context;
-        };
-
-        const context1 = buildExerciseContext(exercise1);
-        const context2 = buildExerciseContext(exercise2);
 
         // Gọi Gemini để tạo bài toán tương tự - có truyền năng lực học sinh làm tham số thứ 5
         // Throttle giữa hai lần gọi (bài 1 và bài 2) bằng delay, không cần gọi zweimal cho cùng một bài
         let similarProblem1, similarProblem2;
         
-        // Conditionally use the Time/Velocity practice service
-        // Check if topic is Time/Velocity/Motion related
-        const lower = topicNameFromExam && topicNameFromExam.toLowerCase();
-        const isTimeVelocity = lower && (
-          lower.includes('thời gian') || 
-          lower.includes('vận tốc') || 
-          lower.includes('chuyển động') || 
-          lower.includes('quãng đường') || 
-          lower.includes('tốc độ') ||
-          (lower.includes('số đo') && lower.includes('thời gian'))
-        );
-        let gService;
-        if (isTimeVelocity) {
-          gService = new GeminiPracticeServiceTimeVelocity();
-        } else {
-          gService = new geminiService.constructor();
-        }
+        // 🆕 Use router to auto-detect practice service based on topic
+        console.log('🔵 [StudentPracticePage] Initializing practice - topic:', topicNameFromExam);
+        const gService = practiceServiceRouter.getService(topicNameFromExam);
         
         try {
-          // chỉ gọi một lần cho bài 1 với độ năng lực đã xác định
+          
           similarProblem1 = await gService.generateSimilarProblem(
-            exercise1.name,
-            exercise2.name,
-            context1,
-            1,
-            competencyLevel
+            exercise1.name,        // startupProblem1
+            exercise2.name,        // startupProblem2
+            topicNameFromExam,     // context (chủ đề) - FIX này! context1 chỉ là exercise.context, không phải topic
+            1,                     // problemNumber
+            competencyLevel        // ✅ competencyLevel ĐÚNG vị trí 5
           );
         } catch (err1) {
+          console.error('❌ [StudentPracticePage] Error generating problem 1:', err1);
           similarProblem1 = exercise1.name || 'Bài tập 1';
         }
 
         try {
-          similarProblem2 = await gService.generateSimilarProblem(exercise1.name, exercise2.name, context2, 2, competencyLevel);
+          
+          similarProblem2 = await gService.generateSimilarProblem(
+            exercise1.name,        // startupProblem1
+            exercise2.name,        // startupProblem2
+            topicNameFromExam,     // context (chủ đề) - FIX này!
+            2,                     // problemNumber
+            competencyLevel        // ✅ competencyLevel ĐÚNG vị trí 5
+          );
         } catch (err2) {
+          console.error('❌ [StudentPracticePage] Error generating problem 2:', err2);
           similarProblem2 = exercise2.name || 'Bài tập 2';
         }
 

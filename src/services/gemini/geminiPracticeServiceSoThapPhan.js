@@ -17,14 +17,24 @@ export class GeminiPracticeServiceSoThapPhan extends GeminiPracticeService {
     return guidance[lessonName] || "Toán về số thập phân lớp 5.";
   }
 
-  async generateSimilarProblem(topicName, competencyLevel = "Đạt", startupPercentage = 100) {
+  async generateSimilarProblem(
+    startupProblem1,
+    startupProblem2,
+    context = "",
+    problemNumber = 1,
+    competencyLevel = "Đạt",
+    startupPercentage = 100,
+    specificWeaknesses = ""
+  ) {
+    // ✅ FIX: Use 'context' from params as topicName (Vietnamese lesson name)
+    const topicName = context || "Cộng số thập phân";
     const lessonGuidance = this._getLessonSpecificGuidance(topicName);
     
     let difficultyGuidance = "";
     const pct = typeof startupPercentage === "number" ? startupPercentage : parseFloat(startupPercentage) || 0;
-    if (pct < 50) {
+    if (pct < 50 || String(competencyLevel || "").toLowerCase().includes("cần cố gắng")) {
       difficultyGuidance = "🔴 MỨC DỄ: 1 phép tính cơ bản, số liệu nguyên đẹp, ít chữ số thập phân.";
-    } else if (pct < 75) {
+    } else if (pct < 75 || String(competencyLevel || "").toLowerCase().includes("đạt")) {
       difficultyGuidance = "🟡 MỨC TRUNG BÌNH: 1-2 phép tính, có số thập phân đủ chữ số, cần kiểm tra dấu phẩy.";
     } else {
       difficultyGuidance = "🟢 MỨC KHÓ: 2-3 phép tính, có số thập phân phức tạp, cần suy luận/so sánh, ghi đơn vị.";
@@ -33,6 +43,7 @@ export class GeminiPracticeServiceSoThapPhan extends GeminiPracticeService {
     const prompt = `Bạn là chuyên gia soạn đề toán lớp 5. 
 CHỦ ĐỀ: ${topicName}
 QUY TẮC: ${lessonGuidance}
+MỨC NĂNG LỰC: ${competencyLevel}
 ĐỘ KHÓ: ${difficultyGuidance}
 
 NHIỆM VỤ: Sinh một ĐỀ TOÁN TỰ LUẬN thực tế.
@@ -42,7 +53,7 @@ NHIỆM VỤ: Sinh một ĐỀ TOÁN TỰ LUẬN thực tế.
 3. SỬ DỤNG DẤU PHẨY: BẮT BUỘC dùng dấu phẩy (,) cho số thập phân, KHÔNG dấu chấm (.).
 4. GHI ĐƠN VỊ: Phải ghi rõ đơn vị (kg, m, cm, lít, v.v.) trong bài toán và yêu cầu.
 5. KHÔNG lời dẫn: Bắt đầu ngay bằng "Một cá hàng...", "Bao gạo...", "Người đi...".
-6. TRẢ VỀ: Duy nhất nội dung đề bài.`;
+6. TRẢ VỀ: DUY NHẤT nội dung đề bài.`;
 
     try {
       const result = await this._rateLimitedGenerate(prompt);
@@ -70,7 +81,12 @@ NHIỆM VỤ: Sinh một ĐỀ TOÁN TỰ LUẬN thực tế.
     else if (pct < 75) competencyLevel = "Đạt";
     else competencyLevel = "Giỏi";
 
-    const errorLog = [...errorsInKhoiDong, ...Object.values(weaknessesInLuyenTap)].filter(x => x).join("; ");
+    // ✅ FIX: Extract nhanXet (comments) from TC1-TC4 objects in weaknessesInLuyenTap
+    const practiceComments = Object.values(weaknessesInLuyenTap)
+      .map(tc => tc?.nhanXet)
+      .filter(comment => comment && typeof comment === 'string' && comment.trim());
+    
+    const errorLog = [...errorsInKhoiDong, ...practiceComments].join("; ");
 
     const prompt = `TẠO ĐỀ TOÁN VẬN DỤNG TỰ LUẬN. CHỦ ĐỀ: ${topicName}.
 MỨC ĐỘ: ${competencyLevel}. LỖI HS HAY MẮC: ${errorLog || "Không có lỗi cụ thể"}.

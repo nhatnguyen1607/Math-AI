@@ -1,56 +1,91 @@
 import { GeminiPracticeService } from "./geminiPracticeService";
 
-/**
- * GeminiPracticeServiceTimeVelocity - Educational Architect 2026
- * Khắc phục lỗi sinh đề trắc nghiệm và đảm bảo nội dung tự luận phù hợp Polya.
- */
+const extractJSON = (text) => {
+  try {
+    const startIndex = text.indexOf('{');
+    const endIndex = text.lastIndexOf('}');
+    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+      const jsonString = text.substring(startIndex, endIndex + 1);
+      return JSON.parse(jsonString);
+    }
+    return null;
+  } catch (error) {
+    console.warn('Lỗi khi parse JSON:', error);
+    return null;
+  }
+};
+
 export class GeminiPracticeServiceTimeVelocity extends GeminiPracticeService {
   
   _getLessonSpecificGuidance(lessonName) {
     const guidance = {
-      "Số đo thời gian": "Trọng tâm: Đổi đơn vị (giây, phút, giờ, ngày). Lỗi: Nhầm hệ số 60 thành 100[cite: 6]. Dùng dấu phẩy cho số thập phân[cite: 14].",
-      "Vận tốc": "Công thức v = s : t[cite: 13]. Lỗi: Nhầm t : s[cite: 13]. Đơn vị v (km/h) phải khớp với s (km) và t (giờ)[cite: 14].",
-      "Quãng đường": "Công thức s = v × t[cite: 15]. Lỗi: Nhầm thành s = v + t[cite: 16].",
-      "Thời gian": "Công thức t = s : v[cite: 15]. Lỗi: Không đổi phần dư khi chia thời gian[cite: 12].",
-      "Chuyển động đều": "Tổng hợp. Lưu ý bối cảnh: xe cộ, đi bộ. Lỗi: Quên ghi đơn vị kết quả[cite: 15, 20]."
+      "Các đơn vị đo thời gian": "Trọng tâm: Đổi đơn vị (giây, phút, giờ, ngày). Lỗi: Nhầm hệ số 60 thành 100.",
+      "Cộng, trừ số đo thời gian": "Trọng tâm: Tính toán và nhớ chuyển đổi đơn vị nếu phần dư quá 60.",
+      "Nhân, chia số đo thời gian với một số": "Trọng tâm: Đặt tính nhân chia, xử lý phần dư thời gian.",
+      "Vận tốc của một chuyển động đều": "Công thức v = s : t. Yêu cầu BẮT BUỘC: Câu hỏi cuối cùng phải là tính vận tốc. Chú ý đơn vị km/giờ, m/phút.",
+      "Quãng đường, thời gian của một chuyển động đều": "Công thức s = v × t hoặc t = s : v. Yêu cầu BẮT BUỘC: Hỏi đúng đại lượng Quãng đường hoặc Thời gian theo nội dung bài học."
     };
     return guidance[lessonName] || "Toán chuyển động đều lớp 5.";
   }
 
-  async generateSimilarProblem(topicName, competencyLevel = "Đạt", startupPercentage = 100) {
-    const lessonGuidance = this._getLessonSpecificGuidance(topicName);
-    
-    let difficultyGuidance = "";
-    const pct = typeof startupPercentage === "number" ? startupPercentage : parseFloat(startupPercentage) || 0;
-    if (pct < 50) {
-      difficultyGuidance = "🔴 MỨC DỄ: 1 phép tính, số liệu nguyên đẹp.";
-    } else if (pct < 75) {
-      difficultyGuidance = "🟡 MỨC TRUNG BÌNH: 1-2 phép tính, có số thập phân.";
+  // CẬP NHẬT MỚI: Định nghĩa lại độ khó sắc bén hơn, khóa chặt dạng toán
+  _getDifficultyGuidance(competencyLevel, topicName) {
+    const level = String(competencyLevel || "Đạt").toLowerCase();
+    if (level.includes("cần cố gắng")) {
+      return `🔴 MỨC DỄ: 1 phép tính trực tiếp đúng chuẩn dạng "${topicName}". Cho sẵn đầy đủ các đại lượng cần thiết (Ví dụ bài Vận tốc thì cho sẵn s và t chuẩn đơn vị). Lời văn cực kỳ đơn giản, không bẫy, không yêu cầu đổi đơn vị.`;
+    } else if (level.includes("đạt")) {
+      return `🟡 MỨC TRUNG BÌNH: 2 phép tính. Học sinh phải thực hiện 1 bước tính toán trung gian (Ví dụ: Đổi đơn vị từ phút sang giờ, hoặc làm 1 phép trừ để tìm thời gian thực đi), SAU ĐÓ mới dùng số liệu đó để giải quyết yêu cầu chính của bài "${topicName}".`;
     } else {
-      difficultyGuidance = "🟢 MỨC KHÓ: 2-3 phép tính, có suy luận/so sánh.";
+      return `🟢 MỨC KHÓ (VẬN DỤNG CAO): 3 phép tính trở lên. Tình huống phức tạp: có thời gian nghỉ dọc đường, xuất phát không cùng lúc, hoặc phải tính quãng đường của từng đoạn. Học sinh phải lập luận, tính qua nhiều bước trung gian, BƯỚC CUỐI CÙNG bắt buộc phải áp dụng công thức của bài "${topicName}" để chốt câu trả lời.`;
     }
+  }
 
-    const prompt = `Bạn là chuyên gia soạn đề toán lớp 5. 
-CHỦ ĐỀ: ${topicName}
-QUY TẮC: ${lessonGuidance}
-ĐỘ KHÓ: ${difficultyGuidance}
+  async generateSimilarProblem(
+    startupProblem1,
+    startupProblem2,
+    context = "",
+    problemNumber = 1,
+    competencyLevel = "Đạt",
+    startupPercentage = 100,
+    specificWeaknesses = ""
+  ) {
+    // ✅ FIX: Use 'context' from params as topicName (Vietnamese lesson name)
+    const topicName = context || "Vận tốc của một chuyển động đều";
+    const lessonGuidance = this._getLessonSpecificGuidance(topicName);
+    const difficultyGuidance = this._getDifficultyGuidance(competencyLevel, topicName);
 
-NHIỆM VỤ: Sinh một ĐỀ TOÁN TỰ LUẬN thực tế.
-⚠️ QUY TẮC BẮT BUỘC:
-1. ĐỊNH DẠNG TỰ LUẬN: Tuyệt đối KHÔNG có trắc nghiệm A, B, C, D. 
-2. CẤU TRÚC: Chỉ gồm 1 bối cảnh và 1 câu hỏi chính (hoặc tối đa 2 ý hỏi liên quan trực tiếp).
-3. KHÔNG lời dẫn: Bắt đầu ngay bằng "Một người...", "Lúc...", "Xe máy...".
-4. TRẢ VỀ: Duy nhất nội dung đề bài.`;
+    const prompt = `Bạn là chuyên gia ra đề toán tiểu học siêu việt.
+CHỦ ĐỀ & TRỌNG TÂM HIỆN TẠI: ${topicName}
+
+[TIẾN TRÌNH & RÀNG BUỘC KỸ THUẬT]
+Bài 56: Các đơn vị đo thời gian -> Bài 57: Cộng, trừ số đo thời gian -> Bài 58: Nhân, chia số đo thời gian với một số -> Bài 59: Vận tốc của một chuyển động đều -> Bài 60: Quãng đường, thời gian của một chuyển động đều.
+⚠️ QUY TẮC TỐI THƯỢNG: 
+1. TUYỆT ĐỐI KHÔNG dùng khái niệm/công thức của các bài học đứng sau bài "${topicName}".
+2. CÂU HỎI CUỐI CÙNG của đề bài BẮT BUỘC phải hỏi ĐÚNG ĐẠI LƯỢNG trọng tâm của bài "${topicName}". (Ví dụ: Đang ở bài 59 thì câu hỏi chốt phải là "tính vận tốc", tuyệt đối không hỏi ngược lại quãng đường hay thời gian).
+
+[ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
+Mức năng lực: ${competencyLevel}
+Yêu cầu sinh đề: ${difficultyGuidance}
+Lưu ý chuyên môn: ${lessonGuidance}
+
+[YÊU CẦU ĐẦU RA JSON BẮT BUỘC]
+Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
+{
+  "suy_luan": "Bước 1: Phân tích yêu cầu dạng toán ${topicName}. Bước 2: Thiết kế các bước giải tương ứng với độ khó (có đổi đơn vị/tính thời gian nghỉ không). Bước 3: Chốt câu hỏi cuối cùng đảm bảo đúng dạng ${topicName}.",
+  "de_bai": "Viết trực tiếp đề bài tự luận. KHÔNG có trắc nghiệm. KHÔNG lời dẫn."
+}`;
 
     try {
       const result = await this._rateLimitedGenerate(prompt);
-      const cleaned = this._cleanGeneratedProblem(result?.response.text() || "");
-      if (cleaned && cleaned.length > 20 && !cleaned.includes("A.") && !cleaned.includes("B.")) {
-        return cleaned;
+      const parsed = extractJSON(result?.response.text() || "");
+      
+      if (parsed && parsed.de_bai) {
+        return this._cleanGeneratedProblem(parsed.de_bai);
       }
-      return "Một người đi xe đạp quãng đường 18km trong 1 giờ 12 phút. Tính vận tốc của người đó với đơn vị km/giờ.";
+      return "Một người đi xe máy trong 2 giờ được quãng đường dài 70km. Tính vận tốc của người đi xe máy đó.";
     } catch (error) {
-      return "Một ô tô đi được quãng đường 120km trong 2 giờ 30 phút. Tính vận tốc của ô tô đó.";
+      console.error("Lỗi sinh đề:", error);
+      return "Một con đà điểu khi chạy có thể đạt vận tốc 42 km/giờ. Tính quãng đường con đà điểu đó chạy được trong 2 giờ.";
     }
   }
 
@@ -58,41 +93,50 @@ NHIỆM VỤ: Sinh một ĐỀ TOÁN TỰ LUẬN thực tế.
     const {
       errorsInKhoiDong = [],
       weaknessesInLuyenTap = {},
-      topicName = "Chuyển động đều",
-      practicePercentage = 0,
+      topicName = "Vận tốc của một chuyển động đều",
+      competencyLevel = "Đạt"
     } = studentContext;
 
-    let competencyLevel = "Đạt";
-    const pct = typeof practicePercentage === "number" ? practicePercentage : parseFloat(practicePercentage) || 0;
-    if (pct < 50) competencyLevel = "Cần cố gắng";
-    else if (pct < 75) competencyLevel = "Đạt";
-    else competencyLevel = "Giỏi";
+    // ✅ FIX: Extract nhanXet (comments) from TC1-TC4 objects in weaknessesInLuyenTap
+    const practiceComments = Object.values(weaknessesInLuyenTap)
+      .map(tc => tc?.nhanXet)
+      .filter(comment => comment && typeof comment === 'string' && comment.trim());
+    
+    const errorLog = [...errorsInKhoiDong, ...practiceComments].join("; ");
+    const difficultyGuidance = this._getDifficultyGuidance(competencyLevel, topicName);
 
-    const errorLog = [...errorsInKhoiDong, ...Object.values(weaknessesInLuyenTap)].filter(x => x).join("; ");
+    const prompt = `TẠO ĐỀ TOÁN VẬN DỤNG THỰC TẾ. 
+CHỦ ĐỀ & TRỌNG TÂM HIỆN TẠI: ${topicName}
 
-    const prompt = `TẠO ĐỀ TOÁN VẬN DỤNG TỰ LUẬN. CHỦ ĐỀ: ${topicName}.
-MỨC ĐỘ: ${competencyLevel}. LỖI HS HAY MẮC: ${errorLog || "Không có lỗi cụ thể"}.
+[TIẾN TRÌNH & RÀNG BUỘC KỸ THUẬT]
+Bài 56: Các đơn vị đo thời gian -> Bài 57: Cộng, trừ số đo thời gian -> Bài 58: Nhân, chia số đo thời gian với một số -> Bài 59: Vận tốc của một chuyển động đều -> Bài 60: Quãng đường, thời gian của một chuyển động đều.
+⚠️ QUY TẮC TỐI THƯỢNG: 
+1. Cấm dùng kiến thức vượt cấp.
+2. CÂU HỎI CUỐI CÙNG của đề bài BẮT BUỘC phải là dạng toán "${topicName}". Không được nhầm lẫn sang đại lượng khác.
 
-⚠️ QUY TẮC VÀNG:
-1. ĐẠNG TỰ LUẬN THUẦN TÚY: Cấm tuyệt đối trắc nghiệm A, B, C, D. 
-2. TÍNH TẬP TRUNG: Chỉ sinh 1 bài toán duy nhất, nội dung ngắn gọn, súc tích (dưới 100 từ).
-3. KHÔNG CHIA NHỎ CÂU HỎI: Chỉ hỏi 1 hoặc 2 ý để học sinh tự thực hiện 4 bước Polya.
-4. KHÔNG lời dẫn, tiêu đề. Bắt đầu ngay vào nội dung.
-5. Nếu HS hay sai lỗi nào, hãy tạo tình huống yêu cầu dùng kiến thức đó (ví dụ: cần đổi đơn vị).`;
+[ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
+Mức năng lực: ${competencyLevel}
+Yêu cầu sinh đề: ${difficultyGuidance}
+Lỗi HS hay mắc: ${errorLog || "Không có lỗi cụ thể"}. (Tạo tình huống để rèn luyện tránh lỗi này).
+
+[YÊU CẦU ĐẦU RA JSON BẮT BUỘC]
+Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
+{
+  "suy_luan": "Phân tích bối cảnh bài toán cho mức ${competencyLevel}. Đảm bảo học sinh phải tính toán trung gian trước khi chốt câu hỏi đúng kiến thức ${topicName}.",
+  "de_bai": "Chỉ sinh 1 bài toán ngắn gọn (dưới 100 từ). Cấm trắc nghiệm. Không tiêu đề."
+}`;
 
     try {
       const result = await this._rateLimitedGenerate(prompt);
-      const rawText = result?.response.text() || "";
-      const cleaned = this._cleanGeneratedProblem(rawText);
+      const parsed = extractJSON(result?.response.text() || "");
       
-      // Kiểm tra xem có chứa rác trắc nghiệm không
-      if (cleaned && cleaned.length > 20 && !cleaned.match(/[A-D]\.\s/)) {
-        return cleaned;
+      if (parsed && parsed.de_bai) {
+        return this._cleanGeneratedProblem(parsed.de_bai);
       }
-      // Fallback nếu AI sinh sai định dạng
-      return "Lúc 7 giờ 30 phút, một người đi xe máy từ A đến B với vận tốc 40km/giờ. Biết quãng đường AB dài 90km, hỏi người đó đến B lúc mấy giờ?";
+      return "Lúc 7 giờ 15 phút, một ô tô xuất phát từ A đi về B. Dọc đường ô tô nghỉ 15 phút và đến B lúc 10 giờ. Biết quãng đường AB dài 125km. Tính vận tốc của ô tô.";
     } catch (error) {
-      return "Một ô tô đi quãng đường 150km với vận tốc 50km/giờ. Tính thời gian ô tô đã đi.";
+      console.error("Lỗi sinh đề vận dụng:", error);
+      return "Một xe đạp đi với vận tốc 12 km/giờ. Hỏi xe đạp đó đi quãng đường 30 km hết bao nhiêu thời gian?";
     }
   }
 
@@ -102,7 +146,7 @@ MỨC ĐỘ: ${competencyLevel}. LỖI HS HAY MẮC: ${errorLog || "Không có l
       .replace(/^(Dưới đây là|Bài toán|Đề bài|Bài vận dụng|Bạn hãy giải quyết|Câu hỏi|Lời dẫn):/gi, "")
       .replace(/^(Chào bạn|Đây là bài toán).*?\n/gi, "")
       .replace(/```[a-z]*\n?|```/g, "")
-      .replace(/\.(?=\d)/g, ",") // [cite: 14]
+      .replace(/\.(?=\d)/g, ",") 
       .trim();
   }
 }

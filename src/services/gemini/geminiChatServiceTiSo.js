@@ -84,7 +84,7 @@ LUÔN TRẢ VỀ JSON:
     this.currentStep = 1;
     this.isSessionComplete = false;
 
-    const msg = `Chào bạn! Mình là trợ lý học tập của bạn. Chúng ta cùng giải bài toán tỉ số này nhé!\n\nBài toán: ${problemText}\n\nTrước tiên, bạn hãy cho mình biết bài toán đã cho những dữ kiện gì?`;
+    const msg = `Chào bạn! Mình là trợ lý học tập của bạn. Chúng ta cùng giải bài toán tỉ số này nhé!\n\nBài toán: ${problemText}\n\nTrước tiên, bạn hãy cho mình biết bài toán đã cho những thông tin gì?`;
     return { message: msg, step: 1, stepName: this._getStepName(1) };
   }
 

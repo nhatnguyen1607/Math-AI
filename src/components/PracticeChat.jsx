@@ -42,15 +42,19 @@ const PracticeChat = ({
 }) => {
   // Select the appropriate chat service based on topic using router
   const chatService = useMemo(() => {
+    console.log('🔵 [PracticeChat.useMemo] Creating chat service for topicName:', topicName);
     
     // 🆕 Use serviceRouter instead of hardcoded logic
     const routerService = chatServiceRouter.getService(topicName);
+    console.log('🔵 [PracticeChat.useMemo] routerService received:', routerService?.constructor?.name || 'null');
     
     if (routerService) {
+      console.log('✅ [PracticeChat.useMemo] Using router service:', routerService.constructor.name);
       return routerService;
     }
     
     // Fallback to default if router returns null
+    console.log('⚠️ [PracticeChat.useMemo] Router returned null, using fallback:', geminiChatServiceSoThapPhan.constructor.name);
     return geminiChatServiceSoThapPhan;
   }, [topicName]);
   const [messages, setMessages] = useState(chatHistory);

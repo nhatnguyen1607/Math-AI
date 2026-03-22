@@ -123,9 +123,15 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
 
         // Gọi Gemini để tạo bài toán vận dụng được cá nhân hóa
         console.log('🔵 [StudentVanDungPage] Generating new VanDung');
+        console.log('📌 [StudentVanDungPage] exam object:', exam);
+        console.log('📌 [StudentVanDungPage] exam.title:', exam.title);
         
         // 🆕 Sử dụng router để auto-detect topic
-        const gService = practiceServiceRouter.getService(exam.title || 'Bài toán');
+        const topicNameForRouter = exam.title || 'Bài toán';
+        console.log('📌 [StudentVanDungPage] Topic being passed to router:', topicNameForRouter);
+        
+        const gService = practiceServiceRouter.getService(topicNameForRouter);
+        console.log('🔵 [StudentVanDungPage] Service received from router:', gService.constructor.name);
         console.log('🔵 [StudentVanDungPage] Using service for topic:', exam.title);
         
         let applicationProblem;

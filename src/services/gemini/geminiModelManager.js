@@ -7,14 +7,14 @@ const MODELS = [
     type: "text"
   },
   {
-    name: "gemini-1.5-flash-002", 
-    displayName: "Gemini 1.5 Flash (Stable)",
+    name: "gemini-2.5-flash-lite", 
+    displayName: "Gemini 2.5 Flash Lite",
     rpdLimit: 5000, 
     type: "text"
   },
   {
-    name: "gemini-1.5-pro-002", 
-    displayName: "Gemini 1.5 Pro (High Intelligence)",
+    name: "gemini-2.5-pro", 
+    displayName: "Gemini 2.5 Pro",
     rpdLimit: 1000,
     type: "text"
   },
@@ -82,7 +82,7 @@ class GeminiModelManager {
     const requestBody = {
       modelName: modelName,
       prompt: prompt,
-      maxOutputTokens: 16384
+      maxOutputTokens: 4096
     };
 
     try {

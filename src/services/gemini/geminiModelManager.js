@@ -82,7 +82,7 @@ class GeminiModelManager {
     const requestBody = {
       modelName: modelName,
       prompt: prompt,
-      maxOutputTokens: 8000
+      maxOutputTokens: 16384
     };
 
     try {

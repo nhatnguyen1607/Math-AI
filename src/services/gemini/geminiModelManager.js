@@ -50,7 +50,7 @@ class GeminiModelManager {
     try {
       const apiKey = process.env.REACT_APP_VERTEX_AI_API_KEY;
       const projectId = process.env.REACT_APP_GCP_PROJECT_ID;
-      const location = process.env.REACT_APP_GCP_LOCATION || 'us-central1';
+      const location = process.env.REACT_APP_GCP_LOCATION || 'asia-southeast1';
       if (!apiKey || !projectId) {
         return;
       }

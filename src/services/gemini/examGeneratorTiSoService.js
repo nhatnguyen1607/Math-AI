@@ -120,6 +120,20 @@ ${this._formatSampleContent(sample.content)}
 🚫 **CẤM**: Dùng ví dụ "Học sinh nam và nữ" quá nhiều
    → Thay bằng: bi, sách, quả, gà, vịt, ô tô, tiền, cây...
 
+🚫 **CẤM**: Sử dụng dấu chấm (.) cho số thập phân
+   → CHỈ dùng dấu phẩy (,) cho SỐ THẬP PHÂN (chuẩn tiếng Việt)
+   → Ví dụ SAI: 3.5, 0.25, 12.4%
+   → Ví dụ ĐÚNG: 3,5, 0,25, 12,4%
+   → Áp dụng cho TẤT CẢ số thập phân trong context và explanation
+
+🚫 **CẤM TUYỆT ĐỐI**: Số thập phân vô hạn tuần hoàn hoặc số hữu tỉ phức tạp
+   → CHỈ dùng số thập phân "ĐẸP" - tức là HỮU HẠN và không lặp lại (terminating decimals)
+   → Ví dụ SAI: 0,333... (1/3), 0,6666... (2/3), 0,1666... (1/6), 2,142857... (15/7)
+   → Ví dụ ĐÚNG: 2,3, 3,45, 0,5, 1,25, 0,75, 12,5%, 0,125, 33,33% (có thể dùng % nếu hợp lý)
+   → Cách kiểm tra: Số thập phân "đẹp" khi kết thúc sau vài chữ số (không vô hạn)
+   → Nếu phải tính, chọn số chia hết: 24÷8 = 3, 15÷5 = 3, 80÷4 = 20
+   → TUYỆT ĐỐI đừng dùng: 1÷3, 2÷3, 1÷6, 1÷7, 5÷6, 4÷9, bất kỳ số nào ra vô hạn tuần hoàn
+
 ═══════════════════════════════════════════════════════════════
 📋 **CẤU TRÚC PHẦN 1 (VẬN DỤNG - 2 phút)**
 ═══════════════════════════════════════════════════════════════
@@ -225,7 +239,10 @@ ${this._formatSampleContent(sample.content)}
 
       let jsonStr = responseText.substring(firstBrace, lastBrace + 1).trim();
       const sanitizedJson = this._sanitizeJsonString(jsonStr);
-      const generatedExam = JSON.parse(sanitizedJson);
+      let generatedExam = JSON.parse(sanitizedJson);
+      
+      // Convert decimal separators from . to , (Vietnamese format)
+      generatedExam = this._convertDecimalSeparators(generatedExam);
 
       return {
         success: true,
@@ -294,6 +311,35 @@ ${questionsText}`;
         return JSON.stringify(JSON.parse(sanitized));
       }
     }
+  }
+
+  /**
+   * Convert decimal separators from . to , (Vietnamese format)
+   * Recursively processes all string values in the object
+   * @private
+   */
+  _convertDecimalSeparators(obj) {
+    if (typeof obj === 'string') {
+      // Replace decimal dots with commas in numbers
+      // Pattern: digit.digit (but not URLs or IP addresses)
+      return obj.replace(/(\d)\.(\d)/g, '$1,$2');
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map(item => this._convertDecimalSeparators(item));
+    }
+
+    if (obj !== null && typeof obj === 'object') {
+      const converted = {};
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          converted[key] = this._convertDecimalSeparators(obj[key]);
+        }
+      }
+      return converted;
+    }
+
+    return obj;
   }
 }
 

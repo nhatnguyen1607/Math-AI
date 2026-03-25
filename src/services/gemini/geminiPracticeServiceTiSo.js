@@ -64,6 +64,8 @@ Bài 36: Tỉ số, Tỉ số phần trăm -> Bài 37: Tỉ lệ bản đồ -> 
 ⚠️ QUY TẮC TỐI THƯỢNG: 
 1. TUYỆT ĐỐI KHÔNG dùng khái niệm của các bài học đứng sau bài "${topicName}".
 2. CÂU HỎI CUỐI CÙNG của đề bài BẮT BUỘC phải hỏi ĐÚNG DẠNG của bài "${topicName}". (Ví dụ: Đang ở bài 40 thì phải hỏi "tỉ số phần trăm là bao nhiêu?", cấm hỏi ngược lại giá trị cụ thể của bài 41).
+3. CHỈ dùng dấu PHẨY (,) cho số thập phân, KHÔNG dùng dấu chấm (.). Ví dụ: 2,5, 0,75, 12,4%, 33,33%
+4. CHỈ dùng số thập phân "ĐẸP" - HỮU HẠN không lặp lại. CÁCH: 2,3, 3,45, 0,5, 1,25, 0,75, 12,5. TUYỆT ĐỐI KHÔNG: 0,333... (1/3), 0,6666... (2/3), 0,1666... (1/6)
 
 [ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
 Mức năng lực: ${competencyLevel}
@@ -74,7 +76,7 @@ Lưu ý chuyên môn: ${lessonGuidance}
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
   "suy_luan": "Bước 1: Phân tích yêu cầu dạng toán ${topicName}. Bước 2: Thiết kế các bước giải tương ứng với độ khó. Bước 3: Chốt câu hỏi cuối cùng đảm bảo đúng dạng ${topicName}.",
-  "de_bai": "Viết trực tiếp đề bài tự luận. KHÔNG có trắc nghiệm. KHÔNG lời dẫn."
+  "de_bai": "Viết trực tiếp đề bài tự luận. KHÔNG có trắc nghiệm. KHÔNG lời dẫn. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp."
 }`;
 
     try {
@@ -115,6 +117,8 @@ Bài 36: Tỉ số, Tỉ số phần trăm -> Bài 37: Tỉ lệ bản đồ -> 
 ⚠️ QUY TẮC TỐI THƯỢNG: 
 1. Cấm dùng kiến thức vượt cấp.
 2. CÂU HỎI CUỐI CÙNG của đề bài BẮT BUỘC phải là dạng toán "${topicName}". Không được nhầm lẫn sang bài khác.
+3. CHỈ dùng dấu PHẨY (,) cho số thập phân, KHÔNG dùng dấu chấm (.). Ví dụ: 2,5, 0,75, 12,4%, 33,33%
+4. CHỈ dùng số thập phân "ĐẸP" - HỮU HẠN không lặp lại. CÁCH: 2,3, 3,45, 0,5, 1,25, 0,75, 12,5. TUYỆT ĐỐI KHÔNG: 0,333... (1/3), 0,6666... (2/3), 0,1666... (1/6)
 
 [ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
 Mức năng lực: ${competencyLevel}
@@ -125,7 +129,7 @@ Lỗi HS hay mắc: ${errorLog || "Không có lỗi cụ thể"}.
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
   "suy_luan": "Phân tích số liệu bị ẩn cho mức ${competencyLevel}. Đảm bảo câu hỏi cuối cùng hỏi đúng kiến thức ${topicName}.",
-  "de_bai": "Chỉ sinh 1 bài toán ngắn gọn (dưới 100 từ). Cấm trắc nghiệm. Không tiêu đề."
+  "de_bai": "Chỉ sinh 1 bài toán ngắn gọn (dưới 100 từ). Cấm trắc nghiệm. Không tiêu đề. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp."
 }`;
 
     try {

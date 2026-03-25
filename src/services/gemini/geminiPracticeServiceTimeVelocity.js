@@ -62,6 +62,8 @@ Bài 56: Các đơn vị đo thời gian -> Bài 57: Cộng, trừ số đo th�
 ⚠️ QUY TẮC TỐI THƯỢNG: 
 1. TUYỆT ĐỐI KHÔNG dùng khái niệm/công thức của các bài học đứng sau bài "${topicName}".
 2. CÂU HỎI CUỐI CÙNG của đề bài BẮT BUỘC phải hỏi ĐÚNG ĐẠI LƯỢNG trọng tâm của bài "${topicName}". (Ví dụ: Đang ở bài 59 thì câu hỏi chốt phải là "tính vận tốc", tuyệt đối không hỏi ngược lại quãng đường hay thời gian).
+3. CHỈ dùng dấu PHẨY (,) cho số thập phân, KHÔNG dùng dấu chấm (.). Ví dụ: 2,5 km/h, 0,75 giờ, 12,3 m/s
+4. CHỈ dùng số thập phân "ĐẸP" - HỮU HẠN không lặp lại. CÁCH: 2,3, 3,45, 0,5, 1,25, 0,75, 12,5. TUYỆT ĐỐI KHÔNG: 0,333... (1/3), 0,6666... (2/3), 0,1666... (1/6), 2,142857... (15/7)
 
 [ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
 Mức năng lực: ${competencyLevel}
@@ -72,7 +74,7 @@ Lưu ý chuyên môn: ${lessonGuidance}
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
   "suy_luan": "Bước 1: Phân tích yêu cầu dạng toán ${topicName}. Bước 2: Thiết kế các bước giải tương ứng với độ khó (có đổi đơn vị/tính thời gian nghỉ không). Bước 3: Chốt câu hỏi cuối cùng đảm bảo đúng dạng ${topicName}.",
-  "de_bai": "Viết trực tiếp đề bài tự luận. KHÔNG có trắc nghiệm. KHÔNG lời dẫn."
+  "de_bai": "Viết trực tiếp đề bài tự luận. KHÔNG có trắc nghiệm. KHÔNG lời dẫn. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp."
 }`;
 
     try {
@@ -113,6 +115,8 @@ Bài 56: Các đơn vị đo thời gian -> Bài 57: Cộng, trừ số đo th�
 ⚠️ QUY TẮC TỐI THƯỢNG: 
 1. Cấm dùng kiến thức vượt cấp.
 2. CÂU HỎI CUỐI CÙNG của đề bài BẮT BUỘC phải là dạng toán "${topicName}". Không được nhầm lẫn sang đại lượng khác.
+3. CHỈ dùng dấu PHẨY (,) cho số thập phân, KHÔNG dùng dấu chấm (.). Ví dụ: 2,5 km/h, 0,75 giờ, 12,3 m/s
+4. CHỈ dùng số thập phân "ĐẸP" - HỮU HẠN không lặp lại. CÁCH: 2,3, 3,45, 0,5, 1,25, 0,75, 12,5. TUYỆT ĐỐI KHÔNG: 0,333... (1/3), 0,6666... (2/3), 0,1666... (1/6)
 
 [ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
 Mức năng lực: ${competencyLevel}
@@ -123,7 +127,7 @@ Lỗi HS hay mắc: ${errorLog || "Không có lỗi cụ thể"}. (Tạo tình h
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
   "suy_luan": "Phân tích bối cảnh bài toán cho mức ${competencyLevel}. Đảm bảo học sinh phải tính toán trung gian trước khi chốt câu hỏi đúng kiến thức ${topicName}.",
-  "de_bai": "Chỉ sinh 1 bài toán ngắn gọn (dưới 100 từ). Cấm trắc nghiệm. Không tiêu đề."
+  "de_bai": "Chỉ sinh 1 bài toán ngắn gọn (dưới 100 từ). Cấm trắc nghiệm. Không tiêu đề. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp."
 }`;
 
     try {

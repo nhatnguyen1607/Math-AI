@@ -272,6 +272,20 @@ ${this._formatSampleContent(sample.content)}
 🚫 **CẤM DÙNG VÍ DỤ "HỌC SINH NAM VÀ NỮ"** - Quá nhàm chán, lặp lại!
 → Thay bằng: bi đỏ/xanh, sách toán/văn, táo/cam, gà/vịt, xe máy/ô tô, bánh mì/bánh ngọt...
 
+🚫 **CẤM**: Sử dụng dấu chấm (.) cho số thập phân
+   → CHỈ dùng dấu phẩy (,) cho SỐ THẬP PHÂN (chuẩn tiếng Việt)
+   → Ví dụ SAI: 3.5, 0.25, 12.4%, 2.5 km, 0.1 lít
+   → Ví dụ ĐÚNG: 3,5, 0,25, 12,4%, 2,5 km, 0,1 lít
+   → Áp dụng cho TẤT CẢ số thập phân trong context, options, và explanation
+
+🚫 **CẤM TUYỆT ĐỐI**: Số thập phân vô hạn tuần hoàn hoặc số hữu tỉ phức tạp
+   → CHỈ dùng số thập phân "ĐẸP" - tức là HỮU HẠN và không lặp lại (terminating decimals)
+   → Ví dụ SAI: 0,333... (1/3), 0,6666... (2/3), 0,1666... (1/6), 2,142857... (15/7)
+   → Ví dụ ĐÚNG: 2,3, 3,45, 0,5, 1,25, 0,75, 12,5, 0,125
+   → Cách kiểm tra: Số thập phân "đẹp" khi kết thúc sau vài chữ số (không vô hạn)
+   → Nếu phải dùng phân số, chọn số chia hết khác: 24÷8 = 3, 15÷5 = 3, 24÷4 = 6
+   → TUYỆT ĐỐI đừng dùng: 1÷3, 2÷3, 1÷6, 1÷7, 5÷6, 4÷9, bất kỳ số nào ra vô hạn tuần hoàn
+
 ❌ **SAI**: Bài "Tìm tỉ số phần trăm" + Context "Có 20 bi đỏ, 15 bi xanh. Tỉ số?" 
    → Đây là BÀI 36 (tỉ số thuần), KHÔNG phải tỉ số phần trăm!
 ✅ **ĐÚNG**: Bài "Tìm tỉ số phần trăm" + Context "80kg giấy, 28kg phân loại đúng. Chiếm bao nhiêu %?"

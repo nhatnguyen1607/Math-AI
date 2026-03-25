@@ -6,7 +6,7 @@ import examSessionService from '../../services/faculty/examSessionService';
 import classService from '../../services/faculty/classService';
 import topicService from '../../services/faculty/topicService';
 // import geminiService from '../../services/geminiService';
-import examGeneratorService from '../../services/faculty/examGeneratorService';
+import examGeneratorRouter from '../../services/gemini/examGeneratorRouter';
 import { parseExamFile } from '../../services/faculty/fileParserService';
 import ExamCard from '../../components/cards/ExamCard';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
@@ -338,11 +338,20 @@ const FacultyExamManagementPage = () => {
       }
 
       // Call AI to generate exam based on sampleExams - use form title as lesson name
-      const generatedExercises = await examGeneratorService.generateExamFromSamples({
+      console.log('🔍 [ExamGeneration] Bắt đầu tạo đề cho:');
+      console.log('   📚 Chủ đề:', topic.name);
+      console.log('   📖 Bài học:', formData.title);
+      
+      // Use router to automatically detect topic and use appropriate service
+      const generatedExercises = await examGeneratorRouter.generateExam({
         topicName: topic.name,
         lessonName: formData.title,
         sampleExams: topic.sampleExams
       });
+      
+      const serviceInfo = examGeneratorRouter.getServiceInfo(formData.title);
+      console.log('✅ [ExamGeneration] Service được sử dụng:', serviceInfo);
+      console.log('   📊 Số lượng bài:', generatedExercises?.data?.exercises?.length || 0);
 
       setAiExercises(generatedExercises?.data?.exercises || []);
       setAiError(null);

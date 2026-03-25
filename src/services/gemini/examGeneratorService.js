@@ -465,9 +465,7 @@ Câu hỏi mẫu (CHỌN 1-2 trong các dạng sau):
 
 **YÊU CẦU:**
 - correctAnswers: array chỉ số 0-based ([0]=A, [1]=B, [2]=C, [3]=D)
-- **explanation PHẢI là STRING (text), KHÔNG phải object hoặc array**
-  - Ví dụ: "explanation": "A đúng vì... B sai vì... C sai vì... D sai vì..."
-- Giải thích chi tiết cho MỖI đáp án (Chọn A → ..., Chọn B → ...)
+- explanation: Giải thích chi tiết cho MỖI đáp án (Chọn A → ..., Chọn B → ...)
 - Đề mới phải độc lập, KHÔNG COPY từ đề mẫu
 
 🔴🔴🔴 **KIỂM TRA BẮT BUỘC TRƯỚC KHI OUTPUT:** 🔴🔴🔴
@@ -544,20 +542,12 @@ Nếu bài chỉ có Bước 1, 2, 3 mà thiếu Bước 4:
       let firstBrace = responseText.indexOf('{');
       let lastBrace = responseText.lastIndexOf('}');
       
-      console.log('🔍 JSON Search - firstBrace:', firstBrace, 'lastBrace:', lastBrace, 'textLength:', responseText.length);
       
       if (firstBrace === -1 || lastBrace === -1 || firstBrace >= lastBrace) {
-        console.error('❌ JSON extraction failed.');
-        console.error('   Response length:', responseText.length);
-        console.error('   First 300 chars:', responseText.substring(0, 300));
-        console.error('   Last 300 chars:', responseText.substring(Math.max(0, responseText.length - 300)));
         throw new Error('Không thể phân tích đáp án từ AI');
       }
 
       let jsonStr = responseText.substring(firstBrace, lastBrace + 1).trim();
-      console.log('✅ JSON extracted, length:', jsonStr.length);
-      console.log('   First 100 chars:', jsonStr.substring(0, 100));
-      console.log('   Last 100 chars:', jsonStr.substring(Math.max(0, jsonStr.length - 100)));
 
       // Sanitize JSON string to remove control characters
       const sanitizedJson = this._sanitizeJsonString(jsonStr);
@@ -567,9 +557,6 @@ Nếu bài chỉ có Bước 1, 2, 3 mà thiếu Bước 4:
         data: generatedExam
       };
     } catch (error) {
-      console.error('❌ Lỗi khi tạo đề:');
-      console.error('   Message:', error.message);
-      console.error('   Stack:', error.stack);
       if (error.at !== undefined) {
         console.error('   Position:', error.at);
       }
@@ -630,7 +617,6 @@ ${questionsText}`;
       // First attempt: try regular JSON parse
       return JSON.stringify(JSON.parse(jsonStr));
     } catch (e) {
-      console.log('⚠️ JSON parse failed, attempting sanitization:', e.message);
       
       let sanitized = jsonStr
         .trim()
@@ -644,10 +630,8 @@ ${questionsText}`;
         });
       
       try {
-        console.log('✅ Attempting parse after newline fix');
         return JSON.stringify(JSON.parse(sanitized));
       } catch (e2) {
-        console.log('⚠️ Sanitization attempt 2 failed, trying aggressive cleanup');
         
         // More aggressive approach: handle all string values
         sanitized = sanitized
@@ -667,12 +651,8 @@ ${questionsText}`;
           });
         
         try {
-          console.log('✅ Attempting parse after aggressive cleanup');
           return JSON.stringify(JSON.parse(sanitized));
         } catch (e3) {
-          console.error('❌ All sanitization attempts failed');
-          console.error('   Original error:', e.message);
-          console.error('   Sanitized string first 500 chars:', sanitized.substring(0, 500));
           throw new Error(`JSON parse failed after sanitization: ${e.message}`);
         }
       }

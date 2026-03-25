@@ -1026,6 +1026,25 @@ class ResultService {
   }
 
   /**
+   * Update Competency Evaluation for a specific exam
+   */
+  async updateCompetencyEvaluation(userId, examId, competencyEvaluation) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+
+      await updateDoc(progressRef, {
+        competencyEvaluation: competencyEvaluation,
+        'parts.khoiDong.competencyEvaluation': competencyEvaluation,
+        lastUpdatedAt: serverTimestamp()
+      });
+
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
    * Xóa AI Progress Assessment 
    */
   async deleteAiProgressAssessment(userId, examId) {

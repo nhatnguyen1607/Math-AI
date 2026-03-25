@@ -216,19 +216,13 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
         {/* Congratulations Banner (only on first visit from exam) */}
         {showCongrats && (
           <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 animate-bounce-gentle game-card">
-            <div
-              className={`relative overflow-hidden p-6 text-center text-white sm:p-8 lg:p-12 ${
-                isPassed
-                  ? 'bg-gradient-to-br from-green-400 to-emerald-500'
-                  : 'bg-gradient-to-br from-orange-400 to-yellow-500'
-              }`}
-            >
+            <div className="relative overflow-hidden p-6 text-center text-white bg-gradient-to-br from-green-400 to-emerald-500 sm:p-8 lg:p-12">
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
-              <div className="relative z-10 mb-4 block text-5xl animate-bounce-gentle sm:text-6xl lg:text-7xl">{isPassed ? '🎉' : '💪'}</div>
+              <div className="relative z-10 mb-4 block text-5xl animate-bounce-gentle sm:text-6xl lg:text-7xl">🎉</div>
               <h1 className="relative z-10 mb-3 text-3xl font-bold font-quicksand sm:text-4xl lg:text-5xl">
-                {isPassed ? 'Chúc mừng!' : 'Cố gắng thêm lần tới!'}
+                Bạn đã hoàn thành bài thi!
               </h1>
-              <p className="relative z-10 text-base opacity-95 font-quicksand sm:text-lg lg:text-xl">{exam?.title || 'Bài thi'}</p>
+              <p className="relative z-10 text-base opacity-95 font-quicksand sm:text-lg lg:text-xl">Vui lòng xem chi tiết kết quả dưới đây</p>
               <button
                 onClick={() => setShowCongrats(false)}
                 className="touch-btn mt-5 rounded-full bg-white/30 px-5 text-white hover:bg-white/50 sm:mt-6 sm:px-6"
@@ -526,13 +520,24 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
 
                                     {(() => {
                                       // Find the AI comment for this question - ONLY show AI comments, NO database fallback
-                                      const aiComment = examProgress.parts.khoiDong.aiAnalysis.questionComments?.find(
-                                        (c) => c.questionNum === globalQuestionIndex + 1
+                                      const questionComments = examProgress?.parts?.khoiDong?.questionComments;
+                                      if (!questionComments || !Array.isArray(questionComments)) {
+                                        return null; // Data not ready yet
+                                      }
+
+                                      // Try to find by questionNum first (if available)
+                                      let aiComment = questionComments.find(
+                                        (c) => c?.questionNum === globalQuestionIndex + 1
                                       );
                                       
-                                      // Only display if AI generated a unique comment for THIS student
+                                      // Fallback: if not found by questionNum, use array index
+                                      if (!aiComment && questionComments[globalQuestionIndex]) {
+                                        aiComment = questionComments[globalQuestionIndex];
+                                      }
+                                      
+                                      // Only display if AI generated a comment for THIS student
                                       if (!aiComment?.comment) {
-                                        return null; // Don't show database explanation as fallback
+                                        return null; // Don't show if no comment
                                       }
 
                                       return (

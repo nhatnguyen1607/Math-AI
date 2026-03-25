@@ -154,19 +154,64 @@ const FacultyStudentExamResultPage = () => {
     }
   }, [studentResult, practiceData]);
 
-  // Save AI Assessment to Database
-  const saveAiAssessment = useCallback(
-    async (assessment) => {
-      try {
-        await resultService.updateAiProgressAssessment(
-          userId,
-          examId,
-          assessment,
-        );
-      } catch (err) {}
-    },
-    [userId, examId],
-  );
+  // Re-evaluate competency using AI
+  const handleReEvaluateCompetency = useCallback(async () => {
+    try {
+      setLoadingAiAssessment(true);
+      
+      // Get the evaluation data stored in DB
+      const khoiDongData = studentResult.data?.parts?.khoiDong;
+      if (!khoiDongData?.answers) {
+        alert('Chưa có dữ liệu bài làm');
+        setLoadingAiAssessment(false);
+        return;
+      }
+
+      // Get exam data to create questions context
+      if (!exam?.exercises) {
+        alert('Không thể tải dữ liệu bài thi');
+        setLoadingAiAssessment(false);
+        return;
+      }
+
+      // Create questions array from exam exercises
+      const questions = [];
+      exam.exercises.forEach(exercise => {
+        if (exercise.questions) {
+          questions.push(...exercise.questions.map(q => ({
+            ...q,
+            exerciseContext: exercise.context
+          })));
+        }
+      });
+
+      // Convert answers to the format expected by evaluateCompetencyFramework (must be array)
+      const answersArray = Array.isArray(khoiDongData.answers) ? khoiDongData.answers : Object.values(khoiDongData.answers || {});
+
+      // Call the evaluateCompetencyFramework function
+      const competencyEval = await geminiService.evaluateCompetencyFramework(answersArray, questions);
+      
+      // Update the database with new evaluation
+      // evaluateCompetencyFramework returns the evaluation object directly (TC1, TC2, TC3, TC4, etc.)
+      if (competencyEval && competencyEval.tongDiem !== undefined) {
+        await resultService.updateCompetencyEvaluation(userId, examId, competencyEval);
+        // Update state
+        setStudentResult(prev => ({
+          ...prev,
+          competencyEvaluation: competencyEval
+        }));
+        alert('✅ Đánh giá lại thành công!');
+      } else {
+        console.error('Invalid competency evaluation:', competencyEval);
+        alert('Lỗi: Không nhận được dữ liệu đánh giá từ AI. Vui lòng kiểm tra console.');
+      }
+    } catch (err) {
+      console.error('Error re-evaluating competency:', err);
+      alert('Lỗi khi đánh giá lại năng lực: ' + err.message);
+    } finally {
+      setLoadingAiAssessment(false);
+    }
+  }, [studentResult, exam, userId, examId]);
 
   // Fallback assessment when AI generation fails
   const createFallbackAssessment = useCallback(() => {
@@ -229,7 +274,6 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
 
       const response = await geminiService.processExamQuestion(prompt);
       const assessment = response.message || response;
-      await saveAiAssessment(assessment);
 
       setAiAssessment(assessment);
     } catch (err) {
@@ -241,7 +285,6 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
     studentResult,
     practiceData,
     student,
-    saveAiAssessment,
     createFallbackAssessment,
   ]);
 
@@ -459,13 +502,55 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
         {/* Content */}
         {activeTab === "khoiDong" && (
           <div className="space-y-8">
-            {/* New Competency Evaluation Section */}
-            {studentResult.competencyEvaluation && (
-              <CompetencyEvaluationDisplay
-                evaluation={studentResult.competencyEvaluation}
-                showDetails={true}
-              />
-            )}
+            {/* Khung Đánh giá năng lực - LUÔN HIỂN THỊ */}
+            <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-soft border border-indigo-200">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b-3 border-indigo-300">
+                <h3 className="text-2xl lg:text-3xl font-bold text-gray-800 flex items-center gap-3">
+                  <span>📊</span> Đánh giá năng lực (Khởi động)
+                </h3>
+                <button
+                  onClick={handleReEvaluateCompetency}
+                  disabled={loadingAiAssessment}
+                  className={`px-4 py-2 rounded-full font-semibold transition-all ${
+                    loadingAiAssessment
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white hover:shadow-lg'
+                  }`}
+                >
+                  {loadingAiAssessment ? '🔄 Đang đánh giá...' : '🔄 Đánh giá lại'}
+                </button>
+              </div>
+
+              {loadingAiAssessment && (
+                <div className="flex justify-center py-8">
+                  <div className="inline-flex items-center gap-2">
+                    <div className="animate-spin w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full"></div>
+                    <span className="text-gray-600">Đang đánh giá lại...</span>
+                  </div>
+                </div>
+              )}
+
+              {!loadingAiAssessment && studentResult.competencyEvaluation ? (
+                <div>
+                  <CompetencyEvaluationDisplay
+                    evaluation={studentResult.competencyEvaluation}
+                    showDetails={true}
+                  />
+                </div>
+              ) : !loadingAiAssessment ? (
+                <div className="py-8 text-center">
+                  <div className="text-5xl mb-3">📝</div>
+                  <p className="text-gray-600 mb-3">Chưa có dữ liệu đánh giá năng lực</p>
+                  <p className="text-sm text-gray-500 mb-4">Bấm nút "Đánh giá lại" để tạo đánh giá 4TC từ câu trả lời của học sinh</p>
+                  <button
+                    onClick={handleReEvaluateCompetency}
+                    className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full font-semibold transition-all hover:shadow-lg"
+                  >
+                    🚀 Tạo đánh giá
+                  </button>
+                </div>
+              ) : null}
+            </div>
 
             {/* Xem chi tiết câu trả lời */}
             <div className="border-t-4 border-indigo-200">
@@ -653,13 +738,29 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
                                     </div>
 
                                     {(() => {
-                                      // Find the AI comment for this question - ONLY show AI comments, NO database fallback
-                                      const aiComment =
-                                        studentResult.data?.parts?.khoiDong?.aiAnalysis?.questionComments?.find(
-                                          (c) =>
-                                            c.questionNum ===
-                                            globalQuestionIndex + 1,
+                                      // Find the AI comment for this question - get from questionComments array directly
+                                      const khoiDongData = studentResult.data?.parts?.khoiDong;
+                                      const questionComments = khoiDongData?.questionComments;
+                                      
+                                      // Check if questionComments exists and is array
+                                      if (!questionComments || !Array.isArray(questionComments)) {
+                                        // Show placeholder if data not ready yet
+                                        return (
+                                          <div className="p-6 rounded-2xl bg-gray-50 border border-gray-300 text-center">
+                                            <p className="text-sm text-gray-500">⏳ Nhận xét AI chưa được tạo</p>
+                                          </div>
                                         );
+                                      }
+
+                                      // Try to find by questionNum first (if available)
+                                      let aiComment = questionComments.find(
+                                        (c) => c?.questionNum === globalQuestionIndex + 1
+                                      );
+                                      
+                                      // Fallback: if not found by questionNum, use array index
+                                      if (!aiComment && questionComments[globalQuestionIndex]) {
+                                        aiComment = questionComments[globalQuestionIndex];
+                                      }
 
                                       // Only display if AI generated a unique comment for THIS student
                                       if (!aiComment?.comment) {

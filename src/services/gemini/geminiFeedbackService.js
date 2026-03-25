@@ -84,24 +84,22 @@ export class GeminiFeedbackService {
 ${JSON.stringify(questionsContext, null, 2)}
 
 ## Nhiệm vụ:
-Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu hỏi. Nhận xét phải:
-- Chỉ rõ học sinh làm đúng/sai điểm nào cụ thể
-- Giải thích TẠI SAO câu trả lời đó đúng hoặc sai
-- Đưa ra gợi ý xây dựng nếu học sinh trả lời sai
-- Khích lệ và chia sẻ những điểm tốt của học sinh
-- Tránh để nhận xét quá chung chung
+Viết NGẮN GỌN từ 2-4 câu (khoảng 30-40 chữ) nhận xét cho mỗi câu hỏi. Nhận xét phải:
+- Chỉ rõ học sinh làm đúng hay sai
+- Giải thích ngắn gọn TẠI SAO hoặc gợi ý cải thiện
+- Tránh dài dòng, tập trung vào điểm chính
 
 ## QUY TẮC NGÔN NGỮ TIẾNG VIỆT:
 - LƯU Ý: Dùng "bạn", "mình", hoặc tên gọi thân thiết - KHÔNG dùng "em", "học sinh"
-- Ví dụ: "Bạn trả lời rất tốt, bạn đã xác định đúng..."
-- Viết trang trọng nhưng thân thiện, gần gũi
+- Ví dụ: "Bạn trả lời đúng! Lý do là..."
+- Viết ngắn gọn, thân thiện, dễ hiểu
 
 ## Định dạng JSON (PHẢI ĐÚNG):
 {
   "questionComments": [
     {
       "questionNum": 1,
-      "comment": "Nhận xét CHI TIẾT dài 5-8 câu (80-150 từ), giải thích rõ ràng vì sao đúng/sai, nêu gợi ý nếu cần"
+      "comment": "Nhận xét NGẮN GỌN 2-4 câu (30-40 chữ), chỉ rõ đúng/sai và gợi ý nếu cần"
     }
   ]
 }`;
@@ -216,8 +214,22 @@ Viết TỪ NĂM ĐẾN NỬA NĂM LỜI NHẬN XÉT CHI TIẾT cho mỗi câu h
         console.warn('⚠ Competency Evaluation Validation Warnings:', validation.warnings);
       }
       
+      // Ensure all required fields exist
+      if (!competencyEvaluation.tongDiem && competencyEvaluation.totalCompetencyScore) {
+        competencyEvaluation.tongDiem = competencyEvaluation.totalCompetencyScore;
+      }
+      
+      console.log('✅ Competency Evaluation Successfully Generated:', {
+        tongDiem: competencyEvaluation.tongDiem,
+        TC1: competencyEvaluation.TC1?.diem,
+        TC2: competencyEvaluation.TC2?.diem,
+        TC3: competencyEvaluation.TC3?.diem,
+        TC4: competencyEvaluation.TC4?.diem
+      });
+      
       return competencyEvaluation;
     } catch (error) {
+      console.error('❌ Error in evaluateCompetencyFramework:', error);
       return competencyEvaluationService.createEmptyEvaluation();
     }
   }
@@ -340,62 +352,6 @@ HƯỚNG DẪN VIẾT NHẬN XÉT:
     }
   }
 
-  /**
-   * Tạo overallAssessment từ TC1-4 nhận xét
-   * @param {Object} evaluation - Evaluation object with TC1-4
-   * @returns {Object} - Overall assessment with strengths, weaknesses, areas to improve, recommendations
-   */
-  async generateOverallAssessment(evaluation) {
-    try {
-      const tc1Comment = evaluation.TC1?.nhanXet || '';
-      const tc2Comment = evaluation.TC2?.nhanXet || '';
-      const tc3Comment = evaluation.TC3?.nhanXet || '';
-      const tc4Comment = evaluation.TC4?.nhanXet || '';
-      const totalComment = evaluation.tongNhanXet || '';
-
-      const prompt = `Dựa vào nhận xét chi tiết từ 4 tiêu chí đánh giá năng lực sau:
-
-TC1 (Nhận biết vấn đề): ${tc1Comment}
-
-TC2 (Nêu cách giải): ${tc2Comment}
-
-TC3 (Trình bày giải): ${tc3Comment}
-
-TC4 (Kiểm tra và vận dụng): ${tc4Comment}
-
-NHẬN XÉT TỔNG THỂ: ${totalComment}
-`;
-
-      const result = await this._rateLimitedGenerate(prompt);
-      const responseText = result ? result.response.text().trim() : '';
-
-      // Parse JSON
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        return {
-          strengths: ['Không thể tạo đánh giá chi tiết'],
-          weaknesses: ['Vui lòng tải lại trang'],
-          recommendations: ['Liên hệ hỗ trợ'],
-          encouragement: 'Hãy cố gắng thêm, bạn sẽ thành công!'
-        };
-      }
-
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        strengths: parsed.strengths || [],
-        weaknesses: parsed.weaknesses || [],
-        recommendations: parsed.recommendations || [],
-        encouragement: parsed.encouragement || 'Bạn đang trên đúng con đường!'
-      };
-    } catch (error) {
-      return {
-        strengths: ['Không thể tạo đánh giá chi tiết'],
-        weaknesses: ['Vui lòng tải lại trang'],
-        recommendations: ['Liên hệ hỗ trợ'],
-        encouragement: 'Hãy cố gắng thêm, bạn sẽ thành công!'
-      };
-    }
-  }
 }
 
 const geminiFeedbackServiceInstance = new GeminiFeedbackService();

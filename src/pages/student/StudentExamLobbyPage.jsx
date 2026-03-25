@@ -51,7 +51,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
           
           // Check if session is finished
           if (session.status === 'finished') {
-            setError('Phiên thi đã kết thúc. Vui lòng chờ giáo viên bắt đầu phiên thi mới.');
+            setError('Phiên trò chơi đã kết thúc. Vui lòng chờ giáo viên bắt đầu phiên trò chơi mới.');
             setLoading(false);
           } else {
             // Use the active session
@@ -59,11 +59,11 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
             navigate(`/student/exam-lobby/${actualExamId}?sessionId=${activeSessionId}`, { replace: true });
           }
         } else {
-          setError('Chưa có phiên thi nào được bắt đầu cho đề thi này. Vui lòng chờ giáo viên kích hoạt phiên thi.');
+          setError('Chưa có phiên trò chơi nào được bắt đầu cho đề thi này. Vui lòng chờ giáo viên kích hoạt phiên trò chơi.');
           setLoading(false);
         }
       } catch (err) {
-        setError('Lỗi khi tìm phiên thi: ' + err.message);
+        setError('Lỗi khi tìm phiên trò chơi: ' + err.message);
         setLoading(false);
       }
     };
@@ -119,14 +119,14 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
                 }, 3000);
               }
             } else {
-              setError('Phiên thi không tồn tại');
+              setError('phiên trò chơi không tồn tại');
             }
 
             setLoading(false);
           }
         );
       } catch (err) {
-        setError('Lỗi khi kết nối phiên thi');
+        setError('Lỗi khi kết nối phiên trò chơi');
         setLoading(false);
       }
     };
@@ -186,7 +186,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
       }
 
       if (!actualSessionId) {
-        setError('Không tìm thấy ID phiên thi');
+        setError('Không tìm thấy ID phiên trò chơi');
         return;
       }
 
@@ -214,7 +214,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
         <div className="flex flex-col items-center gap-6">
           <div className="text-6xl animate-bounce-gentle">🐻</div>
-          <div className="text-2xl font-bold text-gray-700 font-quicksand">Đang tải phiên thi...</div>
+          <div className="text-2xl font-bold text-gray-700 font-quicksand">Đang tải phiên trò chơi...</div>
         </div>
       </div>
     );
@@ -415,14 +415,14 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
         {!joined && session.status === 'waiting' && (
           <div className="flex items-center gap-3 bg-yellow-400 text-white px-6 py-4 rounded-max shadow-lg mb-8 font-quicksand">
             <span className="text-2xl">⚠️</span>
-            <span>Chuẩn bị sẵn sàng: Bạn sẽ có 7 phút để hoàn thành bài thi.</span>
+            <span>Chuẩn bị sẵn sàng: Bạn sẽ có 7 phút để hoàn thành .</span>
           </div>
         )}
 
         {session.status === 'finished' && (
           <div className="flex items-center gap-3 bg-teal-400 text-white px-6 py-4 rounded-max shadow-lg mb-8 font-quicksand">
             <span className="text-2xl">✅</span>
-            <span>Phiên thi đã kết thúc. Vui lòng chờ để xem kết quả...</span>
+            <span>Phiên trò chơi đã kết thúc. Vui lòng chờ để xem kết quả...</span>
           </div>
         )}
 

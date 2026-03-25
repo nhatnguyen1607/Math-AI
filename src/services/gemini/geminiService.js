@@ -91,10 +91,6 @@ export class GeminiService {
     return this._feedbackService.evaluatePolyaStep(chatHistory, problem);
   }
 
-  async generateOverallAssessment(evaluation) {
-    return this._feedbackService.generateOverallAssessment(evaluation);
-  }
-
   // ============ PRACTICE SERVICE METHODS ============
 
 async generateSimilarProblem(

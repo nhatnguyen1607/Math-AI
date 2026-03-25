@@ -1,17 +1,4 @@
-/**
- * Competency Evaluation Service
- * Đánh giá năng lực giải quyết vấn đề toán học dựa vào khung đánh giá
- * 
- * Khung đánh giá có 3 tiêu chí (TC):
- * - TC1: Nhận biết được vấn đề cần giải quyết
- * - TC2: Nêu được cách thức GQVĐ
- * - TC3: Trình bày được cách thức GQVĐ
- * 
- * Mỗi tiêu chí có 3 mức độ:
- * - "need_effort" (Cần cố gắng): 1 điểm
- * - "achieved" (Đạt): 2 điểm
- * - "good" (Tốt): 3 điểm
- */
+
 
 // Scoring scale for competency levels (0-2 points per criterion)
 export const COMPETENCY_LEVELS = {
@@ -87,11 +74,12 @@ export const COMPETENCY_CRITERIA = {
 export const parseCompetencyEvaluation = (responseText) => {
   if (!responseText) {
     return {
-      TC1: { level: 'achieved', score: 1, nhanXet: '' },
-      TC2: { level: 'achieved', score: 1, nhanXet: '' },
-      TC3: { level: 'achieved', score: 1, nhanXet: '' },
-      TC4: { level: 'achieved', score: 1, nhanXet: '' },
+      TC1: { level: 'achieved', score: 1, diem: 1, nhanXet: '' },
+      TC2: { level: 'achieved', score: 1, diem: 1, nhanXet: '' },
+      TC3: { level: 'achieved', score: 1, diem: 1, nhanXet: '' },
+      TC4: { level: 'achieved', score: 1, diem: 1, nhanXet: '' },
       totalCompetencyScore: 4,
+      tongDiem: 4,
       tongNhanXet: ''
     };
   }
@@ -107,46 +95,54 @@ export const parseCompetencyEvaluation = (responseText) => {
 
     // Convert Vietnamese response to standard format
     // Comment is already in Vietnamese, no translation needed
-    const tc1Score = typeof raw.TC1?.score === 'number' ? raw.TC1.score : 1;
-    const tc2Score = typeof raw.TC2?.score === 'number' ? raw.TC2.score : 1;
-    const tc3Score = typeof raw.TC3?.score === 'number' ? raw.TC3.score : 1;
-    const tc4Score = typeof raw.TC4?.score === 'number' ? raw.TC4.score : 1;
+    // Support both 'diem' (Vietnamese) and 'score' formats
+    const tc1Score = typeof raw.TC1?.diem === 'number' ? raw.TC1.diem : (typeof raw.TC1?.score === 'number' ? raw.TC1.score : 1);
+    const tc2Score = typeof raw.TC2?.diem === 'number' ? raw.TC2.diem : (typeof raw.TC2?.score === 'number' ? raw.TC2.score : 1);
+    const tc3Score = typeof raw.TC3?.diem === 'number' ? raw.TC3.diem : (typeof raw.TC3?.score === 'number' ? raw.TC3.score : 1);
+    const tc4Score = typeof raw.TC4?.diem === 'number' ? raw.TC4.diem : (typeof raw.TC4?.score === 'number' ? raw.TC4.score : 1);
 
     const evaluation = {
       TC1: {
         level: normalizeLevelName(raw.TC1?.level || 'Đạt'),
         score: tc1Score,
+        diem: tc1Score,
         nhanXet: raw.TC1?.nhanXet || raw.TC1?.comment || ''
       },
       TC2: {
         level: normalizeLevelName(raw.TC2?.level || 'Đạt'),
         score: tc2Score,
+        diem: tc2Score,
         nhanXet: raw.TC2?.nhanXet || raw.TC2?.comment || ''
       },
       TC3: {
         level: normalizeLevelName(raw.TC3?.level || 'Đạt'),
         score: tc3Score,
+        diem: tc3Score,
         nhanXet: raw.TC3?.nhanXet || raw.TC3?.comment || ''
       },
       TC4: {
         level: normalizeLevelName(raw.TC4?.level || 'Đạt'),
         score: tc4Score,
+        diem: tc4Score,
         nhanXet: raw.TC4?.nhanXet || raw.TC4?.comment || ''
       },
-      totalCompetencyScore: raw.totalScore || (tc1Score + tc2Score + tc3Score + tc4Score),
+      totalCompetencyScore: raw.totalScore || raw.tongDiem || (tc1Score + tc2Score + tc3Score + tc4Score),
+      tongDiem: raw.tongDiem || (tc1Score + tc2Score + tc3Score + tc4Score),
       tongNhanXet: raw.tongNhanXet || ''
     };
 
 
     return evaluation;
   } catch (error) {
+    console.error('Error parsing competency evaluation:', error);
     // Return default if parsing fails
     return {
-      TC1: { level: 'achieved', score: 1, nhanXet: 'Không thể phân tích' },
-      TC2: { level: 'achieved', score: 1, nhanXet: 'Không thể phân tích' },
-      TC3: { level: 'achieved', score: 1, nhanXet: 'Không thể phân tích' },
-      TC4: { level: 'achieved', score: 1, nhanXet: 'Không thể phân tích' },
+      TC1: { level: 'achieved', score: 1, diem: 1, nhanXet: 'Không thể phân tích' },
+      TC2: { level: 'achieved', score: 1, diem: 1, nhanXet: 'Không thể phân tích' },
+      TC3: { level: 'achieved', score: 1, diem: 1, nhanXet: 'Không thể phân tích' },
+      TC4: { level: 'achieved', score: 1, diem: 1, nhanXet: 'Không thể phân tích' },
       totalCompetencyScore: 4,
+      tongDiem: 4,
       tongNhanXet: 'Lỗi phân tích'
     };
   }
@@ -166,7 +162,7 @@ export const generateCompetencyEvaluationPrompt = (studentResponses, problemStat
   
   return `Bạn là một giáo viên toán học giỏi đang đánh giá kỹ năng giải quyết vấn đề của một học sinh lớp 5 theo khung đánh giá chi tiết sau:
 
-KHUNG ĐÁNH GIÁ NĂN LỰC - ĐIỂM SỐ CHI TIẾT:
+KHUNG ĐÁNH GIÁ NĂNG LỰC - ĐIỂM SỐ CHI TIẾT:
 
 TC1. Nhận biết được vấn đề cần giải quyết (tối đa 2 điểm):
   • Cần cố gắng (0 điểm): Không xác định được đầy đủ dữ kiện, yêu cầu bài toán (làm sai > 50% câu)

@@ -57,7 +57,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
   // Lắng nghe session realtime
   useEffect(() => {
     if (!sessionId) {
-      setError('Không tìm thấy ID phiên thi');
+      setError('Không tìm thấy ID trò chơi');
       setLoading(false);
       return;
     }
@@ -119,19 +119,19 @@ const StudentExamPage = ({ user, onSignOut }) => {
                   } else {
                   }
                 } catch (err) {
-                  setError('Không thể tải đề thi');
+                  setError('Không thể tải trò chơi');
                 }
               }
 
               setLoading(false);
             } else {
-              setError('Phiên thi không tồn tại');
+              setError('Trò chơi không tồn tại');
               setLoading(false);
             }
           }
         );
       } catch (err) {
-        setError('Lỗi khi kết nối phiên thi');
+        setError('Lỗi khi kết nối trò chơi');
         setLoading(false);
       }
     };
@@ -265,87 +265,18 @@ const StudentExamPage = ({ user, onSignOut }) => {
         }
       }
 
-      // 1. Gọi AI Đánh giá năng lực (Dùng evaluateCompetencyFramework - 4 TC mới)
-      let competencyEvaluation = null;
-      let aiAnalysis = null;
+      // 1. Evaluate question comments QUICKLY (lightweight, no AI analysis delay)
+      let questionComments = [];
       try {
-        // Call Gemini to evaluate competency using the 4-criterion framework
-        const [questionComments, competencyEval] = await Promise.all([
-          geminiService.evaluateQuestionComments(validatedAnswers, questions),
-          geminiService.evaluateCompetencyFramework(Object.values(validatedAnswers), questions)
-        ]);
-
-        // 🤖 Generate overall assessment from competency evaluation
-        const overallAssessment = await geminiService.generateOverallAssessment(competencyEval);
-        
-        // Structure aiAnalysis with questionComments and overallAssessment
-        aiAnalysis = {
-          questionComments: questionComments || [],
-          overallAssessment: overallAssessment
-        };
-
-        // Add overallAssessment to competencyEvaluation
-        competencyEvaluation = competencyEval || {
-          overallAssessment: {
-            level: 'Cần cố gắng',
-            score: 0
-          },
-          competenceAssessment: {}
-        };
-        
-        if (!competencyEvaluation.overallAssessment) {
-          competencyEvaluation.overallAssessment = {};
-        }
-        competencyEvaluation.overallAssessment.strengths = overallAssessment.strengths || [];
-        competencyEvaluation.overallAssessment.weaknesses = overallAssessment.weaknesses || [];
-        competencyEvaluation.overallAssessment.recommendations = overallAssessment.recommendations || [];
-        competencyEvaluation.overallAssessment.encouragement = overallAssessment.encouragement || '';
-      } catch (compError) {
-        competencyEvaluation = {
-          overallAssessment: {
-            level: 'Cần cố gắng',
-            score: 0
-          },
-          competenceAssessment: {}
-        };
-        aiAnalysis = { questionComments: [] };
+        questionComments = await geminiService.evaluateQuestionComments(validatedAnswers, questions);
+      } catch (feedError) {
+        console.error('Error evaluating question comments:', feedError);
+        questionComments = [];
       }
 
-      // 2. Validate competency evaluation with percentage from actual answers
-      // Ensure consistency between overall score and competency levels
-      const percentage = questions.length > 0 ? Math.round((correctAnswers / questions.length) * 100) : 0;
-      
-      // Map percentage to level
-      let expectedLevel = 'Cần cố gắng';
-      if (percentage >= 80) {
-        expectedLevel = 'Tốt';
-      } else if (percentage >= 50) {
-        expectedLevel = 'Đạt';
-      }
-      
-      // Validate and correct competency evaluation if needed
-      if (competencyEvaluation?.overallAssessment) {
-        const evalLevel = typeof competencyEvaluation.overallAssessment === 'string' 
-          ? competencyEvaluation.overallAssessment 
-          : competencyEvaluation.overallAssessment?.level;
-        
-        // If evaluation doesn't match percentage, log warning but use it
-        if (evalLevel !== expectedLevel) {
-          // Force correct level based on percentage
-          if (competencyEvaluation.overallAssessment?.level !== undefined) {
-            competencyEvaluation.overallAssessment.level = expectedLevel;
-          }
-          if (competencyEvaluation.competenceAssessment) {
-            Object.keys(competencyEvaluation.competenceAssessment).forEach(key => {
-              if (competencyEvaluation.competenceAssessment[key].level) {
-                competencyEvaluation.competenceAssessment[key].level = expectedLevel;
-              }
-            });
-          }
-        }
-      }
-
-      // 3. Lưu vào tiến trình (Lưu vào parts.khoiDong)
+      // Step 2: IMMEDIATELY save exam result to Firestore with questionComments
+      // This allows student to see results page quickly without waiting for 4TC AI analysis
+      // No need to calculate expectedLevel now - just show congratulations page
       if (user?.uid && exam?.id) {
         try {
           await resultService.upsertExamProgress(user.uid, exam.id, {
@@ -354,23 +285,44 @@ const StudentExamPage = ({ user, onSignOut }) => {
               score: totalScore,
               correctAnswers,
               totalQuestions: questions.length,
-              percentage: questions.length > 0 ? Math.round((correctAnswers / questions.length) * 100) : 0,
               answers: answersArray,
-              aiAnalysis: aiAnalysis,
-              competencyEvaluation: competencyEvaluation,
+              questionComments: questionComments || [],
               completedAt: new Date().toISOString()
             },
-            sessionId // include sessionId for traceability
+            sessionId
           });
         } catch (writeErr) {
           console.error('upsertExamProgress error:', writeErr);
-          throw writeErr;
         }
+      }
+
+      // Step 4: Trigger competency evaluation in BACKGROUND (non-blocking)
+      // This will update the evaluation results later without blocking the student's view
+      if (user?.uid && exam?.id) {
+        // Fire and forget - no await
+        geminiService.evaluateCompetencyFramework(Object.values(validatedAnswers), questions)
+          .then((competencyEval) => {
+            // Save competency evaluation result to database
+            if (competencyEval) {
+              resultService.upsertExamProgress(user.uid, exam.id, {
+                part: 'khoiDong',
+                data: {
+                  competencyEvaluation: competencyEval,
+                  totalCompetencyScore: competencyEval?.totalCompetencyScore || 0,
+                  evaluatedAt: new Date().toISOString()
+                },
+                sessionId
+              }).catch(err => console.error('Failed to update competency evaluation:', err));
+            }
+          })
+          .catch((compError) => {
+            console.error('Background competency evaluation error:', compError);
+          });
       }
 
       setIsCompleted(true);
 
-      // 3. Chuyển sang trang kết quả (với flag fromExam để hiển thị lời chúc mừng)
+      // Step 5: Navigate to exam result page quickly
       setTimeout(() => {
         navigate(`/student/exam-result/${sessionId}`, {
           state: { fromExam: true, examId: exam?.id }

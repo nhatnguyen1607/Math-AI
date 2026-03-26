@@ -267,7 +267,7 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
   "suy_luan": "Đối chiếu bài làm với [LUẬT CHẤM ĐIỂM BẮT BUỘC]. Kiểm tra chặt chẽ việc ghi phép tính câu a và ghi đủ các bước câu b. Từ đó đưa ra quyết định điểm cuối cùng.",
   "diem": (0, 1 hoặc 2),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
-  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Chỉ rõ HS đã vận dụng được kiến thức mở rộng đến mức độ nào, và ĐẶC BIỆT lưu ý nhắc nhở nếu em ấy có thói quen chỉ ghi đáp án mà không trình bày phép tính. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'tiêu chí'."
+  "nhan_xet": "Viết 4-5 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Đánh giá rõ: (1) HS kiểm tra lại được kết quả hay không; (2) HS vận dụng kiến thức mở rộng đến mức độ nào và có thể giải quyết được bài toán mở rộng; (3) HS có so sánh được các phương pháp giải khác nhau mà mình đã thực hiện. ĐẶC BIỆT lưu ý nhắc nhở nếu em ấy có thói quen chỉ ghi đáp án mà không trình bày phép tính. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'tiêu chí'."
 }`;
 
     const result = await geminiModelManager.generateContent(prompt);

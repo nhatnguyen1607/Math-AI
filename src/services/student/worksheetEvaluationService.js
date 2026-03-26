@@ -130,7 +130,7 @@ QUAN TRỌNG: Mỗi cách PHẢI CÓ ĐỦ tất cả các bước cần thiết
 [YÊU CẦU ĐẦU RA]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
-  "suy_luan": "Bước 1: Đếm số bước trong mỗi cách mà HS xếp. Bước 2: So sánh với số bước cần thiết từ Barem. Bước 3: Nếu cách nào thiếu bước (ví dụ chỉ có 2-3 bước thay vì 4-5 bước) -> TÍNH CÁC ĐÓ LÀ SAI. Bước 4: Đếm có bao nhiêu cách đầy đủ bước VÀ thứ tự đúng. Kết luận: Nếu >= 2 cách đầy đủ -> 2 điểm, có 1 cách đúng -> 1 điểm,  không có cách nào đúng -> 0 điểm.",
+  "suy_luan": "Bước 1: ĐỌC KỸ 4 CÁCH GIẢI ĐÚNG: Cách 1: (1) → (2) → (3), Cách 2: (1) → (3) → (2), Cách 3: (1) → (2) → (4), Cách 4: (1) → (3) → (5). Bước 2: ĐỐI CHIẾU bài làm của HS với 4 cách đúng trên. Cách nào của HS khớp với một trong 4 cách đúng thì tính là XẾP ĐÚNG. Cách nào không khớp hoặc thiếu bước thì tính là SAI. Bước 3: Đếm có bao nhiêu cách HS xếp đúng. Kết luận: Nếu HS xếp đúng >= 2 cách (mỗi cách đầy đủ bước + thứ tự logic trùng 1 trong 4 cách đúng) -> 2 điểm. Nếu HS xếp đúng 1 cách -> 1 điểm. Nếu không có cách nào đúng -> 0 điểm.",
   "diem": (0 ,1 hoặc 2),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
   "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Nêu rõ: học sinh sắp xếp được mấy cách đầy đủ, những cách nào bị thiếu bước (và thiếu bước nào cụ thể). Nhắc nhở HS rằng mỗi cách phải trình bày đủ các phép tính từ đầu đến cuối. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'ID'."

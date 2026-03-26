@@ -2,10 +2,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FacultyClassManagementPage from './FacultyClassManagementPage';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
+import { query, where, getDocs, collection, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 const FacultyPage = ({ user, userData, onSignOut }) => {
   const [loading, setLoading] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
+  const [showStudentList, setShowStudentList] = useState(false);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [deleting, setDeleting] = useState(null);
+  const [studentDetails, setStudentDetails] = useState({}); // Lưu thông tin chi tiết học sinh
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,6 +23,31 @@ const FacultyPage = ({ user, userData, onSignOut }) => {
       navigate('/login', { replace: true });
     }
   }, [user, navigate]);
+
+  // Fetch thông tin chi tiết học sinh khi selectedClass thay đổi
+  useEffect(() => {
+    const fetchStudentDetails = async () => {
+      if (!selectedClass || !selectedClass.students) return;
+
+      const details = {};
+      for (const studentId of selectedClass.students) {
+        try {
+          const userSnap = await getDoc(doc(db, 'users', studentId));
+          if (userSnap.exists()) {
+            details[studentId] = userSnap.data().displayName || userSnap.data().name || 'Học sinh';
+          } else {
+            details[studentId] = 'Học sinh (không tìm thấy)';
+          }
+        } catch (error) {
+          console.error('Error fetching student details:', error);
+          details[studentId] = 'Học sinh';
+        }
+      }
+      setStudentDetails(details);
+    };
+
+    fetchStudentDetails();
+  }, [selectedClass]);
 
   const handleSelectClass = useCallback((cls) => {
     setSelectedClass(cls);
@@ -32,6 +63,52 @@ const FacultyPage = ({ user, userData, onSignOut }) => {
 
   const handleWorksheetClick = () => {
     handleNavigate('/faculty/worksheet/management');
+  };
+
+  const handleDeleteStudent = async (studentId, studentName) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa học sinh "${studentName}" khỏi lớp?\n\nTất cả phiếu bài tập của học sinh này sẽ bị xóa.`)) {
+      return;
+    }
+
+    setDeleting(studentId);
+    try {
+      // Lấy tất cả worksheet_result của học sinh này trong lớp
+      const q = query(
+        collection(db, 'worksheet_results'),
+        where('studentId', '==', studentId),
+        where('classId', '==', selectedClass.id)
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      // Xóa từng worksheet result
+      for (const docSnapshot of querySnapshot.docs) {
+        await deleteDoc(doc(db, 'worksheet_results', docSnapshot.id));
+      }
+
+      // Xóa học sinh khỏi mảng students của lớp
+      const updatedStudents = selectedClass.students.filter(s => {
+        const id = typeof s === 'string' ? s : s.id;
+        return id !== studentId;
+      });
+
+      await updateDoc(doc(db, 'classes', selectedClass.id), {
+        students: updatedStudents
+      });
+
+      // Cập nhật lại selectedClass
+      setSelectedClass({
+        ...selectedClass,
+        students: updatedStudents
+      });
+
+      alert('Xóa học sinh thành công!');
+    } catch (error) {
+      console.error('Lỗi khi xóa học sinh:', error);
+      alert('Có lỗi xảy ra khi xóa học sinh. Vui lòng thử lại.');
+    } finally {
+      setDeleting(null);
+    }
   };
 
   // Early return if loading
@@ -118,23 +195,65 @@ const FacultyPage = ({ user, userData, onSignOut }) => {
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="rounded-2xl bg-white bg-opacity-95 p-5 shadow-xl sm:p-8">
-            <h3 className="mb-4 text-xl font-bold text-gray-800 sm:mb-6 sm:text-2xl">🚀 Hành động nhanh</h3>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
-              <button className="touch-btn h-auto min-h-11 rounded-xl bg-gradient-to-br from-purple-100 to-purple-50 p-4 text-center text-sm font-semibold text-purple-700 transition-all duration-300 hover:from-purple-200 hover:to-purple-100 hover:shadow-lg sm:text-base" onClick={() => handleNavigate('/faculty/learning-pathway/exam')}>
-                ➕ Thêm chủ đề
-              </button>
-              <button className="touch-btn h-auto min-h-11 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 p-4 text-center text-sm font-semibold text-blue-700 transition-all duration-300 hover:from-blue-200 hover:to-blue-100 hover:shadow-lg sm:text-base" onClick={() => handleNavigate('/faculty/learning-pathway/exam')}>
-                ➕ Tạo đề thi
-              </button>
-              <button className="touch-btn h-auto min-h-11 rounded-xl bg-gradient-to-br from-green-100 to-green-50 p-4 text-center text-sm font-semibold text-green-700 transition-all duration-300 hover:from-green-200 hover:to-green-100 hover:shadow-lg sm:text-base">
-                👥 Danh sách HS
-              </button>
-              <button className="touch-btn h-auto min-h-11 rounded-xl bg-gradient-to-br from-orange-100 to-orange-50 p-4 text-center text-sm font-semibold text-orange-700 transition-all duration-300 hover:from-orange-200 hover:to-orange-100 hover:shadow-lg sm:text-base">
-                📊 Báo cáo
-              </button>
-            </div>
+          {/* Student List Section */}
+          <div className="mt-10">
+            <button
+              onClick={() => setShowStudentList(!showStudentList)}
+              className="mb-5 flex w-full items-center justify-between rounded-xl bg-white px-6 py-4 shadow-lg transition-all duration-300 hover:shadow-xl sm:w-auto"
+            >
+              <span className="text-lg font-bold text-gray-800">👥 Danh sách học sinh ({selectedClass.students?.length || 0})</span>
+              <span className={`text-2xl transition-transform duration-300 ${showStudentList ? 'rotate-180' : ''}`}>▼</span>
+            </button>
+
+            {showStudentList && (
+              <div className="rounded-xl bg-white p-6 shadow-xl sm:p-8">
+                {/* Search Box */}
+                <div className="mb-6">
+                  <input
+                    type="text"
+                    placeholder="🔍 Tìm kiếm tên học sinh..."
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    className="w-full rounded-lg border-2 border-gray-300 px-4 py-2 text-base transition-all duration-300 focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* Student List */}
+                <div className="space-y-2">
+                  {(!selectedClass.students || selectedClass.students.length === 0) ? (
+                    <div className="py-8 text-center text-gray-500">
+                      <p className="text-lg">Chưa có học sinh trong lớp</p>
+                    </div>
+                  ) : (
+                    selectedClass.students
+                      .filter((studentId) => {
+                        const studentName = studentDetails[studentId] || 'Học sinh';
+                        return studentName.toLowerCase().includes(studentSearch.toLowerCase());
+                      })
+                      .map((studentId, idx) => {
+                        const studentName = studentDetails[studentId] || '...';
+                        
+                        return (
+                          <div
+                            key={studentId}
+                            className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 transition-all duration-300 hover:bg-gray-100"
+                          >
+                            <span className="text-base font-medium text-gray-800">{studentName}</span>
+                            <button
+                              onClick={() => handleDeleteStudent(studentId, studentName)}
+                              disabled={deleting === studentId}
+                              className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-600 transition-all duration-300 hover:bg-red-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Xóa học sinh"
+                            >
+                              {deleting === studentId ? '...' : '×'}
+                            </button>
+                          </div>
+                        );
+                      })
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

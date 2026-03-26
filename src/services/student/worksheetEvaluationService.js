@@ -124,14 +124,15 @@ ${arrangementText}
 QUAN TRỌNG: Mỗi cách PHẢI CÓ ĐỦ tất cả các bước cần thiết. Nếu một cách thiếu bước hoặc chỉ có 1-2 bước -> cách đó được tính là SAI HOÀN TOÀN.
 - Yêu cầu: Tối thiểu 2 CÁCH đầy đủ bước và đúng logic thứ tự.
 - Mức Tốt (2 điểm): Xếp đúng ≥2 cách (mỗi cách đầy đủ bước + thứ tự logic đúng).
-- Mức Cần cố gắng (0 điểm): Xếp < 2 cách đầy đủ, HOẶC các cách bị thiếu bước, HOẶC thứ tự logic sai.
+- Mức Đạt (1 điểm): ếp đúng 1 cách (đầy đủ bước + thứ tự logic đúng).
+- Mức Cần cố gắng (0 điểm): Xếp < 1 cách đầy đủ, HOẶC các cách bị thiếu bước, HOẶC thứ tự logic sai.
 
 [YÊU CẦU ĐẦU RA]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
-  "suy_luan": "Bước 1: Đếm số bước trong mỗi cách mà HS xếp. Bước 2: So sánh với số bước cần thiết từ Barem. Bước 3: Nếu cách nào thiếu bước (ví dụ chỉ có 2-3 bước thay vì 4-5 bước) -> TÍNH CÁC ĐÓ LÀ SAI. Bước 4: Đếm có bao nhiêu cách đầy đủ bước VÀ thứ tự đúng. Kết luận: Nếu >= 2 cách đầy đủ -> 2 điểm, ngược lại -> 0 điểm.",
-  "diem": (0 hoặc 2),
-  "muc_nang_luc": "(cần cố gắng / tốt)",
+  "suy_luan": "Bước 1: Đếm số bước trong mỗi cách mà HS xếp. Bước 2: So sánh với số bước cần thiết từ Barem. Bước 3: Nếu cách nào thiếu bước (ví dụ chỉ có 2-3 bước thay vì 4-5 bước) -> TÍNH CÁC ĐÓ LÀ SAI. Bước 4: Đếm có bao nhiêu cách đầy đủ bước VÀ thứ tự đúng. Kết luận: Nếu >= 2 cách đầy đủ -> 2 điểm, có 1 cách đúng -> 1 điểm,  không có cách nào đúng -> 0 điểm.",
+  "diem": (0 ,1 hoặc 2),
+  "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
   "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Nêu rõ: học sinh sắp xếp được mấy cách đầy đủ, những cách nào bị thiếu bước (và thiếu bước nào cụ thể). Nhắc nhở HS rằng mỗi cách phải trình bày đủ các phép tính từ đầu đến cuối. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'ID'."
 }`;
 

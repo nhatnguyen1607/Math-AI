@@ -155,9 +155,9 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
       }
       setWorksheetData(data);
 
-      // Check if already submitted
-      if (user?.uid) {
-        const resultId = `${user.uid}_${worksheetId}`;
+      // Check if already submitted for this specific class
+      if (user?.uid && classId && classId !== 'undefined') {
+        const resultId = `${user.uid}_${classId}_${worksheetId}`;
         try {
           const result = await worksheetResultService.getWorksheetResult(resultId);
           if (result) {
@@ -173,7 +173,7 @@ const StudentWorksheetPage = ({ user, onSignOut }) => {
     } finally {
       setLoading(false);
     }
-  }, [worksheet, worksheetId, user?.uid]);
+  }, [worksheet, worksheetId, user?.uid, classId]);
 
   useEffect(() => {
     loadWorksheet();

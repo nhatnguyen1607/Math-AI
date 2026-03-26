@@ -23,23 +23,34 @@ const StudentWorksheetSelectionPage = ({ user, onSignOut }) => {
   const loadWorksheets = useCallback(async () => {
     try {
       setLoading(true);
-      // Load all worksheets by type (không lọc classId)
-      const data = await worksheetService.getWorksheetsByType(worksheetType);
+      // Load worksheets by type and class
+      const data = await worksheetService.getWorksheetsByType(worksheetType, classId);
       setWorksheets(data || []);
 
       // Check which worksheets have been submitted by student
       const submitted = {};
-      for (const ws of data || []) {
-        const resultId = `${user.uid}_${ws.id}`;
-        try {
-          const result =
-            await worksheetResultService.getWorksheetResult(resultId);
-          if (result) {
-            submitted[ws.id] = result;
+      try {
+        // Only load submitted worksheets if both user uid and classId exist
+        if (user?.uid && classId && classId !== 'undefined') {
+          try {
+            const allResults = await worksheetResultService.getStudentWorksheetResults(user.uid, classId);
+            if (allResults && Array.isArray(allResults) && allResults.length > 0) {
+              for (const result of allResults) {
+                if (result) {
+                  const wsId = result.worksheetId || result.wsId || result.sheetId || result.id;
+                  if (wsId) {
+                    submitted[wsId] = result;
+                  }
+                }
+              }
+            }
+          } catch (innerError) {
+            console.log('Inner error loading student results:', innerError);
+            // Continue without submitted worksheets if there's an error
           }
-        } catch (error) {
-          // No result found, which is fine
         }
+      } catch (error) {
+        console.log('Could not load submitted worksheets', error);
       }
       setSubmittedWorksheets(submitted);
     } catch (error) {
@@ -48,7 +59,7 @@ const StudentWorksheetSelectionPage = ({ user, onSignOut }) => {
     } finally {
       setLoading(false);
     }
-  }, [worksheetType, user?.uid]);
+  }, [worksheetType, classId, user?.uid]);
 
   useEffect(() => {
     if (worksheetType && classId) {

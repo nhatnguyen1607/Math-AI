@@ -26,7 +26,7 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
         setLoading(true);
         
         // Load worksheet info
-        const worksheetData = await worksheetService.getWorksheetById(worksheetId);
+        const worksheetData = await worksheetService.getWorksheetById(worksheetId, classId);
         setWorksheet(worksheetData);
 
         // Load class name

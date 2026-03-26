@@ -15,7 +15,7 @@ import * as worksheetEvaluationService from './worksheetEvaluationService';
 // Tạo kết quả phiếu bài tập
 export const createWorksheetResult = async (resultData, worksheet) => {
   try {
-    const resultId = `${resultData.studentId}_${resultData.worksheetId}`;
+    const resultId = `${resultData.studentId}_${resultData.classId}_${resultData.worksheetId}`;
 
     // Gọi API để đánh giá bài làm
     const evaluation = await worksheetEvaluationService.evaluateWorksheet(

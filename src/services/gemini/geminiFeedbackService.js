@@ -352,6 +352,106 @@ HƯỚNG DẪN VIẾT NHẬN XÉT:
     }
   }
 
+  /**
+   * Tạo nhận xét chung dựa trên điểm 4TC và chủ đề
+   * @param {Object} currentEval - Đánh giá hiện tại với TC1-TC4
+   * @param {string} topic - Chủ đề (ví dụ: "cộng số thập phân")
+   * @param {string} deBai - Đề bài
+   * @returns {Promise<string>} - Nhận xét chung
+   */
+  async generateGeneralComment(currentEval, topic, deBai) {
+    try {
+      const scores = {
+        TC1: currentEval?.TC1?.diem || 0,
+        TC2: currentEval?.TC2?.diem || 0,
+        TC3: currentEval?.TC3?.diem || 0,
+        TC4: currentEval?.TC4?.diem || 0,
+      };
+      
+      const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
+      const topicText = `${topic || ''} ${deBai || ''}`.toLowerCase();
+
+      // Infer the exact skill focus to keep feedback tied to the current lesson title.
+      let lessonFocus = topic || 'toán học';
+      let focusKeywords = 'phân tích đề, chọn phép tính phù hợp, trình bày bài giải rõ ràng';
+      let focusRule = 'thực hiện đúng quy tắc của dạng toán hiện tại và kiểm tra lại kết quả';
+
+      if (topicText.includes('cộng') && topicText.includes('thập phân')) {
+        lessonFocus = 'cộng số thập phân';
+        focusKeywords = 'đặt tính theo cột dọc, thẳng cột các hàng, dấu phẩy thẳng hàng, cộng lần lượt từ phải sang trái';
+        focusRule = 'khi số chữ số thập phân khác nhau có thể thêm 0 vào bên phải phần thập phân trước khi cộng';
+      } else if (topicText.includes('trừ') && topicText.includes('thập phân')) {
+        lessonFocus = 'trừ số thập phân';
+        focusKeywords = 'đặt tính theo cột dọc, thẳng cột các hàng, dấu phẩy thẳng hàng, mượn đúng khi trừ';
+        focusRule = 'khi số chữ số thập phân khác nhau có thể thêm 0 vào bên phải phần thập phân trước khi trừ';
+      } else if (topicText.includes('nhân') && topicText.includes('thập phân')) {
+        lessonFocus = 'nhân số thập phân';
+        focusKeywords = 'nhân như số tự nhiên, đếm tổng chữ số phần thập phân, đặt dấu phẩy đúng vị trí ở tích';
+        focusRule = 'trình bày rõ bước nhân từng hàng và kiểm tra lại vị trí dấu phẩy ở kết quả cuối cùng';
+      } else if (topicText.includes('chia') && topicText.includes('thập phân')) {
+        lessonFocus = 'chia số thập phân';
+        focusKeywords = 'dịch dấu phẩy để đưa về phép chia phù hợp, chia tuần tự, hạ chữ số đúng quy tắc';
+        focusRule = 'xử lý dấu phẩy ở số bị chia/số chia chính xác trước khi thực hiện chia';
+      }
+      
+      // Build detailed evaluation context based on TC scores
+      let evaluationContext = `\nPhân tích chi tiết:\n`;
+      evaluationContext += `- TC1 (Nhận biết vấn đề): ${scores.TC1}/2 - ${scores.TC1 === 2 ? 'Học sinh đã nắm vững' : scores.TC1 === 1 ? 'Học sinh hiểu phần lớn' : 'Học sinh cần cải thiện'}\n`;
+      evaluationContext += `- TC2 (Cách thức giải): ${scores.TC2}/2 - ${scores.TC2 === 2 ? 'Lựa chọn phương pháp tối ưu' : scores.TC2 === 1 ? 'Chọn phương pháp nhưng còn vấn đề' : 'Còn khó khăn trong phương pháp'}\n`;
+      evaluationContext += `- TC3 (Trình bày giải): ${scores.TC3}/2 - ${scores.TC3 === 2 ? 'Trình bày rõ ràng, logic' : scores.TC3 === 1 ? 'Trình bày tạm ổn nhưng chưa chi tiết' : 'Trình bày chưa rõ ràng'}\n`;
+      evaluationContext += `- TC4 (Kiểm tra kết quả): ${scores.TC4}/2 - ${scores.TC4 === 2 ? 'Đáp số chính xác, kiểm chứng tốt' : scores.TC4 === 1 ? 'Đáp số chủ yếu đúng' : 'Đáp số sai'}\n`;
+      
+      const prompt = `Bạn là một giáo viên toán lớp 5 có kinh nghiệm, đang viết nhận xét chuyên môn cho trang báo cáo kết quả.
+
+THÔNG TIN ĐÁNH GIÁ:
+Chủ đề hiển thị: ${topic}
+Trọng tâm bài hiện tại: ${lessonFocus}
+Đề bài: ${deBai}
+Điểm 4TC: TC1=${scores.TC1}/2, TC2=${scores.TC2}/2, TC3=${scores.TC3}/2, TC4=${scores.TC4}/2
+Tổng điểm: ${totalScore}/8
+Từ khóa bắt buộc bám sát: ${focusKeywords}
+Quy tắc cần nhấn mạnh: ${focusRule}
+${evaluationContext}
+
+HƯỚNG DẪN VIẾT NHẬN XÉT CHUNG:
+Hãy viết nhận xét (6-8 câu) từ góc độ giáo viên, bám sát CHÍNH XÁC trọng tâm "${lessonFocus}" và các điểm mạnh/yếu cụ thể:
+
+1️⃣ NHẬN XÉT TÍCH CỰC (Điểm mạnh):
+- Nêu rõ điều gì học sinh đã làm tốt trong chủ đề ${lessonFocus}
+- Dùng ví dụ cụ thể liên quan đến quy tắc/khái niệm của ${lessonFocus}
+- Ví dụ: "Học sinh đã đọc hiểu đúng của bài toán", "Học sinh tính toán chính xác", v.v.
+
+2️⃣ NHẬN XÉT CẦN CẢI THIỆN (Điểm yếu):
+- Nêu cụ thể những lỗi hoặc thiếu sót liên quan đến "${lessonFocus}"
+- Không nói chung chung, mà phải cụ thể về quy tắc/bước làm
+- Ví dụ cho cộng số thập phân: "Cần chú ý đặt dấu phẩy thẳng hàng", "Nên thêm số 0 vào bên phải", v.v.
+
+3️⃣ GỢI Ý CẢI THIỆN:
+- Đưa ra cách cụ thể để học sinh tránh lỗi
+- Khuyến khích luyện tập thêm các dạng bài tương tự
+
+NGÔN NGỮ:
+- TUYỆT ĐỐI KHÔNG mở đầu bằng lời chào như "Chào phụ huynh", "Chào phụ huynh và học sinh", "Kính gửi", ...
+- Bắt đầu trực tiếp bằng nhận định chuyên môn.
+- Viết từ góc độ giáo viên (không xưng "em", không xưng "cô", ưu tiên dùng "học sinh").
+- Bám sát chủ đề: dùng từ khóa, quy tắc, khái niệm của ${lessonFocus}
+- Thân thiện, tích cực, nhưng chuyên nghiệp
+- Dễ hiểu cho phụ huynh lớp 5`;
+
+      const result = await this._rateLimitedGenerate(prompt);
+      const rawComment = result?.response?.text?.() || result?.text?.() || '';
+      const comment = String(rawComment)
+        .replace(/^\s*(chào|kính gửi)[^\n]*\n?/i, '')
+        .replace(/^\s*(thưa)[^\n]*\n?/i, '')
+        .trim();
+      
+      return comment;
+    } catch (error) {
+      console.error('Error generating general comment:', error);
+      return 'Không thể tạo nhận xét chung. Vui lòng thử lại.';
+    }
+  }
+
 }
 
 const geminiFeedbackServiceInstance = new GeminiFeedbackService();

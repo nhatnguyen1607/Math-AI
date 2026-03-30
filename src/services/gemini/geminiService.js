@@ -91,6 +91,10 @@ export class GeminiService {
     return this._feedbackService.evaluatePolyaStep(chatHistory, problem);
   }
 
+  async generateGeneralComment(currentEval, topic, deBai) {
+    return this._feedbackService.generateGeneralComment(currentEval, topic, deBai);
+  }
+
   // ============ PRACTICE SERVICE METHODS ============
 
 async generateSimilarProblem(

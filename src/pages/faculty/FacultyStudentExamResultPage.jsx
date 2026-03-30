@@ -21,6 +21,9 @@ const FacultyStudentExamResultPage = () => {
   const [loadingPractice, setLoadingPractice] = useState(true);
   const [aiAssessment, setAiAssessment] = useState(null);
   const [loadingAiAssessment, setLoadingAiAssessment] = useState(false);
+  
+  // Re-evaluation states for practice and van dung
+  const [reevalLoading, setReevalLoading] = useState({});
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -287,6 +290,97 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
     student,
     createFallbackAssessment,
   ]);
+
+  // Re-evaluate practice/van dung competency
+  const handleReevaluateCompetency = useCallback(async (type, baiNumber) => {
+    const key = `${type}_${baiNumber}`;
+    try {
+      setReevalLoading(prev => ({ ...prev, [key]: true }));
+
+      const baiData = type === 'practice' ? practiceData?.[baiNumber] : practiceData?.vanDung;
+      if (!baiData?.chatHistory || baiData.chatHistory.length === 0) {
+        alert('Không có dữ liệu chat để đánh giá');
+        return;
+      }
+
+      // Get topic for context
+      const topic = exam?.title || exam?.name || 'toán học';
+      
+      // Call evaluatePolyaStep with enhanced prompt
+      const evaluation = await geminiService.evaluatePolyaStep(
+        baiData.chatHistory,
+        baiData.deBai,
+        topic
+      );
+
+      // Update state
+      if (type === 'practice') {
+        // Update practiceData state
+        setPracticeData(prev => ({
+          ...prev,
+          [baiNumber]: { ...prev[baiNumber], evaluation }
+        }));
+      } else {
+        setPracticeData(prev => ({
+          ...prev,
+          vanDung: { ...prev.vanDung, evaluation }
+        }));
+      }
+      
+      alert('Đánh giá lại 4TC thành công!');
+    } catch (err) {
+      console.error('Error re-evaluating:', err);
+      alert('Lỗi khi đánh giá lại: ' + err.message);
+    } finally {
+      setReevalLoading(prev => ({ ...prev, [key]: false }));
+    }
+  }, [practiceData, exam?.title, exam?.name]);
+
+  // Re-evaluate practice general comment
+  const handleReevaluateComment = useCallback(async (type, baiNumber) => {
+    const key = `${type}_comment_${baiNumber}`;
+    try {
+      setReevalLoading(prev => ({ ...prev, [key]: true }));
+
+      const baiData = type === 'practice' ? practiceData?.[baiNumber] : practiceData?.vanDung;
+      
+      // Get current evaluation
+      const currentEval = baiData?.evaluation;
+      if (!currentEval) {
+        alert('Chưa có đánh giá 4TC, vui lòng đánh giá lại 4TC trước');
+        return;
+      }
+
+      // Get topic and create context
+      const topic = exam?.title || exam?.name || 'toán học';
+      const deBai = baiData?.deBai || '';
+      
+      // Create prompt for general comment
+      const comment = await geminiService.generateGeneralComment(currentEval, topic, deBai);
+
+      // Update state
+      const updatedEval = { ...currentEval, tongNhanXet: comment };
+      
+      if (type === 'practice') {
+        setPracticeData(prev => ({
+          ...prev,
+          [baiNumber]: { ...prev[baiNumber], evaluation: updatedEval }
+        }));
+      } else {
+        setPracticeData(prev => ({
+          ...prev,
+          vanDung: { ...prev.vanDung, evaluation: updatedEval }
+        }));
+      }
+      
+      alert('Tạo nhận xét chung thành công!');
+    } catch (err) {
+      console.error('Error creating comment:', err);
+      alert('Lỗi khi tạo nhận xét: ' + err.message);
+    } finally {
+      setReevalLoading(prev => ({ ...prev, [key]: false }));
+    }
+  }, [practiceData, exam?.title, exam?.name]);
 
   // Load AI assessment when viewing the competency evaluation tab
   useEffect(() => {
@@ -884,9 +978,22 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
                       {/* Evaluation Results */}
                       {evaluation && (
                         <div className="space-y-4">
-                          <h5 className="font-bold text-gray-800 text-lg mb-4">
-                            📊 Đánh giá 4 Tiêu chí Năng lực (Tối đa 8 điểm)
-                          </h5>
+                          <div className="flex justify-between items-center mb-4">
+                            <h5 className="font-bold text-gray-800 text-lg">
+                              📊 Đánh giá 4 Tiêu chí Năng lực (Tối đa 8 điểm)
+                            </h5>
+                            <button
+                              onClick={() => handleReevaluateCompetency('practice', baiNum)}
+                              disabled={reevalLoading[`practice_${baiNum}`]}
+                              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                                reevalLoading[`practice_${baiNum}`]
+                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                  : 'bg-blue-500 hover:bg-blue-600 text-white hover:shadow-lg'
+                              }`}
+                            >
+                              {reevalLoading[`practice_${baiNum}`] ? '⏳ Đang đánh giá...' : '🔄 Đánh giá lại 4TC'}
+                            </button>
+                          </div>
 
                           {/* 4 Tiêu chí TC1-TC4 */}
                           <div className="space-y-4">
@@ -958,13 +1065,26 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
                           {/* Nhận xét chung và Tổng điểm */}
                           {evaluation.tongNhanXet && (
                             <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-5 rounded-lg border-l-4 border-purple-500 space-y-3">
-                              <div>
-                                <p className="font-bold text-gray-800 mb-2">
-                                  💭 Nhận xét chung:
-                                </p>
-                                <p className="text-gray-700 text-sm">
-                                  {evaluation.tongNhanXet}
-                                </p>
+                              <div className="flex justify-between items-start gap-3">
+                                <div className="flex-1">
+                                  <p className="font-bold text-gray-800 mb-2">
+                                    💭 Nhận xét chung:
+                                  </p>
+                                  <p className="text-gray-700 text-sm">
+                                    {evaluation.tongNhanXet}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => handleReevaluateComment('practice', baiNum)}
+                                  disabled={reevalLoading[`practice_comment_${baiNum}`]}
+                                  className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex-shrink-0 ${
+                                    reevalLoading[`practice_comment_${baiNum}`]
+                                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                      : 'bg-purple-500 hover:bg-purple-600 text-white hover:shadow-lg'
+                                  }`}
+                                >
+                                  {reevalLoading[`practice_comment_${baiNum}`] ? '⏳' : '🔄 Tạo lại'}
+                                </button>
                               </div>
                               <div className="pt-3 border-t border-purple-200">
                                 <div className="flex justify-between items-center">
@@ -1091,9 +1211,22 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
                   {practiceData.vanDung?.status === "completed" &&
                   practiceData.vanDung?.evaluation ? (
                     <div className="space-y-6">
-                      <h5 className="font-bold text-gray-800 text-lg mb-4">
-                        📊 Đánh giá 4 Tiêu chí Năng lực (Tối đa 8 điểm)
-                      </h5>
+                      <div className="flex justify-between items-center mb-4">
+                        <h5 className="font-bold text-gray-800 text-lg">
+                          📊 Đánh giá 4 Tiêu chí Năng lực (Tối đa 8 điểm)
+                        </h5>
+                        <button
+                          onClick={() => handleReevaluateCompetency('vanDung', 'vanDung')}
+                          disabled={reevalLoading[`vanDung_vanDung`]}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                            reevalLoading[`vanDung_vanDung`]
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : 'bg-blue-500 hover:bg-blue-600 text-white hover:shadow-lg'
+                          }`}
+                        >
+                          {reevalLoading[`vanDung_vanDung`] ? '⏳ Đang đánh giá...' : '🔄 Đánh giá lại 4TC'}
+                        </button>
+                      </div>
 
                       {/* 4 Tiêu chí TC1-TC4 */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1167,13 +1300,26 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
                       {/* Nhận xét chung và Tổng điểm */}
                       <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-6 rounded-lg border-l-4 border-orange-500 space-y-4">
                         {practiceData.vanDung.evaluation?.tongNhanXet && (
-                          <div>
-                            <p className="font-bold text-gray-800 mb-2">
-                              💭 Nhận xét chung:
-                            </p>
-                            <p className="text-gray-700 text-sm leading-relaxed">
-                              {practiceData.vanDung.evaluation.tongNhanXet}
-                            </p>
+                          <div className="flex justify-between items-start gap-3">
+                            <div className="flex-1">
+                              <p className="font-bold text-gray-800 mb-2">
+                                💭 Nhận xét chung:
+                              </p>
+                              <p className="text-gray-700 text-sm leading-relaxed">
+                                {practiceData.vanDung.evaluation.tongNhanXet}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleReevaluateComment('vanDung', 'vanDung')}
+                              disabled={reevalLoading[`vanDung_comment_vanDung`]}
+                              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex-shrink-0 ${
+                                reevalLoading[`vanDung_comment_vanDung`]
+                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                  : 'bg-orange-500 hover:bg-orange-600 text-white hover:shadow-lg'
+                              }`}
+                            >
+                              {reevalLoading[`vanDung_comment_vanDung`] ? '⏳' : '🔄 Tạo lại'}
+                            </button>
                           </div>
                         )}
                         <div

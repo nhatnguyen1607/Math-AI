@@ -1,4 +1,5 @@
 import geminiServiceInstance from '../gemini/geminiService';
+import { EXAM_CONTEXTS, CHARACTER_GUIDE } from '../../constants/examContexts';
 // apiKeyManager no longer needed here (handled inside geminiModelManager)
 
 
@@ -21,11 +22,13 @@ class ExamGeneratorService {
    */
   async generateExamFromSamples(params) {
     try {
-      const { topicName, lessonName, sampleExams } = params;
+      const { topicName, lessonName, sampleExams, contextId } = params;
 
       if (!sampleExams || sampleExams.length === 0) {
         throw new Error('Chưa có đề mẫu nào để tạo đề');
       }
+
+      const selectedContext = EXAM_CONTEXTS.find((c) => c.id === contextId) || EXAM_CONTEXTS[0];
 
       // Chuẩn bị nội dung từ các đề mẫu để gửi cho AI
       const prompt = `Bạn là chuyên gia soạn đề thi toán lớp 5 theo phương pháp Polya.
@@ -35,6 +38,14 @@ class ExamGeneratorService {
 ═══════════════════════════════════════════════════════════════
 - **CHỦ ĐỀ**: ${topicName}
 - **TÊN BÀI HỌC**: ${lessonName}
+
+═══════════════════════════════════════════════════════════════
+🎭 **BỐI CẢNH VÀ NHÂN VẬT (BẮT BUỘC TUÂN THỦ)**
+═══════════════════════════════════════════════════════════════
+- **CHỦ ĐỀ BỐI CẢNH**: ${selectedContext.name}
+- **MÔ TẢ**: ${selectedContext.description}
+${CHARACTER_GUIDE}
+- **YÊU CẦU**: Context (đoạn văn bối cảnh) của cả Bài 1 và Bài 2 PHẢI là một câu chuyện thuộc chủ đề "${selectedContext.name}", có sự xuất hiện của Mai, Việt, hoặc Nam.
 
 📋 **CÁC ĐỀ MẪU THAM KHẢO (chỉ tham khảo cấu trúc)**:
 ${sampleExams.map((sample, idx) => `

@@ -38,7 +38,8 @@ const PracticeChat = ({
   evaluation = null,
   // parent may provide the scroll container ref (left column of page)
   scrollContainerRef = null,
-  topicName = ''
+  topicName = '',
+  examContextId = ''
 }) => {
   // Select the appropriate chat service based on topic using router
   const chatService = useMemo(() => {
@@ -157,7 +158,7 @@ const PracticeChat = ({
 
     // Nếu đã có chatHistory thì không khởi tạo lại, chỉ tiếp tục chat
     if (chatHistory && chatHistory.length > 0) {
-      chatService.restoreSession(deBai, chatHistory);
+      chatService.restoreSession(deBai, chatHistory, examContextId);
       setIsInitializing(false);
       hasInitializedRef.current = true;
       return;
@@ -170,7 +171,7 @@ const PracticeChat = ({
         setError(null);
         // Truyền flag isApplicationProblem nếu đây là bài vận dụng
         const isApplicationProblem = baiNumber === 'vanDung';
-        const response = await chatService.startNewProblem(deBai, isApplicationProblem);
+        const response = await chatService.startNewProblem(deBai, isApplicationProblem, examContextId);
         const aiMsg = {
           role: 'model',
           parts: [{ text: response.message }]
@@ -192,7 +193,7 @@ const PracticeChat = ({
 
     initializeProblem();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deBai, isCompleted, saveChatMessage, onChatUpdate]);
+  }, [deBai, examContextId, isCompleted, saveChatMessage, onChatUpdate]);
 
   // Auto scroll to bottom using parent-provided scroll container if available
   const scrollToBottom = () => {

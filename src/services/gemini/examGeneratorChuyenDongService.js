@@ -9,6 +9,7 @@
  */
 
 import geminiServiceInstance from './geminiService';
+import { EXAM_CONTEXTS, CHARACTER_GUIDE } from '../../constants/examContexts';
 
 class ExamGeneratorChuyenDongService {
   async initialize() {
@@ -25,11 +26,13 @@ class ExamGeneratorChuyenDongService {
    */
   async generateExamFromSamples(params) {
     try {
-      const { topicName, lessonName, sampleExams } = params;
+      const { topicName, lessonName, sampleExams, contextId } = params;
 
       if (!sampleExams || sampleExams.length === 0) {
         throw new Error('Chưa có đề mẫu nào để tạo đề');
       }
+
+      const selectedContext = EXAM_CONTEXTS.find((c) => c.id === contextId) || EXAM_CONTEXTS[0];
 
       const prompt = `Bạn là một AI Agent chuyên gia Toán chuyển động lớp 5. Bạn hiểu sâu sắc về mối liên hệ giữa Quãng đường, Vận tốc và Thời gian. Khả năng suy luận logic theo phương pháp Polya và kiến thức sư phạm để soạn đề thi.
 
@@ -38,6 +41,15 @@ class ExamGeneratorChuyenDongService {
 ═══════════════════════════════════════════════════════════════
 - **CHỦ ĐỀ**: ${topicName}
 - **TÊN BÀI HỌC**: ${lessonName}
+
+═══════════════════════════════════════════════════════════════
+🎭 **BỐI CẢNH VÀ NHÂN VẬT (BẮT BUỘC TUÂN THỦ)**
+═══════════════════════════════════════════════════════════════
+- **CHỦ ĐỀ BỐI CẢNH**: ${selectedContext.name}
+- **MÔ TẢ**: ${selectedContext.description}
+${CHARACTER_GUIDE}
+- **YÊU CẦU**: Context (đoạn văn bối cảnh) của cả Bài 1 và Bài 2 PHẢI là một câu chuyện thuộc chủ đề "${selectedContext.name}", có sự xuất hiện của Mai, Việt, hoặc Nam. Số liệu quãng đường, vận tốc, thời gian phải thực tế.
+- **QUY TẮC DIỄN ĐẠT THỜI GIAN**: Nếu đề có "nghỉ giữa các vòng/chặng" thì khi hỏi đội nào hoàn thành nhanh hơn, phải tính tổng thời gian BAO GỒM cả thời gian nghỉ. Chỉ dùng "được trừ X giây mỗi vòng" khi có cơ chế thưởng/trừ thời gian và nêu rõ quy tắc trừ.
 
 📋 **CÁC ĐỀ MẪU THAM KHẢO (chỉ tham khảo cấu trúc & phong cách)**:
 ${sampleExams.map((sample, idx) => `
@@ -129,6 +141,10 @@ ${this._formatSampleContent(sample.content)}
 🚫 **CẤM**: Bài toán "so sánh vận tốc" mà không hỏi "ai chạy nhanh hơn?"
    → Phải luôn có câu so sánh thực tế
 
+🚫 **CẤM**: Diễn đạt mơ hồ "được nghỉ X giây" nhưng lại ngầm trừ thời gian khi xếp hạng
+  → "Nghỉ" là thời gian phát sinh thật và phải cộng vào tổng thời gian hoàn thành
+  → Nếu muốn giảm thời gian xếp hạng, PHẢI ghi rõ: "được trừ X giây mỗi vòng" (thời gian thưởng)
+
 🚫 **CẤM**: Số liệu ra số thập phân lặp lại (0.333...) 
    → Chọn số chia hết hoặc ra thập phân đẹp
 
@@ -203,6 +219,7 @@ Sau đó là 6-10 câu nhỏ theo 4 bước Polya để giải"
 4. **Kiểm tra hợp lý**: Vận tốc người bộ (5-6 km/h), xe máy (30-50 km/h), ô tô (40-120 km/h)
 5. **Số liệu hợp lý**: Chia hết, không ra thập phân lặp lại
 6. **Bắt buộc 2 CÂU BƯỚC 4**: Kiểm tra, so sánh ý nghĩa thực tế
+7. **Rõ nghĩa thời gian**: Phân biệt rõ "thời gian nghỉ" (cộng vào tổng thời gian) và "thời gian được trừ" (trừ khỏi tổng thời gian xếp hạng)
 
 ═══════════════════════════════════════════════════════════════
 📄 **ĐỊNH DẠNG JSON OUTPUT (PHẢI CHÍNH XÁC)**

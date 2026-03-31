@@ -1,10 +1,16 @@
 import geminiModelManager from "./geminiModelManager";
+import { EXAM_CONTEXTS } from '../../constants/examContexts';
 
 export class GeminiChatServiceTiSo {
   constructor() {
     this.currentProblem = "";
     this.currentStep = 1;
     this.isSessionComplete = false;
+    this.currentContextId = EXAM_CONTEXTS[0]?.id || '';
+  }
+
+  _getContext() {
+    return EXAM_CONTEXTS.find((c) => c.id === this.currentContextId) || EXAM_CONTEXTS[0];
   }
 
   _getStepName(step) {
@@ -32,8 +38,11 @@ export class GeminiChatServiceTiSo {
       .replace(/\bem\s+(hãy|cần|có|là|vừa)/g, 'bạn $1');
   }
 
-  restoreSession(problemText, chatHistory) {
+  restoreSession(problemText, chatHistory, examContextId = '') {
     this.currentProblem = problemText;
+    if (examContextId) {
+      this.currentContextId = examContextId;
+    }
     const model = geminiModelManager.getModel();
     if (model && chatHistory && chatHistory.length > 0) {
       let fixedHistory = Array.isArray(chatHistory) ? [...chatHistory] : [];
@@ -49,8 +58,15 @@ export class GeminiChatServiceTiSo {
   }
 
   _buildSystemPrompt() {
+    const ctx = this._getContext();
+
     return `Bạn là "trợ lý học tập" dẫn dắt HS lớp 5 giải toán tỉ số theo 4 bước Polya. 
 Xưng hô: "mình" - "bạn". TUYỆT ĐỐI CẤM xưng "em", "học sinh" - PHẢI luôn xưng "bạn" ở MỌI chỗ.
+
+VAI TRÒ CỦA BẠN: BẠN ĐANG ĐÓNG VAI LÀ "${ctx.aiRole}".
+- Nhiệm vụ nhập vai: ${ctx.aiRoleDescription}
+- Hãy xưng hô thân thiện, nhất quán với vai trò này.
+- Trong cuộc trò chuyện, hãy nhắc đến các nhân vật Mai, Việt, Nam trong bối cảnh bài toán để tạo sự gần gũi.
 
 QUY TẮC PHẢN HỒI GỢI MỞ (SIÊU SÚC TÍCH):
 - Khi HS nói "không biết", "không hiểu" hoặc bế tắc:
@@ -79,12 +95,17 @@ LUÔN TRẢ VỀ JSON:
 }`;
   }
 
-  async startNewProblem(problemText) {
+  async startNewProblem(problemText, isApplicationProblem = false, examContextId = '') {
     this.currentProblem = problemText;
     this.currentStep = 1;
     this.isSessionComplete = false;
+    if (examContextId) {
+      this.currentContextId = examContextId;
+    }
 
-    const msg = `Chào bạn! Mình là trợ lý học tập của bạn. Chúng ta cùng giải bài toán tỉ số này nhé!\n\nBài toán: ${problemText}\n\nTrước tiên, bạn hãy cho mình biết bài toán đã cho những thông tin gì?`;
+    const ctx = this._getContext();
+
+    const msg = `Chào bạn! Mình là ${ctx.aiRole}. Chúng ta cùng giải bài toán tỉ số này nhé!\n\nBài toán: ${problemText}\n\nTrước tiên, bạn hãy cho mình biết bài toán đã cho những thông tin gì?`;
     return { message: msg, step: 1, stepName: this._getStepName(1) };
   }
 

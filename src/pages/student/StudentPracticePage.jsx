@@ -28,6 +28,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
   const [robotStatus, setRobotStatus] = useState('idle');
   const [robotMessage, setRobotMessage] = useState('');
   const [topicName, setTopicName] = useState('');
+  const [examContextId, setExamContextId] = useState('');
   const leftColRef = useRef(null);
 
   // Khởi tạo dữ liệu luyện tập
@@ -51,6 +52,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         
         const topicNameFromExam = examData.title || '';
         setTopicName(topicNameFromExam);
+        setExamContextId(examData.contextId || '');
 
         // Kiểm tra nếu đã có phiên luyện tập cũ
         const existingSession = await resultService.getPracticeSessionData(user.uid, examId);
@@ -63,6 +65,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
           }
           // 🆕 Add topicName to restored session data
           existingSession.topicName = topicNameFromExam;
+          existingSession.examContextId = examData.contextId || '';
           setPracticeData(existingSession);
           setLoading(false);
           return;
@@ -110,7 +113,10 @@ const StudentPracticePage = ({ user, onSignOut }) => {
             exercise2.name,        // startupProblem2
             topicNameFromExam,     // context (chủ đề) - FIX này! context1 chỉ là exercise.context, không phải topic
             1,                     // problemNumber
-            competencyLevel        // ✅ competencyLevel ĐÚNG vị trí 5
+            competencyLevel,
+            100,
+            '',
+            examData.contextId || ''
           );
         } catch (err1) {
           console.error('❌ [StudentPracticePage] Error generating problem 1:', err1);
@@ -124,7 +130,10 @@ const StudentPracticePage = ({ user, onSignOut }) => {
             exercise2.name,        // startupProblem2
             topicNameFromExam,     // context (chủ đề) - FIX này!
             2,                     // problemNumber
-            competencyLevel        // ✅ competencyLevel ĐÚNG vị trí 5
+            competencyLevel,
+            100,
+            '',
+            examData.contextId || ''
           );
         } catch (err2) {
           console.error('❌ [StudentPracticePage] Error generating problem 2:', err2);
@@ -142,6 +151,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         if (practice && practice.luyenTap) {
           // 🆕 Add topicName to practice data for sync
           practice.topicName = topicNameFromExam;
+          practice.examContextId = examData.contextId || '';
           setPracticeData(practice);
         } else {
           setError('Lỗi: Cấu trúc dữ liệu không hợp lệ');
@@ -345,6 +355,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
                   isCompleted={currentBai.status === 'completed'}
                   evaluation={currentBai.evaluation}
                   topicName={practiceData?.topicName || topicName}
+                  examContextId={practiceData?.examContextId || examContextId}
                   onCompleted={() => {
                     if (activeTab === 'bai1') {
                       handleSubmitPractice('bai1');

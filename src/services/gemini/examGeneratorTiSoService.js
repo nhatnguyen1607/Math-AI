@@ -1,6 +1,7 @@
 
 
 import geminiServiceInstance from './geminiService';
+import { EXAM_CONTEXTS, CHARACTER_GUIDE } from '../../constants/examContexts';
 
 class ExamGeneratorTiSoService {
   async initialize() {
@@ -17,11 +18,13 @@ class ExamGeneratorTiSoService {
    */
   async generateExamFromSamples(params) {
     try {
-      const { topicName, lessonName, sampleExams } = params;
+      const { topicName, lessonName, sampleExams, contextId } = params;
 
       if (!sampleExams || sampleExams.length === 0) {
         throw new Error('Chưa có đề mẫu nào để tạo đề');
       }
+
+      const selectedContext = EXAM_CONTEXTS.find((c) => c.id === contextId) || EXAM_CONTEXTS[0];
 
       const prompt = `Bạn là một AI Agent chuyên gia sư phạm Toán lớp 5, chuyên về mảng "Tỉ số và các bài toán liên quan". Bạn có khả năng suy luận logic theo phương pháp Polya và kiến thức sư phạm để soạn đề thi.
 
@@ -30,6 +33,14 @@ class ExamGeneratorTiSoService {
 ═══════════════════════════════════════════════════════════════
 - **CHỦ ĐỀ**: ${topicName}
 - **TÊN BÀI HỌC**: ${lessonName}
+
+═══════════════════════════════════════════════════════════════
+🎭 **BỐI CẢNH VÀ NHÂN VẬT (BẮT BUỘC TUÂN THỦ)**
+═══════════════════════════════════════════════════════════════
+- **CHỦ ĐỀ BỐI CẢNH**: ${selectedContext.name}
+- **MÔ TẢ**: ${selectedContext.description}
+${CHARACTER_GUIDE}
+- **YÊU CẦU**: Context (đoạn văn bối cảnh) của cả Bài 1 và Bài 2 PHẢI là một câu chuyện thuộc chủ đề "${selectedContext.name}", có sự xuất hiện của Mai, Việt, hoặc Nam.
 
 📋 **CÁC ĐỀ MẪU THAM KHẢO (chỉ tham khảo cấu trúc & phong cách)**:
 ${sampleExams.map((sample, idx) => `

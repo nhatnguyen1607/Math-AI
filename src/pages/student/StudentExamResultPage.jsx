@@ -220,7 +220,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
               <div className="relative z-10 mb-4 block text-5xl animate-bounce-gentle sm:text-6xl lg:text-7xl">🎉</div>
               <h1 className="relative z-10 mb-3 text-3xl font-bold font-quicksand sm:text-4xl lg:text-5xl">
-                Bạn đã hoàn thành bài thi!
+                Bạn đã hoàn thành trò chơi!
               </h1>
               <p className="relative z-10 text-base opacity-95 font-quicksand sm:text-lg lg:text-xl">Vui lòng xem chi tiết kết quả dưới đây</p>
               <button

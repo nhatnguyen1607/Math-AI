@@ -1,4 +1,5 @@
 import { GeminiPracticeService } from "./geminiPracticeService";
+import { EXAM_CONTEXTS, CHARACTER_GUIDE } from '../../constants/examContexts';
 
 const extractJSON = (text) => {
   try {
@@ -47,12 +48,21 @@ export class GeminiPracticeServiceTimeVelocity extends GeminiPracticeService {
     problemNumber = 1,
     competencyLevel = "Đạt",
     startupPercentage = 100,
-    specificWeaknesses = ""
+    specificWeaknesses = "",
+    examContextId = ""
   ) {
     // ✅ FIX: Use 'context' from params as topicName (Vietnamese lesson name)
     const topicName = context || "Vận tốc của một chuyển động đều";
     const lessonGuidance = this._getLessonSpecificGuidance(topicName);
     const difficultyGuidance = this._getDifficultyGuidance(competencyLevel, topicName);
+    const ctx = EXAM_CONTEXTS.find((c) => c.id === examContextId) || EXAM_CONTEXTS[0];
+    const contextInjection = `
+  ═══════════════════════════════════════════════════════════════
+  BOI CANH VA TUYEN NHAN VAT
+  ═══════════════════════════════════════════════════════════════
+  - Bai toan phai dien ra trong boi canh: ${ctx.name} (${ctx.description})
+  ${CHARACTER_GUIDE}
+  `;
 
     const prompt = `Bạn là chuyên gia ra đề toán tiểu học siêu việt.
 CHỦ ĐỀ & TRỌNG TÂM HIỆN TẠI: ${topicName}
@@ -64,11 +74,14 @@ Bài 56: Các đơn vị đo thời gian -> Bài 57: Cộng, trừ số đo th�
 2. CÂU HỎI CUỐI CÙNG của đề bài BẮT BUỘC phải hỏi ĐÚNG ĐẠI LƯỢNG trọng tâm của bài "${topicName}". (Ví dụ: Đang ở bài 59 thì câu hỏi chốt phải là "tính vận tốc", tuyệt đối không hỏi ngược lại quãng đường hay thời gian).
 3. CHỈ dùng dấu PHẨY (,) cho số thập phân, KHÔNG dùng dấu chấm (.). Ví dụ: 2,5 km/h, 0,75 giờ, 12,3 m/s
 4. CHỈ dùng số thập phân "ĐẸP" - HỮU HẠN không lặp lại. CÁCH: 2,3, 3,45, 0,5, 1,25, 0,75, 12,5. TUYỆT ĐỐI KHÔNG: 0,333... (1/3), 0,6666... (2/3), 0,1666... (1/6), 2,142857... (15/7)
+5. Nếu đề có "thời gian nghỉ" giữa các vòng/chặng thì tổng thời gian hoàn thành PHẢI tính cả thời gian nghỉ.
+6. Chỉ dùng cụm "được trừ X giây mỗi vòng" khi thực sự có cơ chế thưởng/trừ thời gian và phải nêu rõ đó là thời gian xếp hạng sau trừ.
 
 [ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
 Mức năng lực: ${competencyLevel}
 Yêu cầu sinh đề: ${difficultyGuidance}
 Lưu ý chuyên môn: ${lessonGuidance}
+${contextInjection}
 
 [YÊU CẦU ĐẦU RA JSON BẮT BUỘC]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
@@ -96,7 +109,8 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
       errorsInKhoiDong = [],
       weaknessesInLuyenTap = {},
       topicName = "Vận tốc của một chuyển động đều",
-      competencyLevel = "Đạt"
+      competencyLevel = "Đạt",
+      examContextId = ''
     } = studentContext;
 
     // ✅ FIX: Extract nhanXet (comments) from TC1-TC4 objects in weaknessesInLuyenTap
@@ -106,6 +120,14 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
     
     const errorLog = [...errorsInKhoiDong, ...practiceComments].join("; ");
     const difficultyGuidance = this._getDifficultyGuidance(competencyLevel, topicName);
+    const ctx = EXAM_CONTEXTS.find((c) => c.id === examContextId) || EXAM_CONTEXTS[0];
+    const contextInjection = `
+  ═══════════════════════════════════════════════════════════════
+  BOI CANH VA TUYEN NHAN VAT
+  ═══════════════════════════════════════════════════════════════
+  - Bai toan phai dien ra trong boi canh: ${ctx.name} (${ctx.description})
+  ${CHARACTER_GUIDE}
+  `;
 
     const prompt = `TẠO ĐỀ TOÁN VẬN DỤNG THỰC TẾ. 
 CHỦ ĐỀ & TRỌNG TÂM HIỆN TẠI: ${topicName}
@@ -117,11 +139,14 @@ Bài 56: Các đơn vị đo thời gian -> Bài 57: Cộng, trừ số đo th�
 2. CÂU HỎI CUỐI CÙNG của đề bài BẮT BUỘC phải là dạng toán "${topicName}". Không được nhầm lẫn sang đại lượng khác.
 3. CHỈ dùng dấu PHẨY (,) cho số thập phân, KHÔNG dùng dấu chấm (.). Ví dụ: 2,5 km/h, 0,75 giờ, 12,3 m/s
 4. CHỈ dùng số thập phân "ĐẸP" - HỮU HẠN không lặp lại. CÁCH: 2,3, 3,45, 0,5, 1,25, 0,75, 12,5. TUYỆT ĐỐI KHÔNG: 0,333... (1/3), 0,6666... (2/3), 0,1666... (1/6)
+5. Nếu đề có "thời gian nghỉ" giữa các vòng/chặng thì tổng thời gian hoàn thành PHẢI tính cả thời gian nghỉ.
+6. Chỉ dùng cụm "được trừ X giây mỗi vòng" khi thực sự có cơ chế thưởng/trừ thời gian và phải nêu rõ đó là thời gian xếp hạng sau trừ.
 
 [ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
 Mức năng lực: ${competencyLevel}
 Yêu cầu sinh đề: ${difficultyGuidance}
 Lỗi HS hay mắc: ${errorLog || "Không có lỗi cụ thể"}. (Tạo tình huống để rèn luyện tránh lỗi này).
+${contextInjection}
 
 [YÊU CẦU ĐẦU RA JSON BẮT BUỘC]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:

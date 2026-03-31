@@ -23,6 +23,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
   const [submitting, setSubmitting] = useState(false);
   const initializingRef = useRef(false); // Để track xem đã khởi tạo chưa
   const [examTitle, setExamTitle] = useState(''); // 🆕 Thêm state để lưu examTitle trực tiếp
+  const [examContextId, setExamContextId] = useState('');
 
   // UI state from practice layout
   const [activeTab, setActiveTab] = useState('vanDung');
@@ -62,6 +63,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
         const examTitle = exam.title || 'Bài toán';
         console.log('🔵 [StudentVanDungPage] Lấy examTitle từ exam:', examTitle);
         setExamTitle(examTitle);
+        setExamContextId(exam.contextId || '');
 
         // Kiểm tra nếu đã có phiên Vận dụng cũ (với dữ liệu sẵn)
         const existingVanDung = await resultService.getVanDungSession(user.uid, examId);
@@ -69,6 +71,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
           console.log('🔵 [StudentVanDungPage] Using existing VanDung, không regenerate');
           // 🆕 Ensure examTitle is added to existing vanDung too
           existingVanDung.examTitle = examTitle;
+          existingVanDung.examContextId = exam.contextId || '';
           setVanDungData(existingVanDung);
           setLoading(false);
           return;
@@ -141,7 +144,8 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
             errorsInKhoiDong: lỗiKhoiDong,
             weaknessesInLuyenTap: yếuĐiềmLuyenTap,
             topicName: exam.title || 'Bài toán',
-            practicePercentage: 0
+            practicePercentage: 0,
+            examContextId: exam.contextId || ''
           });
         } catch (err) {
           applicationProblem = 'Bài toán vận dụng. Bạn hãy giải quyết bài toán này bằng cách thực hiện đầy đủ 4 bước Polya.';
@@ -157,6 +161,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
         if (vanDung && vanDung.deBai) {
           // 🆕 Thêm examTitle vào vanDung data
           vanDung.examTitle = examTitle;
+          vanDung.examContextId = exam.contextId || '';
           console.log('🔵 [StudentVanDungPage] Setting vanDungData with examTitle:', examTitle);
           setVanDungData(vanDung);
         } else {
@@ -346,6 +351,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
                   isCompleted={vanDungData.status === 'completed'}
                   evaluation={vanDungData.evaluation}
                   topicName={vanDungData.examTitle || examTitle}
+                  examContextId={vanDungData.examContextId || examContextId}
                   // onCompleted={handleSubmitVanDung} // Bỏ tự động nộp
                   onRobotStateChange={(status, msg) => {
                     setRobotStatus(status);

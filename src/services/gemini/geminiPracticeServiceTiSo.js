@@ -1,4 +1,5 @@
 import { GeminiPracticeService } from "./geminiPracticeService";
+import { EXAM_CONTEXTS, CHARACTER_GUIDE } from '../../constants/examContexts';
 
 const extractJSON = (text) => {
   try {
@@ -49,12 +50,21 @@ export class GeminiPracticeServiceTiSo extends GeminiPracticeService {
     problemNumber = 1,
     competencyLevel = "Đạt",
     startupPercentage = 100,
-    specificWeaknesses = ""
+    specificWeaknesses = "",
+    examContextId = ""
   ) {
     // ✅ FIX: Use 'context' from params as topicName (Vietnamese lesson name)
     const topicName = context || "Tỉ số đơn giản";
     const lessonGuidance = this._getLessonSpecificGuidance(topicName);
     const difficultyGuidance = this._getDifficultyGuidance(competencyLevel, topicName);
+    const ctx = EXAM_CONTEXTS.find((c) => c.id === examContextId) || EXAM_CONTEXTS[0];
+    const contextInjection = `
+  ═══════════════════════════════════════════════════════════════
+  BOI CANH VA TUYEN NHAN VAT
+  ═══════════════════════════════════════════════════════════════
+  - Bai toan phai dien ra trong boi canh: ${ctx.name} (${ctx.description})
+  ${CHARACTER_GUIDE}
+  `;
 
     const prompt = `Bạn là chuyên gia ra đề toán tiểu học siêu việt.
 CHỦ ĐỀ & TRỌNG TÂM HIỆN TẠI: ${topicName}
@@ -71,6 +81,7 @@ Bài 36: Tỉ số, Tỉ số phần trăm -> Bài 37: Tỉ lệ bản đồ -> 
 Mức năng lực: ${competencyLevel}
 Yêu cầu sinh đề: ${difficultyGuidance}
 Lưu ý chuyên môn: ${lessonGuidance}
+${contextInjection}
 
 [YÊU CẦU ĐẦU RA JSON BẮT BUỘC]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
@@ -98,7 +109,8 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
       errorsInKhoiDong = [],
       weaknessesInLuyenTap = {},
       topicName = "Tỉ số",
-      competencyLevel = "Đạt"
+      competencyLevel = "Đạt",
+      examContextId = ''
     } = studentContext;
 
     // ✅ FIX: Extract nhanXet (comments) from TC1-TC4 objects in weaknessesInLuyenTap
@@ -108,6 +120,14 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
     
     const errorLog = [...errorsInKhoiDong, ...practiceComments].join("; ");
     const difficultyGuidance = this._getDifficultyGuidance(competencyLevel, topicName);
+    const ctx = EXAM_CONTEXTS.find((c) => c.id === examContextId) || EXAM_CONTEXTS[0];
+    const contextInjection = `
+  ═══════════════════════════════════════════════════════════════
+  BOI CANH VA TUYEN NHAN VAT
+  ═══════════════════════════════════════════════════════════════
+  - Bai toan phai dien ra trong boi canh: ${ctx.name} (${ctx.description})
+  ${CHARACTER_GUIDE}
+  `;
 
     const prompt = `TẠO ĐỀ TOÁN VẬN DỤNG THỰC TẾ. 
 CHỦ ĐỀ & TRỌNG TÂM HIỆN TẠI: ${topicName}
@@ -124,6 +144,7 @@ Bài 36: Tỉ số, Tỉ số phần trăm -> Bài 37: Tỉ lệ bản đồ -> 
 Mức năng lực: ${competencyLevel}
 Yêu cầu sinh đề: ${difficultyGuidance}
 Lỗi HS hay mắc: ${errorLog || "Không có lỗi cụ thể"}.
+${contextInjection}
 
 [YÊU CẦU ĐẦU RA JSON BẮT BUỘC]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:

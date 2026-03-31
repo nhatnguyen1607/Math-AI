@@ -8,6 +8,7 @@ import topicService from '../../services/faculty/topicService';
 // import geminiService from '../../services/geminiService';
 import examGeneratorRouter from '../../services/gemini/examGeneratorRouter';
 import { parseExamFile } from '../../services/faculty/fileParserService';
+import { EXAM_CONTEXTS } from '../../constants/examContexts';
 import ExamCard from '../../components/cards/ExamCard';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 
@@ -38,6 +39,7 @@ const FacultyExamManagementPage = () => {
   });
   const [selectedClassName, setSelectedClassName] = useState('');
   const [selectedTopicName, setSelectedTopicName] = useState('');
+  const [selectedContextId, setSelectedContextId] = useState('');
   
   // Effect to load initial values from location.state or URL params
   useEffect(() => {
@@ -325,6 +327,11 @@ const FacultyExamManagementPage = () => {
       return;
     }
 
+    if (!selectedContextId) {
+      alert('Vui lòng chọn bối cảnh bài toán trước');
+      return;
+    }
+
     setAiGenerating(true);
     setAiError(null);
     setAiExercises(null);
@@ -346,7 +353,8 @@ const FacultyExamManagementPage = () => {
       const generatedExercises = await examGeneratorRouter.generateExam({
         topicName: topic.name,
         lessonName: formData.title,
-        sampleExams: topic.sampleExams
+        sampleExams: topic.sampleExams,
+        contextId: selectedContextId
       });
       
       const serviceInfo = examGeneratorRouter.getServiceInfo(formData.title);
@@ -394,6 +402,11 @@ const FacultyExamManagementPage = () => {
 
     if (!formData.title.trim()) {
       alert('Vui lòng nhập tiêu đề bài ôn');
+      return;
+    }
+
+    if (!selectedContextId) {
+      alert('Vui lòng chọn bối cảnh bài toán');
       return;
     }
 
@@ -464,6 +477,7 @@ const FacultyExamManagementPage = () => {
         description: String(formData.description || '').trim(),
         classId: String(selectedClassId || ''),
         topicId: String(selectedTopicId || ''),
+        contextId: String(selectedContextId || ''),
         exercises: sanitizedExercises,
         status: editingExam?.status || 'draft',
         ...(editingExam?.createdBy && { createdBy: editingExam.createdBy }),
@@ -536,6 +550,7 @@ const FacultyExamManagementPage = () => {
 
   const handleEditExam = (exam) => {
     setEditingExam(exam);
+    setSelectedContextId(exam.contextId || '');
     setFormData({
       title: exam.title || '',
       description: exam.description || ''
@@ -576,6 +591,7 @@ const FacultyExamManagementPage = () => {
     ]);
     setCurrentExerciseIndex(0);
     setCurrentQuestionIndex(0);
+    setSelectedContextId('');
     setShowForm(false);
     setEditingExam(null);
   };
@@ -712,6 +728,21 @@ const FacultyExamManagementPage = () => {
                 <div className="mb-5 p-4 bg-purple-50 border-l-4 border-purple-500 rounded-lg">
                   <p className="text-purple-800 font-semibold mb-2">📚 Lớp học: {selectedClassName}</p>
                   <p className="text-purple-800 font-semibold">📖 Chủ đề: {selectedTopicName}</p>
+                </div>
+
+                <div className="mb-5">
+                  <label className="block mb-2 text-gray-700 font-semibold">Bối cảnh bài toán *</label>
+                  <select
+                    value={selectedContextId}
+                    onChange={(e) => setSelectedContextId(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                  >
+                    <option value="">-- Chọn bối cảnh hóa cho đề --</option>
+                    {EXAM_CONTEXTS.map((ctx) => (
+                      <option key={ctx.id} value={ctx.id}>{ctx.name}</option>
+                    ))}
+                  </select>
                 </div>
                 
                 <div className="mb-5">

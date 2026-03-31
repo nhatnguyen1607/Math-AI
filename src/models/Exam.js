@@ -13,6 +13,7 @@ export class Exam {
   constructor(data = {}) {
     this.id = data.id || '';
     this.topicId = data.topicId || '';
+    this.contextId = data.contextId || '';
     this.title = data.title || '';
     this.description = data.description || '';
     this.classId = data.classId || '';
@@ -99,6 +100,7 @@ export class Exam {
     
     return {
       topicId: this.topicId,
+      contextId: this.contextId,
       title: this.title,
       description: this.description,
       classId: this.classId,

@@ -1,11 +1,4 @@
-/**
- * examGeneratorTiSoService.js
- * 
- * Chuyên dụng cho chủ đề: TỈ SỐ VÀ CÁC BÀI TOÁN LIÊN QUAN
- * Role: AI Agent chuyên gia sư phạm Toán lớp 5, chuyên về tỉ số
- * 
- * Hiểu sâu: Tỉ số, tỉ lệ bản đồ, tìm hai số khi biết tổng/hiệu và tỉ số, tỉ số phần trăm
- */
+
 
 import geminiServiceInstance from './geminiService';
 

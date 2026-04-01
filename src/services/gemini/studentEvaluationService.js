@@ -237,7 +237,6 @@ class StudentEvaluationService {
   _analyzeChatForSpecificMistakes(chatHistory = [], problemText = '') {
     const messages = Array.isArray(chatHistory) ? chatHistory : [];
     const userMessages = messages.filter((m) => m?.role === 'user');
-    const assistantMessages = messages.filter((m) => m?.role === 'model' || m?.role === 'assistant');
     
     const analysis = {
       userTurns: userMessages.length,
@@ -293,7 +292,6 @@ class StudentEvaluationService {
     // Determine student's engagement level
     const hasAskedForHelp = chatAnalysis.askedForHints > 0;
     const hasMadeMistakes = chatAnalysis.askedAboutErrors > 0;
-    const manyInteractions = chatAnalysis.userTurns >= 4;
 
     if (weakSkills.length === 0) {
       const opening = isBai1
@@ -370,7 +368,6 @@ class StudentEvaluationService {
     const weakSkills = this._extractPracticeWeakSkillsFromTeacherEvaluation(teacherEvaluation);
     const strongSkills = this._extractPracticeStrongSkillsFromTeacherEvaluation(teacherEvaluation);
     const chatAnalysis = this._analyzeChatForSpecificMistakes(chatHistory, problemText);
-    const shortProblem = this._safeText(problemText).slice(0, 110);
 
     const isCompleted = status === 'completed';
     const hasAskedForHelp = chatAnalysis.askedForHints > 0;

@@ -5,6 +5,7 @@ import examSessionService from '../../services/faculty/examSessionService';
 import examService from '../../services/faculty/examService';
 import scoringService from '../../services/scoringService';
 import geminiService from '../../services/gemini/geminiService';
+import studentEvaluationService from '../../services/gemini/studentEvaluationService';
 import resultService from '../../services/faculty/resultService';
 
 /**
@@ -274,6 +275,54 @@ const StudentExamPage = ({ user, onSignOut }) => {
         questionComments = [];
       }
 
+      // 1.5. Tạo nhận xét chung cho học sinh (ưu tiên nhanh để hiển thị ngay)
+      let studentEvaluation = '';
+      try {
+        const questionCommentsByNum = (questionComments || []).reduce((acc, item) => {
+          if (item?.questionNum) {
+            acc[item.questionNum] = item.comment || '';
+          }
+          return acc;
+        }, {});
+
+        const questionReviews = questions.map((question, idx) => {
+          const answerData = validatedAnswers[String(idx)];
+          const selectedAnswer = answerData?.answer;
+          let studentAnswerText = 'Khong tra loi';
+          const isCorrectAnswer = Boolean(answerData?.isCorrect);
+
+          if (Array.isArray(selectedAnswer)) {
+            const selectedOptions = selectedAnswer
+              .map((optIndex) => question?.options?.[optIndex])
+              .filter(Boolean);
+            studentAnswerText = selectedOptions.length > 0
+              ? selectedOptions.join('; ')
+              : selectedAnswer.map((v) => String(v)).join(', ');
+          } else if (selectedAnswer !== null && selectedAnswer !== undefined) {
+            studentAnswerText = question?.options?.[selectedAnswer] || String(selectedAnswer);
+          }
+
+          return {
+            questionNum: idx + 1,
+            studentAnswer: studentAnswerText,
+            result: isCorrectAnswer ? 'dung' : 'sai',
+            comment: questionCommentsByNum[idx + 1] || (isCorrectAnswer
+              ? 'Bạn làm đúng câu này, tiếp tục phát huy nhé.'
+              : 'Bạn cần đọc kỹ đề và kiểm tra lại dữ kiện trước khi chọn đáp án.')
+          };
+        });
+
+        studentEvaluation = await studentEvaluationService.generateKhoiDongEvaluation({
+          examTitle: exam?.title || 'Bai hoc',
+          correctAnswers,
+          totalQuestions: questions.length,
+          questionComments,
+          questionReviews
+        });
+      } catch (studentEvalErr) {
+        console.error('Error generating student evaluation:', studentEvalErr);
+      }
+
       // Step 2: IMMEDIATELY save exam result to Firestore with questionComments
       // This allows student to see results page quickly without waiting for 4TC AI analysis
       // No need to calculate expectedLevel now - just show congratulations page
@@ -287,6 +336,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
               totalQuestions: questions.length,
               answers: answersArray,
               questionComments: questionComments || [],
+              student_evaluation: studentEvaluation || '',
               completedAt: new Date().toISOString()
             },
             sessionId
@@ -333,7 +383,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [answers, sessionId, user?.uid, exam?.id, isCompleted, isSubmitting, questions, navigate]);
+  }, [answers, sessionId, user?.uid, exam?.id, exam?.title, isCompleted, isSubmitting, questions, navigate]);
 
   // Handler: Câu hỏi tiếp theo
   const handleNextQuestion = () => {

@@ -5,6 +5,7 @@ import PracticeChat from '../../components/PracticeChat';
 import RobotCompanion from '../../components/common/RobotCompanion';
 import MobileRobotAvatar from '../../components/common/MobileRobotAvatar';
 import geminiService from '../../services/gemini/geminiService';
+import studentEvaluationService from '../../services/gemini/studentEvaluationService';
 import { practiceServiceRouter } from '../../services/serviceRouter';
 import resultService from '../../services/faculty/resultService';
 import examService from '../../services/faculty/examService';
@@ -201,11 +202,24 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
         latestVanDung.deBai
       );
 
+      let studentEvaluation = '';
+      try {
+        studentEvaluation = await studentEvaluationService.generateVanDungEvaluation({
+          status: 'completed',
+          chatHistory: latestVanDung.chatHistory || [],
+          teacherEvaluation: evaluation || null,
+          problemText: latestVanDung.deBai || ''
+        });
+      } catch (studentEvalError) {
+        console.error('Error generating van dung student evaluation:', studentEvalError);
+      }
+
       // Lưu kết quả đánh giá
       await resultService.completeVanDungExercise(
         user.uid,
         examId,
-        evaluation
+        evaluation,
+        studentEvaluation
       );
 
       // Cập nhật state

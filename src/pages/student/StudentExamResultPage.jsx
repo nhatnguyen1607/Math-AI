@@ -4,6 +4,7 @@ import StudentHeader from '../../components/student/StudentHeader';
 import examSessionService from '../../services/faculty/examSessionService';
 import examService from '../../services/faculty/examService';
 import resultService from '../../services/faculty/resultService';
+import studentEvaluationService from '../../services/gemini/studentEvaluationService';
 
 /**
  * StudentExamResultPage
@@ -38,6 +39,12 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
   // Practice states
   const [practiceData, setPracticeData] = useState(null);
   const [loadingPractice, setLoadingPractice] = useState(true);
+  const [regeneratingByPart, setRegeneratingByPart] = useState({
+    khoiDong: false,
+    luyenTap_bai1: false,
+    luyenTap_bai2: false,
+    vanDung: false
+  });
 
   // Lấy dữ liệu phiên thi và tiến trình
   useEffect(() => {
@@ -198,6 +205,177 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
     : Math.round((correctCount / totalQuestions) * 100);
     
   const isPassed = percentage >= 50;
+  const finalExamId = exam?.id || examIdParam || examIdFromState;
+
+  const updateLocalStudentEvaluation = (part, value) => {
+    setExamProgress((prev) => {
+      if (!prev?.parts) return prev;
+
+      if (part === 'luyenTap_bai1' || part === 'luyenTap_bai2') {
+        const baiKey = part === 'luyenTap_bai1' ? 'bai1' : 'bai2';
+        return {
+          ...prev,
+          parts: {
+            ...prev.parts,
+            luyenTap: {
+              ...(prev.parts.luyenTap || {}),
+              [baiKey]: {
+                ...(prev.parts.luyenTap?.[baiKey] || {}),
+                student_evaluation: value
+              }
+            }
+          }
+        };
+      }
+
+      return {
+        ...prev,
+        parts: {
+          ...prev.parts,
+          [part]: {
+            ...(prev.parts[part] || {}),
+            student_evaluation: value
+          }
+        }
+      };
+    });
+
+    if (part === 'luyenTap_bai1' || part === 'luyenTap_bai2') {
+      const baiKey = part === 'luyenTap_bai1' ? 'bai1' : 'bai2';
+      setPracticeData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          [baiKey]: {
+            ...(prev[baiKey] || {}),
+            student_evaluation: value
+          }
+        };
+      });
+    }
+  };
+
+  const handleRegenerateStudentEvaluation = async (part) => {
+    if (!user?.uid || !finalExamId || regeneratingByPart[part]) {
+      return;
+    }
+
+    try {
+      setRegeneratingByPart((prev) => ({ ...prev, [part]: true }));
+      let studentEvaluation = '';
+
+      if (part === 'khoiDong') {
+        const khoiDongData = examProgress?.parts?.khoiDong || {};
+        const questionCommentsByNum = (khoiDongData.questionComments || []).reduce((acc, item) => {
+          if (item?.questionNum) {
+            acc[item.questionNum] = item.comment || '';
+          }
+          return acc;
+        }, {});
+
+        const startupQuestions = (exam?.exercises || []).flatMap((exercise) => exercise?.questions || []);
+        const questionReviews = startupQuestions.map((question, idx) => {
+          const answerData = khoiDongData?.answers?.[idx] || {};
+          const selectedAnswer = answerData?.answer;
+          let studentAnswerText = 'Khong tra loi';
+          const isCorrectAnswer = Boolean(answerData?.isCorrect);
+
+          if (Array.isArray(selectedAnswer)) {
+            const selectedOptions = selectedAnswer
+              .map((optIndex) => question?.options?.[optIndex])
+              .filter(Boolean);
+            studentAnswerText = selectedOptions.length > 0
+              ? selectedOptions.join('; ')
+              : selectedAnswer.map((v) => String(v)).join(', ');
+          } else if (selectedAnswer !== null && selectedAnswer !== undefined) {
+            studentAnswerText = question?.options?.[selectedAnswer] || String(selectedAnswer);
+          }
+
+          return {
+            questionNum: idx + 1,
+            studentAnswer: studentAnswerText,
+            result: isCorrectAnswer ? 'dung' : 'sai',
+            comment: questionCommentsByNum[idx + 1] || (isCorrectAnswer
+              ? 'Bạn làm đúng câu này, tiếp tục phát huy nhé.'
+              : 'Bạn cần đọc kỹ đề và kiểm tra lại dữ kiện trước khi chọn đáp án.')
+          };
+        });
+
+        studentEvaluation = await studentEvaluationService.generateKhoiDongEvaluation({
+          examTitle: exam?.title || 'Bai hoc',
+          correctAnswers: khoiDongData.correctAnswers || correctCount || 0,
+          totalQuestions: khoiDongData.totalQuestions || totalQuestions || 0,
+          questionComments: khoiDongData.questionComments || [],
+          questionReviews
+        });
+      } else if (part === 'luyenTap_bai1' || part === 'luyenTap_bai2') {
+        const luyenTap = examProgress?.parts?.luyenTap || practiceData || {};
+        const baiNumber = part === 'luyenTap_bai1' ? 'bai1' : 'bai2';
+        const baiData = luyenTap?.[baiNumber] || {};
+        studentEvaluation = await studentEvaluationService.generateLuyenTapBaiEvaluation({
+          baiNumber,
+          status: baiData?.status || 'not_started',
+          chatHistory: baiData?.chatHistory || [],
+          teacherEvaluation: baiData?.evaluation || null,
+          problemText: baiData?.deBai || ''
+        });
+      } else if (part === 'vanDung') {
+        const vanDung = examProgress?.parts?.vanDung || {};
+        studentEvaluation = await studentEvaluationService.generateVanDungEvaluation({
+          status: vanDung?.status || 'not_started',
+          chatHistory: vanDung?.chatHistory || [],
+          teacherEvaluation: vanDung?.evaluation || null,
+          problemText: vanDung?.deBai || ''
+        });
+      }
+
+      await resultService.updatePartStudentEvaluation(user.uid, finalExamId, part, studentEvaluation);
+      updateLocalStudentEvaluation(part, studentEvaluation);
+    } catch (err) {
+      console.error('Regenerate student evaluation error:', err);
+    } finally {
+      setRegeneratingByPart((prev) => ({ ...prev, [part]: false }));
+    }
+  };
+
+  const renderStudentEvaluationCard = (part, evaluationText) => {
+    const loading = regeneratingByPart[part];
+    const hasText = Boolean(evaluationText && String(evaluationText).trim());
+    const titleMap = {
+      khoiDong: '💌 Nhận xét khởi động',
+      luyenTap_bai1: '💌 Nhận xét Bài 1 (Luyện tập)',
+      luyenTap_bai2: '💌 Nhận xét Bài 2 (Luyện tập)',
+      vanDung: '💌 Nhận xét vận dụng'
+    };
+    const cardTitle = titleMap[part] || '💌 Nhận xét chung dành cho bạn';
+
+    return (
+      <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 game-card border-t-4 border-pink-300">
+        <div className="p-6 sm:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h3 className="text-xl sm:text-2xl font-bold text-pink-700 font-quicksand">{cardTitle}</h3>
+            <button
+              onClick={() => handleRegenerateStudentEvaluation(part)}
+              disabled={loading}
+              className="touch-btn rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-5 text-sm sm:text-base font-bold text-white font-quicksand disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? '⏳ Đang nhận xét lại...' : '🔄 Nhận xét lại'}
+            </button>
+          </div>
+
+          {hasText ? (
+            <div className="p-5 rounded-max bg-pink-50 border-l-4 border-pink-400 text-gray-800 leading-relaxed">
+              {evaluationText}
+            </div>
+          ) : (
+            <div className="p-5 rounded-max bg-gray-50 border border-gray-200 text-gray-600">
+              Chưa có nhận xét chung cho phần này. Bạn có thể bấm "Nhận xét lại" để tạo nhận xét mới nhé.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // Render content based on active tab
   const renderTabContent = () => {
@@ -211,6 +389,8 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
   };
 
   const renderKhoiDongTab = () => {
+    const khoiDongStudentEvaluation = examProgress?.parts?.khoiDong?.student_evaluation || '';
+
     return (
       <div>
         {/* Congratulations Banner (only on first visit from exam) */}
@@ -567,6 +747,8 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
             )}
           </div>
         </div>
+
+        {renderStudentEvaluationCard('khoiDong', khoiDongStudentEvaluation)}
       </div>
     );
   };
@@ -580,15 +762,18 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
     const bai2Completed = practiceData?.bai2?.status === 'completed';
     const bothCompleted = bai1Completed && bai2Completed;
     const anyProgress = bai1Started || bai2Started;
+    const luyenTapBai1StudentEvaluation = examProgress?.parts?.luyenTap?.bai1?.student_evaluation || practiceData?.bai1?.student_evaluation || '';
+    const luyenTapBai2StudentEvaluation = examProgress?.parts?.luyenTap?.bai2?.student_evaluation || practiceData?.bai2?.student_evaluation || '';
 
     return (
-      <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 game-card">
-        <div className="bg-gradient-to-br from-blue-400 to-blue-500 p-6 text-center text-white sm:p-8 lg:p-10">
+      <div>
+        <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 game-card">
+          <div className="bg-gradient-to-br from-blue-400 to-blue-500 p-6 text-center text-white sm:p-8 lg:p-10">
           <h2 className="mb-2 text-2xl font-bold font-quicksand sm:text-3xl lg:text-4xl">📚 Phần Luyện tập</h2>
           <p className="text-base opacity-90 sm:text-lg">
             {bothCompleted ? '✅ Đã hoàn thành!' : anyProgress ? '⏳ Đang làm' : '🆕 Chưa thực hiện'}
           </p>
-        </div>
+          </div>
 
         {loadingPractice ? (
           <div className="p-12 text-center">
@@ -682,26 +867,32 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
             </button>
           </div>
         )}
+        </div>
+
+        {renderStudentEvaluationCard('luyenTap_bai1', luyenTapBai1StudentEvaluation)}
+        {renderStudentEvaluationCard('luyenTap_bai2', luyenTapBai2StudentEvaluation)}
       </div>
     );
   };
 
   const renderVanDungTab = () => {
     const vanDungData = examProgress?.parts?.vanDung;
+    const vanDungStudentEvaluation = examProgress?.parts?.vanDung?.student_evaluation || '';
     const luyenTapCompleted = 
       examProgress?.parts?.luyenTap?.bai1?.status === 'completed' &&
       examProgress?.parts?.luyenTap?.bai2?.status === 'completed';
 
     return (
-      <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 game-card">
-        <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-6 text-center text-white sm:p-8 lg:p-10">
+      <div>
+        <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 game-card">
+          <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-6 text-center text-white sm:p-8 lg:p-10">
           <h2 className="mb-2 text-2xl font-bold font-quicksand sm:text-3xl lg:text-4xl">🌟 Phần Vận dụng</h2>
           <p className="text-base opacity-90 sm:text-lg">
             {vanDungData?.status === 'completed' ? '✅ Đã hoàn thành!' : 
              vanDungData?.status === 'in_progress' ? '⏳ Đang làm' : 
              '🆕 Sẵn sàng bắt đầu'}
           </p>
-        </div>
+          </div>
 
         {!vanDungData ? (
           // Chưa bắt đầu Vận dụng
@@ -772,6 +963,9 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
             </button>
           </div>
         )}
+        </div>
+
+        {renderStudentEvaluationCard('vanDung', vanDungStudentEvaluation)}
       </div>
     );
   };

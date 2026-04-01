@@ -64,7 +64,7 @@ const StudentExamSelectionPage = ({
             </button>
             <div>
               <h2 className="text-4xl font-bold text-gray-800 font-quicksand">
-                Các đề thi bài tập
+                Các bài học
               </h2>
               {selectedTopic && (
                 <p className="text-gray-600 font-quicksand mt-1">

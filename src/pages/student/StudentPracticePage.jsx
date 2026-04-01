@@ -5,6 +5,7 @@ import PracticeChat from '../../components/PracticeChat';
 import RobotCompanion from '../../components/common/RobotCompanion';
 import MobileRobotAvatar from '../../components/common/MobileRobotAvatar';
 import geminiService from '../../services/gemini/geminiService';
+import studentEvaluationService from '../../services/gemini/studentEvaluationService';
 import { practiceServiceRouter } from '../../services/serviceRouter';
 import resultService from '../../services/faculty/resultService';
 import examService from '../../services/faculty/examService';
@@ -190,6 +191,19 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         baiData.deBai
       );
 
+      let studentEvaluation = '';
+      try {
+        studentEvaluation = await studentEvaluationService.generateLuyenTapBaiEvaluation({
+          baiNumber,
+          status: 'completed',
+          chatHistory: baiData.chatHistory || [],
+          teacherEvaluation: evaluation || null,
+          problemText: baiData.deBai || ''
+        });
+      } catch (studentEvalError) {
+        console.error('Error generating practice student evaluation:', studentEvalError);
+      }
+
       // update robot status based on evaluation
       const passed = evaluation.mucDoChinh === 'Tốt' || evaluation.mucDoChinh === 'Đạt';
       if (passed) {
@@ -210,7 +224,8 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         user.uid,
         examId,
         baiNumber,
-        evaluation
+        evaluation,
+        studentEvaluation
       );
 
       // Cập nhật state

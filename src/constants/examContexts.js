@@ -58,7 +58,7 @@ TUYEN NHAN VAT CO DINH (BAT BUOC):
 Moi bai toan su dung bo nhan vat hoc sinh: Mai, Viet, Nam.
 - Co the su dung linh hoat 1, 2 hoac ca 3 nhan vat tuy muc dich cua de.
 - Mai: Co the tham gia vao boi canh mua sam, nau an, nghe thuat.
-- Viet: Nang dong, thich the thao, kham pha.
+- Việt: Nang dong, thich the thao, kham pha.
 - Nam: Thong minh, thich tinh toan, lap ke hoach.
 QUY TAC NGHIEM NGAT: Cac nhan vat chi moi la hoc sinh lop 5.
 - KHONG THE tu lai xe may hay o to. Phuong tien di chuyen tu tuc chi co the la di bo hoac di xe dap.

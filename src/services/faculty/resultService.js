@@ -544,12 +544,16 @@ class ResultService {
         // Nếu document đã tồn tại, cập nhật phần tương ứng
         const existingData = existingDoc.data();
         const { part, data, sessionId } = progressData;
+        const existingPartData = existingData.parts?.[part] || {};
 
         updateData = {
           ...existingData,
           parts: {
             ...existingData.parts,
-            [part]: data
+            [part]: {
+              ...existingPartData,
+              ...(data || {})
+            }
           },
           latestSessionId: sessionId || null, // Luôn lưu sessionId gần nhất
           lastUpdatedAt: serverTimestamp()
@@ -713,6 +717,7 @@ class ResultService {
           originalContext: '',
           chatHistory: [],
           status: 'in_progress', // in_progress | completed
+          student_evaluation: '',
           evaluation: {
             nhanXet: '',
             diemTC: { tc1: 0, tc2: 0, tc3: 0, tc4: 0 },
@@ -725,6 +730,7 @@ class ResultService {
           originalContext: '',
           chatHistory: [],
           status: 'in_progress', // in_progress | completed | locked - changed to in_progress to allow students to work on both exercises
+          student_evaluation: '',
           evaluation: {
             nhanXet: '',
             diemTC: { tc1: 0, tc2: 0, tc3: 0, tc4: 0 },
@@ -864,7 +870,7 @@ class ResultService {
    * @param {Object} evaluation - Kết quả đánh giá từ Gemini
    * @returns {Promise<void>}
    */
-  async completePracticeExercise(userId, examId, baiNumber, evaluation) {
+  async completePracticeExercise(userId, examId, baiNumber, evaluation, studentEvaluation = null) {
     try {
       const docId = `${userId}_${examId}`;
       const progressRef = doc(db, 'student_exam_progress', docId);
@@ -877,6 +883,10 @@ class ResultService {
         [`parts.luyenTap.${baiNumber}.evaluation`]: evaluation,
         lastUpdatedAt: serverTimestamp()
       };
+
+      if (studentEvaluation) {
+        updateData[`parts.luyenTap.${baiNumber}.student_evaluation`] = studentEvaluation;
+      }
 
       // Nếu là bai1, mở khóa bai2
       if (nextBai) {
@@ -909,6 +919,7 @@ class ResultService {
         deBai: problemText,
         chatHistory: [],
         status: 'in_progress',
+        student_evaluation: '',
         evaluation: null,
         createdAt: serverTimestamp()
       };
@@ -966,17 +977,23 @@ class ResultService {
    * @param {Object} evaluation - Kết quả đánh giá (TC1-TC4)
    * @returns {Promise<void>}
    */
-  async completeVanDungExercise(userId, examId, evaluation) {
+  async completeVanDungExercise(userId, examId, evaluation, studentEvaluation = null) {
     try {
       const docId = `${userId}_${examId}`;
       const progressRef = doc(db, 'student_exam_progress', docId);
 
-      await updateDoc(progressRef, {
+      const updateData = {
         'parts.vanDung.status': 'completed',
         'parts.vanDung.evaluation': evaluation,
         'status': 'all_done', // Đánh dấu hoàn thành toàn bộ đề thi
         lastUpdatedAt: serverTimestamp()
-      });
+      };
+
+      if (studentEvaluation) {
+        updateData['parts.vanDung.student_evaluation'] = studentEvaluation;
+      }
+
+      await updateDoc(progressRef, updateData);
     } catch (error) {
       throw error;
     }
@@ -1000,6 +1017,32 @@ class ResultService {
 
       const data = progressDoc.data();
       return data.parts?.vanDung || null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updatePartStudentEvaluation(userId, examId, part, studentEvaluation) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+
+      const mapPath = {
+        khoiDong: 'parts.khoiDong.student_evaluation',
+        luyenTap_bai1: 'parts.luyenTap.bai1.student_evaluation',
+        luyenTap_bai2: 'parts.luyenTap.bai2.student_evaluation',
+        vanDung: 'parts.vanDung.student_evaluation'
+      };
+
+      const targetPath = mapPath[part];
+      if (!targetPath) {
+        throw new Error('Part không hợp lệ khi cập nhật nhận xét học sinh');
+      }
+
+      await updateDoc(progressRef, {
+        [targetPath]: studentEvaluation || '',
+        lastUpdatedAt: serverTimestamp()
+      });
     } catch (error) {
       throw error;
     }

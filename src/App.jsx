@@ -33,6 +33,7 @@ import FacultyWorksheetResultPage from './pages/faculty/FacultyWorksheetResultPa
 import StudentWorksheetSelectionPage from './pages/student/StudentWorksheetSelectionPage';
 import StudentWorksheetPage from './pages/student/StudentWorksheetPage';
 import StudentWorksheetResultPage from './pages/student/StudentWorksheetResultPage';
+import StudentLearningProfilePage from './pages/student/StudentLearningProfilePage';
 import TestRobotPage from './pages/TestRobotPage';
 
 function App() {
@@ -210,8 +211,10 @@ function App() {
         <Route path="/student/exam-lobby/:examId" element={user && (!userData || !userData.isFaculty()) ? <StudentExamLobbyPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
         <Route path="/student/exam/:sessionId" element={user && (!userData || !userData.isFaculty()) ? <StudentExamPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
         <Route path="/student/exam-result/:sessionId" element={user && (!userData || !userData.isFaculty()) ? <StudentExamResultPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/student/exam-result/id_exam/:examId" element={user && (!userData || !userData.isFaculty()) ? <StudentExamResultPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
         <Route path="/student/practice/:examId" element={user && (!userData || !userData.isFaculty()) ? <StudentPracticePage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
         <Route path="/student/van-dung/:examId" element={user && (!userData || !userData.isFaculty()) ? <StudentVanDungPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/student/profile" element={user && (!userData || !userData.isFaculty()) ? <StudentLearningProfilePage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
         <Route path="/student/:classId/worksheets" element={user && (!userData || !userData.isFaculty()) ? <StudentWorksheetSelectionPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
         <Route path="/student/:classId/worksheet/:worksheetId" element={user && (!userData || !userData.isFaculty()) ? <StudentWorksheetPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />
         <Route path="/student/:classId/worksheet/:worksheetId/result/:resultId" element={user && (!userData || !userData.isFaculty()) ? <StudentWorksheetResultPage user={user} onSignOut={handleSignOut} /> : user && userData && userData.isFaculty() ? <Navigate to="/faculty" replace /> : <Navigate to="/login" replace />} />

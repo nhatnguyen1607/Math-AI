@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { updateDoc, doc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { auth, db } from '../../firebase';
 
-const StudentHeader = ({ user, onLogout, onBack, navItems = [] }) => {
+const StudentHeader = ({ user, onLogout, onBack, navItems = [], profilePath = '/student/profile' }) => {
+  const navigate = useNavigate();
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.displayName || '');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -48,6 +50,10 @@ const StudentHeader = ({ user, onLogout, onBack, navItems = [] }) => {
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const handleProfileClick = () => {
+    navigate(profilePath);
   };
 
   return (
@@ -101,9 +107,17 @@ const StudentHeader = ({ user, onLogout, onBack, navItems = [] }) => {
                 Xin chào, {user?.displayName || user?.email || 'Học sinh'} ✏️
               </button>
             )}
-            {user?.photoURL && (
-              <img src={user.photoURL} alt="Avatar" className="h-11 w-11 rounded-full border-2 border-white/50 object-cover shadow-md" />
-            )}
+            <button
+              onClick={handleProfileClick}
+              title="Hồ sơ học tập"
+              className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/50 bg-indigo-500/80 text-white shadow-md transition hover:scale-105 hover:bg-indigo-500"
+            >
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt="Avatar" className="h-full w-full rounded-full object-cover" />
+              ) : (
+                <span className="font-bold">{(user?.displayName || user?.email || 'H').charAt(0).toUpperCase()}</span>
+              )}
+            </button>
             <button className="touch-btn bg-rose-600/90 text-white hover:bg-rose-700" onClick={handleLogout}>
               Đăng xuất
             </button>
@@ -156,12 +170,20 @@ const StudentHeader = ({ user, onLogout, onBack, navItems = [] }) => {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => setIsEditingName(true)}
-                  className="touch-btn w-full bg-white/15 text-white hover:bg-white/25"
-                >
-                  Đổi tên hiển thị
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    onClick={() => setIsEditingName(true)}
+                    className="touch-btn w-full bg-white/15 text-white hover:bg-white/25"
+                  >
+                    Đổi tên hiển thị
+                  </button>
+                  <button
+                    onClick={handleProfileClick}
+                    className="touch-btn w-full bg-indigo-500/80 text-white hover:bg-indigo-600"
+                  >
+                    Hồ sơ học tập
+                  </button>
+                </div>
               )}
 
               <button

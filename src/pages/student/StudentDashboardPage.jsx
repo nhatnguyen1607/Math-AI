@@ -8,6 +8,7 @@ import StudentHeader from "../../components/student/StudentHeader";
 import StudentTopicSelectionPage from "./StudentTopicSelectionPage";
 import StudentExamSelectionPage from "./StudentExamSelectionPage";
 import StudentLearningPathwayPage from "./StudentLearningPathwayPage";
+import levelService from "../../services/student/levelService";
 
 const StudentDashboardPage = ({ user, onSignOut }) => {
   const navigate = useNavigate();
@@ -21,6 +22,8 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
   const [selectedClass, setSelectedClass] = useState(null);
   const [showClassSelector, setShowClassSelector] = useState(false);
   const [studentClasses, setStudentClasses] = useState([]);
+  const [currentLevel, setCurrentLevel] = useState(null);
+  const [classLeaderboard, setClassLeaderboard] = useState([]);
 
   // Determine current view from URL path
   const currentView = location.includes("/pathways")
@@ -54,10 +57,10 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
         return;
       }
       try {
-        const [topicsData, statsData, examsData] = await Promise.all([
+        const [topicsData, examsData, profileData] = await Promise.all([
           studentService.getAvailableTopics(selectedClass?.id, "startup"),
-          studentService.getStudentStats(userId),
           studentService.getAvailableExams(selectedClass?.id, "startup"),
+          levelService.getStudentProfileData(userId),
         ]);
         setTopics(topicsData || []);
         const validExams = (examsData || []).filter((exam) => {
@@ -65,9 +68,28 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
         });
         setExams(validExams);
 
-        setUserStats(statsData);
+        // Calculate stats from profile data
+        if (profileData?.history) {
+          const completedCount = profileData.history.length;
+          const avgScore = completedCount > 0 
+            ? Math.round((profileData.history.reduce((sum, exam) => sum + (exam.dailyAverage3Parts || 0), 0) / completedCount) * 100) / 100
+            : 0;
+          setUserStats({
+            completedExams: completedCount,
+            averageScore: avgScore
+          });
+        } else {
+          setUserStats({
+            completedExams: 0,
+            averageScore: 0
+          });
+        }
       } catch (error) {
         console.error(error);
+        setUserStats({
+          completedExams: 0,
+          averageScore: 0
+        });
       } finally {
         setLoading(false);
       }
@@ -83,6 +105,39 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
       setLoading(false);
     }
   }, [selectedClass, user, loadClassData]);
+
+  useEffect(() => {
+    const loadLevelData = async () => {
+      if (!user?.uid) return;
+      try {
+        await levelService.recalculateLevelFromProgress(user.uid);
+        const levelData = await levelService.getUserLevel(user.uid);
+        setCurrentLevel(levelData);
+      } catch (error) {
+        console.error('Error loading user level:', error);
+      }
+    };
+
+    loadLevelData();
+  }, [user?.uid]);
+
+  useEffect(() => {
+    const loadLeaderboard = async () => {
+      if (!selectedClass?.id) {
+        setClassLeaderboard([]);
+        return;
+      }
+
+      try {
+        const leaderboard = await levelService.getClassLeaderboard(selectedClass.id);
+        setClassLeaderboard(leaderboard);
+      } catch (error) {
+        console.error('Error loading class leaderboard:', error);
+      }
+    };
+
+    loadLeaderboard();
+  }, [selectedClass?.id]);
 
   // Load class data when classId URL param changes
   useEffect(() => {
@@ -314,6 +369,13 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
                 {selectedClass?.name}
               </span>
             </p>
+            {currentLevel && (
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 shadow-sm">
+                <span className="text-lg">{currentLevel.levelIcon}</span>
+                <span className="font-bold text-gray-800">{currentLevel.level} - {currentLevel.levelName}</span>
+                <span className="text-sm font-semibold text-blue-700">({currentLevel.levelScore} điểm)</span>
+              </div>
+            )}
           </div>
 
           {/* Stats Section - Card Style */}
@@ -326,7 +388,7 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
                     {userStats?.completedExams || 0}
                   </div>
                   <div className="text-sm text-gray-700 font-quicksand sm:text-base">
-                    Đề thi hoàn thành
+                    Trò chơi hoàn thành
                   </div>
                 </div>
               </div>
@@ -403,6 +465,51 @@ const StudentDashboardPage = ({ user, onSignOut }) => {
                 Tham gia bài thi →
               </button>
             </div>
+          </div>
+
+          {/* Leaderboard by level */}
+          <div className="mt-8 rounded-[2rem] bg-white/90 p-6 shadow-lg sm:p-8">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-800 font-quicksand">🏅 BXH Năng Lực Lớp</h3>
+              <span className="text-sm font-semibold text-gray-500">Xếp theo level và điểm</span>
+            </div>
+            {classLeaderboard.length === 0 ? (
+              <p className="text-sm text-gray-600">Chưa có dữ liệu xếp hạng.</p>
+            ) : (
+              <div className="space-y-3">
+                {classLeaderboard.slice(0, 10).map((student) => (
+                  <div
+                    key={student.id}
+                    className={`flex items-center justify-between rounded-2xl border p-3 ${student.id === user?.uid ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 font-bold text-gray-700">
+                        #{student.rank}
+                      </div>
+                      <button
+                        onClick={() => navigate('/student/profile')}
+                        className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500/80 text-sm font-bold text-white"
+                        title="Xem hồ sơ học tập"
+                      >
+                        {student.photoURL ? (
+                          <img src={student.photoURL} alt="avatar" className="h-full w-full rounded-full object-cover" />
+                        ) : (
+                          <span>{(student.displayName || 'H').charAt(0).toUpperCase()}</span>
+                        )}
+                      </button>
+                      <div>
+                        <p className="font-bold text-gray-800">{student.displayName}</p>
+                        <p className="text-xs text-gray-500">{student.levelIcon} {student.level} - {student.levelName}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-extrabold text-blue-700">{student.levelScore}</p>
+                      <p className="text-xs font-semibold text-gray-500">điểm</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

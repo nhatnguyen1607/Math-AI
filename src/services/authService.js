@@ -54,6 +54,8 @@ export const signInWithGoogle = async () => {
           role: 'student', // Mặc định là student
           isActive: true,
           isLocked: false,
+          level: 'Lv1',
+          levelScore: 0,
           createdAt: new Date(),
           updatedAt: new Date()
         });
@@ -65,6 +67,14 @@ export const signInWithGoogle = async () => {
         const updateData = {
           updatedAt: new Date()
         };
+
+        // Backfill level fields cho tài khoản cũ chưa có level
+        if (existingData.level === undefined) {
+          updateData.level = 'Lv1';
+        }
+        if (existingData.levelScore === undefined) {
+          updateData.levelScore = 0;
+        }
         
         // Update displayName nếu chưa có
         if (!existingData.displayName && user.displayName) {

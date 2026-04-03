@@ -16,6 +16,8 @@ export class User {
     this.isLocked = data.isLocked || false;
     this.lockedReason = data.lockedReason || '';
     this.lockedAt = data.lockedAt || null;
+    this.level = data.level || 'Lv1';
+    this.levelScore = data.levelScore !== undefined ? data.levelScore : 0;
   }
 
   isStudent() {
@@ -42,7 +44,9 @@ export class User {
       isActive: this.isActive,
       isLocked: this.isLocked,
       lockedReason: this.lockedReason,
-      lockedAt: this.lockedAt
+      lockedAt: this.lockedAt,
+      level: this.level,
+      levelScore: this.levelScore
     };
   }
 

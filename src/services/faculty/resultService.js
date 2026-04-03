@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import problemService from './problemService';
+import levelService from '../student/levelService';
 
 class ResultService {
   constructor() {
@@ -994,6 +995,13 @@ class ResultService {
       }
 
       await updateDoc(progressRef, updateData);
+
+      // Khi học sinh hoàn thành và nộp Vận dụng thì cộng levelScore cho đề này.
+      try {
+        await levelService.addLevelScoreForCompletedExam(userId, examId);
+      } catch (levelError) {
+        console.error('Level update error:', levelError);
+      }
     } catch (error) {
       throw error;
     }

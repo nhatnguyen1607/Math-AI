@@ -89,6 +89,7 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
         // Xây dựng context từ các phần trước
         const lỗiKhoiDong = [];
         const yếuĐiềmLuyenTap = {};
+        const recentPracticeProblems = [];
 
         // Lấy các lỗi từ khoiDong
         if (examProgress.parts?.khoiDong?.aiAnalysis?.questionComments) {
@@ -103,6 +104,13 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
         if (examProgress.parts?.luyenTap) {
           const bai1Eval = examProgress.parts.luyenTap.bai1?.evaluation;
           const bai2Eval = examProgress.parts.luyenTap.bai2?.evaluation;
+
+          if (examProgress.parts.luyenTap.bai1?.deBai) {
+            recentPracticeProblems.push(examProgress.parts.luyenTap.bai1.deBai);
+          }
+          if (examProgress.parts.luyenTap.bai2?.deBai) {
+            recentPracticeProblems.push(examProgress.parts.luyenTap.bai2.deBai);
+          }
 
           // Tổng hợp đánh giá từ 2 bài
           if (bai1Eval) {
@@ -146,7 +154,8 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
             weaknessesInLuyenTap: yếuĐiềmLuyenTap,
             topicName: exam.title || 'Bài toán',
             practicePercentage: 0,
-            examContextId: exam.contextId || ''
+            examContextId: exam.contextId || '',
+            recentPracticeProblems
           });
         } catch (err) {
           applicationProblem = 'Bài toán vận dụng. Bạn hãy giải quyết bài toán này bằng cách thực hiện đầy đủ 4 bước Polya.';

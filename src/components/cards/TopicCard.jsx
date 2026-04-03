@@ -45,7 +45,7 @@ const TopicCard = ({ topic, onEdit, onDelete, onCreateExam, showActions = true }
               className="touch-btn flex-1 rounded-xl border-none bg-gradient-to-r from-purple-500 to-blue-500 px-3 text-xs font-semibold text-white transition-all duration-300 hover:shadow-lg sm:text-sm"
               onClick={() => onCreateExam(topic.id)}
             >
-              ✏️ Đề thi
+              ✏️ Xem
             </button>
           )}
           {onEdit && (

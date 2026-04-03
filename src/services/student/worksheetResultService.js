@@ -10,7 +10,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../../firebase';
-import * as worksheetEvaluationService from './worksheetEvaluationService';
+import * as worksheetEvaluationService from './InputWorksheetEvaluationService';
 
 // Tạo kết quả phiếu bài tập
 export const createWorksheetResult = async (resultData, worksheet) => {

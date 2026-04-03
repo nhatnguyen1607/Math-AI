@@ -18,6 +18,126 @@ export class GeminiChatServiceTiSo {
     return names[step] || "";
   }
 
+  _normalizeMathText(text = "") {
+    return String(text)
+      .replace(/,/g, ".")
+      .replace(/[xX×]/g, "*")
+      .replace(/:/g, "/");
+  }
+
+  _evaluateSimpleExpression(expression = "") {
+    const expr = String(expression || "").replace(/\s+/g, "");
+    if (!expr) return null;
+
+    const tokens = [];
+    for (let i = 0; i < expr.length; i++) {
+      const ch = expr[i];
+      if (/\d|\./.test(ch)) {
+        let num = ch;
+        while (i + 1 < expr.length && /\d|\./.test(expr[i + 1])) {
+          num += expr[++i];
+        }
+        if ((num.match(/\./g) || []).length > 1) return null;
+        tokens.push(num);
+      } else if ("+-*/()".includes(ch)) {
+        tokens.push(ch);
+      } else {
+        return null;
+      }
+    }
+
+    const precedence = { "+": 1, "-": 1, "*": 2, "/": 2 };
+    const operators = [];
+    const values = [];
+
+    const applyTopOperator = () => {
+      const op = operators.pop();
+      const b = values.pop();
+      const a = values.pop();
+      if (a === undefined || b === undefined || !op) return false;
+
+      let result;
+      if (op === "+") result = a + b;
+      else if (op === "-") result = a - b;
+      else if (op === "*") result = a * b;
+      else {
+        if (b === 0) return false;
+        result = a / b;
+      }
+
+      if (!Number.isFinite(result)) return false;
+      values.push(result);
+      return true;
+    };
+
+    let prevToken = null;
+    for (const token of tokens) {
+      if (/^\d/.test(token) || token.startsWith(".")) {
+        values.push(parseFloat(token));
+      } else if (token === "(") {
+        operators.push(token);
+      } else if (token === ")") {
+        while (operators.length && operators[operators.length - 1] !== "(") {
+          if (!applyTopOperator()) return null;
+        }
+        if (operators.pop() !== "(") return null;
+      } else {
+        if (token === "-" && (!prevToken || "(+-*/".includes(prevToken))) {
+          values.push(0);
+        }
+        while (
+          operators.length &&
+          operators[operators.length - 1] !== "(" &&
+          precedence[operators[operators.length - 1]] >= precedence[token]
+        ) {
+          if (!applyTopOperator()) return null;
+        }
+        operators.push(token);
+      }
+      prevToken = token;
+    }
+
+    while (operators.length) {
+      if (operators[operators.length - 1] === "(") return null;
+      if (!applyTopOperator()) return null;
+    }
+
+    if (values.length !== 1 || !Number.isFinite(values[0])) return null;
+    return values[0];
+  }
+
+  _validateStudentComputation(text = "") {
+    const normalized = this._normalizeMathText(text);
+    const match = normalized.match(/([\d\s.+*/()-]+)=\s*([\d.]+)/);
+    if (!match) return { isValid: true };
+
+    const lhs = (match[1] || "").replace(/\s+/g, "");
+    const rhs = parseFloat(match[2]);
+
+    if (!lhs || !Number.isFinite(rhs) || /[^\d.+*/()-]/.test(lhs)) {
+      return { isValid: true };
+    }
+
+    const calculated = this._evaluateSimpleExpression(lhs);
+    if (!Number.isFinite(calculated)) return { isValid: true };
+    const diff = Math.abs(calculated - rhs);
+    const tolerance = Math.max(1e-6, Math.abs(rhs) * 0.005);
+    if (diff > tolerance) {
+      return {
+        isValid: false,
+        message: "Mình thấy phép tính của bạn chưa khớp kết quả sau dấu '='. Bạn kiểm tra lại từng bước tính nhé!"
+      };
+    }
+    return { isValid: true };
+  }
+
+  _hasStep1DataAndRequirement(answer = "") {
+    const text = String(answer || "").toLowerCase();
+    const hasData = /\d/.test(text);
+    const hasRequirement = /(yêu cầu|cần\s*tìm|hỏi|tính|tìm\s*(tỉ\s*số|phần\s*trăm|giá\s*trị)|bao\s*nhiêu)/i.test(text);
+    return hasData && hasRequirement;
+  }
+
   // 🆕 Post-processing: Tự động sửa xưng hô và các lỗi phổ biến
   _fixPronouns(text) {
     if (!text) return "";
@@ -112,6 +232,17 @@ LUÔN TRẢ VỀ JSON:
   async processStudentResponse(studentAnswer, chatHistory = []) {
     if (this.isSessionComplete) return { message: "Bạn đã hoàn thành bài toán này rồi!" };
 
+    const computationCheck = this._validateStudentComputation(studentAnswer);
+    if (!computationCheck.isValid) {
+      return {
+        message: computationCheck.message,
+        step: this.currentStep,
+        stepName: this._getStepName(this.currentStep),
+        robotStatus: 'wrong',
+        isSessionComplete: false
+      };
+    }
+
     // Nhận diện HS nói "không biết"
     const isHelpless = /không\s*(biết|hiểu|làm|có ý tưởng)|chẳng\s*(biết|hiểu)/i.test(studentAnswer);
 
@@ -164,6 +295,13 @@ HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
       // ⚠️ POST-FIX: Chặn AI hỏi quá rõ ràng ở Bước 3
       if (this.currentStep === 3 && /phép\s*tính|giá\s*trị\s*số|tính\s*toán|chia|nhân|cộng|trừ/i.test(data.next_question)) {
         data.next_question = "Kết quả là bao nhiêu?";
+      }
+
+      if (this.currentStep === 1 && data.step_status === "MOVE_NEXT" && !this._hasStep1DataAndRequirement(studentAnswer)) {
+        data.step_status = "STAY";
+        data.status = "WRONG";
+        data.feedback = "Bạn đã nêu được dữ kiện rồi, rất tốt.";
+        data.next_question = "Bây giờ bạn nói thêm yêu cầu của bài toán là cần tìm gì nhé?";
       }
 
       // Logic chuyển bước

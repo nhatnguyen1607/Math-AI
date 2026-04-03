@@ -18,25 +18,140 @@ export class GeminiChatServiceTimeVelocity {
     return names[step] || "";
   }
 
-  _checkVelocityUnit(text) {
-    // Kiểm tra xem text có sử dụng đơn vị vận tốc không
-    const invalidUnitPatterns = ['km/ph', 'km/p', 'm/p', 'km/s', 'm/h', 'km/giờ', 'm/giây', 'km/phút', 'km/giây'];
-    
-    // Kiểm tra xem có số liệu vận tốc không
-    const hasVelocityNumber = /\d+\s*(km|m)\s*\//i.test(text);
-    
-    if (!hasVelocityNumber) return { hasError: false };
-    
-    // Kiểm tra đơn vị sai
-    for (const invalid of invalidUnitPatterns) {
-      if (text.toLowerCase().includes(invalid.toLowerCase())) {
-        return { 
-          hasError: true, 
-          message: 'Đơn vị vận tốc không đúng. Chỉ có km/h hoặc m/s thôi. Bạn kiểm tra lại nhé!' 
-        };
+  _normalizeMathText(text = "") {
+    return String(text)
+      .replace(/,/g, ".")
+      .replace(/[xX×]/g, "*")
+      .replace(/:/g, "/");
+  }
+
+  _evaluateSimpleExpression(expression = "") {
+    const expr = String(expression || "").replace(/\s+/g, "");
+    if (!expr) return null;
+
+    const tokens = [];
+    for (let i = 0; i < expr.length; i++) {
+      const ch = expr[i];
+      if (/\d|\./.test(ch)) {
+        let num = ch;
+        while (i + 1 < expr.length && /\d|\./.test(expr[i + 1])) {
+          num += expr[++i];
+        }
+        if ((num.match(/\./g) || []).length > 1) return null;
+        tokens.push(num);
+      } else if ("+-*/()".includes(ch)) {
+        tokens.push(ch);
+      } else {
+        return null;
       }
     }
-    
+
+    const precedence = { "+": 1, "-": 1, "*": 2, "/": 2 };
+    const operators = [];
+    const values = [];
+
+    const applyTopOperator = () => {
+      const op = operators.pop();
+      const b = values.pop();
+      const a = values.pop();
+      if (a === undefined || b === undefined || !op) return false;
+
+      let result;
+      if (op === "+") result = a + b;
+      else if (op === "-") result = a - b;
+      else if (op === "*") result = a * b;
+      else {
+        if (b === 0) return false;
+        result = a / b;
+      }
+
+      if (!Number.isFinite(result)) return false;
+      values.push(result);
+      return true;
+    };
+
+    let prevToken = null;
+    for (const token of tokens) {
+      if (/^\d/.test(token) || token.startsWith(".")) {
+        values.push(parseFloat(token));
+      } else if (token === "(") {
+        operators.push(token);
+      } else if (token === ")") {
+        while (operators.length && operators[operators.length - 1] !== "(") {
+          if (!applyTopOperator()) return null;
+        }
+        if (operators.pop() !== "(") return null;
+      } else {
+        if (token === "-" && (!prevToken || "(+-*/".includes(prevToken))) {
+          values.push(0);
+        }
+        while (
+          operators.length &&
+          operators[operators.length - 1] !== "(" &&
+          precedence[operators[operators.length - 1]] >= precedence[token]
+        ) {
+          if (!applyTopOperator()) return null;
+        }
+        operators.push(token);
+      }
+      prevToken = token;
+    }
+
+    while (operators.length) {
+      if (operators[operators.length - 1] === "(") return null;
+      if (!applyTopOperator()) return null;
+    }
+
+    if (values.length !== 1 || !Number.isFinite(values[0])) return null;
+    return values[0];
+  }
+
+  _validateStudentComputation(text = "") {
+    const normalized = this._normalizeMathText(text);
+    const match = normalized.match(/([\d\s.+*/()-]+)=\s*([\d.]+)/);
+    if (!match) return { isValid: true };
+
+    const lhs = (match[1] || "").replace(/\s+/g, "");
+    const rhs = parseFloat(match[2]);
+
+    if (!lhs || !Number.isFinite(rhs) || /[^\d.+*/()-]/.test(lhs)) {
+      return { isValid: true };
+    }
+
+    const calculated = this._evaluateSimpleExpression(lhs);
+    if (!Number.isFinite(calculated)) return { isValid: true };
+    const diff = Math.abs(calculated - rhs);
+    const tolerance = Math.max(1e-6, Math.abs(rhs) * 0.005);
+    if (diff > tolerance) {
+      return {
+        isValid: false,
+        message: "Mình thấy phép tính của bạn chưa khớp kết quả sau dấu '='. Bạn kiểm tra lại từng bước tính nhé!"
+      };
+    }
+    return { isValid: true };
+  }
+
+  _hasStep1DataAndRequirement(answer = "") {
+    const text = String(answer || "").toLowerCase();
+    const hasData = /\d/.test(text);
+    const hasRequirement = /(yêu cầu|cần\s*tìm|hỏi|tính|tìm\s*(vận tốc|quãng\s*đường|thời\s*gian)|bao\s*nhiêu)/i.test(text);
+    return hasData && hasRequirement;
+  }
+
+  _checkVelocityUnit(text) {
+    const lower = String(text || "").toLowerCase();
+    const velocityTokens = lower.match(/(?:km|m)\s*\/\s*[a-zA-ZÀ-ỹ]+/g) || [];
+    if (velocityTokens.length === 0) return { hasError: false };
+
+    const validPattern = /^(km\s*\/\s*(h|giờ|gio)|m\s*\/\s*(s|giây|giay))$/i;
+    const hasInvalid = velocityTokens.some((token) => !validPattern.test(token.trim()));
+    if (hasInvalid) {
+      return {
+        hasError: true,
+        message: "Đơn vị vận tốc chưa đúng. Bạn dùng một trong các cách: km/h, m/s, km/giờ hoặc m/giây nhé!"
+      };
+    }
+
     return { hasError: false };
   }
 
@@ -180,6 +295,17 @@ LUÔN TRẢ VỀ JSON:
       };
     }
 
+    const computationCheck = this._validateStudentComputation(studentAnswer);
+    if (!computationCheck.isValid) {
+      return {
+        message: computationCheck.message,
+        step: this.currentStep,
+        stepName: this._getStepName(this.currentStep),
+        robotStatus: 'wrong',
+        isSessionComplete: false
+      };
+    }
+
     // 🆕 Kiểm tra xem HS có nói "không biết" hay không
     const isHelpless = /không\s*(biết|hiểu|làm|có ý tưởng)|chẳng\s*(biết|hiểu)/i.test(studentAnswer);
     console.log('🆘 Is student helpless?', isHelpless, 'Current step:', this.currentStep);
@@ -246,6 +372,13 @@ YÊU CẦU:
       if (this.currentStep === 3 && /phép\s*tính|giá\s*trị\s*số|tính\s*toán|chia|nhân|cộng|trừ/i.test(data.next_question)) {
         console.log('⚠️ [POST-FIX] AI vẫn hỏi phép tính ở bước 3 → Generalize');
         data.next_question = "Kết quả là bao nhiêu?";
+      }
+
+      if (this.currentStep === 1 && data.step_status === "MOVE_NEXT" && !this._hasStep1DataAndRequirement(studentAnswer)) {
+        data.step_status = "STAY";
+        data.status = "WRONG";
+        data.feedback = "Bạn đã nêu được dữ kiện rồi, rất tốt.";
+        data.next_question = "Bây giờ bạn nói thêm yêu cầu của bài toán là cần tìm gì nhé?";
       }
 
       if (data.step_status === "MOVE_NEXT" && !isHelpless) {

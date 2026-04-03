@@ -17,6 +17,49 @@ const extractJSON = (text) => {
 };
 
 export class GeminiPracticeServiceTimeVelocity extends GeminiPracticeService {
+  constructor(...args) {
+    super(...args);
+    this._lastScenarioIndexByContext = new Map();
+    this._recentGeneratedByContext = new Map();
+  }
+
+  _extractNumbersFromText(text = "") {
+    if (!text || typeof text !== "string") return [];
+    const matches = text.match(/\d+(?:[.,]\d+)?/g) || [];
+    return [...new Set(matches)].slice(0, 12);
+  }
+
+  _rememberGeneratedProblem(contextId = "", text = "") {
+    if (!contextId || !text) return;
+    const prev = this._recentGeneratedByContext.get(contextId) || [];
+    const next = [text, ...prev].slice(0, 2);
+    this._recentGeneratedByContext.set(contextId, next);
+  }
+
+  _getRecentGeneratedProblems(contextId = "") {
+    return this._recentGeneratedByContext.get(contextId) || [];
+  }
+
+  _buildAntiDuplicateGuidance({
+    startupProblem1 = "",
+    startupProblem2 = "",
+    recentGenerated = [],
+    problemNumber = 1
+  }) {
+    const sourceText = [startupProblem1, startupProblem2, ...recentGenerated]
+      .filter(Boolean)
+      .join(" ");
+    const numberHints = this._extractNumbersFromText(sourceText);
+    const numberedHintText = numberHints.length
+      ? `- Tránh lặp lại các số liệu sau: ${numberHints.join(", ")}.`
+      : "- Tránh lặp lại y nguyên bộ số của các bài trước.";
+
+    return `\n[RÀNG BUỘC CHỐNG TRÙNG]\n- Bài đang sinh là Bài ${problemNumber}. Phải KHÁC rõ rệt về loại câu hỏi so với bài đã có.\n${numberedHintText}\n- Ưu tiên thêm một trong các kiểu: so sánh phương án, chọn phương án tối ưu, kiểm tra có vượt ngưỡng thời gian/tốc độ cho phép hay không.`;
+  }
+
+  _getBepAnConstraint() {
+    return `\n[QUY TẮC RIÊNG CHO BỐI CẢNH BỮA ĂN DINH DƯỠNG]\n- Chỉ dùng đại lượng gắn với dinh dưỡng/chế biến: calo (kcal), gam (g), ki-lô-gam (kg), mililít (ml), lít (l), phút/giờ chuẩn bị.\n- Ưu tiên dạng: so sánh thời gian chế biến giữa 2 phương án thực đơn, hoặc kiểm tra phương án có vượt mức calo/khối lượng cho phép hay không.\n- TUYỆT ĐỐI KHÔNG dùng dạng đếm số lượng kiểu: số bánh quy, số phần cơm, số cái/chiếc.`;
+  }
   
   _getLessonSpecificGuidance(lessonName) {
     const guidance = {
@@ -95,8 +138,8 @@ export class GeminiPracticeServiceTimeVelocity extends GeminiPracticeService {
         { type: 'tiet_kiem', desc: 'dự định tiết kiệm', unit: 'giai đoạn' },
       ],
       'bep_an': [
-        { type: 'chuan_bi_mon', desc: 'chuẩn bị một mon ăn', unit: 'công đoạn' },
-        { type: 'chi_tiet_dia', desc: 'phần ăn trên bàn', unit: 'phần' },
+        { type: 'chuan_bi_mon', desc: 'chuẩn bị bữa ăn theo dữ liệu calo và khối lượng', unit: 'gam' },
+        { type: 'chi_tiet_dia', desc: 'so sánh hai thực đơn theo kcal và thời gian chuẩn bị', unit: 'kcal' },
       ]
     };
     return scenarios[contextId] || scenarios['cuoc_dua'];
@@ -148,11 +191,14 @@ export class GeminiPracticeServiceTimeVelocity extends GeminiPracticeService {
     const lessonGuidance = this._getLessonSpecificGuidance(topicName);
     const difficultyGuidance = this._getDifficultyGuidance(competencyLevel, topicName);
     const lengthGuidance = this._getLengthGuidance(competencyLevel);
-    const problemTypeGuidance = this._getProblemTypeLimitForBai(1); // BÀI 1: Loại bài tính tổng thời gian
+    const problemTypeGuidance = this._getProblemTypeLimitForBai(problemNumber); // BÀI 1/BÀI 2 theo tham số
     const ctx = EXAM_CONTEXTS.find((c) => c.id === examContextId) || EXAM_CONTEXTS[0];
+    const recentGenerated = this._getRecentGeneratedProblems(ctx.id);
     
     // ✅ MỚI: Random scenario con từ bối cảnh
-    const scenario = this._getRandomScenario(ctx.id);
+    const excludeIndex = problemNumber > 1 ? this._lastScenarioIndexByContext.get(ctx.id) ?? -1 : -1;
+    const scenario = this._getRandomScenario(ctx.id, excludeIndex);
+    this._lastScenarioIndexByContext.set(ctx.id, scenario.index);
     const scenarioInjection = `
   - Tình huống cụ thể: ${scenario.desc}
   - Từ vựng sử dụng: "${scenario.unit}"`;
@@ -165,6 +211,14 @@ export class GeminiPracticeServiceTimeVelocity extends GeminiPracticeService {
   ${scenarioInjection}
   ${CHARACTER_GUIDE}
   `;
+
+    const antiDuplicateGuidance = this._buildAntiDuplicateGuidance({
+      startupProblem1,
+      startupProblem2,
+      recentGenerated,
+      problemNumber
+    });
+    const bepAnConstraint = ctx.id === 'bep_an' ? this._getBepAnConstraint() : '';
 
     const prompt = `Bạn là chuyên gia ra đề toán tiểu học siêu việt.
 CHỦ ĐỀ & TRỌNG TÂM HIỆN TẠI: ${topicName}
@@ -186,6 +240,8 @@ ${problemTypeGuidance}
 Yêu cầu sinh đề: ${difficultyGuidance}
 Độ dài bắt buộc: ${lengthGuidance}
 Lưu ý chuyên môn: ${lessonGuidance}
+${antiDuplicateGuidance}
+${bepAnConstraint}
 ${contextInjection}
 
 [YÊU CẦU ĐẦU RA JSON BẮT BUỘC]
@@ -200,7 +256,9 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
       const parsed = extractJSON(result?.response.text() || "");
       
       if (parsed && parsed.de_bai) {
-        return this._cleanGeneratedProblem(parsed.de_bai);
+        const cleaned = this._cleanGeneratedProblem(parsed.de_bai);
+        this._rememberGeneratedProblem(ctx.id, cleaned);
+        return cleaned;
       }
       return "Một người đi xe máy trong 2 giờ được quãng đường dài 70km. Tính vận tốc của người đi xe máy đó.";
     } catch (error) {
@@ -215,7 +273,8 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
       weaknessesInLuyenTap = {},
       topicName = "Vận tốc của một chuyển động đều",
       competencyLevel = "Đạt",
-      examContextId = ''
+      examContextId = '',
+      recentPracticeProblems = []
     } = studentContext;
 
     // ✅ FIX: Extract nhanXet (comments) from TC1-TC4 objects in weaknessesInLuyenTap
@@ -228,6 +287,13 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
     const lengthGuidance = this._getLengthGuidance(competencyLevel);
     const problemTypeGuidance = this._getProblemTypeLimitForBai(2); // BÀI 2: Loại bài khác - tính trung bình hoặc so sánh
     const ctx = EXAM_CONTEXTS.find((c) => c.id === examContextId) || EXAM_CONTEXTS[0];
+    const antiDuplicateGuidance = this._buildAntiDuplicateGuidance({
+      startupProblem1: Array.isArray(recentPracticeProblems) ? recentPracticeProblems[0] : '',
+      startupProblem2: Array.isArray(recentPracticeProblems) ? recentPracticeProblems[1] : '',
+      recentGenerated: this._getRecentGeneratedProblems(ctx.id),
+      problemNumber: 3
+    });
+    const bepAnConstraint = ctx.id === 'bep_an' ? this._getBepAnConstraint() : '';
     
     // ✅ MỚI: Random scenario con từ bối cảnh (KHÁ NHAU với Bài 1)
     // Bài 1 vừa random xong, Bài 2 phải random khác. Vì không biết Bài 1 random được index nào,
@@ -266,6 +332,8 @@ ${problemTypeGuidance}
 Yêu cầu sinh đề: ${difficultyGuidance}
 Độ dài bắt buộc: ${lengthGuidance}
 Lỗi HS hay mắc: ${errorLog || "Không có lỗi cụ thể"}. (Tạo tình huống để rèn luyện tránh lỗi này).
+${antiDuplicateGuidance}
+${bepAnConstraint}
 ${contextInjection}
 
 [YÊU CẦU ĐẦU RA JSON BẮT BUỘC]
@@ -280,7 +348,9 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
       const parsed = extractJSON(result?.response.text() || "");
       
       if (parsed && parsed.de_bai) {
-        return this._cleanGeneratedProblem(parsed.de_bai);
+        const cleaned = this._cleanGeneratedProblem(parsed.de_bai);
+        this._rememberGeneratedProblem(ctx.id, cleaned);
+        return cleaned;
       }
       return "Lúc 7 giờ 15 phút, một ô tô xuất phát từ A đi về B. Dọc đường ô tô nghỉ 15 phút và đến B lúc 10 giờ. Biết quãng đường AB dài 125km. Tính vận tốc của ô tô.";
     } catch (error) {

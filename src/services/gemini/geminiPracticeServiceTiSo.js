@@ -17,6 +17,49 @@ const extractJSON = (text) => {
 };
 
 export class GeminiPracticeServiceTiSo extends GeminiPracticeService {
+  constructor(...args) {
+    super(...args);
+    this._lastScenarioIndexByContext = new Map();
+    this._recentGeneratedByContext = new Map();
+  }
+
+  _extractNumbersFromText(text = "") {
+    if (!text || typeof text !== "string") return [];
+    const matches = text.match(/\d+(?:[.,]\d+)?/g) || [];
+    return [...new Set(matches)].slice(0, 12);
+  }
+
+  _rememberGeneratedProblem(contextId = "", text = "") {
+    if (!contextId || !text) return;
+    const prev = this._recentGeneratedByContext.get(contextId) || [];
+    const next = [text, ...prev].slice(0, 2);
+    this._recentGeneratedByContext.set(contextId, next);
+  }
+
+  _getRecentGeneratedProblems(contextId = "") {
+    return this._recentGeneratedByContext.get(contextId) || [];
+  }
+
+  _getBepAnConstraint() {
+    return `\n[QUY TẮC RIÊNG CHO BỐI CẢNH BỮA ĂN DINH DƯỠNG]\n- Chỉ dùng đại lượng dinh dưỡng: calo (kcal), gam (g), ki-lô-gam (kg), mililít (ml), lít (l).\n- Ưu tiên dạng: so sánh với mức khuyến nghị, kiểm tra có vượt ngưỡng cho phép hay không, lựa chọn phương án thực đơn tối ưu.\n- TUYỆT ĐỐI KHÔNG dùng dạng đếm số lượng kiểu: số bánh quy, số phần cơm, số cái/chiếc.\n- Câu hỏi cuối phải xoay quanh tỉ số/tỉ số phần trăm theo dữ liệu dinh dưỡng.`;
+  }
+
+  _buildAntiDuplicateGuidance({
+    startupProblem1 = "",
+    startupProblem2 = "",
+    recentGenerated = [],
+    problemNumber = 1
+  }) {
+    const sourceText = [startupProblem1, startupProblem2, ...recentGenerated]
+      .filter(Boolean)
+      .join(" ");
+    const numberHints = this._extractNumbersFromText(sourceText);
+    const numberedHintText = numberHints.length
+      ? `- Tránh lặp lại các số liệu sau: ${numberHints.join(", ")}.`
+      : "- Tránh lặp lại y nguyên bộ số của các bài trước.";
+
+    return `\n[RÀNG BUỘC CHỐNG TRÙNG]\n- Bài đang sinh là Bài ${problemNumber}. Phải KHÁC rõ rệt về cấu trúc câu hỏi so với bài đã có.\n${numberedHintText}\n- Không sao chép lại mô-típ đề cũ (đổi tên nhân vật nhưng giữ nguyên số/dạng vẫn tính là trùng).`;
+  }
   
   _getLessonSpecificGuidance(lessonName) {
     const guidance = {
@@ -73,6 +116,7 @@ export class GeminiPracticeServiceTiSo extends GeminiPracticeService {
   - Loại A: Cho tỉ số phần trăm, tính giá trị cụ thể (ngược lại bài 1 chỉ tính tỉ số %).
   - Loại B: So sánh tỉ số giữa 2-3 nhân vật/đối tượng khác nhau.
   - Loại C: Bài toán với 2 bước tính tỉ số phụ, rồi mới suy ra kết quả cuối cùng (ví dụ: tìm tỉ số từ tổng và hiệu).
+  - Loại D: Lựa chọn phương án tối ưu hoặc kiểm tra có vượt mức cho phép/khuyến nghị hay không dựa trên tỉ lệ phần trăm.
   TUYỆT ĐỐI KHÔNG phải loại bài giống Bài 1, không được hỏi lại "tính tỉ số % của hai số" như Bài 1.`;
     }
   }
@@ -95,9 +139,9 @@ export class GeminiPracticeServiceTiSo extends GeminiPracticeService {
         { type: 'tiet_kiem_vs_chi', desc: 'so sánh tiền tiết kiệm với tiền chi tiêu', unit: 'phần' },
       ],
       'bep_an': [
-        { type: 'dinh_duong', desc: 'so sánh tỉ lệ dinh dưỡng trong thực phẩm', unit: 'chất' },
-        { type: 'so_luong_thuc_pham', desc: 'tỉ lệ các loại thực phẩm trong một bữa ăn', unit: 'loại' },
-        { type: 'khau_phan', desc: 'chia khẩu phần ăn', unit: 'phần' },
+        { type: 'dinh_duong', desc: 'so sánh tỉ lệ dinh dưỡng theo calo và khối lượng', unit: 'gam' },
+        { type: 'muc_khuyen_nghi', desc: 'đối chiếu chỉ số dinh dưỡng với mức khuyến nghị', unit: 'kcal' },
+        { type: 'toi_uu_thuc_don', desc: 'lựa chọn phương án thực đơn tối ưu theo gam và kg', unit: 'kg' },
       ],
       'nha_truong': [
         { type: 'ti_so_thanh_tich', desc: 'tỉ lệ thành tích giữa các lớp', unit: 'lớp' },
@@ -153,11 +197,14 @@ export class GeminiPracticeServiceTiSo extends GeminiPracticeService {
     const lessonGuidance = this._getLessonSpecificGuidance(topicName);
     const difficultyGuidance = this._getDifficultyGuidance(competencyLevel, topicName);
     const lengthGuidance = this._getLengthGuidance(competencyLevel);
-    const problemTypeGuidance = this._getProblemTypeLimitForBai(1); // BÀI 1
+    const problemTypeGuidance = this._getProblemTypeLimitForBai(problemNumber); // BÀI 1/BÀI 2 theo tham số
     const ctx = EXAM_CONTEXTS.find((c) => c.id === examContextId) || EXAM_CONTEXTS[0];
+    const recentGenerated = this._getRecentGeneratedProblems(ctx.id);
     
     // ✅ MỚI: Random scenario con từ bối cảnh
-    const scenario = this._getRandomScenario(ctx.id);
+    const excludeIndex = problemNumber > 1 ? this._lastScenarioIndexByContext.get(ctx.id) ?? -1 : -1;
+    const scenario = this._getRandomScenario(ctx.id, excludeIndex);
+    this._lastScenarioIndexByContext.set(ctx.id, scenario.index);
     const scenarioInjection = `
   - Tình huống cụ thể: ${scenario.desc}
   - Từ vựng sử dụng: "${scenario.unit}"`;
@@ -170,6 +217,15 @@ export class GeminiPracticeServiceTiSo extends GeminiPracticeService {
   ${scenarioInjection}
   ${CHARACTER_GUIDE}
   `;
+
+    const antiDuplicateGuidance = this._buildAntiDuplicateGuidance({
+      startupProblem1,
+      startupProblem2,
+      recentGenerated,
+      problemNumber
+    });
+
+    const bepAnConstraint = ctx.id === 'bep_an' ? this._getBepAnConstraint() : '';
 
     const prompt = `Bạn là chuyên gia ra đề toán tiểu học siêu việt.
 CHỦ ĐỀ & TRỌNG TÂM HIỆN TẠI: ${topicName}
@@ -187,6 +243,8 @@ ${problemTypeGuidance}
 Yêu cầu sinh đề: ${difficultyGuidance}
 Độ dài bắt buộc: ${lengthGuidance}
 Lưu ý chuyên môn: ${lessonGuidance}
+${antiDuplicateGuidance}
+${bepAnConstraint}
 ${contextInjection}
 
 [YÊU CẦU ĐẦU RA JSON BẮT BUỘC]
@@ -201,7 +259,9 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
       const parsed = extractJSON(result?.response.text() || "");
       
       if (parsed && parsed.de_bai) {
-        return this._cleanGeneratedProblem(parsed.de_bai);
+        const cleaned = this._cleanGeneratedProblem(parsed.de_bai);
+        this._rememberGeneratedProblem(ctx.id, cleaned);
+        return cleaned;
       }
       return "Một lớp học có 18 học sinh nữ và 12 học sinh nam. Tìm tỉ số phần trăm của số học sinh nữ và tổng số học sinh của lớp đó.";
     } catch (error) {
@@ -216,7 +276,8 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
       weaknessesInLuyenTap = {},
       topicName = "Tỉ số",
       competencyLevel = "Đạt",
-      examContextId = ''
+      examContextId = '',
+      recentPracticeProblems = []
     } = studentContext;
 
     // ✅ FIX: Extract nhanXet (comments) from TC1-TC4 objects in weaknessesInLuyenTap
@@ -229,6 +290,13 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
     const lengthGuidance = this._getLengthGuidance(competencyLevel);
     const problemTypeGuidance = this._getProblemTypeLimitForBai(2); // BÀI 2
     const ctx = EXAM_CONTEXTS.find((c) => c.id === examContextId) || EXAM_CONTEXTS[0];
+    const antiDuplicateGuidance = this._buildAntiDuplicateGuidance({
+      startupProblem1: Array.isArray(recentPracticeProblems) ? recentPracticeProblems[0] : '',
+      startupProblem2: Array.isArray(recentPracticeProblems) ? recentPracticeProblems[1] : '',
+      recentGenerated: this._getRecentGeneratedProblems(ctx.id),
+      problemNumber: 3
+    });
+    const bepAnConstraint = ctx.id === 'bep_an' ? this._getBepAnConstraint() : '';
     
     // ✅ MỚI: Random scenario con từ bối cảnh (KHÁC với Bài 1)
     const scenario = this._getRandomScenario(ctx.id, -1);
@@ -261,13 +329,8 @@ ${problemTypeGuidance}
 Yêu cầu sinh đề: ${difficultyGuidance}
 Độ dài bắt buộc: ${lengthGuidance}
 Lỗi HS hay mắc: ${errorLog || "Không có lỗi cụ thể"}.
-${contextInjection}
-
-[ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
-${problemTypeGuidance}
-Yêu cầu sinh đề: ${difficultyGuidance}
-Độ dài bắt buộc: ${lengthGuidance}
-Lỗi HS hay mắc: ${errorLog || "Không có lỗi cụ thể"}.
+${antiDuplicateGuidance}
+${bepAnConstraint}
 ${contextInjection}
 
 [YÊU CẦU ĐẦU RA JSON BẮT BUỘC]
@@ -282,7 +345,9 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
       const parsed = extractJSON(result?.response.text() || "");
       
       if (parsed && parsed.de_bai) {
-        return this._cleanGeneratedProblem(parsed.de_bai);
+        const cleaned = this._cleanGeneratedProblem(parsed.de_bai);
+        this._rememberGeneratedProblem(ctx.id, cleaned);
+        return cleaned;
       }
       return "Một cửa hàng nhập về 400kg gạo. Buổi sáng bán được 120kg, buổi chiều bán được 160kg. Hỏi số gạo đã bán chiếm bao nhiêu phần trăm tổng số gạo nhập về?";
     } catch (error) {

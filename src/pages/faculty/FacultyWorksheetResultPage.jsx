@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import * as worksheetResultService from '../../services/student/worksheetResultService';
 import * as worksheetService from '../../services/faculty/worksheetService';
-import { evaluateBai1, evaluateBai2, evaluateBai3, evaluateBai4, generateOverallComment } from '../../services/student/worksheetEvaluationService';
+import { evaluateBai1, evaluateBai2, evaluateBai3, evaluateBai4, generateOverallComment } from '../../services/student/InputWorksheetEvaluationService';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 import FractionRenderer from '../../components/FractionRenderer';
 

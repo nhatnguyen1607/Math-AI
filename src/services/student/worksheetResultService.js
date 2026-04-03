@@ -10,15 +10,16 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../../firebase';
-import * as worksheetEvaluationService from './InputWorksheetEvaluationService';
+import { getEvaluationService } from './wooksheetEvaluationRouter';
 
 // Tạo kết quả phiếu bài tập
 export const createWorksheetResult = async (resultData, worksheet) => {
   try {
     const resultId = `${resultData.studentId}_${resultData.classId}_${resultData.worksheetId}`;
 
-    // Gọi API để đánh giá bài làm
-    const evaluation = await worksheetEvaluationService.evaluateWorksheet(
+    // Gọi API để đánh giá bài làm - sử dụng router để phân hóa phiếu
+    const evaluationService = getEvaluationService(worksheet);
+    const evaluation = await evaluationService.evaluateWorksheet(
       resultData,
       worksheet
     );

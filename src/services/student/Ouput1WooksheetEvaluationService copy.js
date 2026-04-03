@@ -1,0 +1,255 @@
+import geminiModelManager from '../gemini/geminiModelManager';
+
+const extractJSON = (text) => {
+  try {
+    const startIndex = text.indexOf('{');
+    const endIndex = text.lastIndexOf('}');
+    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+      const jsonString = text.substring(startIndex, endIndex + 1);
+      return JSON.parse(jsonString);
+    }
+    return null;
+  } catch (error) {
+    console.warn('Lỗi khi parse JSON:', error);
+    return null;
+  }
+};
+
+const calculateOverallLevel = (score) => {
+  if (score >= 7) return 'tốt';
+  if (score >= 4) return 'đạt';
+  return 'cần cố gắng';
+};
+
+const requiresCalculation = (questionText) => {
+  if (!questionText) return false;
+  const keywords = ['trình bày', 'phép tính', 'cách giải', 'chi tiết', 'bước', 'giải', 'tính', 'biểu diễn'];
+  const lowerText = questionText.toLowerCase();
+  return keywords.some(keyword => lowerText.includes(keyword));
+};
+
+const isAnswerOnlyResult = (answer) => {
+  if (!answer || typeof answer !== 'string') return false;
+  const trimmed = answer.trim();
+  if (trimmed.length < 5) return true;
+  const shortAnswers = ['có', 'không', 'đúng', 'sai', 'a', 'b', 'c', 'd'];
+  if (shortAnswers.includes(trimmed.toLowerCase())) return true;
+  if (/^\d+(\.\d+)?$/.test(trimmed)) return true;
+  
+  const calculationMarkers = ['+', '-', '×', '*', '÷', '/', '=', '→', 'x'];
+  const hasMarkers = calculationMarkers.some(marker => trimmed.includes(marker));
+  if (!hasMarkers && trimmed.split(/\s+/).length < 3) return true;
+  return false;
+};
+
+export const evaluateWorksheet = async (studentAnswers, worksheet) => {
+  try {
+    const evaluations = {
+      bai_1: await evaluateBai1(studentAnswers, worksheet),
+      bai_2: await evaluateBai2(studentAnswers, worksheet),
+      bai_3: await evaluateBai3(studentAnswers, worksheet),
+      bai_4: await evaluateBai4(studentAnswers, worksheet)
+    };
+
+    const tongDiem =
+      (evaluations.bai_1?.evaluation?.diem || 0) +
+      (evaluations.bai_2?.evaluation?.diem || 0) +
+      (evaluations.bai_3?.evaluation?.diem || 0) +
+      (evaluations.bai_4?.evaluation?.diem || 0);
+
+    const mucNangLucChung = calculateOverallLevel(tongDiem);
+    const nhanXetChung = await generateOverallComment(evaluations, tongDiem, mucNangLucChung);
+
+    return { ...evaluations, tongDiem, mucNangLucChung, nhanXetChung };
+  } catch (error) {
+    console.error('Error evaluating Output 1:', error);
+    return { tongDiem: 0, mucNangLucChung: 'Chưa đánh giá', nhanXetChung: 'Đã xảy ra lỗi trong quá trình chấm bài.' };
+  }
+};
+
+export const evaluateBai1 = async (studentAnswers, worksheet) => {
+  try {
+    let selections = studentAnswers?.bai_1?.selections || [];
+    if (typeof selections === 'object' && !Array.isArray(selections)) selections = Object.values(selections);
+    
+    const questionsList = worksheet?.bai_1?.questions || [];
+    const selectedTexts = selections.map((id) => {
+      const matchedQ = questionsList.find((item) => item.id === id);
+      return matchedQ ? matchedQ.text : id;
+    });
+
+    const prompt = `Bạn là giáo viên chấm Bài 1 (Nhận biết thông tin - Tỉ số phần trăm).
+[BÀI LÀM CỦA HỌC SINH]
+Các ý học sinh đã chọn:
+${selectedTexts.length > 0 ? selectedTexts.map(t => `- ${t}`).join('\n') : 'Không chọn gì'}
+
+[BAREM CHẤM ĐIỂM BẮT BUỘC]
+Bài toán có 4 phát biểu (1, 2, 3, 4).
+- Mức Tốt (2 điểm): Chọn ĐÚNG CẢ 4 phát biểu.
+- Mức Đạt (1 điểm): Chỉ chọn đúng 3 phát biểu đầu (1, 2, 3) và thiếu phát biểu 4 (mối quan hệ đại lượng).
+- Mức Cần cố gắng (0 điểm): Các trường hợp còn lại (thiếu bất kỳ 1,2,3 hoặc chọn sai).
+
+[YÊU CẦU ĐẦU RA JSON]
+{
+  "suy_luan": "Đối chiếu bài làm với barem. Chỉ ra em ấy chọn đúng/thiếu ý nào.",
+  "diem": (0, 1 hoặc 2),
+  "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
+  "nhan_xet": "Viết 3-4 câu BÁO CÁO CHO GIÁO VIÊN đọc. BẮT BUỘC dùng ngôi thứ 3 ('học sinh', 'em ấy'). TUYỆT ĐỐI KHÔNG xưng hô trực tiếp với học sinh (CẤM dùng 'Chào em', 'của em', 'em nhé'). Nêu rõ học sinh xác định được thông tin nào, có tìm được mối quan hệ đại lượng (ý số 4) không."
+}`;
+    const result = await geminiModelManager.generateContent(prompt);
+    const parsed = extractJSON(result.response.text());
+    return { evaluation: parsed || { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi parse JSON.' } };
+  } catch (error) { return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi chấm bài.' } }; }
+};
+
+export const evaluateBai2 = async (studentAnswers, worksheet) => {
+  try {
+    const arrangements = studentAnswers?.bai_2?.arrangements || {};
+    const questionsList = worksheet?.bai_2?.questions || [];
+    
+    const arrangementText = Object.keys(arrangements).length > 0 
+      ? Object.entries(arrangements).map(([key, arr]) => {
+          const items = Array.isArray(arr) ? arr : Object.values(arr || {});
+          const textItems = items.map(id => {
+            const matchedQ = questionsList.find(q => q.id === id);
+            return matchedQ ? matchedQ.text : id;
+          });
+          return `${key}:\n  -> ${textItems.join('\n  -> ')}`;
+        }).join('\n\n')
+      : 'Học sinh không có sắp xếp nào.';
+
+    const prompt = `Bạn là giáo viên chấm Bài 2 (Sắp xếp các bước tính - Tỉ số phần trăm).
+[BÀI LÀM CỦA HỌC SINH]
+${arrangementText}
+
+[BAREM CHẤM ĐIỂM BẮT BUỘC]
+Có 2 cách giải chuẩn logic:
+- Cách 1: Tính số sách khoa học -> Tìm thương (18:40) -> Nhân 100 -> Thêm %
+- Cách 2: Lấy thương sách thiếu nhi -> Nhân 100 -> Thêm % -> Lấy 100% trừ đi
+- Mức Tốt (2 điểm): Xếp đúng chính xác CẢ 2 cách giải.
+- Mức Đạt (1 điểm): Chỉ xếp đúng 1 cách giải (cách 1 hoặc cách 2).
+- Mức Cần cố gắng (0 điểm): Không xếp đúng cách nào, xếp thiếu bước, hoặc xếp sai logic.
+
+[YÊU CẦU ĐẦU RA JSON]
+{
+  "suy_luan": "Đếm số cách học sinh xếp đúng hoàn toàn logic. Từ đó đưa ra điểm số tương ứng.",
+  "diem": (0, 1 hoặc 2),
+  "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
+  "nhan_xet": "Viết 3-4 câu BÁO CÁO CHO GIÁO VIÊN. BẮT BUỘC dùng ngôi thứ 3 ('học sinh', 'em ấy'). TUYỆT ĐỐI KHÔNG xưng hô trực tiếp với học sinh (CẤM dùng 'Chào em', 'của em'). Đánh giá xem học sinh đã đề xuất được bao nhiêu cách giải, có lỗi sai logic nào không."
+}`;
+    const result = await geminiModelManager.generateContent(prompt);
+    const parsed = extractJSON(result.response.text());
+    return { evaluation: parsed || { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi parse JSON.' } };
+  } catch (error) { return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi chấm bài.' } }; }
+};
+
+export const evaluateBai3 = async (studentAnswers, worksheet) => {
+  try {
+    const bai_lam = studentAnswers?.bai_3?.bai_lam || 'Không có';
+    const giai_thich = studentAnswers?.bai_3?.giai_thich || 'Không có';
+
+    const prompt = `Bạn là giáo viên chấm Bài 3 (Trình bày bài giải - Tỉ số phần trăm).
+[BÀI LÀM CỦA HỌC SINH]
+Bài giải: ${bai_lam}
+Giải thích: ${giai_thich}
+
+[BAREM CHẤM ĐIỂM BẮT BUỘC]
+- Mức Tốt (2 điểm): Thực hiện đúng các bước giải/phép tính, trình bày rõ ràng VÀ CÓ GIẢI THÍCH/lập luận hợp lý cho các bước.
+- Mức Đạt (1 điểm): Thực hiện đúng các phép tính cơ bản, trình bày rõ nhưng thiếu giải thích hoặc giải thích hời hợt/thiếu logic.
+- Mức Cần cố gắng (0 điểm): Tính toán sai nhiều, lời giải thiếu logic.
+
+[YÊU CẦU ĐẦU RA JSON]
+{
+  "suy_luan": "Kiểm tra tính chính xác của phép toán. Bắt buộc kiểm tra phần 'Giải thích', nếu sơ sài thì tối đa 1 điểm.",
+  "diem": (0, 1 hoặc 2),
+  "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
+  "nhan_xet": "Viết 3-4 câu BÁO CÁO CHO GIÁO VIÊN. BẮT BUỘC dùng ngôi thứ 3 ('học sinh', 'em ấy'). TUYỆT ĐỐI KHÔNG xưng 'em', 'của em'. Nhận xét năng lực tính toán và đánh giá xem lập luận giải thích của học sinh có hợp lí không."
+}`;
+    const result = await geminiModelManager.generateContent(prompt);
+    const parsed = extractJSON(result.response.text());
+    return { evaluation: parsed || { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi parse JSON.' } };
+  } catch (error) { return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi chấm bài.' } }; }
+};
+
+export const evaluateBai4 = async (studentAnswers, worksheet) => {
+  try {
+    const getAnswerValue = (answers, idx) => {
+      if (Array.isArray(answers)) return answers[idx] || '';
+      if (typeof answers === 'object' && answers !== null) return answers[idx.toString()] || answers[idx] || '';
+      return '';
+    };
+
+    const bai4Answers = studentAnswers?.bai_4?.answers || {};
+    let questionsInfo = '';
+    let validationWarnings = '';
+    
+    (worksheet?.bai_4?.questions || []).forEach((q) => {
+      questionsInfo += `\n${q.label}. ${q.text}\n`;
+      if (q.type === 'cau_hoi_nho') {
+        (q.subQuestions || []).forEach((sq, idx) => {
+          const answer = getAnswerValue(bai4Answers[q.id], idx);
+          questionsInfo += `  - Câu ${idx + 1}: ${sq.text}\n    Trả lời: ${answer || 'trống'}\n`;
+          if (requiresCalculation(sq.text) && isAnswerOnlyResult(answer)) {
+            validationWarnings += `⚠️ CẢNH BÁO: Câu ${q.label}.${idx + 1} yêu cầu phép tính nhưng HS chỉ ghi kết quả.\n`;
+          }
+        });
+      } else {
+        const answer = bai4Answers[q.id];
+        questionsInfo += `  Trả lời: ${answer || 'trống'}\n`;
+      }
+    });
+
+    const prompt = `Bạn là giáo viên chấm Bài 4 (Vận dụng mở rộng - Tỉ số phần trăm).
+[BÀI LÀM CỦA HỌC SINH]
+${questionsInfo || 'Học sinh không làm bài.'}
+${validationWarnings ? `\n[CẢNH BÁO ĐỊNH DẠNG]\n${validationWarnings}\n` : ''}
+
+[BAREM CHẤM ĐIỂM BẮT BUỘC]
+Bài có 3 yêu cầu: a (Kiểm tra lại kết quả), b (Giải bài toán mở rộng), c (Nhận xét/so sánh).
+- Mức Tốt (2 điểm): Làm được ĐỒNG THỜI cả a, b và c.
+- Mức Đạt (1 điểm): Chỉ làm được 1 trong 2 yêu cầu a hoặc b.
+- Mức Cần cố gắng (0 điểm): Không làm được cả a và b.
+
+[YÊU CẦU ĐẦU RA JSON]
+{
+  "suy_luan": "Đánh giá sự xuất hiện và tính đúng đắn của phần a, b và c.",
+  "diem": (0, 1 hoặc 2),
+  "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
+  "nhan_xet": "Viết 3-4 câu BÁO CÁO CHO GIÁO VIÊN. BẮT BUỘC dùng ngôi thứ 3 ('học sinh', 'em ấy'). TUYỆT ĐỐI KHÔNG xưng hô trực tiếp với học sinh. Đánh giá việc học sinh có biết kiểm tra lại kết quả và khả năng giải toán mở rộng."
+}`;
+    const result = await geminiModelManager.generateContent(prompt);
+    const parsed = extractJSON(result.response.text());
+    return { evaluation: parsed || { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi parse JSON.' } };
+  } catch (error) { return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi chấm bài.' } }; }
+};
+
+export const generateOverallComment = async (evaluations, tongDiem, mucNangLucChung) => {
+  try {
+    const bai_1_feedback = evaluations.bai_1?.evaluation?.nhan_xet || '';
+    const bai_2_feedback = evaluations.bai_2?.evaluation?.nhan_xet || '';
+    const bai_3_feedback = evaluations.bai_3?.evaluation?.nhan_xet || '';
+    const bai_4_feedback = evaluations.bai_4?.evaluation?.nhan_xet || '';
+
+    const prompt = `Bạn là một trợ lý tổng hợp báo cáo đánh giá năng lực học sinh về chủ đề TỈ SỐ PHẦN TRĂM. ĐÂY LÀ BÁO CÁO NỘI BỘ DÀNH RIÊNG CHO GIÁO VIÊN ĐỌC.
+
+TỔNG ĐIỂM: ${tongDiem}/8
+MỨC NĂNG LỰC CHUNG: ${mucNangLucChung}
+CHI TIẾT CÁC BÀI:
+- Bài 1: ${bai_1_feedback}
+- Bài 2: ${bai_2_feedback}
+- Bài 3: ${bai_3_feedback}
+- Bài 4: ${bai_4_feedback}
+
+YÊU CẦU BẮT BUỘC: 
+- ĐỐI TƯỢNG ĐỌC: Báo cáo này để GIÁO VIÊN đọc. TUYỆT ĐỐI KHÔNG viết dưới dạng thư gửi học sinh.
+- CẤM: TUYỆT ĐỐI KHÔNG được dùng các từ: 'Chào em', 'của em', 'em nhé', 'cố gắng nhé'.
+- NGÔI XƯNG: Bắt buộc dùng ngôi thứ ba ('học sinh', 'em ấy').
+- NỘI DUNG: Viết 4-6 câu tổng hợp khả năng hiểu bản chất "tỉ số phần trăm", kỹ năng lập phép tính và giải toán mở rộng. Chỉ ra điểm giáo viên cần bồi dưỡng thêm.`;
+
+    const result = await geminiModelManager.generateContent(prompt);
+    return result.response.text().trim() || `Học sinh đạt tổng điểm ${tongDiem}/8 với mức năng lực ${mucNangLucChung}.`;
+  } catch (error) {
+    console.error('Error generating overall comment for Output 1:', error);
+    return `Học sinh đạt tổng điểm ${tongDiem}/8 với mức năng lực ${mucNangLucChung}.`;
+  }
+};

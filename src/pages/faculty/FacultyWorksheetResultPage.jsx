@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import * as worksheetResultService from '../../services/student/worksheetResultService';
 import * as worksheetService from '../../services/faculty/worksheetService';
-import { evaluateBai1, evaluateBai2, evaluateBai3, evaluateBai4, generateOverallComment } from '../../services/student/InputWorksheetEvaluationService';
+import { getEvaluationService } from '../../services/student/wooksheetEvaluationRouter';
 import FacultyHeader from '../../components/faculty/FacultyHeader';
 import FractionRenderer from '../../components/FractionRenderer';
 
@@ -183,7 +183,8 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
   const handleReEvaluateBai1 = async () => {
     try {
       setEvaluatingBai1(true);
-      const evaluation = await evaluateBai1(result, worksheet);
+      const evaluationService = getEvaluationService(worksheet);
+      const evaluation = await evaluationService.evaluateBai1(result, worksheet);
       
       // Update result
       const updatedResult = { ...result };
@@ -224,7 +225,8 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
   const handleReEvaluateBai2 = async () => {
     try {
       setEvaluatingBai2(true);
-      const evaluation = await evaluateBai2(result, worksheet);
+      const evaluationService = getEvaluationService(worksheet);
+      const evaluation = await evaluationService.evaluateBai2(result, worksheet);
       
       const updatedResult = { ...result };
       updatedResult.bai_2 = {
@@ -263,7 +265,8 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
   const handleReEvaluateBai3 = async () => {
     try {
       setEvaluatingBai3(true);
-      const evaluation = await evaluateBai3(result, worksheet);
+      const evaluationService = getEvaluationService(worksheet);
+      const evaluation = await evaluationService.evaluateBai3(result, worksheet);
       
       const updatedResult = { ...result };
       updatedResult.bai_3 = {
@@ -302,7 +305,8 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
   const handleReEvaluateBai4 = async () => {
     try {
       setEvaluatingBai4(true);
-      const evaluation = await evaluateBai4(result, worksheet);
+      const evaluationService = getEvaluationService(worksheet);
+      const evaluation = await evaluationService.evaluateBai4(result, worksheet);
       
       const updatedResult = { ...result };
       updatedResult.bai_4 = {
@@ -341,7 +345,8 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
   const handleReEvaluateOverall = async () => {
     try {
       setEvaluatingOverall(true);
-      const nhanXetChung = await generateOverallComment(
+      const evaluationService = getEvaluationService(worksheet);
+      const nhanXetChung = await evaluationService.generateOverallComment(
         {
           bai_1: result.bai_1,
           bai_2: result.bai_2,
@@ -602,7 +607,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
                   <span className="text-2xl">🎯</span>
                   Bài làm:
                 </p>
-                <div className="bg-green-50 p-4 rounded-xl max-h-40 overflow-y-auto border-l-4 border-green-500 text-gray-700 whitespace-pre-wrap">
+                <div className="bg-green-50 p-4 rounded-xl max-h-64 overflow-y-auto border-l-4 border-green-500 text-gray-700 whitespace-pre-wrap text-base leading-relaxed break-words">
                   {result.bai_3.bai_lam ? <FractionRenderer text={result.bai_3.bai_lam} /> : '(không có)'}
                 </div>
               </div>
@@ -612,7 +617,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
                   <span className="text-2xl">💭</span>
                   Giải thích:
                 </p>
-                <div className="bg-green-50 p-4 rounded-xl max-h-40 overflow-y-auto border-l-4 border-green-500 text-gray-700 whitespace-pre-wrap">
+                <div className="bg-green-50 p-4 rounded-xl max-h-64 overflow-y-auto border-l-4 border-green-500 text-gray-700 whitespace-pre-wrap text-base leading-relaxed break-words">
                   {result.bai_3.giai_thich ? <FractionRenderer text={result.bai_3.giai_thich} /> : '(không có)'}
                 </div>
               </div>

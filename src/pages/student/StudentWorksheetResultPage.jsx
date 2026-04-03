@@ -272,7 +272,7 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
                   <span className="text-2xl">🎯</span>
                   Bài làm:
                 </p>
-                <div className="bg-green-50 p-4 rounded-xl max-h-40 overflow-y-auto border-l-4 border-green-500 text-gray-700 whitespace-pre-wrap">
+                <div className="bg-green-50 p-4 rounded-xl max-h-64 overflow-y-auto border-l-4 border-green-500 text-gray-700 whitespace-pre-wrap text-base leading-relaxed break-words">
                   {result.bai_3.bai_lam ? <FractionRenderer text={result.bai_3.bai_lam} /> : '(không có)'}
                 </div>
               </div>
@@ -283,7 +283,7 @@ const StudentWorksheetResultPage = ({ user, onSignOut }) => {
                   <span className="text-2xl">💭</span>
                   Giải thích:
                 </p>
-                <div className="bg-green-50 p-4 rounded-xl max-h-40 overflow-y-auto border-l-4 border-green-500 text-gray-700 whitespace-pre-wrap">
+                <div className="bg-green-50 p-4 rounded-xl max-h-64 overflow-y-auto border-l-4 border-green-500 text-gray-700 whitespace-pre-wrap text-base leading-relaxed break-words">
                   {result.bai_3.giai_thich ? <FractionRenderer text={result.bai_3.giai_thich} /> : '(không có)'}
                 </div>
               </div>

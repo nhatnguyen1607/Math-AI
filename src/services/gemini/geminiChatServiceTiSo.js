@@ -131,8 +131,15 @@ export class GeminiChatServiceTiSo {
     return { isValid: true };
   }
 
-  _hasStep1DataAndRequirement(answer = "") {
-    const text = String(answer || "").toLowerCase();
+  _hasStep1DataAndRequirement(answer = "", chatHistory = []) {
+    const recentStudentText = Array.isArray(chatHistory)
+      ? chatHistory
+          .filter((m) => m?.role === 'user')
+          .slice(-6)
+          .map((m) => m?.parts?.[0]?.text || '')
+          .join(' ')
+      : '';
+    const text = `${recentStudentText} ${String(answer || '')}`.toLowerCase();
     const hasData = /\d/.test(text);
     const hasRequirement = /(yêu cầu|cần\s*tìm|hỏi|tính|tìm\s*(tỉ\s*số|phần\s*trăm|giá\s*trị)|bao\s*nhiêu)/i.test(text);
     return hasData && hasRequirement;
@@ -297,7 +304,11 @@ HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
         data.next_question = "Kết quả là bao nhiêu?";
       }
 
-      if (this.currentStep === 1 && data.step_status === "MOVE_NEXT" && !this._hasStep1DataAndRequirement(studentAnswer)) {
+      if (
+        this.currentStep === 1 &&
+        data.step_status === "MOVE_NEXT" &&
+        !this._hasStep1DataAndRequirement(studentAnswer, chatHistory)
+      ) {
         data.step_status = "STAY";
         data.status = "WRONG";
         data.feedback = "Bạn đã nêu được dữ kiện rồi, rất tốt.";

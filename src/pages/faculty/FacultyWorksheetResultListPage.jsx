@@ -390,22 +390,32 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
       setExporting(true);
       const workbook = XLSX.utils.book_new();
       const exportData = [
-        ['STT', 'Tên học sinh', 'Điểm']
+        ['STT', 'Tên học sinh', 'Điểm TC1', 'Điểm TC2', 'Điểm TC3', 'Điểm TC4', 'Điểm tổng', 'Mức năng lực']
       ];
       
       results.forEach((result, idx) => {
         exportData.push([
           idx + 1,
           result.studentName || 'N/A',
-          result.tongDiem || 0
+          result.bai_1?.evaluation?.diem || 0,
+          result.bai_2?.evaluation?.diem || 0,
+          result.bai_3?.evaluation?.diem || 0,
+          result.bai_4?.evaluation?.diem || 0,
+          result.tongDiem || 0,
+          capitalizeLevelName(result.mucNangLucChung) || 'Chưa đánh giá'
         ]);
       });
       
       const ws = XLSX.utils.aoa_to_sheet(exportData);
       ws['!cols'] = [
         { wch: 8 },
-        { wch: 30 },
-        { wch: 12 }
+        { wch: 25 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 18 }
       ];
       
       XLSX.utils.book_append_sheet(workbook, ws, 'Kết quả');

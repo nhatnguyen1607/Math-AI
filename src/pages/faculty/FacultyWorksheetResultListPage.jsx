@@ -384,6 +384,52 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
     }
   };
 
+  // Export all data as simple Excel
+  const exportAllSimple = async () => {
+    try {
+      setExporting(true);
+      const workbook = XLSX.utils.book_new();
+      const exportData = [
+        ['STT', 'Tên học sinh', 'Điểm']
+      ];
+      
+      results.forEach((result, idx) => {
+        exportData.push([
+          idx + 1,
+          result.studentName || 'N/A',
+          result.tongDiem || 0
+        ]);
+      });
+      
+      const ws = XLSX.utils.aoa_to_sheet(exportData);
+      ws['!cols'] = [
+        { wch: 8 },
+        { wch: 30 },
+        { wch: 12 }
+      ];
+      
+      XLSX.utils.book_append_sheet(workbook, ws, 'Kết quả');
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      
+      const url = window.URL.createObjectURL(new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${worksheet?.name || 'Kết quả'}.xlsx`);
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      alert('Xuất dữ liệu thành công!');
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      alert('Lỗi khi xuất dữ liệu: ' + error.message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Main export handler
   const handleExportData = async () => {
     try {
@@ -454,6 +500,14 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
           >
             <span className="text-lg">📥</span>
             Xuất dữ liệu
+          </button>
+          <button
+            onClick={exportAllSimple}
+            disabled={results.length === 0 || exporting}
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-full transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <span className="text-lg">📊</span>
+            Xuất toàn bộ
           </button>
         </div>
 

@@ -485,82 +485,60 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
             </div>
 
             {/* Summary Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mb-8 max-w-2xl mx-auto">
               {/* Correct Answers Card */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-3xl p-6 lg:p-8 text-center shadow-soft hover:shadow-soft-lg transition-shadow">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-3xl p-6 lg:p-8 text-center shadow-soft hover:shadow-soft-lg transition-shadow flex flex-col items-center justify-center">
                 <div className="text-4xl lg:text-5xl font-bold text-green-600 mb-2">
                   {studentResult.correctAnswers || 0}
                 </div>
-                <div className="text-gray-600 font-semibold mb-1">Câu đúng</div>
-                <div className="text-gray-500 text-sm">
-                  ({studentResult.percentage || 0}%)
-                </div>
+                <div className="text-gray-600 font-semibold mb-2">Câu đúng</div>
               </div>
 
               {/* Percentage Circle Card */}
               <div className="bg-gradient-to-br from-white to-indigo-50 border-2 border-indigo-200 rounded-3xl p-6 lg:p-8 flex flex-col items-center justify-center shadow-soft hover:shadow-soft-lg transition-shadow">
                 <div className="relative w-28 h-28 lg:w-32 lg:h-32 mb-4">
-                  <svg
-                    className="w-full h-full transform -rotate-90"
-                    viewBox="0 0 120 120"
-                  >
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="50"
-                      fill="none"
-                      stroke="#e5e7eb"
-                      strokeWidth="8"
-                    />
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="50"
-                      fill="none"
-                      stroke="#6366f1"
-                      strokeWidth="8"
-                      strokeDasharray={`${(studentResult.percentage || 0) * 3.14}`}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl lg:text-3xl font-bold text-indigo-700">
-                      {studentResult.percentage || 0}%
-                    </span>
-                  </div>
+                  {(() => {
+                    const calculatedPercentage = studentResult.totalQuestions > 0 
+                      ? Math.round((studentResult.correctAnswers / studentResult.totalQuestions) * 100)
+                      : 0;
+                    return (
+                      <>
+                        <svg
+                          className="w-full h-full transform -rotate-90"
+                          viewBox="0 0 120 120"
+                        >
+                          <circle
+                            cx="60"
+                            cy="60"
+                            r="50"
+                            fill="none"
+                            stroke="#e5e7eb"
+                            strokeWidth="8"
+                          />
+                          <circle
+                            cx="60"
+                            cy="60"
+                            r="50"
+                            fill="none"
+                            stroke="#6366f1"
+                            strokeWidth="8"
+                            strokeDasharray={`${calculatedPercentage * 3.14}`}
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-2xl lg:text-3xl font-bold text-indigo-700">
+                            {calculatedPercentage}%
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
                 <p className="text-xs lg:text-sm text-gray-600 font-semibold">
                   Tỷ lệ đúng
                 </p>
               </div>
-
-              {/* Status Card */}
-              {(() => {
-                const isPassed = (studentResult?.percentage || 0) >= 50;
-                return (
-                  <div
-                    className={`rounded-3xl p-6 lg:p-8 flex flex-col items-center justify-center shadow-soft hover:shadow-soft-lg transition-shadow border-2 ${
-                      isPassed
-                        ? "bg-gradient-to-br from-green-50 to-emerald-50 border-green-300"
-                        : "bg-gradient-to-br from-red-50 to-orange-50 border-red-300"
-                    }`}
-                  >
-                    <div
-                      className={`text-5xl lg:text-6xl font-bold mb-2 ${isPassed ? "text-green-600" : "text-red-600"}`}
-                    >
-                      {isPassed ? "✓" : "✗"}
-                    </div>
-                    <div
-                      className={`text-xl lg:text-2xl font-bold ${isPassed ? "text-green-600" : "text-red-600"}`}
-                    >
-                      {isPassed ? "PASS" : "FAIL"}
-                    </div>
-                    <p className="text-xs text-gray-600 mt-2">
-                      {isPassed ? "Đạt yêu cầu" : "Chưa đạt yêu cầu"}
-                    </p>
-                  </div>
-                );
-              })()}
             </div>
           </>
         )}

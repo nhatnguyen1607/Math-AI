@@ -131,18 +131,34 @@ export class GeminiChatServiceTiSo {
     return { isValid: true };
   }
 
-  _hasStep1DataAndRequirement(answer = "", chatHistory = []) {
-    const recentStudentText = Array.isArray(chatHistory)
+  _hasStep1Complete(answer = "", chatHistory = []) {
+    // Kiểm tra bước 1: HS nêu được thông tin + yêu cầu (có thể tách ra hoặc cùng 1 lần)
+    const recentText = Array.isArray(chatHistory)
       ? chatHistory
           .filter((m) => m?.role === 'user')
-          .slice(-6)
+          .slice(-8)
           .map((m) => m?.parts?.[0]?.text || '')
           .join(' ')
       : '';
-    const text = `${recentStudentText} ${String(answer || '')}`.toLowerCase();
-    const hasData = /\d/.test(text);
-    const hasRequirement = /(yêu cầu|cần\s*tìm|hỏi|tính|tìm\s*(tỉ\s*số|phần\s*trăm|giá\s*trị)|bao\s*nhiêu)/i.test(text);
-    return hasData && hasRequirement;
+    const fullText = `${recentText} ${String(answer || '')}`.toLowerCase();
+    const hasInfo = /\d/.test(fullText);
+    const hasRequirement = /(yêu cầu|cần\s*tìm|hỏi|tính|tìm\s*(tỉ\s*số|phần\s*trăm|giá\s*trị)|bao\s*nhiêu)/i.test(fullText);
+    return hasInfo && hasRequirement;
+  }
+
+  _hasStep2Complete(answer = "", chatHistory = []) {
+    // Kiểm tra bước 2: HS nêu sơ bộ cách giải
+    const recentText = Array.isArray(chatHistory)
+      ? chatHistory
+          .filter((m) => m?.role === 'user')
+          .slice(-8)
+          .map((m) => m?.parts?.[0]?.text || '')
+          .join(' ')
+      : '';
+    const fullText = `${recentText} ${String(answer || '')}`.toLowerCase();
+    // Kiểm tra xem HS có nêu cách giải (sẽ dùng, chia/nhân, công thức, quy tắc...)
+    const hasSolution = /(sẽ|dùng|quy tắc|công thức|bằng cách|bằng|chia|nhân|cộng|trừ|tỉ\s*lệ)/i.test(fullText);
+    return hasSolution;
   }
 
   // 🆕 Post-processing: Tự động sửa xưng hô và các lỗi phổ biến
@@ -232,7 +248,7 @@ LUÔN TRẢ VỀ JSON:
 
     const ctx = this._getContext();
 
-    const msg = `Chào bạn! Mình là ${ctx.aiRole}. Chúng ta cùng giải bài toán tỉ số này nhé!\n\nBài toán: ${problemText}\n\nTrước tiên, bạn hãy cho mình biết bài toán đã cho những thông tin gì?`;
+    const msg = `Chào bạn! Mình là ${ctx.aiRole}. Chúng ta cùng giải bài toán tỉ số này nhé!\n\nBài toán: ${problemText}\n\nTrước tiên, bạn hãy cho mình biết bài toán đã cho những thông tin gì? Và bạn cần tìm/tính cái gì?`;
     return { message: msg, step: 1, stepName: this._getStepName(1) };
   }
 
@@ -256,7 +272,7 @@ LUÔN TRẢ VỀ JSON:
     // ⚡ HARD-CODE FALLBACK CHO BƯỚC 1 KHI HS BẾ TẮC
     if (isHelpless && this.currentStep === 1) {
       return {
-        message: this._fixPronouns(`Đừng lo nhé! Bạn hãy nhìn kỹ đề bài và cho mình biết có những con số nào xuất hiện nào?`),
+        message: this._fixPronouns(`Đừng lo nhé! Bạn hãy nhìn kỹ đề bài và cho mình biết bài toán cho những con số và thông tin nào?`),
         step: 1,
         stepName: this._getStepName(1),
         robotStatus: 'thinking',
@@ -273,11 +289,12 @@ HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
 
 ⚠️ QUY TẮC CỐT LÕI:
 1. TUYỆT ĐỐI KHÔNG xưng "em".
-2. TẠI BƯỚC 1: KHÔNG hỏi phép tính, KHÔNG hỏi công thức.
-3. TẠI BƯỚC 3 (THỰC HIỆN): Hỏi kết quả chung chung ("Kết quả là bao nhiêu?"), KHÔNG nói "phép tính", KHÔNG nêu tên phép tính.
-4. KHÔNG gợi ý từ trừu tượng.
-5. Chỉ MOVE_NEXT khi HS trả lời đúng và đủ ý.
-6. ⚠️ NẾU HS nhập số có dấu chấm (0.7, 1.5), hãy nhắc nhở HS rằng ở Việt Nam ta dùng dấu phẩy (0,7, 1,5). Gợi ý format đúng cho HS.
+2. TẠI BƯỚC 1: NÓI THÔNG TIN + YÊU CẦU, KHÔNG nêu phép tính, KHÔNG giới hạn HS chỉ nêu 1 lần.
+3. TẠI BƯỚC 2: Hỏi cách giải
+4. TẠI BƯỚC 3 (THỰC HIỆN): 🚫 TUYỆT ĐỐI CẤM nêu cụ thể số trong câu hỏi gợi ý
+5. KHÔNG gợi ý từ trừu tượng.
+6. Chỉ MOVE_NEXT khi HS trả lời đúng và đủ ý.
+7. ⚠️ NẾU HS nhập số có dấu chấm (0.7, 1.5), hãy nhắc nhở HS rằng ở Việt Nam ta dùng dấu phẩy (0,7, 1,5). Gợi ý format đúng cho HS.
 `;
 
     try {
@@ -296,23 +313,41 @@ HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
       // ⚠️ POST-FIX: Chặn AI hỏi phép tính/công thức ở Bước 1
       if (this.currentStep === 1 && /phép\s*tính|tính\s*toán|chia|nhân|cộng|trừ|công\s*thức/i.test(data.next_question)) {
         data.step_status = "STAY";
-        data.next_question = "Bạn hãy liệt kê các con số mà đề bài đã cho chúng mình biết nhé!";
+        data.next_question = "Bạn hãy cho mình biết bài toán cho những con số nào và bạn cần tìm cái gì?";
       }
 
-      // ⚠️ POST-FIX: Chặn AI hỏi quá rõ ràng ở Bước 3
-      if (this.currentStep === 3 && /phép\s*tính|giá\s*trị\s*số|tính\s*toán|chia|nhân|cộng|trừ/i.test(data.next_question)) {
-        data.next_question = "Kết quả là bao nhiêu?";
+      // ⚠️ POST-FIX: Chặn AI nêu cụ thể số ở Bước 2
+      if (this.currentStep === 2 && /\d+|\[|\]/i.test(data.next_question)) {
+        data.next_question = "Bạn sẽ dùng những thông tin nào để tìm được câu trả lời?";
       }
 
+      // ⚠️ POST-FIX: Chặn AI nêu cụ thể số ở Bước 3 và hỏi phép tính
+      if (this.currentStep === 3 && (/phép\s*tính|giá\s*trị\s*số|tính\s*toán|chia|nhân|cộng|trừ|\[|\d+/i.test(data.next_question))) {
+        data.next_question = "Bạn hãy tính toán theo kế hoạch bạn nêu ở trên nhé. Kết quả là bao nhiêu?";
+      }
+
+      // 🆕 CHECK: Bước 1 phải hoàn thành (có thông tin + yêu cầu)
       if (
         this.currentStep === 1 &&
         data.step_status === "MOVE_NEXT" &&
-        !this._hasStep1DataAndRequirement(studentAnswer, chatHistory)
+        !this._hasStep1Complete(studentAnswer, chatHistory)
       ) {
         data.step_status = "STAY";
         data.status = "WRONG";
-        data.feedback = "Bạn đã nêu được dữ kiện rồi, rất tốt.";
+        data.feedback = "Bạn đã nêu được thông tin rồi, rất tốt.";
         data.next_question = "Bây giờ bạn nói thêm yêu cầu của bài toán là cần tìm gì nhé?";
+      }
+
+      // 🆕 CHECK: Bước 2 phải hoàn thành (nêu cách giải)
+      if (
+        this.currentStep === 2 &&
+        data.step_status === "MOVE_NEXT" &&
+        !this._hasStep2Complete(studentAnswer, chatHistory)
+      ) {
+        data.step_status = "STAY";
+        data.status = "WRONG";
+        data.feedback = "Bạn cần nêu sơ bộ cách giải bài toán.";
+        data.next_question = "Bạn sẽ dùng những gì (công thức, quy tắc) để tìm được câu trả lời?";
       }
 
       // Logic chuyển bước
@@ -339,7 +374,7 @@ HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
 
   async getHint() {
     const model = geminiModelManager.getModel();
-    const result = await model.generateContent(`Đưa ra duy nhất 1 câu hỏi gợi ý cho HS lớp 5 ở bước ${this.currentStep} bài toán tỉ số: ${this.currentProblem}. Không giải thích, xưng bạn.`);
+    const result = await model.generateContent(`Đưa ra duy nhất 1 câu hỏi gợi ý cho HS lớp 5 ở bước ${this.currentStep} (${this._getStepName(this.currentStep)}) bài toán tỉ số: ${this.currentProblem}. Không giải thích, xưng bạn, KHÔNG nêu cụ thể số.`);
     return this._fixPronouns(result.response.text());
   }
 }

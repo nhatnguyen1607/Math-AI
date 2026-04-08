@@ -34,13 +34,23 @@ const FacultyPage = ({ user, userData, onSignOut }) => {
         try {
           const userSnap = await getDoc(doc(db, 'users', studentId));
           if (userSnap.exists()) {
-            details[studentId] = userSnap.data().displayName || userSnap.data().name || 'Học sinh';
+            const userData = userSnap.data();
+            details[studentId] = {
+              displayName: userData.displayName || userData.name || 'Học sinh',
+              email: userData.email || studentId
+            };
           } else {
-            details[studentId] = 'Học sinh (không tìm thấy)';
+            details[studentId] = {
+              displayName: 'Học sinh (không tìm thấy)',
+              email: studentId
+            };
           }
         } catch (error) {
           console.error('Error fetching student details:', error);
-          details[studentId] = 'Học sinh';
+          details[studentId] = {
+            displayName: 'Học sinh',
+            email: studentId
+          };
         }
       }
       setStudentDetails(details);
@@ -227,20 +237,28 @@ const FacultyPage = ({ user, userData, onSignOut }) => {
                   ) : (
                     selectedClass.students
                       .filter((studentId) => {
-                        const studentName = studentDetails[studentId] || 'Học sinh';
-                        return studentName.toLowerCase().includes(studentSearch.toLowerCase());
+                        const studentInfo = studentDetails[studentId];
+                        if (!studentInfo) return true;
+                        const searchText = `${studentInfo.displayName} ${studentInfo.email}`.toLowerCase();
+                        return searchText.includes(studentSearch.toLowerCase());
                       })
                       .map((studentId, idx) => {
-                        const studentName = studentDetails[studentId] || '...';
+                        const studentInfo = studentDetails[studentId] || {
+                          displayName: '...',
+                          email: ''
+                        };
                         
                         return (
                           <div
                             key={studentId}
                             className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 transition-all duration-300 hover:bg-gray-100"
                           >
-                            <span className="text-base font-medium text-gray-800">{studentName}</span>
+                            <div className="flex-1">
+                              <div className="text-base font-medium text-gray-800">{studentInfo.displayName}</div>
+                              <div className="text-sm text-gray-500">{studentInfo.email}</div>
+                            </div>
                             <button
-                              onClick={() => handleDeleteStudent(studentId, studentName)}
+                              onClick={() => handleDeleteStudent(studentId, studentInfo.displayName)}
                               disabled={deleting === studentId}
                               className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-600 transition-all duration-300 hover:bg-red-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Xóa học sinh"

@@ -637,17 +637,60 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                                       {(question.options || []).map((option, oIdx) => {
                                         // Handle both array (multiple select) and single answer formats
                                         const isMultipleSelect = Array.isArray(answerData.answer);
-                                        const selectedAnswers = isMultipleSelect ? answerData.answer : [answerData.answer];
+                                        const selectedAnswersRaw = isMultipleSelect ? answerData.answer : [answerData.answer];
+                                        const selectedAnswers = (selectedAnswersRaw || [])
+                                          .map((value) => {
+                                            if (typeof value === 'number') return value;
+                                            const parsed = Number(value);
+                                            return Number.isNaN(parsed) ? value : parsed;
+                                          });
                                         const isSelected = selectedAnswers.includes(oIdx);
-                                        
-                                        // For multiple select, we can't have a single correctAnswerIndex
-                                        // So we check if the answer is correct based on isCorrect flag
-                                        const isCorrectAnswer = answerData.correctAnswerIndex === oIdx;
+
+                                        // Resolve correct answer indexes from multiple possible data shapes.
+                                        const resolvedCorrectIndexes = (() => {
+                                          const questionCorrectAnswers = Array.isArray(question?.correctAnswers)
+                                            ? question.correctAnswers
+                                                .map((idx) => Number(idx))
+                                                .filter((idx) => Number.isInteger(idx))
+                                            : [];
+                                          if (questionCorrectAnswers.length > 0) {
+                                            return questionCorrectAnswers;
+                                          }
+
+                                          if (Number.isInteger(answerData?.correctAnswerIndex)) {
+                                            return [answerData.correctAnswerIndex];
+                                          }
+
+                                          const answerCorrectIndexes = Array.isArray(answerData?.correctAnswerIndexes)
+                                            ? answerData.correctAnswerIndexes
+                                                .map((idx) => Number(idx))
+                                                .filter((idx) => Number.isInteger(idx))
+                                            : [];
+                                          if (answerCorrectIndexes.length > 0) {
+                                            return answerCorrectIndexes;
+                                          }
+
+                                          if (typeof question?.correctAnswer === 'number' && Number.isInteger(question.correctAnswer)) {
+                                            return [question.correctAnswer];
+                                          }
+
+                                          return (question.options || [])
+                                            .map((opt, idx) => ({ opt, idx }))
+                                            .filter(({ opt }) => opt && typeof opt === 'object' && opt.isCorrect)
+                                            .map(({ idx }) => idx);
+                                        })();
+
+                                        const isCorrectAnswer = resolvedCorrectIndexes.includes(oIdx);
+                                        const optionText = option && typeof option === 'object'
+                                          ? (option.text || option.label || option.value || '')
+                                          : option;
                                         
                                         // Hiển thị "✓ Bạn chọn" (green) khi học sinh chọn và câu đúng
                                         const showAsCorrect = isSelected && answerData.isCorrect;
                                         // Hiển thị "✓ Bạn chọn" (red) khi học sinh chọn nhưng câu sai
                                         const showAsWrong = isSelected && !answerData.isCorrect;
+                                        // Hiển thị đáp án đúng khi câu sai
+                                        const showCorrectAnswer = isCorrectAnswer && !answerData.isCorrect;
 
                                         return (
                                           <div
@@ -657,8 +700,8 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                                                 ? 'border-green-500 bg-green-100'
                                                 : showAsWrong
                                                 ? 'border-red-500 bg-red-100'
-                                                : isCorrectAnswer
-                                                ? 'border-green-300 bg-green-50'
+                                                : showCorrectAnswer
+                                                ? 'border-green-500 bg-green-100'
                                                 : 'border-gray-300 bg-gray-50'
                                             }`}
                                           >
@@ -668,15 +711,15 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                                                   ? 'bg-gradient-to-br from-green-500 to-emerald-600'
                                                   : showAsWrong
                                                   ? 'bg-gradient-to-br from-red-500 to-red-600'
-                                                  : isCorrectAnswer
-                                                  ? 'bg-gradient-to-br from-green-400 to-green-500'
+                                                  : showCorrectAnswer
+                                                  ? 'bg-gradient-to-br from-green-500 to-emerald-600'
                                                   : 'bg-gradient-to-br from-purple-600 to-purple-700'
                                               }`}
                                             >
                                               {String.fromCharCode(65 + oIdx)}
                                             </span>
                                             <span className="min-w-0 text-[clamp(0.95rem,2.8vw,1.05rem)] leading-[1.55] text-gray-800 [overflow-wrap:anywhere] break-words">
-                                              {option}
+                                              {optionText}
                                             </span>
                                             {showAsCorrect && (
                                               <span className="col-span-2 inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-max bg-green-600 px-4 py-2 text-sm font-bold text-white sm:col-span-1 sm:self-start">
@@ -688,9 +731,9 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
                                                 ✓ Bạn chọn
                                               </span>
                                             )}
-                                            {isCorrectAnswer && !isSelected && !answerData.isCorrect && (
+                                            {showCorrectAnswer && (
                                               <span className="col-span-2 inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-max bg-green-600 px-4 py-2 text-sm font-bold text-white sm:col-span-1 sm:self-start">
-                                                ✓ Đúng
+                                                ✓ Đáp án đúng
                                               </span>
                                             )}
                                           </div>

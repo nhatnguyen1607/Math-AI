@@ -123,12 +123,30 @@ export class GeminiChatServiceTiSo {
     const diff = Math.abs(calculated - rhs);
     const tolerance = Math.max(1e-6, Math.abs(rhs) * 0.005);
     if (diff > tolerance) {
+      const prettyCalculated = Number(calculated.toFixed(6));
+      const prettyRhs = Number(rhs.toFixed(6));
       return {
         isValid: false,
-        message: "Mình thấy phép tính của bạn chưa khớp kết quả sau dấu '='. Bạn kiểm tra lại từng bước tính nhé!"
+        message: `Mình thấy chỗ sau dấu '=' đang lệch: vế trái tính ra ${prettyCalculated} nhưng bạn ghi ${prettyRhs}. Bạn kiểm tra lại bước tính cuối nhé!`
       };
     }
     return { isValid: true };
+  }
+
+  _checkPercentUnit(text = "") {
+    const lower = String(text || "").toLowerCase();
+    const hasPercent = /%|phần\s*trăm/.test(lower);
+    const hasNumericResult = /(?:=\s*)?\d+(?:[.,]\d+)?/.test(lower);
+    const isResultLike = /=|kết\s*quả|đáp\s*số|tỉ\s*số|tỷ\s*số|là\s*\d/.test(lower);
+
+    if (hasNumericResult && isResultLike && !hasPercent) {
+      return {
+        hasError: true,
+        message: "Ở bài tỉ số, kết quả cần kèm đơn vị %. Bạn kiểm tra và thêm % vào sau kết quả nhé!"
+      };
+    }
+
+    return { hasError: false };
   }
 
   _hasStep1Complete(answer = "", chatHistory = []) {
@@ -222,9 +240,11 @@ CHI TIẾT PHẢN HỒI THEO BƯỚC:
    - Chỉ hỏi dữ kiện: "Bạn xem bài toán cho những con số nào?"
    - KHÔNG hỏi phép tính, KHÔNG hỏi tìm cái gì.
 2. 🟡 LẬP KẾ HOẠCH (Bước 2): 
-   - Hỏi: "Bạn cần tìm cái gì trong bài toán này?" hoặc "Để tìm tỉ số phần trăm, ta cần biết những gì?"
+  - Hỏi kế hoạch giải: "Bạn sẽ dùng thông tin nào và quy tắc/công thức nào để giải?"
+  - CHỈ hỏi kế hoạch, CHƯA yêu cầu tính toán hay cho đáp số.
 3. 🟢 THỰC HIỆN (Bước 3):
-   - Chỉ nêu số: "Bạn hãy lấy [số liệu 1] và [số liệu 2] để tính nhé". KHÔNG nêu tên phép tính.
+  - Yêu cầu HS trình bày lời giải đầy đủ theo kế hoạch đã nêu.
+  - KHÔNG đưa số cụ thể vào gợi ý.
 4. 🔵 KIỂM TRA (Bước 4):
    - Nếu đúng -> MOVE_NEXT. Nếu chưa rõ -> hỏi các câu hỏi để học sinh có thể kiểm tra lại đáp số, ví dụ "Nếu số lượng thay đổi thì kết quả thế nào?".
 
@@ -266,15 +286,59 @@ LUÔN TRẢ VỀ JSON:
       };
     }
 
+    // Với chủ đề tỉ số: khi HS đã nêu kết quả dạng số thì cần có đơn vị %
+    if (this.currentStep >= 3) {
+      const percentCheck = this._checkPercentUnit(studentAnswer);
+      if (percentCheck.hasError) {
+        return {
+          message: percentCheck.message,
+          step: this.currentStep,
+          stepName: this._getStepName(this.currentStep),
+          robotStatus: 'wrong',
+          isSessionComplete: false
+        };
+      }
+    }
+
     // Nhận diện HS nói "không biết"
     const isHelpless = /không\s*(biết|hiểu|làm|có ý tưởng)|chẳng\s*(biết|hiểu)/i.test(studentAnswer);
 
-    // ⚡ HARD-CODE FALLBACK CHO BƯỚC 1 KHI HS BẾ TẮC
-    if (isHelpless && this.currentStep === 1) {
+    // Gợi mở khi HS bế tắc ở mọi bước, không đưa số cụ thể
+    if (isHelpless) {
+      if (this.currentStep === 1) {
+        return {
+          message: this._fixPronouns("Đừng lo nhé! Bạn hãy nêu các thông tin đề bài đã cho và yêu cầu cần tìm là gì nhé."),
+          step: 1,
+          stepName: this._getStepName(1),
+          robotStatus: 'thinking',
+          isSessionComplete: false
+        };
+      }
+
+      if (this.currentStep === 2) {
+        return {
+          message: this._fixPronouns("Bạn làm tốt rồi! Ở bước này bạn chỉ cần nêu kế hoạch giải: sẽ dùng thông tin nào và quy tắc/công thức nào, chưa cần tính ra kết quả."),
+          step: 2,
+          stepName: this._getStepName(2),
+          robotStatus: 'thinking',
+          isSessionComplete: false
+        };
+      }
+
+      if (this.currentStep === 3) {
+        return {
+          message: this._fixPronouns("Không sao nhé! Bạn hãy trình bày lời giải đầy đủ theo kế hoạch đã nêu, viết lần lượt từng bước rồi kết luận có đơn vị %."),
+          step: 3,
+          stepName: this._getStepName(3),
+          robotStatus: 'thinking',
+          isSessionComplete: false
+        };
+      }
+
       return {
-        message: this._fixPronouns(`Đừng lo nhé! Bạn hãy nhìn kỹ đề bài và cho mình biết bài toán cho những con số và thông tin nào?`),
-        step: 1,
-        stepName: this._getStepName(1),
+        message: this._fixPronouns("Bạn thử kiểm tra lại lời giải: các bước đã đủ chưa, kết luận đã đúng yêu cầu chưa, và kết quả đã có đơn vị % chưa?"),
+        step: this.currentStep,
+        stepName: this._getStepName(this.currentStep),
         robotStatus: 'thinking',
         isSessionComplete: false
       };
@@ -317,13 +381,18 @@ HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
       }
 
       // ⚠️ POST-FIX: Chặn AI nêu cụ thể số ở Bước 2
-      if (this.currentStep === 2 && /\d+|\[|\]/i.test(data.next_question)) {
-        data.next_question = "Bạn sẽ dùng những thông tin nào để tìm được câu trả lời?";
+      if (this.currentStep === 2 && /\d+|\[|\]|kết\s*quả|đáp\s*số|tính\s*toán|=|ra\s*bao\s*nhiêu/i.test(data.next_question)) {
+        data.step_status = "STAY";
+        data.next_question = "Bạn hãy nêu kế hoạch giải: bạn sẽ dùng thông tin nào và dùng quy tắc/công thức nào để giải?";
+      }
+
+      if (this.currentStep === 2 && data.step_status === "MOVE_NEXT") {
+        data.next_question = "Bạn hãy trình bày lời giải đầy đủ theo kế hoạch bạn đã nêu, viết rõ từng bước rồi kết luận có đơn vị % nhé.";
       }
 
       // ⚠️ POST-FIX: Chặn AI nêu cụ thể số ở Bước 3 và hỏi phép tính
       if (this.currentStep === 3 && (/phép\s*tính|giá\s*trị\s*số|tính\s*toán|chia|nhân|cộng|trừ|\[|\d+/i.test(data.next_question))) {
-        data.next_question = "Bạn hãy tính toán theo kế hoạch bạn nêu ở trên nhé. Kết quả là bao nhiêu?";
+        data.next_question = "Bạn hãy trình bày lời giải đầy đủ theo kế hoạch bạn nêu ở trên, rồi viết kết luận có đơn vị % nhé.";
       }
 
       // 🆕 CHECK: Bước 1 phải hoàn thành (có thông tin + yêu cầu)

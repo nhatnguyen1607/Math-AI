@@ -123,9 +123,11 @@ export class GeminiChatServiceTimeVelocity {
     const diff = Math.abs(calculated - rhs);
     const tolerance = Math.max(1e-6, Math.abs(rhs) * 0.005);
     if (diff > tolerance) {
+      const prettyCalculated = Number(calculated.toFixed(6));
+      const prettyRhs = Number(rhs.toFixed(6));
       return {
         isValid: false,
-        message: "Mình thấy phép tính của bạn chưa khớp kết quả sau dấu '='. Bạn kiểm tra lại từng bước tính nhé!"
+        message: `Mình thấy chỗ sau dấu '=' đang lệch: vế trái tính ra ${prettyCalculated} nhưng bạn ghi ${prettyRhs}. Bạn kiểm tra lại bước tính cuối nhé!`
       };
     }
     return { isValid: true };
@@ -257,12 +259,12 @@ CHI TIẾT PHẢN HỒI THEO BƯỚC:
 2. 🟡 LẬP KẾ HOẠCH (Bước 2 - NÊU SƠ BỘ CÁCH GIẢI):
    - Nếu HS không biết → hỏi "Bạn sẽ dùng những thông tin nào để tìm được yêu cầu của bài?"
    - HS nêu sơ bộ: ví dụ "sẽ tính vận tốc bằng quãng đường chia cho thời gian" (KHÔNG nêu cụ thể con số)
-   - KHÔNG được nói tên phép tính chi tiết (cộng, trừ, chia, nhân), chỉ nêu qui luật/công thức
+  - CHỈ hỏi kế hoạch giải, CHƯA bắt HS tính toán hay cho đáp số
    
 3. 🟢 THỰC HIỆN (Bước 3 - TÍNH TOÁN):
-   - Nếu HS không biết tính → hỏi "Bạn hãy tính toán theo kế hoạch bạn nêu ở trên nhé"
+  - Nếu HS không biết tính → đưa GỢI Ý CÓ CẤU TRÚC (không nêu số cụ thể), ví dụ: nêu công thức/qui tắc, thay dữ kiện từ đề, tính ra kết quả, rồi kết luận có đơn vị.
    - KHÔNG được nêu cụ thể các con số, KHÔNG được nêu chi tiết phép tính
-   - Để HS tự thực hiện theo kế hoạch đã nêu
+  - Để HS tự thực hiện và trình bày đầy đủ theo kế hoạch đã nêu
    
 4. 🔵 KIỂM TRA (Bước 4 - MỞ RỘNG):
    - Nếu HS nêu hợp lý (kết quả có đơn vị đúng, dấu hiệu logic) → MOVE_NEXT luôn
@@ -331,15 +333,43 @@ LUÔN TRẢ VỀ JSON:
 
     // 🆕 Kiểm tra xem HS có nói "không biết" hay không
     const isHelpless = /không\s*(biết|hiểu|làm|có ý tưởng)|chẳng\s*(biết|hiểu)/i.test(studentAnswer);
-    console.log('🆘 Is student helpless?', isHelpless, 'Current step:', this.currentStep);
 
-    // 🆕 HARD-CODE FALLBACK CHO BƯỚC 1 KHI HS BẾ TẮC
-    if (isHelpless && this.currentStep === 1) {
-      console.log('⚡ [HARD-CODE] Bước 1 + HS bế tắc → Return hard-coded Step 1 gợi ý');
+    // Gợi mở khi HS bế tắc ở mọi bước, không đưa số cụ thể
+    if (isHelpless) {
+      if (this.currentStep === 1) {
+        return {
+          message: this._fixPronouns("Đừng lo nhé! Bạn hãy nêu các thông tin đề bài đã cho và yêu cầu cần tìm là gì nhé."),
+          step: 1,
+          stepName: this._getStepName(1),
+          robotStatus: 'thinking',
+          isSessionComplete: false
+        };
+      }
+
+      if (this.currentStep === 2) {
+        return {
+          message: this._fixPronouns("Bạn làm tốt rồi! Ở bước này bạn chỉ cần nêu kế hoạch giải: bạn sẽ dùng thông tin nào và dùng quy tắc/công thức nào, chưa cần tính ra kết quả."),
+          step: 2,
+          stepName: this._getStepName(2),
+          robotStatus: 'thinking',
+          isSessionComplete: false
+        };
+      }
+
+      if (this.currentStep === 3) {
+        return {
+          message: this._fixPronouns("Không sao nhé! Gợi ý cho bạn ở bước này: (1) nhắc lại quy tắc/công thức bạn đã chọn, (2) thay các dữ kiện từ đề vào, (3) tính ra kết quả, (4) viết kết luận có đơn vị phù hợp. Bạn thử làm theo 4 ý này nhé."),
+          step: 3,
+          stepName: this._getStepName(3),
+          robotStatus: 'thinking',
+          isSessionComplete: false
+        };
+      }
+
       return {
-        message: this._fixPronouns(`Đừng lo nhé! Bài toán cho chúng mình biết có những số liệu và thông tin gì? Và bạn cần tìm/tính cái gì nhé? Bạn có thể nêu riêng lẻ hoặc cùng 1 lần cũng được!`),
-        step: 1,
-        stepName: this._getStepName(1),
+        message: this._fixPronouns("Bạn thử kiểm tra lại lời giải: dữ kiện đã dùng đủ chưa, đơn vị đã đúng chưa, và kết luận đã khớp yêu cầu đề chưa?"),
+        step: this.currentStep,
+        stepName: this._getStepName(this.currentStep),
         robotStatus: 'thinking',
         isSessionComplete: false
       };
@@ -397,10 +427,19 @@ YÊU CẦU:
         data.next_question = "Bạn có thể tìm và liệt kê các thông tin mà đề bài cho biết không?";
       }
 
+      // Bước 2 chỉ hỏi kế hoạch, chưa tính toán
+      if (this.currentStep === 2 && /kết\s*quả|đáp\s*số|tính\s*toán|\d+|=|ra\s*bao\s*nhiêu/i.test(data.next_question)) {
+        data.step_status = "STAY";
+        data.next_question = "Bạn hãy nêu kế hoạch giải: bạn sẽ dùng thông tin nào và dùng quy tắc/công thức nào để giải?";
+      }
+
+      if (this.currentStep === 2 && data.step_status === "MOVE_NEXT") {
+        data.next_question = "Bạn hãy trình bày lời giải đầy đủ theo kế hoạch bạn đã nêu, viết rõ từng bước rồi kết luận nhé.";
+      }
+
       // 🆕 POST-FIX: Chặn AI hỏi quá rõ ràng ở Bước 3
       if (this.currentStep === 3 && /phép\s*tính|giá\s*trị\s*số|tính\s*toán|chia|nhân|cộng|trừ/i.test(data.next_question)) {
-        console.log('⚠️ [POST-FIX] AI vẫn hỏi phép tính ở bước 3 → Generalize');
-        data.next_question = "Kết quả là bao nhiêu?";
+        data.next_question = "Bạn hãy trình bày lời giải đầy đủ theo kế hoạch bạn đã nêu, rồi ghi kết luận cuối cùng nhé.";
       }
 
       if (
@@ -420,7 +459,6 @@ YÊU CẦU:
         data.step_status === "MOVE_NEXT" &&
         !this._hasStep2Complete(studentAnswer, chatHistory)
       ) {
-        console.log('⚠️ [CHECK] Bước 2 chưa xong - HS chưa nêu sơ bộ cách giải → Block sang bước 3');
         data.step_status = "STAY";
         data.status = "WRONG";
         data.feedback = "Bạn cần nêu sơ bộ cách giải bài toán.";

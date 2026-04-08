@@ -125,12 +125,34 @@ export class GeminiChatServiceTiSo {
     if (diff > tolerance) {
       const prettyCalculated = Number(calculated.toFixed(6));
       const prettyRhs = Number(rhs.toFixed(6));
+      let issueType = "arithmetic";
+      if (Math.abs(rhs) > 0) {
+        const ratio = Math.abs(calculated / rhs);
+        const decimalLikeFactors = [10, 100, 1000, 0.1, 0.01, 0.001];
+        const looksLikeDecimalShift = decimalLikeFactors.some((factor) =>
+          Math.abs(ratio - factor) <= factor * 0.03
+        );
+        if (looksLikeDecimalShift) issueType = "decimal";
+      }
       return {
         isValid: false,
-        message: `Mình thấy chỗ sau dấu '=' đang lệch: vế trái tính ra ${prettyCalculated} nhưng bạn ghi ${prettyRhs}. Bạn kiểm tra lại bước tính cuối nhé!`
+        issueType,
+        expression: lhs,
+        expected: prettyCalculated,
+        actual: prettyRhs,
+        message: "Mình thấy có chút sai sót ở kết quả, bạn hãy kiểm tra lại nhé!"
       };
     }
     return { isValid: true };
+  }
+
+  _buildStep3ComputationFeedback(check = {}) {
+    const expression = check?.expression ? ` ${check.expression}` : "";
+    if (check?.issueType === "decimal") {
+      return `Bạn hãy kiểm tra lại kết quả của phép tính${expression}, có vẻ bạn đang đặt vị trí dấu phẩy chưa chính xác. Bạn thử tính lại từng bước rồi ghi lại kết quả, và nhớ kiểm tra lại đơn vị % nhé.`;
+    }
+
+    return `Bạn hãy kiểm tra lại kết quả của phép tính${expression}, hiện chưa khớp với dữ kiện bài toán. Bạn rà lại từng bước tính và nhớ kiểm tra lại đơn vị % trước khi kết luận nhé.`;
   }
 
   _checkPercentUnit(text = "") {
@@ -177,6 +199,40 @@ export class GeminiChatServiceTiSo {
     // Kiểm tra xem HS có nêu cách giải (sẽ dùng, chia/nhân, công thức, quy tắc...)
     const hasSolution = /(sẽ|dùng|quy tắc|công thức|bằng cách|bằng|chia|nhân|cộng|trừ|tỉ\s*lệ)/i.test(fullText);
     return hasSolution;
+  }
+
+  _hasExecutionEvidence(answer = "") {
+    const text = String(answer || "").toLowerCase();
+    // Nếu HS đã bắt đầu tính/ghi biểu thức thì xem như đã có ý tưởng giải.
+    return /[=:+\-*/]|tỉ\s*số|tỷ\s*số|phần\s*trăm|đáp\s*số|kết\s*luận/i.test(text);
+  }
+
+  _isOldStep2Prompt(text = "") {
+    return /bạn\s+hãy\s+nêu\s+kế\s*hoạch\s*giải[:：]?\s*bạn\s*sẽ\s*dùng\s*thông\s*tin\s*nào\s+và\s+dùng\s*quy\s*tắc\s*\/\s*công\s*thức\s*nào\s+để\s*giải\??/i.test(String(text || ""));
+  }
+
+  _sanitizeByCurrentStep(text = "") {
+    let safeText = String(text || "");
+    if (this.currentStep !== 2 && this._isOldStep2Prompt(safeText)) {
+      if (this.currentStep === 3) {
+        safeText = "Bạn hãy trình bày lời giải đầy đủ theo kế hoạch đã nêu, viết rõ từng bước rồi kết luận có đơn vị % nhé.";
+      } else if (this.currentStep === 4) {
+        safeText = "Bạn hãy kiểm tra lại lời giải: kết quả có khớp dữ kiện, đã có đơn vị % và kết luận đã đủ yêu cầu chưa?";
+      } else {
+        safeText = "Bạn hãy tiếp tục trả lời theo đúng bước hiện tại nhé.";
+      }
+    }
+    return safeText;
+  }
+
+  _hasStep3Complete(answer = "") {
+    const text = String(answer || "").toLowerCase();
+    const equationCount = (text.match(/=/g) || []).length;
+    const hasRatioContext = /tỉ\s*số|tỷ\s*số|phần\s*trăm/.test(text);
+    const hasConclusion = /đáp\s*số|kết\s*luận|%/.test(text);
+    const hasStructuredFlow = /bước\s*1|bước\s*2|bước\s*3|trước\s*hết|tiếp\s*theo|sau\s*đó|cuối\s*cùng/.test(text);
+
+    return (equationCount >= 1 || hasStructuredFlow) && hasRatioContext && hasConclusion;
   }
 
   // 🆕 Post-processing: Tự động sửa xưng hô và các lỗi phổ biến
@@ -278,7 +334,9 @@ LUÔN TRẢ VỀ JSON:
     const computationCheck = this._validateStudentComputation(studentAnswer);
     if (!computationCheck.isValid) {
       return {
-        message: computationCheck.message,
+        message: this.currentStep === 3
+          ? this._buildStep3ComputationFeedback(computationCheck)
+          : computationCheck.message,
         step: this.currentStep,
         stepName: this._getStepName(this.currentStep),
         robotStatus: 'wrong',
@@ -291,7 +349,9 @@ LUÔN TRẢ VỀ JSON:
       const percentCheck = this._checkPercentUnit(studentAnswer);
       if (percentCheck.hasError) {
         return {
-          message: percentCheck.message,
+          message: this.currentStep === 3
+            ? "Bạn hãy xem lại đơn vị của bài toán cho chính xác nhé. Ở bài tỉ số, kết quả cần ghi kèm đơn vị %."
+            : percentCheck.message,
           step: this.currentStep,
           stepName: this._getStepName(this.currentStep),
           robotStatus: 'wrong',
@@ -336,7 +396,7 @@ LUÔN TRẢ VỀ JSON:
       }
 
       return {
-        message: this._fixPronouns("Bạn thử kiểm tra lại lời giải: các bước đã đủ chưa, kết luận đã đúng yêu cầu chưa, và kết quả đã có đơn vị % chưa?"),
+        message: this._fixPronouns("Không sao đâu nhé! Ở bước kiểm tra, bạn làm theo 3 ý này: (1) đối chiếu lại kết quả với dữ kiện đề bài, (2) kiểm tra kết quả đã có đơn vị % chưa, (3) kết luận đã trả lời đúng yêu cầu chưa. Bạn thử trả lời lại theo 3 ý này nhé."),
         step: this.currentStep,
         stepName: this._getStepName(this.currentStep),
         robotStatus: 'thinking',
@@ -390,8 +450,8 @@ HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
         data.next_question = "Bạn hãy trình bày lời giải đầy đủ theo kế hoạch bạn đã nêu, viết rõ từng bước rồi kết luận có đơn vị % nhé.";
       }
 
-      // ⚠️ POST-FIX: Chặn AI nêu cụ thể số ở Bước 3 và hỏi phép tính
-      if (this.currentStep === 3 && (/phép\s*tính|giá\s*trị\s*số|tính\s*toán|chia|nhân|cộng|trừ|\[|\d+/i.test(data.next_question))) {
+      // ⚠️ POST-FIX: Ở bước 3 không được quay lại hỏi kiểu bước 2
+      if (this.currentStep === 3 && (/kế\s*hoạch|sẽ\s*dùng|dùng\s*thông\s*tin\s*nào|quy\s*tắc|công\s*thức|phép\s*tính|giá\s*trị\s*số|tính\s*toán|chia|nhân|cộng|trừ|\[|\d+/i.test(data.next_question))) {
         data.next_question = "Bạn hãy trình bày lời giải đầy đủ theo kế hoạch bạn nêu ở trên, rồi viết kết luận có đơn vị % nhé.";
       }
 
@@ -411,13 +471,40 @@ HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
       if (
         this.currentStep === 2 &&
         data.step_status === "MOVE_NEXT" &&
-        !this._hasStep2Complete(studentAnswer, chatHistory)
+        !this._hasStep2Complete(studentAnswer, chatHistory) &&
+        !this._hasExecutionEvidence(studentAnswer)
       ) {
         data.step_status = "STAY";
         data.status = "WRONG";
         data.feedback = "Bạn cần nêu sơ bộ cách giải bài toán.";
         data.next_question = "Bạn sẽ dùng những gì (công thức, quy tắc) để tìm được câu trả lời?";
       }
+
+      // Bước 3: HS phải trình bày đầy đủ các bước tính theo kế hoạch đã nêu.
+      if (
+        this.currentStep === 3 &&
+        data.step_status === "MOVE_NEXT" &&
+        !this._hasStep3Complete(studentAnswer)
+      ) {
+        data.step_status = "STAY";
+        data.status = "WRONG";
+        data.feedback = "Bạn mới nêu một phần kết quả, chưa đủ các bước tính theo kế hoạch.";
+        data.next_question = "Bạn hãy trình bày đầy đủ từng bước tính rồi viết kết luận cuối cùng có đơn vị % nhé.";
+      }
+
+      // Bước 4: chỉ được hoàn thành khi trả lời đúng.
+      if (this.currentStep === 4) {
+        const isCorrect = String(data.status || "").toUpperCase() === "CORRECT";
+        if (!isCorrect) {
+          data.step_status = "STAY";
+          data.status = "WRONG";
+          data.feedback = data.feedback || "Không sao đâu, mình cùng kiểm tra lại nhé.";
+          data.next_question = "Bạn hãy rà lại theo 3 ý: kết quả có khớp dữ kiện không, kết quả đã có đơn vị chưa, và kết luận đã trả lời đủ yêu cầu đề bài chưa?";
+        }
+      }
+
+      data.feedback = this._sanitizeByCurrentStep(data.feedback || "");
+      data.next_question = this._sanitizeByCurrentStep(data.next_question || "");
 
       // Logic chuyển bước
       if (data.step_status === "MOVE_NEXT" && !isHelpless) {

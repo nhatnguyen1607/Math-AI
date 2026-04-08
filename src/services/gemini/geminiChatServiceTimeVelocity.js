@@ -125,12 +125,34 @@ export class GeminiChatServiceTimeVelocity {
     if (diff > tolerance) {
       const prettyCalculated = Number(calculated.toFixed(6));
       const prettyRhs = Number(rhs.toFixed(6));
+      let issueType = "arithmetic";
+      if (Math.abs(rhs) > 0) {
+        const ratio = Math.abs(calculated / rhs);
+        const decimalLikeFactors = [10, 100, 1000, 0.1, 0.01, 0.001];
+        const looksLikeDecimalShift = decimalLikeFactors.some((factor) =>
+          Math.abs(ratio - factor) <= factor * 0.03
+        );
+        if (looksLikeDecimalShift) issueType = "decimal";
+      }
       return {
         isValid: false,
-        message: `Mình thấy chỗ sau dấu '=' đang lệch: vế trái tính ra ${prettyCalculated} nhưng bạn ghi ${prettyRhs}. Bạn kiểm tra lại bước tính cuối nhé!`
+        issueType,
+        expression: lhs,
+        expected: prettyCalculated,
+        actual: prettyRhs,
+        message: "Mình thấy có chút sai sót ở kết quả, bạn hãy kiểm tra lại nhé!"
       };
     }
     return { isValid: true };
+  }
+
+  _buildStep3ComputationFeedback(check = {}) {
+    const expression = check?.expression ? ` ${check.expression}` : "";
+    if (check?.issueType === "decimal") {
+      return `Bạn hãy kiểm tra lại kết quả của phép tính${expression}, có vẻ bạn đang đặt vị trí dấu phẩy chưa chính xác. Bạn thử tính lại từng bước rồi ghi lại kết quả, đồng thời kiểm tra lại đơn vị cho đúng nhé.`;
+    }
+
+    return `Bạn hãy kiểm tra lại kết quả của phép tính${expression}, hiện chưa khớp với dữ kiện bài toán. Bạn rà lại từng bước tính và nhớ kiểm tra lại đơn vị trước khi kết luận nhé.`;
   }
 
   _hasStep1Complete(answer = "", chatHistory = []) {
@@ -161,6 +183,42 @@ export class GeminiChatServiceTimeVelocity {
     // Kiểm tra xem HS có nêu cách giải (sẽ dùng, chia/nhân, công thức, bằng cách, bằng...)
     const hasSolution = /(sẽ|dùng|quy tắc|công thức|bằng cách|bằng|chia|nhân|cộng|trừ|tổng|hiệu|tích|thương)/i.test(fullText);
     return hasSolution;
+  }
+
+  _hasExecutionEvidence(answer = "") {
+    const text = String(answer || "").toLowerCase();
+    // Nếu HS đã bắt đầu tính/ghi biểu thức thì xem như đã có ý tưởng giải.
+    return /[=:+\-*/]|vận\s*tốc|quãng\s*đường|thời\s*gian|đáp\s*số|kết\s*luận/i.test(text);
+  }
+
+  _isOldStep2Prompt(text = "") {
+    return /bạn\s+hãy\s+nêu\s+kế\s*hoạch\s*giải[:：]?\s*bạn\s*sẽ\s*dùng\s*thông\s*tin\s*nào\s+và\s+dùng\s*quy\s*tắc\s*\/\s*công\s*thức\s*nào\s+để\s*giải\??/i.test(String(text || ""));
+  }
+
+  _sanitizeByCurrentStep(text = "") {
+    let safeText = String(text || "");
+    if (this.currentStep !== 2 && this._isOldStep2Prompt(safeText)) {
+      if (this.currentStep === 3) {
+        safeText = "Bạn hãy trình bày lời giải đầy đủ theo kế hoạch bạn đã nêu, viết rõ từng bước tính rồi kết luận nhé.";
+      } else if (this.currentStep === 4) {
+        safeText = "Bạn hãy kiểm tra lại lời giải: kết quả có khớp dữ kiện, đơn vị đã đúng và kết luận đã đủ yêu cầu chưa?";
+      } else {
+        safeText = "Bạn hãy tiếp tục trả lời theo đúng bước hiện tại nhé.";
+      }
+    }
+    return safeText;
+  }
+
+  _hasStep3Complete(answer = "") {
+    const text = String(answer || "").toLowerCase();
+    const equationCount = (text.match(/=/g) || []).length;
+    const hasDistance = /quãng\s*đường|tổng\s*quãng\s*đường/.test(text);
+    const hasTime = /thời\s*gian|tổng\s*thời\s*gian/.test(text);
+    const hasVelocityOrConclusion = /vận\s*tốc|đáp\s*số|kết\s*luận/.test(text);
+    const hasStructuredFlow = /bước\s*1|bước\s*2|bước\s*3|trước\s*hết|tiếp\s*theo|sau\s*đó|cuối\s*cùng/.test(text);
+
+    // Bước 3 chỉ đúng khi có đủ tiến trình tính, không chấp nhận chỉ nêu đáp số cuối.
+    return (equationCount >= 2 || hasStructuredFlow) && hasDistance && hasTime && hasVelocityOrConclusion;
   }
 
   _checkVelocityUnit(text) {
@@ -313,7 +371,9 @@ LUÔN TRẢ VỀ JSON:
     const unitCheck = this._checkVelocityUnit(studentAnswer);
     if (unitCheck.hasError) {
       return {
-        message: unitCheck.message,
+        message: this.currentStep === 3
+          ? "Bạn hãy xem lại đơn vị của bài toán cho chính xác nhé. Ở đây bạn cần dùng đúng đơn vị vận tốc phù hợp như km/h hoặc m/s."
+          : unitCheck.message,
         step: this.currentStep,
         stepName: this._getStepName(this.currentStep),
         robotStatus: 'wrong'
@@ -323,7 +383,9 @@ LUÔN TRẢ VỀ JSON:
     const computationCheck = this._validateStudentComputation(studentAnswer);
     if (!computationCheck.isValid) {
       return {
-        message: computationCheck.message,
+        message: this.currentStep === 3
+          ? this._buildStep3ComputationFeedback(computationCheck)
+          : computationCheck.message,
         step: this.currentStep,
         stepName: this._getStepName(this.currentStep),
         robotStatus: 'wrong',
@@ -367,7 +429,7 @@ LUÔN TRẢ VỀ JSON:
       }
 
       return {
-        message: this._fixPronouns("Bạn thử kiểm tra lại lời giải: dữ kiện đã dùng đủ chưa, đơn vị đã đúng chưa, và kết luận đã khớp yêu cầu đề chưa?"),
+        message: this._fixPronouns("Không sao đâu nhé! Ở bước kiểm tra, bạn làm theo 3 ý này: (1) đối chiếu lại kết quả với dữ kiện đề bài, (2) kiểm tra đơn vị vận tốc đã đúng chưa, (3) kết luận đã trả lời đủ yêu cầu chưa. Bạn thử trả lời lại theo 3 ý này nhé."),
         step: this.currentStep,
         stepName: this._getStepName(this.currentStep),
         robotStatus: 'thinking',
@@ -437,8 +499,8 @@ YÊU CẦU:
         data.next_question = "Bạn hãy trình bày lời giải đầy đủ theo kế hoạch bạn đã nêu, viết rõ từng bước rồi kết luận nhé.";
       }
 
-      // 🆕 POST-FIX: Chặn AI hỏi quá rõ ràng ở Bước 3
-      if (this.currentStep === 3 && /phép\s*tính|giá\s*trị\s*số|tính\s*toán|chia|nhân|cộng|trừ/i.test(data.next_question)) {
+      // 🆕 POST-FIX: Ở bước 3 tuyệt đối không quay lại hỏi kiểu bước 2
+      if (this.currentStep === 3 && /kế\s*hoạch|sẽ\s*dùng|dùng\s*thông\s*tin\s*nào|quy\s*tắc|công\s*thức|phép\s*tính|giá\s*trị\s*số|tính\s*toán|chia|nhân|cộng|trừ/i.test(data.next_question)) {
         data.next_question = "Bạn hãy trình bày lời giải đầy đủ theo kế hoạch bạn đã nêu, rồi ghi kết luận cuối cùng nhé.";
       }
 
@@ -457,13 +519,40 @@ YÊU CẦU:
       if (
         this.currentStep === 2 &&
         data.step_status === "MOVE_NEXT" &&
-        !this._hasStep2Complete(studentAnswer, chatHistory)
+        !this._hasStep2Complete(studentAnswer, chatHistory) &&
+        !this._hasExecutionEvidence(studentAnswer)
       ) {
         data.step_status = "STAY";
         data.status = "WRONG";
         data.feedback = "Bạn cần nêu sơ bộ cách giải bài toán.";
         data.next_question = "Vậy bạn sẽ dùng những thông tin nào và cách nào để tìm được câu trả lời?";
       }
+
+      // Bước 3: HS phải trình bày đầy đủ các bước tính theo kế hoạch đã nêu.
+      if (
+        this.currentStep === 3 &&
+        data.step_status === "MOVE_NEXT" &&
+        !this._hasStep3Complete(studentAnswer)
+      ) {
+        data.step_status = "STAY";
+        data.status = "WRONG";
+        data.feedback = "Bạn mới nêu một phần kết quả, chưa đủ các bước tính theo kế hoạch.";
+        data.next_question = "Bạn hãy trình bày đầy đủ: tính quãng đường, tính thời gian, rồi tính vận tốc và kết luận có đơn vị phù hợp nhé.";
+      }
+
+      // Bước 4: chỉ được hoàn thành khi trả lời đúng.
+      if (this.currentStep === 4) {
+        const isCorrect = String(data.status || "").toUpperCase() === "CORRECT";
+        if (!isCorrect) {
+          data.step_status = "STAY";
+          data.status = "WRONG";
+          data.feedback = data.feedback || "Không sao đâu, mình cùng kiểm tra lại nhé.";
+          data.next_question = "Bạn hãy rà lại theo 3 ý: kết quả có khớp dữ kiện không, đơn vị vận tốc đã đúng chưa, và kết luận đã trả lời đủ yêu cầu đề bài chưa?";
+        }
+      }
+
+      data.feedback = this._sanitizeByCurrentStep(data.feedback || "");
+      data.next_question = this._sanitizeByCurrentStep(data.next_question || "");
 
       if (data.step_status === "MOVE_NEXT" && !isHelpless) {
         if (this.currentStep < 4) {

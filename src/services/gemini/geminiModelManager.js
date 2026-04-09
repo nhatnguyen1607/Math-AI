@@ -3,7 +3,7 @@ const MODELS = [
   {
     name: "gemini-2.5-flash", 
     displayName: "Gemini 2.5 Flash",
-    rpdLimit: 2000, 
+    rpdLimit: 99999, 
     type: "text"
   },
   {
@@ -242,7 +242,7 @@ class GeminiModelManager {
 
     try {
       // Add a small inter-request delay to avoid burst limit
-      await this._delay(500);
+      await this._delay(50);
 
       // ---------- Vertex AI generateContent body ----------
       let lastError = null;

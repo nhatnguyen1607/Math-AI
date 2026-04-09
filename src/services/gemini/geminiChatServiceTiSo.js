@@ -286,31 +286,32 @@ VAI TRÒ CỦA BẠN: BẠN ĐANG ĐÓNG VAI LÀ "${ctx.aiRole}".
 - Trong cuộc trò chuyện, hãy nhắc đến các nhân vật Mai, Việt, Nam trong bối cảnh bài toán để tạo sự gần gũi.
 
 QUY TẮC PHẢN HỒI GỢI MỞ (SIÊU SÚC TÍCH):
-- Khi HS nói "không biết", "không hiểu" hoặc bế tắc:
-  + Bước 1: Khích lệ tinh thần (KHÔNG gợi ý phép tính, KHÔNG gợi ý công thức).
-  + Bước 2: Đặt DUY NHẤT 1 câu hỏi CƠ BẢN RẤT ĐƠN GIẢN.
-  + TUYỆT ĐỐI CẤM: Giải hộ, hỏi thẳng phép tính (VD: "lấy A chia B à"), gợi ý từ trừu tượng ("tỉ lệ thuận", "mối quan hệ").
+- NẾU HS NÓI "KHÔNG BIẾT" HOẶC YÊU CẦU GIẢI: TUYỆT ĐỐI KHÔNG quay lại hỏi câu hỏi về "thông tin bài toán" (Bước 1) nếu đang ở Bước 2, Bước 3, hoặc Bước 4.
+  + Tùy vào bước hiện tại, hãy CHIA NHỎ vấn đề hiện tại thành một câu hỏi gợi mở siêu dễ liên quan MẬT THIẾT đến con số hoặc bước tính mà HS đang kẹt.
+  + TUYỆT ĐỐI CẤM: Giải hộ, hỏi thẳng phép tính, gợi ý từ khóa trừu tượng.
 
 CHI TIẾT PHẢN HỒI THEO BƯỚC:
-1. 🔴 HIỂU BÀI (Bước 1):
-   - Chỉ hỏi dữ kiện: "Bạn xem bài toán cho những con số nào?"
-   - KHÔNG hỏi phép tính, KHÔNG hỏi tìm cái gì.
-2. 🟡 LẬP KẾ HOẠCH (Bước 2): 
-  - Hỏi kế hoạch giải: "Bạn sẽ dùng thông tin nào và quy tắc/công thức nào để giải?"
+1. 🔴 HIỂU BÀI (Bước 1 - NÊU THÔNG TIN VÀ YÊU CẦU):
+   - Hỏi HS nêu thông tin đề bài + yêu cầu cần tìm: "Bạn hãy cho mình biết bài toán cho những thông tin gì? Và bạn cần tìm/tính cái gì?"
+   - KHÔNG hỏi phép tính, KHÔNG hỏi công thức, CHỈ hỏi về thông tin và yêu cầu.
+2. 🟡 LẬP KẾ HOẠCH (Bước 2 - NÊU SƠ BỘ CÁCH GIẢI): 
+  - ⚠️ KHÔNG hỏi lại "bài toán có những con số nào" hay "bài toán cho những thông tin gì" - đó là câu hỏi bước 1 rồi!
+  - Hỏi kế hoạch/chiến lược giải: "Bạn sẽ giải bài này như thế nào? Bạn dùng cách gì/quy tắc gì để tìm đáp án?"
   - CHỈ hỏi kế hoạch, CHƯA yêu cầu tính toán hay cho đáp số.
 3. 🟢 THỰC HIỆN (Bước 3):
   - Yêu cầu HS trình bày lời giải đầy đủ theo kế hoạch đã nêu.
+  - TUYỆT ĐỐI KHÔNG ĐƯỢC lặp lại các câu hỏi của bước 1 hay bước 2 (như "đề bài cho biết gì?", "bạn cần tìm gì?", "bạn sẽ giải bài này thế nào?"). CHỈ nhận xét lỗi tính toán và yêu cầu tính tiếp.
   - KHÔNG đưa số cụ thể vào gợi ý.
 4. 🔵 KIỂM TRA (Bước 4):
    - Nếu đúng -> MOVE_NEXT. Nếu chưa rõ -> hỏi các câu hỏi để học sinh có thể kiểm tra lại đáp số, ví dụ "Nếu số lượng thay đổi thì kết quả thế nào?".
 
 LUÔN TRẢ VỀ JSON:
 {
-  "analysis": "Phân tích ngắn bế tắc",
+  "reasoning_process": "Tự duy luận: 1. Đang ở bước mấy? 2. Học sinh đúng hay sai? 3. Ở bước này được hỏi gì và BỊ CẤM hỏi gì (ví dụ đang ở bước 3 thì cấm hỏi lại thông tin của bước 1, bước 2)? 4. Quyết định câu trả lời.",
   "status": "CORRECT" hoặc "WRONG",
   "step_status": "STAY" hoặc "MOVE_NEXT",
-  "feedback": "Lời khích lệ ngắn, xưng 'bạn'.",
-  "next_question": "DUY NHẤT 1 câu hỏi CƠ BẢN, xưng 'bạn', không hỏi phép tính."
+  "feedback": "Lời khích lệ hoặc nhận xét kết quả, xưng 'bạn', không xưng 'em'.",
+  "next_question": "DUY NHẤT 1 câu hỏi CƠ BẢN gợi mở để HS tự làm bước tiếp theo. TUYỆT ĐỐI KHÔNG lồng ghép câu hỏi của bước cũ."
 }`;
   }
 
@@ -414,7 +415,7 @@ HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
 ⚠️ QUY TẮC CỐT LÕI:
 1. TUYỆT ĐỐI KHÔNG xưng "em".
 2. TẠI BƯỚC 1: NÓI THÔNG TIN + YÊU CẦU, KHÔNG nêu phép tính, KHÔNG giới hạn HS chỉ nêu 1 lần.
-3. TẠI BƯỚC 2: Hỏi cách giải
+3. TẠI BƯỚC 2: ⚠️ KHÔNG hỏi lại "bài toán có những con số nào" - đó là bước 1. Bước 2 CHỈ hỏi kế hoạch giải: "Bạn sẽ giải bài này như thế nào?"
 4. TẠI BƯỚC 3 (THỰC HIỆN): 🚫 TUYỆT ĐỐI CẤM nêu cụ thể số trong câu hỏi gợi ý
 5. KHÔNG gợi ý từ trừu tượng.
 6. Chỉ MOVE_NEXT khi HS trả lời đúng và đủ ý.
@@ -440,68 +441,18 @@ HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
         data.next_question = "Bạn hãy cho mình biết bài toán cho những con số nào và bạn cần tìm cái gì?";
       }
 
-      // ⚠️ POST-FIX: Chặn AI nêu cụ thể số ở Bước 2
-      if (this.currentStep === 2 && /\d+|\[|\]|kết\s*quả|đáp\s*số|tính\s*toán|=|ra\s*bao\s*nhiêu/i.test(data.next_question)) {
-        data.step_status = "STAY";
-        data.next_question = "Bạn hãy nêu kế hoạch giải: bạn sẽ dùng thông tin nào và dùng quy tắc/công thức nào để giải?";
-      }
+      // ===== BƯỚC 2: XỬ LÝ KẾ HOẠCH =====
+      if (this.currentStep === 2) {
+        // Lưu step_status gốc trước khi POST-FIX
+        const originalStep2Status = data.step_status;
 
-      if (this.currentStep === 2 && data.step_status === "MOVE_NEXT") {
-        data.next_question = "Bạn hãy trình bày lời giải đầy đủ theo kế hoạch bạn đã nêu, viết rõ từng bước rồi kết luận có đơn vị % nhé.";
-      }
-
-      // ⚠️ POST-FIX: Ở bước 3 không được quay lại hỏi kiểu bước 2
-      if (this.currentStep === 3 && (/kế\s*hoạch|sẽ\s*dùng|dùng\s*thông\s*tin\s*nào|quy\s*tắc|công\s*thức|phép\s*tính|giá\s*trị\s*số|tính\s*toán|chia|nhân|cộng|trừ|\[|\d+/i.test(data.next_question))) {
-        data.next_question = "Bạn hãy trình bày lời giải đầy đủ theo kế hoạch bạn nêu ở trên, rồi viết kết luận có đơn vị % nhé.";
-      }
-
-      // 🆕 CHECK: Bước 1 phải hoàn thành (có thông tin + yêu cầu)
-      if (
-        this.currentStep === 1 &&
-        data.step_status === "MOVE_NEXT" &&
-        !this._hasStep1Complete(studentAnswer, chatHistory)
-      ) {
-        data.step_status = "STAY";
-        data.status = "WRONG";
-        data.feedback = "Bạn đã nêu được thông tin rồi, rất tốt.";
-        data.next_question = "Bây giờ bạn nói thêm yêu cầu của bài toán là cần tìm gì nhé?";
-      }
-
-      // 🆕 CHECK: Bước 2 phải hoàn thành (nêu cách giải)
-      if (
-        this.currentStep === 2 &&
-        data.step_status === "MOVE_NEXT" &&
-        !this._hasStep2Complete(studentAnswer, chatHistory) &&
-        !this._hasExecutionEvidence(studentAnswer)
-      ) {
-        data.step_status = "STAY";
-        data.status = "WRONG";
-        data.feedback = "Bạn cần nêu sơ bộ cách giải bài toán.";
-        data.next_question = "Bạn sẽ dùng những gì (công thức, quy tắc) để tìm được câu trả lời?";
-      }
-
-      // Bước 3: HS phải trình bày đầy đủ các bước tính theo kế hoạch đã nêu.
-      if (
-        this.currentStep === 3 &&
-        data.step_status === "MOVE_NEXT" &&
-        !this._hasStep3Complete(studentAnswer)
-      ) {
-        data.step_status = "STAY";
-        data.status = "WRONG";
-        data.feedback = "Bạn mới nêu một phần kết quả, chưa đủ các bước tính theo kế hoạch.";
-        data.next_question = "Bạn hãy trình bày đầy đủ từng bước tính rồi viết kết luận cuối cùng có đơn vị % nhé.";
-      }
-
-      // Bước 4: chỉ được hoàn thành khi trả lời đúng.
-      if (this.currentStep === 4) {
-        const isCorrect = String(data.status || "").toUpperCase() === "CORRECT";
-        if (!isCorrect) {
-          data.step_status = "STAY";
-          data.status = "WRONG";
-          data.feedback = data.feedback || "Không sao đâu, mình cùng kiểm tra lại nhé.";
-          data.next_question = "Bạn hãy rà lại theo 3 ý: kết quả có khớp dữ kiện không, kết quả đã có đơn vị chưa, và kết luận đã trả lời đủ yêu cầu đề bài chưa?";
+        // ✅ MOVE_NEXT: HS đã nêu kế hoạch xong → chuyển sang bước 3
+        if (originalStep2Status === "MOVE_NEXT") {
+          data.next_question = "Tuyệt vời! Bây giờ bạn hãy bắt đầu giải bài theo kế hoạch nhé! Trình bày lời giải đầy đủ, viết rõ từng bước rồi kết luận có đơn vị % nhé.";
         }
       }
+
+
 
       data.feedback = this._sanitizeByCurrentStep(data.feedback || "");
       data.next_question = this._sanitizeByCurrentStep(data.next_question || "");
@@ -515,8 +466,11 @@ HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
         }
       }
 
+      // Tạo câu phản hồi chuẩn từ feedback và next_question, không cắt ráp từ khóa nữa
+      let finalMessage = this._fixPronouns(`${data.feedback} ${data.next_question || ""}`).trim();
+
       return {
-        message: this._fixPronouns(`${data.feedback} ${data.next_question || ""}`),
+        message: finalMessage,
         step: this.currentStep,
         stepName: this._getStepName(this.currentStep),
         robotStatus: data.status.toLowerCase(),

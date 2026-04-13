@@ -7,6 +7,7 @@ export class GeminiChatServiceTimeVelocity {
     this.currentStep = 1;
     this.isSessionComplete = false;
     this.currentContextId = EXAM_CONTEXTS[0]?.id || '';
+    this.wrongAttemptCount = 0; // 🆕 Đếm số lần trả lời sai/không biết liên tiếp tại mỗi bước
   }
 
   _getContext() {
@@ -259,8 +260,62 @@ export class GeminiChatServiceTimeVelocity {
       .replace(/\bem\s+(hãy|cần|có|là|vừa)/g, 'bạn $1');
   }
 
+  // 🆕 Xác định mức hỗ trợ theo số lần sai liên tiếp
+  _getScaffoldingLevel() {
+    if (this.wrongAttemptCount <= 1) return 1; // Lần 1: Động viên + kêu kiểm tra lại
+    if (this.wrongAttemptCount === 2) return 2; // Lần 2: Chỉ ra lỗi sai
+    return 3; // Lần 3+: Gợi ý rõ ràng
+  }
+
+  // 🆕 Tạo phản hồi theo cấp độ hỗ trợ khi HS bế tắc/sai
+  _buildScaffoldedHelplessResponse() {
+    const level = this._getScaffoldingLevel();
+    const step = this.currentStep;
+
+    // === CẤP ĐỘ 1: Động viên + kêu thử lại ===
+    if (level === 1) {
+      const responses = {
+        1: "Không sao đâu, bạn cứ bình tĩnh nhé! 💪 Bạn hãy đọc lại đề bài thật chậm rồi thử nêu lại xem bài toán cho mình biết những gì nào?",
+        2: "Bạn đang làm tốt lắm rồi! 💪 Bạn hãy suy nghĩ thêm một chút, thử nhớ lại xem mình sẽ giải bài này bằng cách nào nhé?",
+        3: "Đừng lo nhé, bạn thử bình tĩnh đọc lại kế hoạch mình đã nêu rồi thử tính lại xem nào! 💪",
+        4: "Không sao đâu! 💪 Bạn hãy nhìn lại kết quả mình vừa tính, đối chiếu với đề bài rồi thử trả lời lại nhé!"
+      };
+      return {
+        message: this._fixPronouns(responses[step] || responses[1]),
+        robotStatus: 'thinking'
+      };
+    }
+
+    // === CẤP ĐỘ 2: Chỉ ra lỗi/vấn đề cụ thể ===
+    if (level === 2) {
+      const responses = {
+        1: "Mình thấy bạn đang gặp khó ở phần tìm thông tin. Ở bước này, bạn cần làm 2 việc: (1) Nêu các dữ kiện đề bài cho (các con số, đơn vị), (2) Nêu yêu cầu bài toán hỏi gì (cần tìm cái gì). Bạn thử nêu lại nhé!",
+        2: "Mình thấy bạn đang chưa rõ cách giải. Ở bước này, bạn chỉ cần nêu: bạn sẽ dùng quy tắc/công thức nào để tìm đáp án (ví dụ: tính vận tốc, quãng đường hay thời gian), chưa cần tính ra số cụ thể. Bạn thử nêu lại xem!",
+        3: "Mình thấy bạn đang bị kẹt ở phần tính toán. Bạn cần: viết rõ công thức/quy tắc → thay số từ đề vào → tính ra kết quả → viết kết luận có đơn vị. Bạn hãy thử lại từng bước một nhé!",
+        4: "Mình thấy bạn đang chưa rõ cách kiểm tra. Bạn cần đối chiếu: (1) Kết quả có khớp dữ kiện đề bài không? (2) Đơn vị vận tốc đã đúng chưa (km/h hoặc m/s)? (3) Kết luận đã trả lời đủ yêu cầu bài toán chưa? Bạn thử trả lời lại nhé!"
+      };
+      return {
+        message: this._fixPronouns(responses[step] || responses[1]),
+        robotStatus: 'thinking'
+      };
+    }
+
+    // === CẤP ĐỘ 3+: Gợi ý rõ ràng (nhưng KHÔNG giải hộ) ===
+    const responses = {
+      1: "Mình gợi ý cho bạn nhé! 🌟 Bạn hãy nhìn vào đề bài và tìm: có những con số nào được nêu ra (ví dụ: bao nhiêu km, bao nhiêu giờ...)? Và đề bài hỏi bạn tìm cái gì (vận tốc, quãng đường hay thời gian)? Bạn chỉ cần chép lại thông tin từ đề là được rồi!",
+      2: "Mình gợi ý cho bạn nhé! 🌟 Khi giải bài toán về chuyển động, ta thường dùng 3 công thức liên quan đến: vận tốc, quãng đường và thời gian. Bạn hãy nghĩ xem bài này cần tìm đại lượng nào trong 3 đại lượng đó, rồi nêu quy tắc/công thức tương ứng nhé!",
+      3: "Mình gợi ý cho bạn nhé! 🌟 Bạn hãy làm theo 4 ý này: (1) Viết lại quy tắc/công thức bạn đã chọn ở bước trước, (2) Thay các dữ kiện từ đề bài vào công thức, (3) Tính ra kết quả bằng số, (4) Viết kết luận kèm đơn vị (km/h hoặc m/s). Bạn thử làm theo từng ý một nhé!",
+      4: "Mình gợi ý cho bạn nhé! 🌟 Để kiểm tra, bạn hãy: (1) Lấy kết quả vừa tính, thử thế ngược lại vào công thức xem có ra đúng dữ kiện đề bài không. (2) Kiểm tra đơn vị đã viết đúng chưa. (3) Đọc lại yêu cầu đề bài xem kết luận đã trả lời đúng câu hỏi chưa. Bạn thử trả lời theo 3 ý này nhé!"
+    };
+    return {
+      message: this._fixPronouns(responses[step] || responses[1]),
+      robotStatus: 'thinking'
+    };
+  }
+
   restoreSession(problemText, chatHistory, examContextId = '') {
     this.currentProblem = problemText;
+    this.wrongAttemptCount = 0; // Reset khi restore
     if (examContextId) {
       this.currentContextId = examContextId;
     }
@@ -282,7 +337,7 @@ export class GeminiChatServiceTimeVelocity {
     const ctx = this._getContext();
 
     return `Bạn là "trợ lý học tập" dẫn dắt HS lớp 5 giải toán theo 4 bước Polya. 
-Xưng hô: "mình" - "bạn". TUYỆT ĐỐI CẤMI xưng "em", "học sinh", "học sinh của mình" - PHẢI luôn xưng "bạn" ở MỌI chỗ.
+Xưng hô: "mình" - "bạn". TUYỆT ĐỐI CẤM xưng "em", "học sinh", "học sinh của mình" - PHẢI luôn xưng "bạn" ở MỌI chỗ.
 
 VAI TRÒ CỦA BẠN: BẠN ĐANG ĐÓNG VAI LÀ "${ctx.aiRole}".
 - Nhiệm vụ nhập vai: ${ctx.aiRoleDescription}
@@ -294,18 +349,39 @@ VAI TRÒ CỦA BẠN: BẠN ĐANG ĐÓNG VAI LÀ "${ctx.aiRole}".
 - Nếu HS sử dụng đơn vị khác hoặc dùng sai → PHẢI nhắc nhở kiểm tra lại đơn vị
 - VD: HS viết "km/ph" hoặc "m/p" → feedback: "Bạn kiểm tra lại đơn vị vận tốc nhé, chỉ có km/h hoặc m/s thôi"
 
+⚠️ KIỂM TRA CÂU TRẢ LỜI CỦA HỌC SINH:
+- Ở TẤT CẢ 4 BƯỚC, bạn PHẢI kiểm tra kỹ câu trả lời của học sinh để xác định ĐÚNG hay SAI.
+- Phân tích cụ thể: thông tin có đúng/đủ không, phép tính có đúng không, đáp số có chính xác không, đơn vị có phù hợp không.
+- KHÔNG ĐƯỢC chấp nhận câu trả lời sai chỉ vì học sinh đã cố gắng.
+
+🎯 QUY TẮC HỖ TRỢ THEO CẤP ĐỘ (SCAFFOLDING 3 MỨC):
+Dựa vào trường "wrong_attempt_count" được cung cấp để điều chỉnh mức hỗ trợ:
+
+📌 MỨC 1 (Lần sai/không biết thứ 1): ĐỘNG VIÊN + YÊU CẦU THỬ LẠI
+- Khen ngợi tinh thần cố gắng của HS một câu ngắn gọn
+- Nhắc HS kiểm tra lại câu trả lời, KHÔNG chỉ ra lỗi cụ thể
+- Ví dụ: "Bạn cố gắng tốt lắm! Nhưng mình thấy chưa chính xác lắm, bạn thử kiểm tra lại nhé!"
+
+📌 MỨC 2 (Lần sai/không biết thứ 2): CHỈ RA LỖI CỤ THỂ
+- Chỉ rõ CHỖ SAI hoặc THIẾU trong câu trả lời của HS
+- Giải thích ngắn gọn tại sao sai
+- Ví dụ: "Mình thấy bạn đang nhầm ở phần [chỗ sai]. Bạn cần [hướng sửa]. Bạn thử lại nhé!"
+
+📌 MỨC 3+ (Lần sai/không biết thứ 3 trở lên): GỢI Ý RÕ RÀNG
+- Đưa ra gợi ý CỤ THỂ từng bước để HS tự làm
+- CÓ THỂ nêu hướng dẫn chi tiết hơn (ví dụ: nêu tên quy tắc, liệt kê các bước cần làm)
+- ⚠️ TUYỆT ĐỐI VẪN KHÔNG ĐƯỢC GIẢI HỘ hoặc nêu đáp số cụ thể
+- Ví dụ: "Mình gợi ý cho bạn nhé: Bạn hãy (1)... (2)... (3)..."
+
 QUY TẮC PHẢN HỒI GỢI MỞ (SIÊU SÚC TÍCH):
-- Khi HS nói "không biết", "không hiểu" hoặc bế tắc:
-  + Bước 1: Khích lệ tinh thần bạn ấy một câu ngắn gọn (KHÔNG gợi ý phép tính, KHÔNG gợi ý công thức).
-  + Bước 2: Đặt DUY NHẤT 1 câu hỏi CƠ BẢN RẤT ĐƠN GIẢN, KHÔNG gợi ý thẳng vào công thức hoặc phép tính cụ thể.
-  + TUYỆT ĐỐI CẤM: 
+- Kiểm soát đa câu hỏi: HS phải giải xong toàn bộ ý (a, b...) mới được kết thúc bài.
+- TUYỆT ĐỐI CẤM: 
     * Xưng "em", "học sinh", "học sinh của mình"
     * Liệt kê danh sách câu hỏi
     * Đưa ra luồng suy luận dài dòng
-    * Giải hộ
+    * Giải hộ hoặc nêu đáp số
     * Hỏi về phép tính hay công thức (VD: "sẽ dùng phép tính gì", "thực hiện phép tính nào")
     * Gợi ý từ trừu tượng (VD: "bao nhiêu phần", "tổng thể", "mối quan hệ")
-- Kiểm soát đa câu hỏi: HS phải giải xong toàn bộ ý (a, b...) mới được kết thúc bài.
 
 CHI TIẾT PHẢN HỒI THEO BƯỚC:
 1. 🔴 HIỂU BÀI (Bước 1 - NÊU THÔNG TIN VÀ YÊU CẦU):
@@ -341,10 +417,10 @@ CHI TIẾT PHẢN HỒI THEO BƯỚC:
 
 LUÔN TRẢ VỀ JSON:
 {
-  "reasoning_process": "Tự duy luận: 1. Đang ở bước mấy? 2. Học sinh đúng hay sai? 3. Ở bước này được hỏi gì và BỊ CẤM hỏi gì (ví dụ đang ở bước 3 thì cấm hỏi lại thông tin của bước 1, bước 2)? 4. Quyết định câu trả lời.",
+  "reasoning_process": "Tự duy luận: 1. Đang ở bước mấy? 2. Học sinh đúng hay sai? Phân tích cụ thể chỗ đúng/sai. 3. Đây là lần sai thứ mấy (wrong_attempt_count)? Cần hỗ trợ mức nào? 4. Ở bước này được hỏi gì và BỊ CẤM hỏi gì? 5. Quyết định câu trả lời phù hợp với mức hỗ trợ.",
   "status": "CORRECT" hoặc "WRONG",
   "step_status": "STAY" hoặc "MOVE_NEXT",
-  "feedback": "Lời khích lệ hoặc nhận xét kết quả, xưng 'bạn', không xưng 'em'.",
+  "feedback": "Lời khích lệ hoặc nhận xét kết quả, xưng 'bạn', không xưng 'em'. Phải phù hợp với mức scaffolding.",
   "next_question": "DUY NHẤT 1 câu hỏi CƠ BẢN gợi mở để HS tự làm bước tiếp theo. TUYỆT ĐỐI KHÔNG lồng ghép câu hỏi của bước cũ."
 }`;
   }
@@ -354,6 +430,7 @@ LUÔN TRẢ VỀ JSON:
     this.currentProblem = problemText;
     this.currentStep = 1;
     this.isSessionComplete = false;
+    this.wrongAttemptCount = 0; // 🆕 Reset bộ đếm
     if (examContextId) {
       this.currentContextId = examContextId;
     }
@@ -371,6 +448,7 @@ LUÔN TRẢ VỀ JSON:
     // 🆕 Kiểm tra đơn vị vận tốc
     const unitCheck = this._checkVelocityUnit(studentAnswer);
     if (unitCheck.hasError) {
+      this.wrongAttemptCount++; // 🆕 Tăng bộ đếm
       return {
         message: this.currentStep === 3
           ? "Bạn hãy xem lại đơn vị của bài toán cho chính xác nhé. Ở đây bạn cần dùng đúng đơn vị vận tốc phù hợp như km/h hoặc m/s."
@@ -383,6 +461,7 @@ LUÔN TRẢ VỀ JSON:
 
     const computationCheck = this._validateStudentComputation(studentAnswer);
     if (!computationCheck.isValid) {
+      this.wrongAttemptCount++; // 🆕 Tăng bộ đếm
       return {
         message: this.currentStep === 3
           ? this._buildStep3ComputationFeedback(computationCheck)
@@ -394,81 +473,46 @@ LUÔN TRẢ VỀ JSON:
       };
     }
 
-    // 🆕 Kiểm tra xem HS có nói "không biết" hay không
+    // Kiểm tra xem HS có nói "không biết" hay không
     const isHelpless = /không\s*(biết|hiểu|làm|có ý tưởng)|chẳng\s*(biết|hiểu)/i.test(studentAnswer);
 
-    // Gợi mở khi HS bế tắc ở mọi bước, không đưa số cụ thể
-    if (isHelpless) {
-      if (this.currentStep === 1) {
-        return {
-          message: this._fixPronouns("Đừng lo nhé! Bạn hãy nêu các thông tin đề bài đã cho và yêu cầu cần tìm là gì nhé."),
-          step: 1,
-          stepName: this._getStepName(1),
-          robotStatus: 'thinking',
-          isSessionComplete: false
-        };
-      }
-
-      if (this.currentStep === 2) {
-        return {
-          message: this._fixPronouns("Bạn làm tốt rồi! Ở bước này bạn chỉ cần nêu kế hoạch giải: bạn sẽ dùng thông tin nào và dùng quy tắc/công thức nào, chưa cần tính ra kết quả."),
-          step: 2,
-          stepName: this._getStepName(2),
-          robotStatus: 'thinking',
-          isSessionComplete: false
-        };
-      }
-
-      if (this.currentStep === 3) {
-        return {
-          message: this._fixPronouns("Không sao nhé! Gợi ý cho bạn ở bước này: (1) nhắc lại quy tắc/công thức bạn đã chọn, (2) thay các dữ kiện từ đề vào, (3) tính ra kết quả, (4) viết kết luận có đơn vị phù hợp. Bạn thử làm theo 4 ý này nhé."),
-          step: 3,
-          stepName: this._getStepName(3),
-          robotStatus: 'thinking',
-          isSessionComplete: false
-        };
-      }
-
-      return {
-        message: this._fixPronouns("Không sao đâu nhé! Ở bước kiểm tra, bạn làm theo 3 ý này: (1) đối chiếu lại kết quả với dữ kiện đề bài, (2) kiểm tra đơn vị vận tốc đã đúng chưa, (3) kết luận đã trả lời đủ yêu cầu chưa. Bạn thử trả lời lại theo 3 ý này nhé."),
-        step: this.currentStep,
-        stepName: this._getStepName(this.currentStep),
-        robotStatus: 'thinking',
-        isSessionComplete: false
-      };
-    }
+    // 🆕 LUÔN gửi qua AI kèm chatHistory đầy đủ để AI phân tích đúng bối cảnh
+    // (KHÔNG return sớm vì hardcoded responses không có context của cuộc chat)
 
     const fullPrompt = `
 ĐỀ BÀI: ${this.currentProblem}
 BƯỚC HIỆN TẠI: ${this.currentStep} (Tên: ${this._getStepName(this.currentStep)})
-LỊCH SỬ CHAT: ${JSON.stringify(chatHistory.slice(-10))}
+LỊCH SỬ CHAT (ĐỌC KỸ ĐỂ HIỂU BỐI CẢNH): ${JSON.stringify(chatHistory.slice(-12))}
 HS VỪA NHẬP: "${studentAnswer}"
-HS CÓ NÓI KHÔNG BIẾT?: ${isHelpless}
+HS CÓ NÓI KHÔNG BIẾT/BẾ TẮC?: ${isHelpless}
+SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_count): ${this.wrongAttemptCount}
 
-⚠️ QUY TẮC CẤM CÓ:
-1. TUYỆT ĐỐI KO XỮ "em" - phải xưng "bạn" ở mọi nơi
-2. TẠI BƯỚC 1 (Hiểu bài): KHÔNG hỏi phép tính, KHÔNG hỏi công thức, CHỈ hỏi về thông tin và số liệu
-3. KHÔNG gợi ý từ trừu tượng ("bao nhiêu phần", "tổng thể", "mối quan hệ")
-4. Gợi ý phải CỰC KỲ CƠ BẢN, KHÔNG nêu công thức hay phép tính
-5. 🚫 TUYỆT ĐỐI CẤM nêu cụ thể các con số trong câu hỏi gợi ý - để HS tự tìm từ bài toán
-6. ⚠️ NẾU HS nhập số có dấu chấm (0.7, 1.5), hãy nhắc nhở HS rằng ở Việt Nam ta dùng dấu phẩy (0,7, 1,5). Gợi ý format đúng cho HS.
+⚠️ PHẢI ĐỌC KỸ LỊCH SỬ CHAT ĐỂ XÁC ĐỊNH:
+- HS đang ở bước nào trong 4 bước Polya?
+- HS đã hoàn thành những bước nào rồi? (Nếu đã qua bước 1 và 2 thì TUYỆT ĐỐI KHÔNG quay lại hỏi bước 1/2)
+- HS đang bế tắc ở CHỖ NÀO CỤ THỂ tại bước hiện tại?
 
-YÊU CẦU:
-1. 🚫 TUYỆT ĐỐI CẤM gợi ý về phép tính hay công thức, KHÔNG nêu tên phép tính cả
-2. 🚫 TUYỆT ĐỐI CẤM nêu cụ thể các con số trong câu hỏi - để HS tự tìm từ bài toán
-3. NẾU HS NÓI "KHÔNG BIẾT" HOẶC YÊU CẦU GIẢI: TUYỆT ĐỐI KHÔNG QUAY LẠI hỏi câu hỏi thông tin của Bước 1 nếu đang ở Bước 2, Bước 3, hoặc Bước 4. Thay vào đó, hãy CHIA NHỎ vấn đề hiện tại thành một câu hỏi gợi mở siêu dễ liên quan MẬT THIẾT đến con số hoặc bước tính mà HS đang kẹt.
-4. Ở BƯỚC 1: Chỉ hỏi thông tin, KHÔNG hỏi phép tính
-5. ⚠️ Ở BƯỚC 2: TUYỆT ĐỐI KHÔNG hỏi "bài toán cho những con số nào" hay "bài toán có những thông tin gì" - đó là bước 1. Bước 2 CHỈ hỏi kế hoạch giải.
-6. Kiểm tra xem HS đã trả lời đủ hết các ý của đề không (nếu đề có a, b, c phải làm hết)
-6. ⭐ BƯỚC 4 (Kiểm tra):
-   - Nếu HS nêu hợp lý (có phần giải thích, đơn vị đúng) → MOVE_NEXT
-   - Không chỉ hỏi "có/không", phải hỏi thêm về thay đổi số liệu: "Nếu thay đổi số liệu X thành Y thì kết quả sẽ như nào?"
-   - ⚠️ TUYỆT ĐỐI CẤM hỏi tính lại quãng đường hay những phép tính phức tạp khác để kiểm tra
-   - Giúp HS giải thích ngắn gọn
-7. ⚠️ KIỂM TRA HOÀN THÀNH CÁC BƯỚC:
-   - Bước 1 PHẢI hoàn thành: HS nêu được thông tin + yêu cầu
-   - Bước 2 PHẢI hoàn thành: HS nêu được sơ bộ cách giải (công thức/qui luật)
-   - Chỉ MOVE_NEXT khi HS làm đúng và đủ hết toàn bộ yêu cầu của mỗi bước
+⚠️ HƯỚNG DẪN HỖ TRỢ THEO CẤP ĐỘ (dựa vào wrong_attempt_count):
+- wrong_attempt_count = 0: Lần sai ĐẦU TIÊN → MỨC 1: Động viên + kêu kiểm tra lại. KHÔNG chỉ ra lỗi cụ thể.
+- wrong_attempt_count = 1: Lần sai thứ 2 → MỨC 2: CHỈ RA LỖI CỤ THỂ hoặc chỉ rõ HS đang thiếu gì. Nói rõ sai ở đâu.
+- wrong_attempt_count >= 2: Lần sai thứ 3+ → MỨC 3: GỢI Ý RÕ RÀNG từng bước để HS tự làm. NHƯNG TUYỆT ĐỐI KHÔNG giải hộ hay nêu đáp số.
+
+⚠️ KHI HS NÓI "KHÔNG BIẾT" Ở BƯỚC 3:
+- KHÔNG được quay lại hỏi "đề bài cho biết gì" (bước 1) hay "bạn giải thế nào" (bước 2)
+- Phải HỖ TRỢ ĐÚNG ở bước 3: chia nhỏ phép tính, gợi ý cách bắt đầu trình bày lời giải
+- Ví dụ mức 1: "Bạn đã biết cách giải rồi đấy! Bạn thử viết phép tính ra xem nào"
+- Ví dụ mức 2: "Ở bước trước bạn nói sẽ [nhắc lại kế hoạch HS đã nêu]. Vậy bạn thử viết phép tính đó ra nhé"
+- Ví dụ mức 3: "Mình gợi ý nhé: (1) Viết phép tính, (2) Tính kết quả, (3) Viết kết luận kèm đơn vị"
+
+⚠️ QUY TẮC CỐT LÕI:
+1. TUYỆT ĐỐI KHÔNG xưng "em" - phải xưng "bạn" ở mọi nơi
+2. TẠI BƯỚC 1: KHÔNG hỏi phép tính. CHỈ hỏi dữ kiện.
+3. TẠI BƯỚC 2: KHÔNG hỏi lại dữ kiện. CHỈ hỏi kế hoạch giải.
+4. TẠI BƯỚC 3: KHÔNG hỏi lại bước 1/2. CHỈ yêu cầu trình bày lời giải hoặc hỗ trợ tính toán.
+5. TẠI BƯỚC 4: KHÔNG bảo trình bày lại. CHỈ hỏi kiểm tra kết quả.
+6. 🚫 CẤM nêu cụ thể con số trong gợi ý - HS tự tìm.
+7. Chỉ MOVE_NEXT khi HS trả lời đúng và đủ ý.
+8. ⚠️ NẾU HS nhập dấu chấm (0.7), nhắc dùng dấu phẩy (0,7).
 `;
 
     try {
@@ -484,7 +528,12 @@ YÊU CẦU:
       
       let data = JSON.parse(jsonMatch[0]);
 
-
+      // 🆕 Cập nhật bộ đếm sai: nếu WRONG thì tăng, nếu CORRECT thì reset
+      if (data.status === "WRONG") {
+        this.wrongAttemptCount++;
+      } else if (data.status === "CORRECT") {
+        this.wrongAttemptCount = 0; // Reset khi đúng
+      }
 
       // ===== BƯỚC 2: XỬ LÝ KẾ HOẠCH =====
       if (this.currentStep === 2) {
@@ -492,6 +541,7 @@ YÊU CẦU:
 
         // ✅ MOVE_NEXT: HS đã nêu kế hoạch xong → chuyển sang bước 3
         if (originalStep2Status === "MOVE_NEXT") {
+          data.feedback = ""; // Xóa feedback để tránh trùng lặp
           data.next_question = "Tuyệt vời! Bây giờ bạn hãy bắt đầu giải bài theo kế hoạch nhé! Trình bày lời giải đầy đủ, viết rõ từng bước rồi kết luận nhé.";
         }
       }
@@ -501,9 +551,53 @@ YÊU CẦU:
       data.feedback = this._sanitizeByCurrentStep(data.feedback || "");
       data.next_question = this._sanitizeByCurrentStep(data.next_question || "");
 
-      if (data.step_status === "MOVE_NEXT" && !isHelpless) {
+      // ⚠️ POST-FIX: Bước 4 (Kiểm tra) - XỬ LÝ HOÀN THÀNH PHIÊN
+      if (this.currentStep === 4) {
+        const isStatusCorrect = data.status && data.status.toLowerCase() === "correct";
+
+        // 🔴 Kiểm tra CẢ feedback VÀ next_question cho step 3 contamination
+        const combinedText = `${data.feedback || ''} ${data.next_question || ''}`;
+        const containsStep3Text = /trình bày.*lời giải|thực hiện.*kế hoạch|bắt đầu.*giải.*bài|hãy.*giải.*bài/i.test(combinedText);
+        const containsStep2Text = /bạn sẽ.*giải.*thế nào|nêu.*cách giải|lập.*kế hoạch/i.test(combinedText);
+        const containsStep1Text = /bài toán.*cho.*thông tin|đề bài.*cho.*biết/i.test(combinedText);
+
+        // ✅ Nếu AI trả MOVE_NEXT ở bước 4 → LUÔN hoàn thành phiên
+        if (data.step_status === "MOVE_NEXT") {
+          data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán theo đầy đủ 4 bước của Polya rồi đó!";
+          data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
+        }
+        // ✅ Nếu AI dính câu hỏi bước 1/2/3 vào response ở bước 4 → sửa lại
+        else if (containsStep3Text || containsStep2Text || containsStep1Text) {
+          if (isStatusCorrect) {
+            data.step_status = "MOVE_NEXT";
+            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán theo đầy đủ 4 bước của Polya rồi đó!";
+            data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
+          } else {
+            data.next_question = "Bạn hãy kiểm tra lại kết quả nhé. Nếu thay đổi một trong các số liệu ban đầu thì kết quả sẽ thay đổi như thế nào?";
+          }
+        }
+        // ✅ Nếu HS đã xác nhận đúng → kết thúc
+        else if (isStatusCorrect) {
+          const hasConfirmedCorrect = /đúng|hợp lý|hợp lí|được|ok|ổn|tốt|chính xác|xác nhận|xong|vâng|rồi|có thể|đúng rồi|được rồi/i.test(studentAnswer);
+          if (hasConfirmedCorrect) {
+            data.step_status = "MOVE_NEXT";
+            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán theo đầy đủ 4 bước của Polya rồi đó!";
+            data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
+          }
+        }
+        // ✅ Nếu STAY + câu hỏi quá ngắn → thay bằng câu hỏi kiểm tra
+        else {
+          if (!data.next_question || data.next_question.length < 20 ||
+              !/nếu|thay đổi|kiểm tra|hợp lý/i.test(data.next_question)) {
+            data.next_question = "Bạn hãy kiểm tra lại kết quả nhé. Nếu thay đổi một trong các số liệu ban đầu thì kết quả sẽ thay đổi như thế nào?";
+          }
+        }
+      }
+
+      if (data.step_status === "MOVE_NEXT") {
         if (this.currentStep < 4) {
           this.currentStep++;
+          this.wrongAttemptCount = 0; // 🆕 Reset bộ đếm khi chuyển bước
         } else {
           this.isSessionComplete = true; 
         }

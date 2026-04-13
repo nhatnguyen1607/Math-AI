@@ -63,58 +63,172 @@ const PracticeChat = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true); // Track initialization state
   const [error, setError] = useState(null);
-  const [isTTSEnabled, setIsTTSEnabled] = useState(false); // 🆕 Text-to-Speech toggle
+  const [isRecording, setIsRecording] = useState(false); // 🎤 Voice recording state
   const messagesEndRef = useRef(null);
+  const recognitionRef = useRef(null); // 🎤 Web Speech API instance
+  const continueRecordingRef = useRef(false); // 🎤 Track if user wants to continue recording
+  const recognitionStartedRef = useRef(false); // 🎤 Track if recognition is actually started
+  const voiceBaseTextRef = useRef(''); // 🎤 Original input before starting voice
+  const voiceConfirmedTextRef = useRef(''); // 🎤 Confirmed voice text
+  const voiceInterimRef = useRef(''); // 🎤 Interim (temporary) voice text
 
-  // 🆕 Hàm phát âm thanh AI response - with voice debugging
-  const speakMessage = useCallback((text) => {
-    if (!isTTSEnabled) return;
-    
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel();
-    
-    // Create utterance
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'vi-VN'; // Vietnamese
-    
-    // 🆕 Chọn giọng nói tiếng Việt - try multiple strategies
-    const voices = window.speechSynthesis.getVoices();
-    
-    // Strategy 1: tìm voice tiếng Việt exact
-    let vietnameseVoice = voices.find(v => 
-      v.lang && (v.lang === 'vi' || v.lang === 'vi-VN' || v.lang.startsWith('vi-'))
-    );
-    
-    // Strategy 2: tìm voice Google Tiếng Việt
-    if (!vietnameseVoice) {
-      vietnameseVoice = voices.find(v => v.name && (
-        v.name.toLowerCase().includes('vietnamese') || 
-        v.name.toLowerCase().includes('tiếng việt')
-      ));
+  // � Khởi tạo Web Speech API Recognition
+  const initSpeechRecognition = useCallback(() => {
+    const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+    if (!SpeechRecognition) {
+      setError('⚠️ Trình duyệt của bạn không hỗ trợ nhận diện giọng nói. Vui lòng sử dụng Chrome, Edge hoặc trình duyệt tương thích.');
+      return null;
     }
     
-    // Strategy 3: tìm voice có lang chứa 'vi'
-    if (!vietnameseVoice) {
-      vietnameseVoice = voices.find(v => v.lang && v.lang.toLowerCase().includes('vi'));
-    }
+    if (recognitionRef.current) return recognitionRef.current;
     
-    // Debug: log available voices (once)
-    if (!window._voicesLogged && voices.length > 0) {
-      window._voicesLogged = true;
-    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true; // Tiếp tục nhận diện nhiều nhịp
+    recognition.interimResults = true; // Hiển thị kết quả tạm thời
+    recognition.lang = 'vi-VN'; // Tiếng Việt
     
-    if (vietnameseVoice) {
-      utterance.voice = vietnameseVoice;
-    } else {
-      console.warn('⚠️ No Vietnamese voice found. Available:', voices.length);
-    }
+    const newlineCommandPatterns = [
+      /\bxu[oố]ng\s+d[oò]ng\b/gi,
+      /\bxuong\s+dong\b/gi,
+      /\bxu[oố]ng\s+h[aà]ng\b/gi,
+      /\bxuong\s+hang\b/gi,
+      /\bd[oò]ng\s+m[oớ]i\b/gi,
+      /\bdong\s+moi\b/gi,
+      /\bh[aà]ng\s+m[oớ]i\b/gi,
+      /\bhang\s+moi\b/gi,
+      /\benter\b/gi,
+      /\bnew\s+line\b/gi
+    ];
+
+    const normalizeVoiceText = (text = '', preserveTrailingNewline = false) => {
+      let processed = text;
+
+      newlineCommandPatterns.forEach((pattern) => {
+        processed = processed.replace(pattern, '\n');
+      });
+
+      processed = processed
+        .replace(/\r\n/g, '\n')
+        .replace(/\s*\n\s*/g, '\n')
+        .replace(/[ \t]{2,}/g, ' ')
+        .replace(/^\s+/g, '');
+
+      if (preserveTrailingNewline) {
+        return processed.replace(/[ \t]+$/g, '');
+      }
+
+      return processed.trim();
+    };
+
+    const mergeVoiceParts = (base = '', confirmed = '', interim = '') => {
+      const parts = [base, confirmed, interim].filter(Boolean);
+      let output = '';
+
+      parts.forEach((part) => {
+        if (!output) {
+          output = part;
+          return;
+        }
+
+        output += output.endsWith('\n') || part.startsWith('\n') ? part : ` ${part}`;
+      });
+
+      return output;
+    };
     
-    utterance.rate = 0.85; // Slower for better comprehension
-    utterance.pitch = 0.95;
-    utterance.volume = 1;
+    recognition.onstart = () => {
+      console.log('🎤 [PracticeChat] Voice recognition started');
+      recognitionStartedRef.current = true;
+      voiceConfirmedTextRef.current = '';
+      voiceInterimRef.current = '';
+      setIsRecording(true);
+      setError(null);
+    };
     
-    window.speechSynthesis.speak(utterance);
-  }, [isTTSEnabled]);
+    recognition.onresult = (event) => {
+      let interimText = '';
+      let finalText = '';
+      
+      for (let i = 0; i < event.results.length; i++) {
+        const transcript = event.results[i][0]?.transcript || '';
+        
+        if (event.results[i].isFinal) {
+          // Final result
+          finalText += transcript + ' ';
+        } else {
+          // Interim result
+          interimText += transcript + ' ';
+        }
+      }
+
+      voiceConfirmedTextRef.current = normalizeVoiceText(finalText, true);
+      voiceInterimRef.current = normalizeVoiceText(interimText, true);
+
+      // Re-render full text on each result so newline commands apply immediately, even mid-sentence.
+      setInputValue(
+        mergeVoiceParts(
+          voiceBaseTextRef.current,
+          voiceConfirmedTextRef.current,
+          voiceInterimRef.current
+        )
+      );
+    };
+    
+    recognition.onerror = (event) => {
+      console.error('🎤 [PracticeChat] Voice recognition error:', event.error);
+      recognitionStartedRef.current = false;
+      voiceInterimRef.current = ''; // 🎤 Clear interim on error
+      setInputValue(mergeVoiceParts(voiceBaseTextRef.current, voiceConfirmedTextRef.current, ''));
+      
+      // Skip 'no-speech' error khi continuous recording (user dừng nói tạm thời)
+      if (event.error === 'no-speech' && continueRecordingRef.current) {
+        console.log('🎤 [PracticeChat] No speech detected, restarting...');
+        try {
+          recognitionRef.current?.start();
+          recognitionStartedRef.current = true;
+        } catch (e) {
+          console.warn('🎤 [PracticeChat] Failed to restart:', e.message);
+        }
+        return;
+      }
+      
+      setIsRecording(false);
+      continueRecordingRef.current = false;
+      
+      const errorMessages = {
+        'no-speech': '⚠️ Không phát hiện giọng nói. Vui lòng nói to hơn.',
+        'network': '❌ Lỗi kết nối mạng. Vui lòng kiểm tra internet.',
+        'not-allowed': '❌ Quyền truy cập mic bị từ chối. Vui lòng cấp quyền trong cài đặt trình duyệt.',
+        'bad-grammar': '❌ Lỗi phát hiện giọng nói. Vui lòng thử lại.',
+      };
+      
+      setError(errorMessages[event.error] || `❌ Lỗi: ${event.error}`);
+    };
+    
+    recognition.onend = () => {
+      console.log('🎤 [PracticeChat] Voice recognition ended');
+      recognitionStartedRef.current = false;
+      voiceInterimRef.current = ''; // 🎤 Clear interim
+      setInputValue(mergeVoiceParts(voiceBaseTextRef.current, voiceConfirmedTextRef.current, ''));
+      // Auto-restart nếu user vẫn muốn ghi âm
+      if (continueRecordingRef.current) {
+        console.log('🎤 [PracticeChat] Restarting voice recognition...');
+        try {
+          recognitionRef.current?.start();
+          recognitionStartedRef.current = true;
+        } catch (e) {
+          console.warn('🎤 [PracticeChat] Failed to restart on end:', e.message);
+          setIsRecording(false);
+          continueRecordingRef.current = false;
+        }
+      } else {
+        setIsRecording(false);
+      }
+    };
+    
+    recognitionRef.current = recognition;
+    return recognition;
+  }, []);
 
   // Helper function để lưu chat history vào đúng service
   const saveChatMessage = useCallback(async (message) => {
@@ -230,36 +344,20 @@ const handleSendMessage = async (e) => {
 
     await saveChatMessage(userMsg);
 
-    const hintKeywords = ['gợi ý', 'hint', 'giúp', 'help', 'không biết', 'không hiểu', 'khó', 'chỉ', 'dạy', 'hướng dẫn'];
-    const isAskingForHint = hintKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
-
-    // CHỈ khai báo let aiMsg một lần ở đây
+    // 🆕 Luôn đi qua processStudentResponse để hệ thống scaffolding 3 mức xử lý
+    // (trước đây có tách riêng getHint nhưng nó bypass logic scaffolding)
     let aiMsg;
-    let response = null; 
-    
-    if (isAskingForHint) {
-      try {
-        const hintResponse = await chatService.getHint();
-        aiMsg = { role: 'model', parts: [{ text: hintResponse }] }; // Gán giá trị, không dùng const/let
-      } catch (hintError) {
-        response = await chatService.processStudentResponse(userMessage, messages);
-        aiMsg = { role: 'model', parts: [{ text: response.message }] };
-      }
-    } else {
-      response = await chatService.processStudentResponse(userMessage, messages);
-      aiMsg = { role: 'model', parts: [{ text: response.message }] };
+    let response = null;
 
-      // ✅ CHỈ kiểm tra response.nextStep nếu response tồn tại (không phải gợi ý)
-      if (response && response.nextStep === 5) {
-        setTimeout(() => { if (onCompleted) onCompleted(); }, 1500);
-      }
+    response = await chatService.processStudentResponse(userMessage, messages);
+    aiMsg = { role: 'model', parts: [{ text: response.message }] };
+
+    if (response && response.nextStep === 5) {
+      setTimeout(() => { if (onCompleted) onCompleted(); }, 1500);
     }
 
     setMessages(prev => [...prev, aiMsg]);
     await saveChatMessage(aiMsg);
-
-    // 🆕 Phát âm thanh AI response nếu TTS được bật
-    speakMessage(aiMsg.parts[0].text);
 
     // Callback to notify parent about updates
       if (onChatUpdate) {
@@ -281,15 +379,8 @@ const handleSendMessage = async (e) => {
 
       }
 
-      // 🎯 Nếu hoàn thành bước 4 (nextStep === 5), tự động gọi callback
-      // ✅ CHỈ kiểm tra nếu response tồn tại (không phải gợi ý)
-      if (response && response.nextStep === 5) {
-        setTimeout(() => {
-          if (onCompleted) {
-            onCompleted();
-          }
-        }, 1500); // Chờ 1.5s để hiển thị kết quả hoàn thành
-      }
+
+
 
     } catch (err) {
 
@@ -332,10 +423,10 @@ const handleSendMessage = async (e) => {
               className={`flex min-w-0 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`min-w-0 max-w-[min(92%,44rem)] rounded-xl px-[clamp(0.75rem,2.2vw,1rem)] py-[clamp(0.6rem,1.8vw,0.85rem)] font-quicksand shadow-sm ${
+                className={`min-w-0 max-w-[min(92%,44rem)] rounded-xl px-[clamp(0.75rem,2.2vw,1rem)] py-[clamp(0.6rem,1.8vw,0.85rem)] font-quicksand shadow-md ${
                   msg.role === 'user'
                     ? 'bg-blue-500 text-white rounded-br-none'
-                    : 'bg-gray-200 text-gray-800 rounded-bl-none'
+                    : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-bl-none border-2 border-purple-400 font-semibold'
                 }`}
               >
                 <p className="whitespace-pre-wrap text-[clamp(0.9rem,2.8vw,1rem)] leading-relaxed [overflow-wrap:anywhere] break-words">{msg.parts[0].text}</p>
@@ -345,11 +436,11 @@ const handleSendMessage = async (e) => {
         )}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-gray-200 text-gray-800 px-4 py-3 rounded-lg rounded-bl-none">
+            <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3 rounded-lg rounded-bl-none shadow-md border-2 border-purple-400">
               <div className="flex gap-2">
-                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               </div>
             </div>
           </div>
@@ -396,27 +487,56 @@ const handleSendMessage = async (e) => {
               }}
               placeholder="Nhập câu trả lời của bạn... (Shift+Enter để xuống dòng, Enter để gửi)"
               disabled={isLoading || isInitializing || error?.includes('khởi tạo bài toán')}
-              className="min-h-24 w-full rounded-xl border-2 border-gray-300 px-4 py-3 font-quicksand leading-relaxed focus:border-blue-500 focus:outline-none disabled:bg-gray-100 resize-none"
-              style={{ minHeight: '80px', maxHeight: '150px', lineHeight: '1.5' }}
+              className="min-h-24 w-full rounded-xl border-2 border-gray-300 px-4 py-3 font-quicksand leading-relaxed focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 resize-none caret-blue-600"
+              style={{ minHeight: '120px', maxHeight: '250px', lineHeight: '1.5', caretWidth: '4px' }}
             />
             <div className="flex items-center justify-end gap-2 sm:contents">
-              {/* 🆕 Speaker Button - TTS Toggle */}
+              {/* � Mic Button - Voice Chat */}
               <button
                 type="button"
-                onClick={() => setIsTTSEnabled(!isTTSEnabled)}
-                className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl px-4 py-2.5 font-quicksand font-bold transition-all active:scale-[0.98] ${
-                  isTTSEnabled
-                    ? 'bg-green-500 text-white hover:bg-green-600'
-                    : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                onClick={() => {
+                  if (isRecording) {
+                    continueRecordingRef.current = false;
+                    recognitionStartedRef.current = false;
+                    voiceInterimRef.current = ''; // 🎤 Clear interim
+                    try {
+                      recognitionRef.current?.stop();
+                    } catch (e) {
+                      console.warn('🎤 [PracticeChat] Error stopping recognition:', e.message);
+                    }
+                    setIsRecording(false);
+                  } else {
+                    continueRecordingRef.current = true;
+                    voiceInterimRef.current = ''; // 🎤 Clear interim
+                    voiceBaseTextRef.current = inputValue; // 🎤 Save current input as base
+                    voiceConfirmedTextRef.current = '';
+                    const recognition = initSpeechRecognition();
+                    if (recognition && !recognitionStartedRef.current) {
+                      try {
+                        recognition.start();
+                        recognitionStartedRef.current = true;
+                      } catch (e) {
+                        console.error('🎤 [PracticeChat] Error starting recognition:', e.message);
+                        setError('❌ Lỗi khi bắt đầu ghi âm. Vui lòng thử lại.');
+                        continueRecordingRef.current = false;
+                      }
+                    }
+                  }
+                }}
+                disabled={isLoading || isInitializing || error?.includes('khởi tạo bài toán')}
+                className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl px-4 py-2.5 font-quicksand font-bold transition-all active:scale-[0.98] disabled:cursor-not-allowed ${
+                  isRecording
+                    ? 'bg-red-500 text-white hover:bg-red-600 animate-pulse'
+                    : 'bg-gray-300 text-gray-700 hover:bg-gray-400 disabled:bg-gray-200 disabled:text-gray-400'
                 }`}
-                title={isTTSEnabled ? 'Tắt giọng nói' : 'Bật giọng nói'}
-                aria-label={isTTSEnabled ? 'Tắt giọng nói AI' : 'Bật giọng nói AI'}
+                title={isRecording ? 'Dừng ghi âm' : 'Bắt đầu ghi âm'}
+                aria-label={isRecording ? 'Dừng ghi âm' : 'Bắt đầu ghi âm bằng giọng nói'}
               >
-                {isTTSEnabled ? '🔊' : '🔇'}
+                {isRecording ? '🎤' : '🎙️'}
               </button>
               <button
                 type="submit"
-                disabled={isLoading || isInitializing || !inputValue.trim() || error?.includes('khởi tạo bài toán')}
+                disabled={isLoading || isInitializing || !inputValue.trim() || error?.includes('khởi tạo bài toán') || isRecording}
                 className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-blue-500 px-6 py-2.5 font-quicksand font-bold text-white transition-all hover:bg-blue-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-400"
                 aria-label="Gửi tin nhắn"
               >

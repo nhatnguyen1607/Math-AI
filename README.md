@@ -1,150 +1,73 @@
-# AI Math (Math-AI)
+🎓 Math-AI: Hệ thống Học tập Thông minh Tích hợp Trợ lý 3D & AI
+📌 1. Giới thiệu tổng quan
+Math-AI là một nền tảng giáo dục hiện đại chuyên biệt cho môn Toán, kết hợp sức mạnh của Generative AI (Gemini) và giao diện tương tác 3D (Spline). Hệ thống không chỉ cung cấp bài tập mà còn đóng vai trò là một gia sư ảo (AI Tutor) có khả năng hiểu, giải và hướng dẫn học sinh theo từng bước tư duy.
 
-A React‑based educational platform that combines interactive problem solving with an animated
-`RobotCompanion` assistant. The companion uses a **hybrid 3D/2D model** and configurable
-CSS overlays to provide visual feedback (thinking, correct, wrong) during student practice.
+🚀 2. Công nghệ cốt lõi (Tech Stack)
+Frontend: React 18, TailwindCSS, React Router v6/v7.
 
----
+3D Interaction: @splinetool/react-spline (Robot trợ lý ảo).
 
-## 🚀 Setup & Run
+Backend & API: Express.js (Local Server), Firebase (Auth & Firestore).
 
-1. **Clone repository** and `cd` into workspace:
-   ```bash
-   git clone <repo-url> d:\Math-AI
-   cd d:\Math-AI
-   ```
-2. **Install dependencies** (uses npm):
-   ```bash
-   npm install
-   ```
-3. **Create `.env` file** in the project root with API keys:
-   ```ini
-   REACT_APP_GEMINI_API_KEY_1=<your first Gemini key>
-   REACT_APP_GEMINI_API_KEY_2=<optional backup key>
-   # any additional vars used by Firebase or services
-   ```
-4. **Start development server**:
-   ```bash
-   npm start
-   ```
-   The app will open at `http://localhost:3000` (or 3001 if 3000 is in use).
-5. **Build for production**: `npm run build`.
+AI Engine: Google Gemini API (Tích hợp cơ chế xoay vòng Key để chống giới hạn 429).
 
-> Environment variables prefixed with `REACT_APP_` are injected at build time.
+Data Handling: xlsx, jspdf, html2pdf.js (Xuất báo cáo và đề thi).
 
----
+🏛 3. Kiến trúc Hệ thống (System Architecture)
+3.1. Cơ chế Luồng AI (AI Logic Flow)
+Đây là phần quan trọng nhất để các Code Agent nắm bắt:
 
-## 🧩 Core Features
+Service Router (src/services/serviceRouter.js): Hệ thống không dùng một Prompt chung. Thay vào đó, nó sử dụng _detectTopic để phân tích yêu cầu của người dùng và chuyển hướng đến các Service chuyên biệt:
 
-- **Robot Companion**: interactive feedback component with four string states
-  (`idle`, `thinking`, `correct`, `wrong`).
-- **Hybrid rendering**: 3D Spline model (via `@splinetool/react-spline`) persists
-  through state changes with animated CSS overlays for effects.
-- **Variant system**: overlays choose from randomized visual variants (confetti,
-  radar, thunder, bubbles, etc.) to keep interactions lively.
-- **Rate‑limited Gemini AI calls**: backend service uses multiple API keys and
-  retry logic to avoid 429 errors.
-- **Robust error handling**: null checks, fallback animations, and safe resets
-  prevent WebGL crashes and console warnings.
-- **Responsive layout**: fixed-width robot column on desktop, full‑width stack on
-  smaller screens, identical behavior across all devices.
-- **State management patterns**: direct `useState`, context API, auto‑reset helpers.
+TimeVelocity: Chuyên giải bài toán chuyển động.
 
----
+TiSo: Chuyên về tỉ số và phần trăm.
 
-## ⚙️ Environment Variables
+SoThapPhan: Chuyên về số thập phân.
 
-| Variable                          | Description                                   |
-|----------------------------------|-----------------------------------------------|
-| `REACT_APP_GEMINI_API_KEY_1`     | Primary Gemini/Google Generative AI key       |
-| `REACT_APP_GEMINI_API_KEY_2`     | Backup key (optional)                         |
-| `REACT_APP_FIREBASE_API_KEY` ... | Any Firebase credentials as required by app   |
+Gemini Model Manager: Quản lý việc khởi tạo model và tối ưu hóa token.
 
-> Add other keys following the `REACT_APP_` convention; see
-> `src/services/geminiService.js` for usage.
+3.2. Quản lý Trợ lý ảo (Robot Companion)
+Component: src/components/common/RobotCompanion.jsx
 
----
+Logic: Robot có 4 trạng thái cảm xúc (idle, thinking, correct, wrong) dựa trên phản hồi của AI và kết quả làm bài của học sinh.
 
-## 🧠 Architecture & Tech Stack
+3.3. Phân quyền người dùng (Role-based Access Control)
+Hệ thống chia làm 3 phân hệ chính được định nghĩa trong App.jsx:
 
-- **Frontend**: React 19, React Router v7, TailwindCSS 3.
-- **3D Rendering**: `@splinetool/react-spline` (Spline URL stored in `RobotCompanion.jsx`).
-- **AI**: Gemini models via `@google/generative-ai`, managed by custom services.
-- **State**: React hooks and optional context providers.
-- **Animations**: CSS keyframes with hardware acceleration, `canvas-confetti` for explosions.
-- **Backend**: Firebase Firestore + custom services for problems, exams, scoring.
+Student: Dashboard, lộ trình học tập, luyện tập tự do với AI, làm Worksheet và tham gia kỳ thi trực tuyến.
 
-The robot companion is self‑contained within `src/components/common/RobotCompanion.jsx`
-and its stylesheet; other services live under `src/services/`.
+Faculty (Giáo viên): Quản lý lớp học, tạo đề thi, theo dõi phiên thi trực tiếp (Live Session), chấm điểm và phân tích năng lực học sinh.
 
----
+Admin: Quản trị cấp cao, cấu hình hệ thống và quản lý kho dữ liệu bài tập gốc.
 
-## 📦 Usage Guide
+📂 4. Cấu trúc thư mục (Project Structure)
+Plaintext
+src/
+├── api/                # Các endpoint xử lý AI (VertexAI/Gemini)
+├── components/
+│   ├── common/         # RobotCompanion, MobileAvatar, Header dùng chung
+│   ├── student/        # Component đặc thù cho giao diện học sinh
+│   ├── faculty/        # Component quản lý cho giáo viên
+│   └── cards/          # Các UI Card hiển thị Topic, Exam
+├── constants/          # Cấu hình Context cho AI và các biến môi trường
+├── models/             # Định nghĩa Schema cho Firestore (User, Exam, Topic...)
+├── pages/              # Chứa logic của từng màn hình cụ thể
+├── services/           # TẦNG LOGIC CHÍNH
+│   ├── gemini/         # Các Service xử lý Prompt và kết nối Gemini API
+│   ├── student/        # API gọi dữ liệu cho học sinh
+│   ├── faculty/        # API quản lý cho giáo viên
+│   └── serviceRouter.js# Bộ điều hướng AI dựa trên chủ đề bài toán
+└── server/             # Express Server để hỗ trợ các tác vụ backend cục bộ
+🧠 5. Hướng dẫn dành cho Code Agent (Agent Guidelines)
+Khi làm việc trên dự án này, Agent cần tuân thủ các nguyên tắc sau:
 
-### Import & render
+Xử lý Logic Toán: Luôn kiểm tra serviceRouter.js trước khi sửa logic AI. Nếu thêm chủ đề mới, phải tạo file Service tương ứng trong src/services/gemini/.
 
-```jsx
-import RobotCompanion from './src/components/common/RobotCompanion';
+Tương tác Robot: Khi viết các logic kiểm tra kết quả (Submit bài), hãy gọi hàm triggerState của Robot (ví dụ: correct khi làm đúng) để tăng tính tương tác.
 
-function MyPage() {
-  const [status, setStatus] = useState('idle');
-  const [message, setMessage] = useState('Ready to help!');
+Quản lý State: Sử dụng Firebase Firestore làm "Source of Truth". Luôn cập nhật trạng thái làm bài thực tế vào Firestore để giáo viên có thể theo dõi qua LiveSession.
 
-  return (
-    <RobotCompanion status={status} message={message} />
-  );
-}
-```
+UI/UX: Sử dụng TailwindCSS. Đảm bảo giao diện phản hồi tốt (Responsive) vì hệ thống được thiết kế cho cả máy tính và máy tính bảng (phục vụ học sinh trên lớp).
 
-### Common integration patterns
-
-- **Simple state**: manage `status` and `message` with `useState`.
-- **Auto‑reset helper**: set the robot to a state then clear back to `idle` after
-a delay.
-- **Context API**: wrap the app with a `RobotProvider` and call `useRobot()` from
-anywhere for global control.
-
-### Testing component
-
-Navigate to `/robot-test` (add route to `App.jsx` pointing at
-`RobotCompanionTest.jsx`) to interactively exercise all four statuses.
-
----
-
-## 🛠️ Maintenance & Debugging
-
-- **Build warnings**: watch for unused imports when refactoring overlay variants.
-- **WebGL crashes**: ensure robot container has fixed `min-height` (400px).
-- **429 errors**: API calls are throttled (2s) and keys rotate; monitor console.
-- **Animation issues**: unsupported morph targets cause `THREE.PropertyBinding`
-errors – only `Mood` variable is safe.
-
----
-
-## ✅ Responsive UI Checklist
-
-Use this quick checklist before merging UI changes:
-
-- Mobile first by default: start with base classes, then add `sm:`, `md:`, `lg:` overrides.
-- Touch targets: primary actions should be at least 44x44 pixels (`min-h-11`, `min-w-11`).
-- Layout containers: use `app-shell` and `section-shell` for consistent spacing and max width.
-- Tables: provide mobile card fallback for dense data; keep full table at `md` or `lg`.
-- Typography: avoid fixed large headings; prefer responsive scales like `text-2xl sm:text-3xl lg:text-4xl`.
-- Sticky elements: account for header height (`top-16` / `top-20`) to avoid overlap.
-- Focus states: keyboard users must see focus rings (`:focus-visible` is enabled globally).
-- Motion: avoid excessive animation on critical flows and support reduced motion.
-- Ultra-wide screens: constrain content with `max-w-7xl` and center to prevent stretched layouts.
-- QA sweep: test key pages at ~375px, 768px, 1280px, and 1536px widths.
-
----
-
-## 💬 Contributors
-
-- Original developer: [Your Name]
-- Maintained by Math-AI Team
-
----
-
-This README replaces scattered documentation; all previous `.md` files have been
-removed to avoid confusion. For source code references, search `RobotCompanion` in
-`src/components/common` or consult the services under `src/services`.
+Bảo mật API: Không bao giờ hardcode API Key. Sử dụng apiKeyManager.js để lấy key luân phiên.

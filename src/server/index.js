@@ -15,7 +15,7 @@ const PORT = parseInt(process.env.PORT) || 8080;
 const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [
-      'https://math-ai-vert.vercel.app',
+      'https://math-ai-ued.vercel.app',
       'http://localhost:3000'
     ];
     // Cho phép các domain trong list hoặc request không có origin (như Postman)
@@ -57,7 +57,6 @@ function loadServiceAccountCredentials() {
     const credPath = path.join(__dirname, '../../google-service-account.json');
     if (fs.existsSync(credPath)) {
       const credentials = JSON.parse(fs.readFileSync(credPath, 'utf8'));
-      console.log('✅ Loaded service account from file:', credPath);
       return credentials;
     }
 

@@ -480,7 +480,7 @@
   }
 
   .stats-container {
-    @apply grid grid-cols-1 md:grid-cols-4 gap-4 mb-8;
+    @apply flex flex-wrap justify-center gap-6 mb-8;
   }
 
   .stat-card {

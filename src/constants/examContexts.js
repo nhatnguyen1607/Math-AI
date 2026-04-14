@@ -4,21 +4,21 @@ export const EXAM_CONTEXTS = [
     id: 'sieu_thi',
     name: 'Siêu thị thông minh',
     description: 'Boi canh di mua sam, tinh tong chi phi, tinh % giam gia combo, so sanh gia giua cac cua hang, lua chon phuong an mua hop li voi ngan sach co dinh.',
-    aiRole: 'Robot thu ngan',
+    aiRole: 'Robot thu ngân',
     aiRoleDescription: 'Kiem tra hoa don, phat hien sai sot cua hoc sinh khi mua hang hoa.'
   },
   {
     id: 'tieu_vat',
     name: 'Quản lý tiền tiêu vặt',
     description: 'Tinh huong hoc sinh nhan tien tieu vat theo tuan/thang, tu lap ke hoach chi tieu, so sanh va lua chon phuong an su dung hop li, tiet kiem.',
-    aiRole: 'Co van tai chinh',
+    aiRole: 'Cố vấn tài chính',
     aiRoleDescription: 'Dieu chinh ke hoach chi tieu hop ly cho hoc sinh.'
   },
   {
     id: 'bep_an',
     name: 'Bếp ăn gia đình',
     description: 'Tinh huong doi song lien quan den bua an, chia khau phan an, tinh luong duong/chat beo/rau, so sanh voi muc khuyen nghi (5%, 10%), can doi dinh duong.',
-    aiRole: 'Chuyen gia dinh duong',
+    aiRole: 'Chuyên gia dinh dưỡng',
     aiRoleDescription: 'Nguoi dieu chinh che do dinh duong, khau phan an cho hop ly.'
   },
   {
@@ -34,21 +34,21 @@ export const EXAM_CONTEXTS = [
     id: 'kien_truc_su',
     name: 'Kiến trúc sư',
     description: 'Tinh huong thiet ke khong gian song: tinh dien tich xay nha, lat gach, son tuong; tinh the tich phong, be nuoc, khoi da tha vao be. Toi uu phuong an.',
-    aiRole: 'Kien truc su tai ba',
+    aiRole: 'Kiến trúc sư tài ba',
     aiRoleDescription: 'Huong dan, danh gia ban thiet ke va ho tro tinh toan xay dung.'
   },
   {
     id: 'cuoc_dua',
     name: 'Cuộc đua kì thú',
     description: 'Co vu chang dua (xe dap, dua thuyen, chay bo). So sanh van toc, tinh thoi gian ve dich, tinh quang duong con lai. Yeu to chien thuat.',
-    aiRole: 'Trong tai AI / He thong do toc do',
+    aiRole: 'Trọng tài AI / Hệ thống đo tốc độ',
     aiRoleDescription: 'Giam sat, theo doi so lieu va kiem tra ket qua cuoc dua.'
   },
   {
     id: 'du_lich',
     name: 'Hành trình du lịch',
     description: 'Lap ke hoach chuyen di (di hoc, tham quan, ve que). Chon phuong tien phu hop, tinh thoi gian di chuyen, so sanh 2 lo trinh toi uu.',
-    aiRole: 'Huong dan vien thong minh',
+    aiRole: 'Hướng dẫn viên thông minh',
     aiRoleDescription: 'Tu van lo trinh, thoi gian va phuong tien di chuyen.'
   }
 ];

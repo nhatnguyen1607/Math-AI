@@ -338,7 +338,7 @@ Xưng hô: "mình" - "bạn". TUYỆT ĐỐI CẤM xưng "em", "học sinh" - PH
 VAI TRÒ CỦA BẠN: BẠN ĐANG ĐÓNG VAI LÀ "${ctx.aiRole}".
 - Nhiệm vụ nhập vai: ${ctx.aiRoleDescription}
 - Hãy xưng hô thân thiện, nhất quán với vai trò này.
-- Trong cuộc trò chuyện, hãy nhắc đến các nhân vật Mai, Việt, Nam trong bối cảnh bài toán để tạo sự gần gũi.
+- Chỉ được sử dụng nhân vật có trong đề bài, tuyệt đối không tự thêm nhân vật mới.
 
 ⚠️ KIỂM TRA CÂU TRẢ LỜI CỦA HỌC SINH:
 - Ở TẤT CẢ 4 BƯỚC, bạn PHẢI kiểm tra kỹ câu trả lời của học sinh để xác định ĐÚNG hay SAI.
@@ -539,14 +539,14 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 
         // ✅ Nếu AI trả MOVE_NEXT ở bước 4 → LUÔN hoàn thành phiên
         if (data.step_status === "MOVE_NEXT") {
-          data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán theo đầy đủ 4 bước của Polya rồi đó!";
+          data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
           data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
         }
         // ✅ Nếu AI dính câu hỏi bước 1/2/3 vào response ở bước 4 → sửa lại
         else if (containsStep3Text || containsStep2Text || containsStep1Text) {
           if (isStatusCorrect) {
             data.step_status = "MOVE_NEXT";
-            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán theo đầy đủ 4 bước của Polya rồi đó!";
+            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
             data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
           } else {
             data.next_question = "Bạn hãy kiểm tra lại kết quả nhé. Nếu thay đổi một trong các số liệu ban đầu thì kết quả sẽ thay đổi như thế nào?";
@@ -557,7 +557,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
           const hasConfirmedCorrect = /đúng|hợp lý|hợp lí|được|ok|ổn|tốt|chính xác|xác nhận|xong|vâng|rồi|có thể|đúng rồi|được rồi/i.test(studentAnswer);
           if (hasConfirmedCorrect) {
             data.step_status = "MOVE_NEXT";
-            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán theo đầy đủ 4 bước của Polya rồi đó!";
+            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
             data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
           }
         }

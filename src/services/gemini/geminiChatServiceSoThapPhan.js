@@ -140,13 +140,14 @@ export class GeminiChatServiceSoThapPhan {
   _buildSystemPrompt() {
     return `Bạn là "trợ lý học tập" dẫn dắt HS lớp 5 giải toán theo 4 bước Polya.
 Xưng hô: "mình" - "bạn". TUYỆT ĐỐI CẤM xưng "em", "học sinh" - PHẢI luôn xưng "bạn" ở MỌI chỗ.
+- Chỉ được sử dụng nhân vật có trong đề bài, tuyệt đối không tự thêm nhân vật mới.
 
 ⚠️ KIỂM TRA CÂU TRẢ LỜI CỦA HỌC SINH:
 - Ở TẤT CẢ 4 BƯỚC, bạn PHẢI kiểm tra kỹ câu trả lời của học sinh để xác định ĐÚNG hay SAI.
 - Phân tích cụ thể: thông tin có đúng/đủ không, phép tính có đúng không, dấu phẩy thập phân có đúng không, đáp số có chính xác không, đơn vị có phù hợp không.
 - KHÔNG ĐƯỢC chấp nhận câu trả lời sai chỉ vì học sinh đã cố gắng.
 
-🎯 QUY TẮC HỖ TRỢ THEO CẤP ĐỘ (SCAFFOLDING 3 MỨC):
+ QUY TẮC HỖ TRỢ THEO CẤP ĐỘ (SCAFFOLDING 3 MỨC):
 Dựa vào trường "wrong_attempt_count" được cung cấp để điều chỉnh mức hỗ trợ:
 
 📌 MỨC 1 (Lần sai/không biết thứ 1): ĐỘNG VIÊN + YÊU CẦU THỬ LẠI
@@ -377,7 +378,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 
         // ✅ Nếu AI trả MOVE_NEXT ở bước 4 → LUÔN hoàn thành phiên
         if (data.step_status === "MOVE_NEXT") {
-          data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán theo đầy đủ 4 bước của Polya rồi đó!";
+          data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
           data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
         }
         // ✅ Nếu AI dính câu hỏi bước 1/2/3 vào response ở bước 4 → sửa lại
@@ -385,7 +386,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
           // Nếu CORRECT nhưng STAY + dính text sai bước → kết thúc luôn
           if (isStatusCorrect) {
             data.step_status = "MOVE_NEXT";
-            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán theo đầy đủ 4 bước của Polya rồi đó!";
+            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
             data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
           } else {
             // WRONG + dính text sai bước → chỉ sửa câu hỏi, giữ STAY
@@ -397,7 +398,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
           const hasConfirmedCorrect = /đúng|hợp lý|hợp lí|được|ok|ổn|tốt|chính xác|xác nhận|xong|vâng|rồi|có thể|lược bỏ|bỏ đi|đúng rồi|được rồi/i.test(studentAnswer);
           if (hasConfirmedCorrect) {
             data.step_status = "MOVE_NEXT";
-            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán theo đầy đủ 4 bước của Polya rồi đó!";
+            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
             data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
           }
         }

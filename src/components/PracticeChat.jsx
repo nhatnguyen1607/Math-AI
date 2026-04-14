@@ -43,19 +43,15 @@ const PracticeChat = ({
 }) => {
   // Select the appropriate chat service based on topic using router
   const chatService = useMemo(() => {
-    console.log('🔵 [PracticeChat.useMemo] Creating chat service for topicName:', topicName);
     
     // 🆕 Use serviceRouter instead of hardcoded logic
     const routerService = chatServiceRouter.getService(topicName);
-    console.log('🔵 [PracticeChat.useMemo] routerService received:', routerService?.constructor?.name || 'null');
     
     if (routerService) {
-      console.log('✅ [PracticeChat.useMemo] Using router service:', routerService.constructor.name);
       return routerService;
     }
     
     // Fallback to default if router returns null
-    console.log('⚠️ [PracticeChat.useMemo] Router returned null, using fallback:', geminiChatServiceSoThapPhan.constructor.name);
     return geminiChatServiceSoThapPhan;
   }, [topicName]);
   const [messages, setMessages] = useState(chatHistory);
@@ -137,7 +133,6 @@ const PracticeChat = ({
     };
     
     recognition.onstart = () => {
-      console.log('🎤 [PracticeChat] Voice recognition started');
       recognitionStartedRef.current = true;
       voiceConfirmedTextRef.current = '';
       voiceInterimRef.current = '';
@@ -175,19 +170,16 @@ const PracticeChat = ({
     };
     
     recognition.onerror = (event) => {
-      console.error('🎤 [PracticeChat] Voice recognition error:', event.error);
       recognitionStartedRef.current = false;
       voiceInterimRef.current = ''; // 🎤 Clear interim on error
       setInputValue(mergeVoiceParts(voiceBaseTextRef.current, voiceConfirmedTextRef.current, ''));
       
       // Skip 'no-speech' error khi continuous recording (user dừng nói tạm thời)
       if (event.error === 'no-speech' && continueRecordingRef.current) {
-        console.log('🎤 [PracticeChat] No speech detected, restarting...');
         try {
           recognitionRef.current?.start();
           recognitionStartedRef.current = true;
         } catch (e) {
-          console.warn('🎤 [PracticeChat] Failed to restart:', e.message);
         }
         return;
       }
@@ -206,18 +198,15 @@ const PracticeChat = ({
     };
     
     recognition.onend = () => {
-      console.log('🎤 [PracticeChat] Voice recognition ended');
       recognitionStartedRef.current = false;
       voiceInterimRef.current = ''; // 🎤 Clear interim
       setInputValue(mergeVoiceParts(voiceBaseTextRef.current, voiceConfirmedTextRef.current, ''));
       // Auto-restart nếu user vẫn muốn ghi âm
       if (continueRecordingRef.current) {
-        console.log('🎤 [PracticeChat] Restarting voice recognition...');
         try {
           recognitionRef.current?.start();
           recognitionStartedRef.current = true;
         } catch (e) {
-          console.warn('🎤 [PracticeChat] Failed to restart on end:', e.message);
           setIsRecording(false);
           continueRecordingRef.current = false;
         }

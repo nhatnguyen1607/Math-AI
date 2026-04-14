@@ -18,9 +18,7 @@ import examService from '../../services/faculty/examService';
 const StudentPracticePage = ({ user, onSignOut }) => {
   const navigate = useNavigate();
   const { examId } = useParams();
-  
-  console.log('🔵 [StudentPracticePage] Component mounted - examId:', examId, 'user.uid:', user?.uid);
-  
+    
   const [practiceData, setPracticeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,7 +33,6 @@ const StudentPracticePage = ({ user, onSignOut }) => {
   // Khởi tạo dữ liệu luyện tập
   useEffect(() => {
     const initializePractice = async () => {
-      console.log('🔵 [StudentPracticePage.initializePractice] Starting...');
       try {
         if (!user?.uid || !examId) {
           setError('Thiếu thông tin học sinh hoặc đề thi');
@@ -93,10 +90,8 @@ const StudentPracticePage = ({ user, onSignOut }) => {
               competencyLevel = 'Tốt';
             }
           } else {
-            console.log('⚠️ [StudentPracticePage] totalCompetencyScore is undefined/null, using default "Đạt"');
           }
         } else {
-          console.log('❌ [StudentPracticePage] competencyEvaluation does NOT exist, using default "Đạt"');
         }
 
         // Gọi Gemini để tạo bài toán tương tự - có truyền năng lực học sinh làm tham số thứ 5
@@ -104,7 +99,6 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         let similarProblem1, similarProblem2;
         
         // 🆕 Use router to auto-detect practice service based on topic
-        console.log('🔵 [StudentPracticePage] Initializing practice - topic:', topicNameFromExam);
         const gService = practiceServiceRouter.getService(topicNameFromExam);
         
         try {

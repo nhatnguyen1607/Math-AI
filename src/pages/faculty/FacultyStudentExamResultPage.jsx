@@ -481,7 +481,6 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
               <h3 className="text-2xl lg:text-3xl font-bold mb-2 flex items-center gap-3">
                 <span>🚀</span> Phần Khởi động
               </h3>
-              <p className="text-indigo-50">Nhân số thập phân</p>
             </div>
 
             {/* Summary Stats Cards */}

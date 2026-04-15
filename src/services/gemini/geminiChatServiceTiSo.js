@@ -8,6 +8,7 @@ export class GeminiChatServiceTiSo {
     this.isSessionComplete = false;
     this.currentContextId = EXAM_CONTEXTS[0]?.id || '';
     this.wrongAttemptCount = 0; // 🆕 Đếm số lần trả lời sai/không biết liên tiếp tại mỗi bước
+    this.step4ChangedData = null; // Lưu dữ liệu đã đổi ở bước 4 để kiểm tra câu trả lời
   }
 
   _getContext() {
@@ -228,10 +229,12 @@ export class GeminiChatServiceTiSo {
         const base = validNumbers[0];
         const delta = Math.max(1, Math.round(Math.abs(base) * 0.2));
         const next = base + delta;
+        this.step4ChangedData = { from: base, to: next };
         return `Mình chọn sẵn để bạn kiểm tra nhé: giữ nguyên các dữ kiện còn lại, chỉ đổi một dữ kiện từ ${toVnNumber(base)} lên ${toVnNumber(next)}. Bạn hãy tính lại kết quả mới (nếu là tỉ lệ phần trăm thì nhớ ghi %), rồi nêu mối liên hệ giữa dữ liệu thay đổi và đáp số.`;
       }
     }
 
+    this.step4ChangedData = { from: 10, to: 12 };
     return "Mình chọn sẵn để bạn kiểm tra nhé: giữ nguyên các dữ kiện còn lại, chỉ đổi một dữ kiện từ 10 lên 12. Bạn hãy tính lại kết quả mới (nếu là tỉ lệ phần trăm thì nhớ ghi %), rồi nêu mối liên hệ giữa dữ liệu thay đổi và đáp số.";
   }
 
@@ -250,13 +253,77 @@ export class GeminiChatServiceTiSo {
   }
 
   _hasStep4VerificationEvidence(answer = "") {
+    const check = this._analyzeStep4Answer(answer);
+    return check.isValid;
+  }
+
+  _formatStep4ValueVariants(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return [];
+    const compact = num
+      .toFixed(2)
+      .replace(/\.00$/, "")
+      .replace(/(\.\d*?)0+$/, "$1");
+    const comma = compact.replace(".", ",");
+    return Array.from(new Set([compact, comma, String(num)]));
+  }
+
+  _analyzeStep4Answer(answer = "") {
     const text = String(answer || "").toLowerCase();
-    const hasComputedResult = /(=\s*\d+|kết\s*quả\s*(mới)?\s*là\s*\d+|\d+[.,]?\d*)/i.test(text);
+    const hasComputedResult =
+      /(=\s*-?\d+(?:[.,]\d+)?|kết\s*quả\s*(mới)?\s*là\s*-?\d+(?:[.,]\d+)?|đáp\s*số\s*(mới)?\s*là\s*-?\d+(?:[.,]\d+)?)/i.test(
+        text,
+      );
     const hasRelationship =
       /(tỉ\s*lệ\s*thuận|tỉ\s*lệ\s*nghịch|khi\s+.*\s+thì\s+.*|nên|do\s*đó|vì\s*vậy|mối\s*liên\s*hệ)/i.test(
         text,
       ) && /(tăng|giảm|lớn\s*hơn|nhỏ\s*hơn)/i.test(text);
-    return hasComputedResult && hasRelationship;
+
+    const mentionChangePhrase = /(thay|đổi|từ|thành|giữ\s*nguyên)/i.test(text);
+    let hasChangedDataReference = mentionChangePhrase;
+    if (this.step4ChangedData) {
+      const toValues = this._formatStep4ValueVariants(this.step4ChangedData.to);
+      hasChangedDataReference =
+        hasChangedDataReference ||
+        toValues.some((value) => text.includes(String(value).toLowerCase()));
+    }
+
+    if (!hasComputedResult) {
+      return {
+        isValid: false,
+        message: "Mình thấy bạn chưa tính ra kết quả mới sau khi thay dữ liệu. Bạn hãy viết rõ phép tính hoặc kết quả mới trước nhé.",
+      };
+    }
+
+    if (!hasChangedDataReference) {
+      const fromText = this.step4ChangedData
+        ? this._formatStep4ValueVariants(this.step4ChangedData.from)[1] || this.step4ChangedData.from
+        : "giá trị cũ";
+      const toText = this.step4ChangedData
+        ? this._formatStep4ValueVariants(this.step4ChangedData.to)[1] || this.step4ChangedData.to
+        : "giá trị mới";
+      return {
+        isValid: false,
+        message: `Mình thấy bạn chưa dùng đúng dữ liệu đã đổi (${fromText} -> ${toText}). Bạn hãy tính lại theo dữ liệu đã thay đổi nhé.`,
+      };
+    }
+
+    if (!hasRelationship) {
+      return {
+        isValid: false,
+        message: "Mình thấy bạn chưa nêu mối liên hệ giữa dữ liệu thay đổi và đáp số. Bạn bổ sung rõ khi dữ liệu tăng/giảm thì đáp số thay đổi ra sao nhé.",
+      };
+    }
+
+    return { isValid: true };
+  }
+
+  _ensureSpecificStep4WrongFeedback(feedback = "") {
+    const text = String(feedback || "").trim();
+    if (/sai|nhầm|thiếu|chưa|lỗi|khớp|đơn\s*vị|%/i.test(text)) {
+      return text;
+    }
+    return "Mình thấy phần kiểm tra lại của bạn chưa đúng. Bạn hãy rà lại phép tính để ra kết quả mới theo dữ liệu đã đổi, rồi nêu rõ mối liên hệ tăng/giảm và nhớ ghi đơn vị %.";
   }
 
   _hasStep1Complete(answer = "", chatHistory = []) {
@@ -399,6 +466,7 @@ export class GeminiChatServiceTiSo {
   restoreSession(problemText, chatHistory, examContextId = '') {
     this.currentProblem = problemText;
     this.wrongAttemptCount = 0; // Reset khi restore
+    this.step4ChangedData = null;
     if (examContextId) {
       this.currentContextId = examContextId;
     }
@@ -488,6 +556,7 @@ LUÔN TRẢ VỀ JSON:
     this.currentStep = 1;
     this.isSessionComplete = false;
     this.wrongAttemptCount = 0; // 🆕 Reset bộ đếm
+    this.step4ChangedData = null;
     if (examContextId) {
       this.currentContextId = examContextId;
     }
@@ -638,7 +707,8 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
         const isStatusCorrect = data.status && data.status.toLowerCase() === "correct";
         const refusedToCheck = this._isRefusingStep4Check(studentAnswer);
         const askedClarification = this._isAskingStep4Clarification(studentAnswer);
-        const hasVerificationEvidence = this._hasStep4VerificationEvidence(studentAnswer);
+        const step4Validation = this._analyzeStep4Answer(studentAnswer);
+        const hasVerificationEvidence = step4Validation.isValid;
 
         // 🔴 Kiểm tra CẢ feedback VÀ next_question cho step 3 contamination
         const combinedText = `${data.feedback || ''} ${data.next_question || ''}`;
@@ -652,7 +722,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
           data.step_status = "STAY";
           data.feedback = askedClarification
             ? "'Thay đổi số liệu' nghĩa là giữ nguyên các dữ kiện còn lại, chỉ đổi 1 dữ kiện rồi tính lại đáp số mới để so sánh."
-            : "Bước 4 bắt buộc phải kiểm tra lại, nên mình chưa thể kết thúc bài ở đây nhé.";
+            : step4Validation.message;
           data.next_question = this._buildStep4RecheckQuestion();
         }
         // ✅ Nếu AI trả MOVE_NEXT ở bước 4 và HS đã có kiểm tra đủ thì hoàn thành
@@ -678,6 +748,9 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
         }
         // ✅ Nếu STAY + câu hỏi quá ngắn → thay bằng câu hỏi kiểm tra
         else {
+          if (!isStatusCorrect) {
+            data.feedback = this._ensureSpecificStep4WrongFeedback(data.feedback);
+          }
           if (!data.next_question || data.next_question.length < 20 ||
               !/nếu|thay đổi|kiểm tra|hợp lý/i.test(data.next_question)) {
             data.next_question = this._buildStep4RecheckQuestion();

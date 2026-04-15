@@ -250,10 +250,10 @@ const PracticeChat = ({
     if (!chatHistory || chatHistory.length === 0) {
       setMessages([]);
       setError(null);
-      hasInitializedRef.current = false; // 🔴 RESET hasInitializedRef để khởi tạo bài mới
+      hasInitializedRef.current = false; // 🔴 RESET để khởi tạo lại khi đổi bài hoặc tạo lại đề
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baiNumber]);
+  }, [baiNumber, deBai, chatHistory]);
 
   useEffect(() => {
     if (hasInitializedRef.current) return;
@@ -325,7 +325,13 @@ const handleSendMessage = async (e) => {
     const userMessage = inputValue.trim();
 
     const userMsg = { role: 'user', parts: [{ text: userMessage }] };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(prev => {
+      const next = [...prev, userMsg];
+      if (onChatUpdate) {
+        onChatUpdate(next);
+      }
+      return next;
+    });
     setInputValue('');
     setIsLoading(true);
 
@@ -345,13 +351,14 @@ const handleSendMessage = async (e) => {
       setTimeout(() => { if (onCompleted) onCompleted(); }, 1500);
     }
 
-    setMessages(prev => [...prev, aiMsg]);
-    await saveChatMessage(aiMsg);
-
-    // Callback to notify parent about updates
+    setMessages(prev => {
+      const next = [...prev, aiMsg];
       if (onChatUpdate) {
-        onChatUpdate(prev => [...prev, userMsg, aiMsg]);
+        onChatUpdate(next);
       }
+      return next;
+    });
+    await saveChatMessage(aiMsg);
 
       // Use service-driven sentiment for robot state
       try {

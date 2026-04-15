@@ -33,6 +33,16 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
   // robot companion state
   const [robotStatus, setRobotStatus] = useState('idle');
   const [robotMessage, setRobotMessage] = useState('');
+  const [regeneratingProblem, setRegeneratingProblem] = useState(false);
+
+  const resolveCompetencyLevel = (competencyEvaluation) => {
+    if (!competencyEvaluation) return 'Đạt';
+    const totalScore = competencyEvaluation.totalCompetencyScore;
+    if (totalScore === undefined || totalScore === null) return 'Đạt';
+    if (totalScore <= 3) return 'Cần cố gắng';
+    if (totalScore <= 6) return 'Đạt';
+    return 'Tốt';
+  };
 
   // Khởi tạo phiên Vận dụng
   useEffect(() => {
@@ -252,6 +262,105 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
     }
   };
 
+  const handleRegenerateVanDungProblem = async () => {
+    try {
+      if (!user?.uid || !examId || !vanDungData) return;
+
+      const hasUserInteraction = (vanDungData.chatHistory || []).some((m) => m?.role === 'user');
+      if (hasUserInteraction) return;
+
+      setRegeneratingProblem(true);
+      setError(null);
+
+      const exam = await examService.getExamById(examId);
+      if (!exam) {
+        throw new Error('Không tìm thấy đề thi để tạo lại bài vận dụng.');
+      }
+
+      const examProgress = await resultService.getExamProgress(user.uid, examId);
+      if (!examProgress) {
+        throw new Error('Không tìm thấy dữ liệu Khởi động/Luyện tập để tạo bài vận dụng.');
+      }
+
+      const lỗiKhoiDong = [];
+      const yếuĐiềmLuyenTap = {};
+      const recentPracticeProblems = [];
+
+      if (examProgress.parts?.khoiDong?.aiAnalysis?.questionComments) {
+        examProgress.parts.khoiDong.aiAnalysis.questionComments.forEach(comment => {
+          if (comment.comment) lỗiKhoiDong.push(comment.comment);
+        });
+      }
+
+      if (examProgress.parts?.luyenTap) {
+        const bai1Eval = examProgress.parts.luyenTap.bai1?.evaluation;
+        const bai2Eval = examProgress.parts.luyenTap.bai2?.evaluation;
+
+        if (examProgress.parts.luyenTap.bai1?.deBai) {
+          recentPracticeProblems.push(examProgress.parts.luyenTap.bai1.deBai);
+        }
+        if (examProgress.parts.luyenTap.bai2?.deBai) {
+          recentPracticeProblems.push(examProgress.parts.luyenTap.bai2.deBai);
+        }
+
+        if (bai1Eval) {
+          yếuĐiềmLuyenTap.TC1 = {
+            diem: Math.min(bai1Eval.TC1?.diem || 0, bai2Eval?.TC1?.diem || 0),
+            nhanXet: bai1Eval.TC1?.nhanXet
+          };
+          yếuĐiềmLuyenTap.TC2 = {
+            diem: Math.min(bai1Eval.TC2?.diem || 0, bai2Eval?.TC2?.diem || 0),
+            nhanXet: bai1Eval.TC2?.nhanXet
+          };
+          yếuĐiềmLuyenTap.TC3 = {
+            diem: Math.min(bai1Eval.TC3?.diem || 0, bai2Eval?.TC3?.diem || 0),
+            nhanXet: bai1Eval.TC3?.nhanXet
+          };
+          yếuĐiềmLuyenTap.TC4 = {
+            diem: Math.min(bai1Eval.TC4?.diem || 0, bai2Eval?.TC4?.diem || 0),
+            nhanXet: bai1Eval.TC4?.nhanXet
+          };
+        }
+      }
+
+      const topicNameForRouter = exam.title || 'Bài toán';
+      const competencyLevel = resolveCompetencyLevel(examProgress?.parts?.khoiDong?.competencyEvaluation);
+      const gService = practiceServiceRouter.getService(topicNameForRouter);
+
+      let applicationProblem = vanDungData.deBai || '';
+      try {
+        applicationProblem = await gService.generateApplicationProblem({
+          errorsInKhoiDong: lỗiKhoiDong,
+          weaknessesInLuyenTap: yếuĐiềmLuyenTap,
+          topicName: exam.title || 'Bài toán',
+          competencyLevel,
+          practicePercentage: 0,
+          examContextId: exam.contextId || '',
+          recentPracticeProblems
+        });
+      } catch (genErr) {
+        console.error('❌ [StudentVanDungPage] Error regenerating van dung:', genErr);
+      }
+
+      await resultService.regenerateVanDungExercise(user.uid, examId, applicationProblem);
+
+      setVanDungData((prev) => ({
+        ...(prev || {}),
+        deBai: applicationProblem,
+        chatHistory: [],
+        status: 'in_progress',
+        student_evaluation: '',
+        evaluation: null,
+        examTitle: exam.title || prev?.examTitle || '',
+        examContextId: exam.contextId || prev?.examContextId || ''
+      }));
+    } catch (err) {
+      setError(`Lỗi khi tạo lại đề vận dụng: ${err.message || 'Không rõ nguyên nhân'}`);
+    } finally {
+      setRegeneratingProblem(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 px-4">
@@ -298,6 +407,8 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
       </div>
     );
   }
+
+  const vanDungHasUserInteraction = (vanDungData?.chatHistory || []).some((m) => m?.role === 'user');
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 pt-4">
@@ -355,7 +466,17 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
             <>
               {/* STICKY PROBLEM STATEMENT */}
               <div className="sticky top-[7.2rem] z-30 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 p-4 shadow-sm sm:top-[8.2rem]">
-                <h3 className="text-sm font-bold text-blue-900 font-quicksand mb-2">📝 Đề Bài</h3>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-bold text-blue-900 font-quicksand">📝 Đề Bài</h3>
+                  <button
+                    onClick={handleRegenerateVanDungProblem}
+                    disabled={regeneratingProblem || vanDungHasUserInteraction || submitting}
+                    className="touch-btn rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-white font-quicksand transition-all hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    title={vanDungHasUserInteraction ? 'Đã có tương tác, không thể tạo lại đề' : 'Tạo lại đề vận dụng'}
+                  >
+                    {regeneratingProblem ? '⏳ Đang tạo...' : '🔁 Tạo lại đề'}
+                  </button>
+                </div>
                 <p className="text-sm leading-relaxed text-blue-800 font-quicksand sm:text-base">
                   {vanDungData.deBai}
                 </p>
@@ -370,6 +491,12 @@ const StudentVanDungPage = ({ user, onSignOut }) => {
                   baiNumber="vanDung"
                   deBai={vanDungData.deBai}
                   chatHistory={vanDungData.chatHistory || []}
+                  onChatUpdate={(nextChatHistory) => {
+                    setVanDungData((prev) => ({
+                      ...(prev || {}),
+                      chatHistory: Array.isArray(nextChatHistory) ? nextChatHistory : prev?.chatHistory || []
+                    }));
+                  }}
                   scrollContainerRef={leftColRef}
                   isCompleted={vanDungData.status === 'completed'}
                   evaluation={vanDungData.evaluation}

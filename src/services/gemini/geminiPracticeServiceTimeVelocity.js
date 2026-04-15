@@ -172,6 +172,8 @@ export class GeminiPracticeServiceTimeVelocity extends GeminiPracticeService {
   - Loại A: Tính thời gian tổng hợp từ nhiều điều kiện phụ khác nhau (ví dụ: 2-3 nhân vật khác nhau chạy, hoặc từng nhân vật chạy khác nhau, rồi so sánh xem cái nào nhanh hơn hoặc tính chung).
   - Loại B: Tính thời gian trung bình mỗi chặng/vòng, NHƯNG với điều kiện phụ khác (ví dụ: tính trung bình NOT bao gồm thời gian nghỉ, hoặc so sánh 2 ghi chép khác nhau).
   - Loại C: So sánh vận tốc/thời gian trung bình giữa 2 đội hoặc 2 người chạy khác nhau.
+  - Nếu đề có từ 2 nhân vật hoặc 2 bộ dữ kiện tách biệt, câu hỏi cuối BẮT BUỘC phải dùng cả hai bộ dữ kiện (ưu tiên câu hỏi so sánh ai nhanh hơn/chậm hơn, chênh lệch bao nhiêu, hoặc chọn phương án tốt hơn).
+  - TUYỆT ĐỐI KHÔNG tạo dữ kiện thừa: mọi dữ kiện nêu trong đề phải được dùng để trả lời câu hỏi cuối.
   TUYỆT ĐỐI KHÔNG phải loại bài giống Bài 1, không được hỏi lại "tính tổng thời gian N chặng" như Bài 1.`;
     }
   }
@@ -234,6 +236,8 @@ Bài 56: Các đơn vị đo thời gian -> Bài 57: Cộng, trừ số đo th�
 6. Nếu đề có "thời gian nghỉ", câu hỏi chính phải ghi rõ cụm "bao gồm thời gian nghỉ" để học sinh không hiểu nhầm.
 7. Chỉ dùng cụm "được trừ X giây mỗi vòng" khi thực sự có cơ chế thưởng/trừ thời gian và phải nêu rõ đó là thời gian xếp hạng sau trừ.
 8. ⭐ BẮT BUỘC: Toàn bộ đề bài phải dùng NHẤT QUÁN từ vựng - nếu bắt đầu với "chặng" thì toàn bộ phải dùng "chặng", nếu dùng "vòng" thì toàn bộ phải dùng "vòng". TUYỆT ĐỐI KHÔNG được trộn lẫn "chặng" và "vòng" trong cùng một đề.
+9. ⭐ KHÔNG DỮ KIỆN THỪA: Tất cả dữ kiện xuất hiện trong đề phải phục vụ trực tiếp cho câu hỏi cuối.
+10. ⭐ NẾU CÓ 2 NHÂN VẬT/2 BỘ DỮ KIỆN RIÊNG: câu hỏi cuối phải khai thác cả hai (ưu tiên so sánh), không được hỏi chỉ một nhân vật.
 
 [ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
 ${problemTypeGuidance}
@@ -248,7 +252,7 @@ ${contextInjection}
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
   "suy_luan": "Bước 1: Phân tích yêu cầu dạng toán ${topicName}. Bước 2: Thiết kế các bước giải tương ứng với độ khó (có đổi đơn vị/tính thời gian nghỉ không). Bước 3: Chốt câu hỏi cuối cùng đảm bảo đúng dạng ${topicName}.",
-  "de_bai": "Viết trực tiếp đề bài tự luận NGẮN GỌN theo đúng Độ dài bắt buộc. KHÔNG có trắc nghiệm. KHÔNG lời dẫn. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp. Nếu có thời gian nghỉ thì câu hỏi chính phải ghi rõ 'bao gồm thời gian nghỉ'. ⭐ Toàn bộ đề phải dùng NHẤT QUÁN từ vựng (chỉ 'chặng' hoặc chỉ 'vòng', không trộn lẫn)."
+  "de_bai": "Viết trực tiếp đề bài tự luận NGẮN GỌN theo đúng Độ dài bắt buộc. KHÔNG có trắc nghiệm. KHÔNG lời dẫn. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp. Nếu có thời gian nghỉ thì câu hỏi chính phải ghi rõ 'bao gồm thời gian nghỉ'. ⭐ Toàn bộ đề phải dùng NHẤT QUÁN từ vựng (chỉ 'chặng' hoặc chỉ 'vòng', không trộn lẫn). ⭐ Không có dữ kiện thừa: mọi dữ kiện đều phải dùng cho câu hỏi cuối; nếu có 2 nhân vật thì câu hỏi cuối phải dùng cả hai (ưu tiên so sánh)."
 }`;
 
     try {
@@ -326,6 +330,8 @@ Bài 56: Các đơn vị đo thời gian -> Bài 57: Cộng, trừ số đo th�
 6. Nếu đề có "thời gian nghỉ", câu hỏi chính phải ghi rõ cụm "bao gồm thời gian nghỉ" để học sinh không hiểu nhầm.
 7. Chỉ dùng cụm "được trừ X giây mỗi vòng" khi thực sự có cơ chế thưởng/trừ thời gian và phải nêu rõ đó là thời gian xếp hạng sau trừ.
 8. ⭐ BẮT BUỘC: Toàn bộ đề bài phải dùng NHẤT QUÁN từ vựng: nếu bắt đầu với "chặng" thì toàn bộ phải dùng "chặng", nếu dùng "vòng" thì toàn bộ phải dùng "vòng". TUYỆT ĐỐI KHÔNG được trộn lẫn "chặng" và "vòng" trong cùng một đề.
+9. ⭐ KHÔNG DỮ KIỆN THỪA: Tất cả dữ kiện xuất hiện trong đề phải phục vụ trực tiếp cho câu hỏi cuối.
+10. ⭐ NẾU CÓ 2 NHÂN VẬT/2 BỘ DỮ KIỆN RIÊNG: câu hỏi cuối phải khai thác cả hai (ưu tiên so sánh), không được hỏi chỉ một nhân vật.
 
 [ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
 ${problemTypeGuidance}
@@ -340,7 +346,7 @@ ${contextInjection}
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
   "suy_luan": "Phân tích bối cảnh bài toán cho mức ${competencyLevel}. Loại bài PHẢI khác hoàn toàn với Bài 1 luyện tập. Đảm bảo học sinh phải tính toán trung gian trước khi chốt câu hỏi đúng kiến thức ${topicName}.",
-  "de_bai": "Chỉ sinh 1 bài toán ngắn gọn theo đúng Độ dài bắt buộc. Cấm trắc nghiệm. Không tiêu đề. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp. Nếu có thời gian nghỉ thì câu hỏi chính phải ghi rõ 'bao gồm thời gian nghỉ'. ⭐ Toàn bộ đề phải dùng NHẤT QUÁN từ vựng (chỉ 'chặng' hoặc chỉ 'vòng', không trộn lẫn)."
+  "de_bai": "Chỉ sinh 1 bài toán ngắn gọn theo đúng Độ dài bắt buộc. Cấm trắc nghiệm. Không tiêu đề. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp. Nếu có thời gian nghỉ thì câu hỏi chính phải ghi rõ 'bao gồm thời gian nghỉ'. ⭐ Toàn bộ đề phải dùng NHẤT QUÁN từ vựng (chỉ 'chặng' hoặc chỉ 'vòng', không trộn lẫn). ⭐ Không có dữ kiện thừa: mọi dữ kiện đều phải dùng cho câu hỏi cuối; nếu có 2 nhân vật thì câu hỏi cuối phải dùng cả hai (ưu tiên so sánh)."
 }`;
 
     try {

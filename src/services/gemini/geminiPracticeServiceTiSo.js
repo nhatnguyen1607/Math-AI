@@ -117,6 +117,8 @@ export class GeminiPracticeServiceTiSo extends GeminiPracticeService {
   - Loại B: So sánh tỉ số giữa 2-3 nhân vật/đối tượng khác nhau.
   - Loại C: Bài toán với 2 bước tính tỉ số phụ, rồi mới suy ra kết quả cuối cùng (ví dụ: tìm tỉ số từ tổng và hiệu).
   - Loại D: Lựa chọn phương án tối ưu hoặc kiểm tra có vượt mức cho phép/khuyến nghị hay không dựa trên tỉ lệ phần trăm.
+  - Nếu đề có từ 2 nhân vật hoặc 2 bộ dữ kiện tách biệt, câu hỏi cuối BẮT BUỘC phải dùng cả hai bộ dữ kiện (ưu tiên so sánh hoặc chọn phương án).
+  - TUYỆT ĐỐI KHÔNG tạo dữ kiện thừa: mọi dữ kiện nêu trong đề phải được dùng để trả lời câu hỏi cuối.
   TUYỆT ĐỐI KHÔNG phải loại bài giống Bài 1, không được hỏi lại "tính tỉ số % của hai số" như Bài 1.`;
     }
   }
@@ -240,6 +242,8 @@ Bài 36: Tỉ số, Tỉ số phần trăm -> Bài 37: Tỉ lệ bản đồ -> 
 5. CHỈ dùng dấu chấm (.) hoặc không dấu cho số tiền - KHÔNG dùng phẩy (,)
    → Ví dụ SAI: 15,000 đồng, 2,500,000 đồng
    → Ví dụ ĐÚNG: 15.000 đồng, 2.500.000 đồng (hoặc 15000 đồng)
+6. ⭐ KHÔNG DỮ KIỆN THỪA: Tất cả dữ kiện xuất hiện trong đề phải phục vụ trực tiếp cho câu hỏi cuối.
+7. ⭐ NẾU CÓ 2 NHÂN VẬT/2 BỘ DỮ KIỆN RIÊNG: câu hỏi cuối phải khai thác cả hai (ưu tiên so sánh/chọn phương án), không được hỏi chỉ một phía.
 
 [ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
 ${problemTypeGuidance}
@@ -254,7 +258,7 @@ ${contextInjection}
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
   "suy_luan": "Bước 1: Phân tích yêu cầu dạng toán ${topicName}. Bước 2: Thiết kế các bước giải tương ứng với độ khó. Bước 3: Chốt câu hỏi cuối cùng đảm bảo đúng dạng ${topicName}.",
-  "de_bai": "Viết trực tiếp đề bài tự luận NGẮN GỌN theo đúng Độ dài bắt buộc. KHÔNG có trắc nghiệm. KHÔNG lời dẫn. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp."
+  "de_bai": "Viết trực tiếp đề bài tự luận NGẮN GỌN theo đúng Độ dài bắt buộc. KHÔNG có trắc nghiệm. KHÔNG lời dẫn. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp. ⭐ Không có dữ kiện thừa: mọi dữ kiện đều phải dùng cho câu hỏi cuối; nếu có 2 nhân vật thì câu hỏi cuối phải dùng cả hai (ưu tiên so sánh/chọn phương án)."
 }`;
 
     try {
@@ -329,6 +333,8 @@ Bài 36: Tỉ số, Tỉ số phần trăm -> Bài 37: Tỉ lệ bản đồ -> 
 5. CHỈ dùng dấu chấm (.) hoặc không dấu cho số tiền - KHÔNG dùng phẩy (,)
    → Ví dụ SAI: 15,000 đồng, 2,500,000 đồng
    → Ví dụ ĐÚNG: 15.000 đồng, 2.500.000 đồng (hoặc 15000 đồng)
+6. ⭐ KHÔNG DỮ KIỆN THỪA: Tất cả dữ kiện xuất hiện trong đề phải phục vụ trực tiếp cho câu hỏi cuối.
+7. ⭐ NẾU CÓ 2 NHÂN VẬT/2 BỘ DỮ KIỆN RIÊNG: câu hỏi cuối phải khai thác cả hai (ưu tiên so sánh/chọn phương án), không được hỏi chỉ một phía.
 
 [ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
 ${problemTypeGuidance}
@@ -343,7 +349,7 @@ ${contextInjection}
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
   "suy_luan": "Phân tích số liệu bị ẩn cho mức ${competencyLevel}. Loại bài PHẢI khác hoàn toàn với Bài 1 luyện tập. Đảm bảo câu hỏi cuối cùng hỏi đúng kiến thức ${topicName}.",
-  "de_bai": "Chỉ sinh 1 bài toán ngắn gọn theo đúng Độ dài bắt buộc. Cấm trắc nghiệm. Không tiêu đề. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp."
+  "de_bai": "Chỉ sinh 1 bài toán ngắn gọn theo đúng Độ dài bắt buộc. Cấm trắc nghiệm. Không tiêu đề. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp. ⭐ Không có dữ kiện thừa: mọi dữ kiện đều phải dùng cho câu hỏi cuối; nếu có 2 nhân vật thì câu hỏi cuối phải dùng cả hai (ưu tiên so sánh/chọn phương án)."
 }`;
 
     try {

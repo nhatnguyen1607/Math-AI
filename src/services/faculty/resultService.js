@@ -901,6 +901,35 @@ class ResultService {
   }
 
   /**
+   * Tạo lại đề cho một bài luyện tập cụ thể (chỉ bài được chọn)
+   * Reset deBai + chatHistory + đánh giá của đúng bài đó
+   */
+  async regeneratePracticeExercise(userId, examId, baiNumber, problemText) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+
+      const defaultEvaluation = {
+        nhanXet: '',
+        diemTC: { tc1: 0, tc2: 0, tc3: 0, tc4: 0 },
+        tongDiem: 0,
+        mucDo: 'Cần cố gắng'
+      };
+
+      await updateDoc(progressRef, {
+        [`parts.luyenTap.${baiNumber}.deBai`]: problemText || '',
+        [`parts.luyenTap.${baiNumber}.chatHistory`]: [],
+        [`parts.luyenTap.${baiNumber}.status`]: 'in_progress',
+        [`parts.luyenTap.${baiNumber}.student_evaluation`]: '',
+        [`parts.luyenTap.${baiNumber}.evaluation`]: defaultEvaluation,
+        lastUpdatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
    * ========== VẬN DỤNG SESSION (Application Problem) ==========
    */
 
@@ -1025,6 +1054,27 @@ class ResultService {
 
       const data = progressDoc.data();
       return data.parts?.vanDung || null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Tạo lại đề Vận dụng (chỉ phần vanDung)
+   */
+  async regenerateVanDungExercise(userId, examId, problemText) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+
+      await updateDoc(progressRef, {
+        'parts.vanDung.deBai': problemText || '',
+        'parts.vanDung.chatHistory': [],
+        'parts.vanDung.status': 'in_progress',
+        'parts.vanDung.student_evaluation': '',
+        'parts.vanDung.evaluation': null,
+        lastUpdatedAt: serverTimestamp()
+      });
     } catch (error) {
       throw error;
     }

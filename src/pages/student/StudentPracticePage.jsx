@@ -28,7 +28,17 @@ const StudentPracticePage = ({ user, onSignOut }) => {
   const [robotMessage, setRobotMessage] = useState('');
   const [topicName, setTopicName] = useState('');
   const [examContextId, setExamContextId] = useState('');
+  const [regeneratingProblem, setRegeneratingProblem] = useState(false);
   const leftColRef = useRef(null);
+
+  const resolveCompetencyLevel = (competencyEvaluation) => {
+    if (!competencyEvaluation) return 'Đạt';
+    const totalScore = competencyEvaluation.totalCompetencyScore;
+    if (totalScore === undefined || totalScore === null) return 'Đạt';
+    if (totalScore <= 3) return 'Cần cố gắng';
+    if (totalScore <= 6) return 'Đạt';
+    return 'Tốt';
+  };
 
   // Khởi tạo dữ liệu luyện tập
   useEffect(() => {
@@ -42,7 +52,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
 
         // 🔴 ALWAYS load examData to get topicName (needed for session restore too!)
         const examData = await examService.getExamById(examId);
-        if (!examData || !examData.exercises || examData.exercises.length < 2) {
+        if (!examData || !Array.isArray(examData.exercises) || examData.exercises.length < 1) {
           setError('Đề thi không chứa đủ bài tập');
           setLoading(false);
           return;
@@ -70,29 +80,16 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         }
 
         // Tạo context từ các bài tập gốc để Gemini hiểu chủ đề
-        const exercise1 = examData.exercises[0];
-        const exercise2 = examData.exercises[1];
+        const exercise1 = examData.exercises[0] || {};
+        const exercise2 = examData.exercises[1] || exercise1;
+        const startupProblem1 = exercise1?.name || '';
+        const startupProblem2 = exercise2?.name || startupProblem1;
 
         // Lấy đánh giá năng lực của học sinh từ phần khởi động
         const examProgress = await resultService.getExamProgress(user.uid, examId);
         const competencyEvaluation = examProgress?.parts?.khoiDong?.competencyEvaluation;
         
-        let competencyLevel = 'Đạt'; // Default value
-        if (competencyEvaluation) {          
-          if (competencyEvaluation.totalCompetencyScore !== undefined && competencyEvaluation.totalCompetencyScore !== null) {
-            const totalScore = competencyEvaluation.totalCompetencyScore;
-            
-            if (totalScore <= 3) {
-              competencyLevel = 'Cần cố gắng';
-            } else if (totalScore <= 6) {
-              competencyLevel = 'Đạt';
-            } else {
-              competencyLevel = 'Tốt';
-            }
-          } else {
-          }
-        } else {
-        }
+        const competencyLevel = resolveCompetencyLevel(competencyEvaluation);
 
         // Gọi Gemini để tạo bài toán tương tự - có truyền năng lực học sinh làm tham số thứ 5
         // Throttle giữa hai lần gọi (bài 1 và bài 2) bằng delay, không cần gọi zweimal cho cùng một bài
@@ -104,8 +101,8 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         try {
           
           similarProblem1 = await gService.generateSimilarProblem(
-            exercise1.name,        // startupProblem1
-            exercise2.name,        // startupProblem2
+            startupProblem1,       // startupProblem1
+            startupProblem2,       // startupProblem2
             topicNameFromExam,     // context (chủ đề) - FIX này! context1 chỉ là exercise.context, không phải topic
             1,                     // problemNumber
             competencyLevel,
@@ -115,14 +112,14 @@ const StudentPracticePage = ({ user, onSignOut }) => {
           );
         } catch (err1) {
           console.error('❌ [StudentPracticePage] Error generating problem 1:', err1);
-          similarProblem1 = exercise1.name || 'Bài tập 1';
+          similarProblem1 = startupProblem1 || 'Bài tập 1';
         }
 
         try {
           
           similarProblem2 = await gService.generateSimilarProblem(
-            exercise1.name,        // startupProblem1
-            exercise2.name,        // startupProblem2
+            startupProblem1,       // startupProblem1
+            startupProblem2,       // startupProblem2
             topicNameFromExam,     // context (chủ đề) - FIX này!
             2,                     // problemNumber
             competencyLevel,
@@ -132,7 +129,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
           );
         } catch (err2) {
           console.error('❌ [StudentPracticePage] Error generating problem 2:', err2);
-          similarProblem2 = exercise2.name || 'Bài tập 2';
+          similarProblem2 = startupProblem2 || startupProblem1 || 'Bài tập 2';
         }
 
         // Khởi tạo phiên luyện tập với 2 bài toán mới
@@ -241,6 +238,85 @@ const StudentPracticePage = ({ user, onSignOut }) => {
     }
   };
 
+  const handleRegeneratePracticeProblem = async () => {
+    try {
+      if (!user?.uid || !examId || !practiceData?.luyenTap?.[activeTab]) return;
+
+      const activeBaiData = practiceData.luyenTap[activeTab];
+      const hasUserInteraction = (activeBaiData.chatHistory || []).some((m) => m?.role === 'user');
+      if (hasUserInteraction) return;
+
+      setRegeneratingProblem(true);
+      setError(null);
+
+      const examData = await examService.getExamById(examId);
+      if (!examData || !Array.isArray(examData.exercises) || examData.exercises.length < 1) {
+        throw new Error('Không tìm thấy dữ liệu đề gốc để tạo lại bài.');
+      }
+
+      const topicNameFromExam = examData.title || topicName || '';
+      setTopicName(topicNameFromExam);
+      setExamContextId(examData.contextId || '');
+
+      const exercise1 = examData.exercises[0] || {};
+      const exercise2 = examData.exercises[1] || exercise1;
+      const startupProblem1 = exercise1?.name || '';
+      const startupProblem2 = exercise2?.name || startupProblem1;
+
+      const examProgress = await resultService.getExamProgress(user.uid, examId);
+      const competencyEvaluation = examProgress?.parts?.khoiDong?.competencyEvaluation;
+      const competencyLevel = resolveCompetencyLevel(competencyEvaluation);
+
+      const gService = practiceServiceRouter.getService(topicNameFromExam);
+      const problemNumber = activeTab === 'bai1' ? 1 : 2;
+
+      let regeneratedProblem = activeBaiData.deBai || '';
+      try {
+        regeneratedProblem = await gService.generateSimilarProblem(
+          startupProblem1,
+          startupProblem2,
+          topicNameFromExam,
+          problemNumber,
+          competencyLevel,
+          100,
+          '',
+          examData.contextId || ''
+        );
+      } catch (genError) {
+        console.error('❌ [StudentPracticePage] Error regenerating problem:', genError);
+      }
+
+      await resultService.regeneratePracticeExercise(user.uid, examId, activeTab, regeneratedProblem);
+
+      setPracticeData((prev) => {
+        if (!prev?.luyenTap?.[activeTab]) return prev;
+        return {
+          ...prev,
+          luyenTap: {
+            ...prev.luyenTap,
+            [activeTab]: {
+              ...prev.luyenTap[activeTab],
+              deBai: regeneratedProblem,
+              chatHistory: [],
+              status: 'in_progress',
+              student_evaluation: '',
+              evaluation: {
+                nhanXet: '',
+                diemTC: { tc1: 0, tc2: 0, tc3: 0, tc4: 0 },
+                tongDiem: 0,
+                mucDo: 'Cần cố gắng'
+              }
+            }
+          }
+        };
+      });
+    } catch (err) {
+      setError(`Lỗi khi tạo lại đề: ${err.message || 'Không rõ nguyên nhân'}`);
+    } finally {
+      setRegeneratingProblem(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 px-4">
@@ -284,6 +360,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
   const bai1 = practiceData.luyenTap?.bai1;
   const bai2 = practiceData.luyenTap?.bai2;
   const currentBai = activeTab === 'bai1' ? bai1 : bai2;
+  const currentHasUserInteraction = (currentBai?.chatHistory || []).some((m) => m?.role === 'user');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -348,7 +425,21 @@ const StudentPracticePage = ({ user, onSignOut }) => {
             <>
               {/* STICKY PROBLEM STATEMENT */}
               <div className="sticky top-[7.2rem] z-30 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 p-[clamp(0.8rem,2.4vw,1rem)] shadow-sm sm:top-[8.2rem]">
-                <h3 className="mb-2 font-quicksand text-[clamp(0.9rem,2.7vw,1rem)] font-bold text-blue-900">📝 Đề Bài</h3>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <h3 className="font-quicksand text-[clamp(0.9rem,2.7vw,1rem)] font-bold text-blue-900">📝 Đề Bài</h3>
+                  <button
+                    onClick={handleRegeneratePracticeProblem}
+                    disabled={regeneratingProblem || currentHasUserInteraction || submitting}
+                    className={`touch-btn rounded-lg px-3 py-1.5 text-xs font-bold text-white font-quicksand transition-all ${
+                      regeneratingProblem || currentHasUserInteraction || submitting
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-amber-500 hover:bg-amber-600'
+                    }`}
+                    title={currentHasUserInteraction ? 'Đã có tương tác, không thể tạo lại đề' : 'Tạo lại đề cho bài hiện tại'}
+                  >
+                    {regeneratingProblem ? '⏳ Đang tạo...' : '🔁 Tạo lại đề'}
+                  </button>
+                </div>
                 <p className="font-quicksand text-[clamp(0.95rem,2.8vw,1.05rem)] leading-relaxed text-blue-800 [overflow-wrap:anywhere]">{currentBai.deBai}</p>
               </div>
 
@@ -360,6 +451,21 @@ const StudentPracticePage = ({ user, onSignOut }) => {
                   baiNumber={activeTab}
                   deBai={currentBai.deBai}
                   chatHistory={currentBai.chatHistory}
+                  onChatUpdate={(nextChatHistory) => {
+                    setPracticeData((prev) => {
+                      if (!prev?.luyenTap?.[activeTab]) return prev;
+                      return {
+                        ...prev,
+                        luyenTap: {
+                          ...prev.luyenTap,
+                          [activeTab]: {
+                            ...prev.luyenTap[activeTab],
+                            chatHistory: Array.isArray(nextChatHistory) ? nextChatHistory : prev.luyenTap[activeTab].chatHistory
+                          }
+                        }
+                      };
+                    });
+                  }}
                   scrollContainerRef={leftColRef}
                   isCompleted={currentBai.status === 'completed'}
                   evaluation={currentBai.evaluation}

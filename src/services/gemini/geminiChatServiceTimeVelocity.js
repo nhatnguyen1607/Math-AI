@@ -148,12 +148,30 @@ export class GeminiChatServiceTimeVelocity {
   }
 
   _buildStep3ComputationFeedback(check = {}) {
-    const expression = check?.expression ? ` ${check.expression}` : "";
+    const rawExpression = String(check?.expression || "");
+    const prettyExpression = rawExpression
+      .replace(/\*/g, " × ")
+      .replace(/\//g, " : ")
+      .replace(/\./g, ",")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const actualDisplay = Number.isFinite(check?.actual)
+      ? String(check.actual).replace(/\./g, ",")
+      : "";
+
     if (check?.issueType === "decimal") {
-      return `Bạn hãy kiểm tra lại kết quả của phép tính${expression}, có vẻ bạn đang đặt vị trí dấu phẩy chưa chính xác. Bạn thử tính lại từng bước rồi ghi lại kết quả, đồng thời kiểm tra lại đơn vị cho đúng nhé.`;
+      if (prettyExpression && actualDisplay) {
+        return `Bạn đang tính ${prettyExpression} và ghi kết quả là ${actualDisplay}, nhưng kết quả này chưa đúng vì đang sai ở vị trí dấu phẩy. Bạn thử đặt lại dấu phẩy cẩn thận rồi tính lại nhé.`;
+      }
+      return "Kết quả tính chưa đúng do vị trí dấu phẩy chưa chính xác. Bạn thử đặt lại dấu phẩy cẩn thận rồi tính lại nhé.";
     }
 
-    return `Bạn hãy kiểm tra lại kết quả của phép tính${expression}, hiện chưa khớp với dữ kiện bài toán. Bạn rà lại từng bước tính và nhớ kiểm tra lại đơn vị trước khi kết luận nhé.`;
+    if (prettyExpression && actualDisplay) {
+      return `Bạn đang tính ${prettyExpression} và ghi kết quả là ${actualDisplay}, nhưng kết quả tính chưa đúng. Bạn rà lại từng bước tính rồi ghi lại kết quả kèm đơn vị nhé.`;
+    }
+
+    return "Kết quả tính chưa đúng. Bạn rà lại từng bước tính rồi ghi lại kết quả kèm đơn vị nhé.";
   }
 
   _hasStep1Complete(answer = "", chatHistory = []) {
@@ -237,6 +255,184 @@ export class GeminiChatServiceTimeVelocity {
     }
 
     return { hasError: false };
+  }
+
+  _needsUnitConversion(problemText = "") {
+    const text = String(problemText || "").toLowerCase();
+    if (!text) return false;
+
+    const hasExplicitConversion =
+      /đổi\s*đơn\s*vị|quy\s*đổi|đưa\s*về\s*cùng\s*đơn\s*vị|cùng\s*đơn\s*vị|khác\s*đơn\s*vị|không\s*cùng\s*đơn\s*vị|đổi\s*ra/i.test(
+        text,
+      );
+
+    const hasMixedDistanceUnits = /\d+\s*km\b/i.test(text) && /\d+\s*m\b/i.test(text);
+    const hasMixedTimeUnits =
+      (/\d+\s*giờ\b/i.test(text) && /\d+\s*phút\b/i.test(text)) ||
+      (/\d+\s*phút\b/i.test(text) && /\d+\s*giây\b/i.test(text));
+    const hasKmPerHourWithMinute =
+      /km\s*\/\s*(h|giờ)/i.test(text) && /\d+\s*phút\b/i.test(text);
+    const hasMeterPerSecondWithHourOrMinute =
+      /m\s*\/\s*(s|giây)/i.test(text) && /(\d+\s*giờ\b|\d+\s*phút\b)/i.test(text);
+
+    return (
+      hasExplicitConversion ||
+      hasMixedDistanceUnits ||
+      hasMixedTimeUnits ||
+      hasKmPerHourWithMinute ||
+      hasMeterPerSecondWithHourOrMinute
+    );
+  }
+
+  _hasUnitConversionPlan(answer = "", chatHistory = []) {
+    const recentUserText = Array.isArray(chatHistory)
+      ? chatHistory
+          .filter((m) => m?.role === "user")
+          .slice(-6)
+          .map((m) => m?.parts?.[0]?.text || "")
+          .join(" ")
+      : "";
+    const fullText = `${recentUserText} ${String(answer || "")}`.toLowerCase();
+    return /đổi\s*đơn\s*vị|quy\s*đổi|đưa\s*về\s*cùng\s*đơn\s*vị|cùng\s*đơn\s*vị|đổi\s*ra/i.test(
+      fullText,
+    );
+  }
+
+  _buildStep4RecheckQuestion() {
+    const toVnNumber = (num) => {
+      const rounded = Number(num).toFixed(2).replace(/\.00$/, "").replace(/(,\d*?)0+$/, "$1");
+      return rounded.replace(".", ",");
+    };
+
+    if (this.currentProblem && this.currentProblem.trim()) {
+      const text = String(this.currentProblem || "").toLowerCase();
+
+      const distanceMatches = [
+        ...text.matchAll(/(\d+(?:[,.]\d+)?)\s*km\b/gi),
+        ...text.matchAll(/(\d+(?:[,.]\d+)?)\s*m\b/gi),
+      ];
+      const timeMatches = [
+        ...text.matchAll(/(\d+(?:[,.]\d+)?)\s*giờ\b/gi),
+        ...text.matchAll(/(\d+(?:[,.]\d+)?)\s*phút\b/gi),
+      ];
+
+      if (distanceMatches.length > 0) {
+        const raw = distanceMatches[0][1];
+        const unit = /km/i.test(distanceMatches[0][0]) ? "km" : "m";
+        const value = parseFloat(raw.replace(",", "."));
+        if (!isNaN(value)) {
+          const delta = Math.max(value >= 10 ? 2 : 1, Math.round(Math.abs(value) * 0.2));
+          const newValue = value + delta;
+          return `Mình chọn sẵn để bạn kiểm tra nhé: giữ nguyên thời gian như đề bài, chỉ đổi quãng đường từ ${toVnNumber(value)}${unit} lên ${toVnNumber(newValue)}${unit}. Bạn hãy tính vận tốc mới (ghi đúng đơn vị km/h hoặc m/s), rồi nêu mối liên hệ giữa việc tăng quãng đường và đáp số.`;
+        }
+      }
+
+      if (timeMatches.length > 0) {
+        const raw = timeMatches[0][1];
+        const unit = /giờ/i.test(timeMatches[0][0]) ? "giờ" : "phút";
+        const value = parseFloat(raw.replace(",", "."));
+        if (!isNaN(value) && value > 0) {
+          const delta = Math.max(1, Math.round(Math.abs(value) * 0.2));
+          const newValue = Math.max(1, value - delta);
+          return `Mình chọn sẵn để bạn kiểm tra nhé: giữ nguyên quãng đường như đề bài, chỉ đổi thời gian từ ${toVnNumber(value)} ${unit} xuống ${toVnNumber(newValue)} ${unit}. Bạn hãy tính vận tốc mới (ghi đúng đơn vị km/h hoặc m/s), rồi nêu mối liên hệ giữa việc giảm thời gian và đáp số.`;
+        }
+      }
+
+      const numberMatches = this.currentProblem.match(/\d+(?:[,.]\d+)?/g);
+      const validNumbers = numberMatches
+        ? numberMatches.filter((num) => {
+            const parsed = parseFloat(num.replace(",", "."));
+            return !isNaN(parsed) && num.length > 0;
+          })
+        : [];
+
+      if (validNumbers.length > 0) {
+        const base = parseFloat(validNumbers[0].replace(",", "."));
+        if (!isNaN(base)) {
+          const delta = Math.max(1, Math.round(Math.abs(base) * 0.2));
+          const next = base + delta;
+          return `Mình chọn sẵn để bạn kiểm tra nhé: đổi một dữ kiện trong đề từ ${toVnNumber(base)} lên ${toVnNumber(next)} (các dữ kiện còn lại giữ nguyên). Bạn hãy tính vận tốc mới, ghi đơn vị đúng (km/h hoặc m/s), rồi nêu mối liên hệ giữa dữ kiện thay đổi và đáp số.`;
+        }
+      }
+    }
+
+    return "Mình chọn sẵn để bạn kiểm tra nhé: giữ nguyên thời gian, đổi quãng đường từ 10 km lên 12 km. Bạn hãy tính vận tốc mới (ghi đúng đơn vị km/h hoặc m/s), rồi nêu mối liên hệ giữa dữ liệu thay đổi và đáp số.";
+  }
+
+  _isRefusingStep4Check(answer = "") {
+    const text = String(answer || "").toLowerCase();
+    return /(không|khong)\s*(muốn|can|cần|thích|làm)?\s*(kiểm\s*tra|kiem\s*tra|xem\s*lại|xem\s*lai)|khỏi\s*(kiểm\s*tra|xem\s*lại)/i.test(
+      text,
+    );
+  }
+
+  _isAskingStep4Clarification(answer = "") {
+    const text = String(answer || "").toLowerCase().trim();
+    return /(là\s*sao|la\s*sao|nghĩa\s*là\s*gì|nghia\s*la\s*gi|mình\s*chưa\s*hiểu|toi\s*khong\s*hieu|không\s*hiểu|ko\s*hiểu)/i.test(
+      text,
+    ) && /(thay\s*đổi\s*số\s*liệu|thay\s*doi\s*so\s*lieu|kiểm\s*tra\s*lại|kiem\s*tra\s*lai|bước\s*4|buoc\s*4)/i.test(text);
+  }
+
+  _hasStep4VerificationEvidence(answer = "") {
+    return this._analyzeStep4Verification(answer).isValid;
+  }
+
+  _analyzeStep4Verification(answer = "") {
+    const text = String(answer || "").toLowerCase();
+
+    const hasChangedInputMention =
+      /(thay|đổi|doi).*?(thành|thanh|sang|ra)/i.test(text) ||
+      /(từ|tu)\s*\d+[.,]?\d*\s*(thành|thanh|lên|len|đến|den)\s*\d+[.,]?\d*/i.test(text) ||
+      /(tăng|giảm)\s+.*?(từ|tu)\s*\d+[.,]?\d*\s*(lên|len|xuống|xuong|đến|den)\s*\d+[.,]?\d*/i.test(text);
+
+    // Much more flexible: look for "number with unit" anywhere in text (allows words between parts)
+    const hasNewComputedResult =
+      /\d+[.,]?\d*\s*(km\s*\/\s*h|m\s*\/\s*s|km\s*\/\s*giờ|m\s*\/\s*giây)/i.test(text) ||
+      /(=\s*\d+[.,]?\d*|kết\s*quả\s*(mới)?\s*là\s*\d+[.,]?\d*|vận\s*tốc\s+[^.]*?(là|=)\s*\d+[.,]?\d*)/i.test(text);
+
+    const hasVelocityUnit = /(km\s*\/\s*h|m\s*\/\s*s|km\s*\/\s*giờ|m\s*\/\s*giây)/i.test(text);
+
+    const hasRelationshipReasoning =
+      /(tỉ\s*lệ\s*thuận|tỉ\s*lệ\s*nghịch|khi\s+.*\s+thì\s+.*|nên|do\s*đó|vì\s*vậy|mối\s*liên\s*hệ|qua\s*đó|cho\s*thấy|suy\s*ra)/i.test(
+        text,
+      ) && /(tăng|giảm|lớn\s*hơn|nhỏ\s*hơn|tăng\s*theo|giảm\s*theo)/i.test(text);
+
+    const isValid =
+      hasChangedInputMention &&
+      hasNewComputedResult &&
+      hasRelationshipReasoning &&
+      hasVelocityUnit;
+
+    return {
+      isValid,
+      hasChangedInputMention,
+      hasNewComputedResult,
+      hasRelationshipReasoning,
+      hasVelocityUnit,
+    };
+  }
+
+  _buildStep4VerificationFeedback(analysis = {}) {
+    const missingParts = [];
+
+    if (!analysis.hasChangedInputMention) {
+      missingParts.push("chưa nêu rõ bạn đã thay đổi số liệu nào trong đề");
+    }
+    if (!analysis.hasNewComputedResult) {
+      missingParts.push("chưa tính ra kết quả mới bằng số");
+    }
+    if (!analysis.hasVelocityUnit) {
+      missingParts.push("kết quả vận tốc mới chưa kèm đơn vị đúng (km/h hoặc m/s)");
+    }
+    if (!analysis.hasRelationshipReasoning) {
+      missingParts.push("chưa nêu rõ mối liên hệ giữa dữ liệu thay đổi và đáp số");
+    }
+
+    if (missingParts.length === 0) {
+      return "Bạn đã kiểm tra khá đầy đủ rồi. Bạn xem lại thêm một lần để đảm bảo các bước đều hợp lý nhé.";
+    }
+
+    return `Mình thấy câu trả lời của bạn còn thiếu/chưa rõ ở phần: ${missingParts.join("; ")}. Bạn bổ sung lại đúng các ý này là hoàn thành bước 4 nhé.`;
   }
 
   // 🆕 Post-processing: tự động fix xưng hô từ "em" → "bạn"
@@ -394,6 +590,7 @@ CHI TIẾT PHẢN HỒI THEO BƯỚC:
    - ⚠️ KHÔNG hỏi lại "bài toán có những con số nào" hay "bài toán cho những thông tin gì" - đó là câu hỏi bước 1 rồi!
    - Nếu HS không biết → hỏi "Bạn sẽ giải bài này như thế nào? Bạn dùng cách gì/quy tắc gì để tìm đáp án?"
    - HS nêu sơ bộ: ví dụ "sẽ tính vận tốc bằng quãng đường chia cho thời gian" (KHÔNG nêu cụ thể con số)
+  - Nếu bài toán cần đổi đơn vị, HS phải nêu luôn bước đổi đơn vị trong kế hoạch thì mới được MOVE_NEXT.
   - CHỈ hỏi kế hoạch giải, CHƯA bắt HS tính toán hay cho đáp số
    
 3. 🟢 THỰC HIỆN (Bước 3 - TÍNH TOÁN):
@@ -402,9 +599,9 @@ CHI TIẾT PHẢN HỒI THEO BƯỚC:
   - Để HS tự thực hiện và trình bày đầy đủ theo kế hoạch đã nêu
    
 4. 🔵 KIỂM TRA (Bước 4 - MỞ RỘNG):
-   - Nếu HS nêu hợp lý (kết quả có đơn vị đúng, dấu hiệu logic) → MOVE_NEXT luôn
+  - Chỉ MOVE_NEXT khi HS đã kiểm tra thật sự: tính được kết quả mới khi thay đổi dữ liệu và nêu được mối liên hệ giữa dữ liệu thay đổi với đáp số.
    - Không chỉ hỏi "có/không", phải giúp HS trả lời ngắn, giải thích
-   - Đề xuất hỏi liên quan tới thay đổi số liệu: "Nếu thay đổi số liệu này thành ... thì kết quả sẽ như nào?"
+  - Câu hỏi kiểm tra phải yêu cầu tính ra kết quả mới, không chấp nhận trả lời chỉ "tăng" hoặc "giảm".
    - ⚠️ TUYỆT ĐỐI CẤM hỏi tính lại quãng đường hoặc các phép toán phức tạp khác để kiểm tra
 
 ⚠️ LƯU Ý TUYỆT ĐỐI:
@@ -413,6 +610,7 @@ CHI TIẾT PHẢN HỒI THEO BƯỚC:
 - Gợi ý phải CỰC KỲ CƠ BẢN, tránh đề cập tới công thức hay phép tính cụ thể
 - Ở bước 1, hỏi thông tin + yêu cầu (cần tìm gì)
 - Ở bước 2, CHỈ hỏi sơ bộ cách giải (sẽ dùng công thức/qui luật gì), TUYỆT ĐỐI KHÔNG hỏi lại con số hay thông tin bài toán (đó là bước 1)
+- Nếu đề cần đổi đơn vị thì ở bước 2 phải yêu cầu nêu bước đổi đơn vị, chưa nêu thì chưa được MOVE_NEXT.
 - Ở bước 3, để HS tính toán. TUYỆT ĐỐI KHÔNG ĐƯỢC hỏi các câu hỏi của bước 1 hay bước 2 (như "đề bài cho biết gì?", "bạn cần tìm gì?", "bạn sẽ giải bài này thế nào?"). CHỈ nhận xét lỗi tính toán và yêu cầu tính tiếp.
 
 LUÔN TRẢ VỀ JSON:
@@ -508,9 +706,10 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 1. TUYỆT ĐỐI KHÔNG xưng "em" - phải xưng "bạn" ở mọi nơi
 2. TẠI BƯỚC 1: KHÔNG hỏi phép tính. CHỈ hỏi dữ kiện.
 3. TẠI BƯỚC 2: KHÔNG hỏi lại dữ kiện. CHỈ hỏi kế hoạch giải.
+3.1. Nếu đề cần đổi đơn vị thì ở bước 2 phải yêu cầu nêu bước đổi đơn vị, chưa nêu thì chưa được MOVE_NEXT.
 4. TẠI BƯỚC 3: KHÔNG hỏi lại bước 1/2. CHỈ yêu cầu trình bày lời giải hoặc hỗ trợ tính toán.
-5. TẠI BƯỚC 4: KHÔNG bảo trình bày lại. CHỈ hỏi kiểm tra kết quả.
-6. 🚫 CẤM nêu cụ thể con số trong gợi ý - HS tự tìm.
+5. TẠI BƯỚC 4: BẮT BUỘC yêu cầu tính lại kết quả khi thay đổi dữ liệu và nêu mối liên hệ; KHÔNG chấp nhận chỉ trả lời tăng/giảm.
+6. Ở bước 4, ưu tiên nêu sẵn một thay đổi dữ liệu cụ thể để HS làm trực tiếp.
 7. Chỉ MOVE_NEXT khi HS trả lời đúng và đủ ý.
 8. ⚠️ NẾU HS nhập dấu chấm (0.7), nhắc dùng dấu phẩy (0,7).
 `;
@@ -538,12 +737,28 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
       // ===== BƯỚC 2: XỬ LÝ KẾ HOẠCH =====
       if (this.currentStep === 2) {
         const originalStep2Status = data.step_status;
+        const requiresUnitConversion = this._needsUnitConversion(this.currentProblem);
+        const hasUnitConversionPlan = this._hasUnitConversionPlan(studentAnswer, chatHistory);
+
+        if (requiresUnitConversion && !hasUnitConversionPlan) {
+          data.status = "WRONG";
+          data.step_status = "STAY";
+          data.feedback = "Bạn đã nêu được cách giải cơ bản rồi. Tuy nhiên bài này cần đổi đơn vị trước khi tính.";
+          data.next_question =
+            "Bạn hãy bổ sung vào kế hoạch: bạn sẽ đổi đơn vị nào về đơn vị nào trước khi thực hiện phép tính?";
+        }
 
         // ✅ MOVE_NEXT: HS đã nêu kế hoạch xong → chuyển sang bước 3
-        if (originalStep2Status === "MOVE_NEXT") {
+        if (data.step_status === "MOVE_NEXT" && originalStep2Status === "MOVE_NEXT") {
           data.feedback = ""; // Xóa feedback để tránh trùng lặp
           data.next_question = "Tuyệt vời! Bây giờ bạn hãy bắt đầu giải bài theo kế hoạch nhé! Trình bày lời giải đầy đủ, viết rõ từng bước rồi kết luận nhé.";
         }
+      }
+
+      // ✅ Sau khi hoàn thành bước 3, chuyển sang câu hỏi kiểm tra bắt buộc có tính lại kết quả
+      if (this.currentStep === 3 && data.step_status === "MOVE_NEXT") {
+        data.feedback = data.feedback || "Bạn đã thực hiện lời giải tốt lắm!";
+        data.next_question = this._buildStep4RecheckQuestion();
       }
 
 
@@ -554,6 +769,10 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
       // ⚠️ POST-FIX: Bước 4 (Kiểm tra) - XỬ LÝ HOÀN THÀNH PHIÊN
       if (this.currentStep === 4) {
         const isStatusCorrect = data.status && data.status.toLowerCase() === "correct";
+        const refusedToCheck = this._isRefusingStep4Check(studentAnswer);
+        const askedClarification = this._isAskingStep4Clarification(studentAnswer);
+        const step4Analysis = this._analyzeStep4Verification(studentAnswer);
+        const hasVerificationEvidence = step4Analysis.isValid;
 
         // 🔴 Kiểm tra CẢ feedback VÀ next_question cho step 3 contamination
         const combinedText = `${data.feedback || ''} ${data.next_question || ''}`;
@@ -561,8 +780,19 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
         const containsStep2Text = /bạn sẽ.*giải.*thế nào|nêu.*cách giải|lập.*kế hoạch/i.test(combinedText);
         const containsStep1Text = /bài toán.*cho.*thông tin|đề bài.*cho.*biết/i.test(combinedText);
 
-        // ✅ Nếu AI trả MOVE_NEXT ở bước 4 → LUÔN hoàn thành phiên
-        if (data.step_status === "MOVE_NEXT") {
+        // ✅ Bắt buộc có kiểm tra lại đầy đủ trước khi cho hoàn thành
+        if (refusedToCheck || !hasVerificationEvidence) {
+          data.status = "WRONG";
+          data.step_status = "STAY";
+          data.feedback = askedClarification
+            ? "'Thay đổi số liệu' nghĩa là mình giữ nguyên các dữ kiện còn lại, chỉ đổi 1 dữ kiện rồi tính lại kết quả mới để so sánh."
+            : refusedToCheck
+              ? "Bước 4 bắt buộc phải kiểm tra lại, nên mình chưa thể kết thúc bài ở đây nhé."
+              : this._buildStep4VerificationFeedback(step4Analysis);
+          data.next_question = this._buildStep4RecheckQuestion();
+        }
+        // ✅ Nếu AI trả MOVE_NEXT ở bước 4 và HS đã có kiểm tra đủ thì hoàn thành
+        else if (data.step_status === "MOVE_NEXT") {
           data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
           data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
         }
@@ -573,23 +803,20 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
             data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
             data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
           } else {
-            data.next_question = "Bạn hãy kiểm tra lại kết quả nhé. Nếu thay đổi một trong các số liệu ban đầu thì kết quả sẽ thay đổi như thế nào?";
+            data.next_question = this._buildStep4RecheckQuestion();
           }
         }
-        // ✅ Nếu HS đã xác nhận đúng → kết thúc
-        else if (isStatusCorrect) {
-          const hasConfirmedCorrect = /đúng|hợp lý|hợp lí|được|ok|ổn|tốt|chính xác|xác nhận|xong|vâng|rồi|có thể|đúng rồi|được rồi/i.test(studentAnswer);
-          if (hasConfirmedCorrect) {
-            data.step_status = "MOVE_NEXT";
-            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán theo rồi đó!";
-            data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
-          }
+        // ✅ Chỉ cho kết thúc nếu đúng và đã có minh chứng kiểm tra
+        else if (isStatusCorrect && hasVerificationEvidence) {
+          data.step_status = "MOVE_NEXT";
+          data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán theo rồi đó!";
+          data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
         }
         // ✅ Nếu STAY + câu hỏi quá ngắn → thay bằng câu hỏi kiểm tra
         else {
           if (!data.next_question || data.next_question.length < 20 ||
               !/nếu|thay đổi|kiểm tra|hợp lý/i.test(data.next_question)) {
-            data.next_question = "Bạn hãy kiểm tra lại kết quả nhé. Nếu thay đổi một trong các số liệu ban đầu thì kết quả sẽ thay đổi như thế nào?";
+            data.next_question = this._buildStep4RecheckQuestion();
           }
         }
       }

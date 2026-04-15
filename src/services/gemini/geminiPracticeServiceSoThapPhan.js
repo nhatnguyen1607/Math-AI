@@ -114,6 +114,8 @@ export class GeminiPracticeServiceSoThapPhan extends GeminiPracticeService {
   - Loại A: So sánh hai giá trị thập phân (ai nặng hơn, cái nào dài hơn, phương án nào rẻ hơn).
   - Loại B: Bài toán nhiều bước: tính trung gian rồi mới chốt kết quả cuối.
   - Loại C: Kiểm tra có vượt ngưỡng/mức cho phép hay không dựa trên phép tính số thập phân.
+  - Nếu đề có từ 2 nhân vật hoặc 2 bộ dữ kiện tách biệt, câu hỏi cuối BẮT BUỘC phải dùng cả hai bộ dữ kiện (ưu tiên so sánh/chọn phương án).
+  - TUYỆT ĐỐI KHÔNG tạo dữ kiện thừa: mọi dữ kiện nêu trong đề phải được dùng để trả lời câu hỏi cuối.
   TUYỆT ĐỐI KHÔNG phải loại bài giống Bài 1, không được hỏi lại "tính tổng/hiệu đơn giản" như Bài 1.`;
     }
   }
@@ -231,6 +233,8 @@ Bài 24: Cộng số thập phân -> Bài 25: Trừ số thập phân -> Bài 26
 3. CHỈ dùng dấu PHẨY (,) cho số thập phân, KHÔNG dùng dấu chấm (.). Ví dụ: 2,5 kg, 0,75 lít, 12,3 m
 4. CHỈ dùng số thập phân "ĐẸP" - HỮU HẠN không lặp lại. VÍ DỤ: 2,3, 3,45, 0,5, 1,25, 0,75, 12,5. TUYỆT ĐỐI KHÔNG: 0,333... (1/3), 0,6666... (2/3), 0,1666... (1/6)
 5. GHI ĐƠN VỊ: Phải ghi rõ đơn vị (kg, m, cm, lít, v.v.) trong bài toán và yêu cầu.
+6. ⭐ KHÔNG DỮ KIỆN THỪA: Tất cả dữ kiện xuất hiện trong đề phải phục vụ trực tiếp cho câu hỏi cuối.
+7. ⭐ NẾU CÓ 2 NHÂN VẬT/2 BỘ DỮ KIỆN RIÊNG: câu hỏi cuối phải khai thác cả hai (ưu tiên so sánh/chọn phương án), không được hỏi chỉ một phía.
 
 [ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
 ${problemTypeGuidance}
@@ -245,7 +249,7 @@ ${contextInjection}
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
   "suy_luan": "Bước 1: Phân tích yêu cầu dạng toán ${topicName}. Bước 2: Thiết kế các bước giải tương ứng với độ khó. Bước 3: Chốt câu hỏi cuối cùng đảm bảo đúng dạng ${topicName}.",
-  "de_bai": "Viết trực tiếp đề bài tự luận NGẮN GỌN theo đúng Độ dài bắt buộc. KHÔNG có trắc nghiệm. KHÔNG lời dẫn. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp. GHI ĐẦY ĐỦ ĐƠN VỊ."
+  "de_bai": "Viết trực tiếp đề bài tự luận NGẮN GỌN theo đúng Độ dài bắt buộc. KHÔNG có trắc nghiệm. KHÔNG lời dẫn. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp. GHI ĐẦY ĐỦ ĐƠN VỊ. ⭐ Không có dữ kiện thừa: mọi dữ kiện đều phải dùng cho câu hỏi cuối; nếu có 2 nhân vật thì câu hỏi cuối phải dùng cả hai (ưu tiên so sánh/chọn phương án)."
 }`;
 
     try {
@@ -318,6 +322,8 @@ Bài 24: Cộng số thập phân -> Bài 25: Trừ số thập phân -> Bài 26
 3. CHỈ dùng dấu PHẨY (,) cho số thập phân, KHÔNG dùng dấu chấm (.). Ví dụ: 2,5 kg, 0,75 lít, 12,3 m
 4. CHỈ dùng số thập phân "ĐẸP" - HỮU HẠN không lặp lại.
 5. GHI ĐƠN VỊ: Phải ghi rõ đơn vị (kg, m, cm, lít, v.v.) trong bài toán và yêu cầu.
+6. ⭐ KHÔNG DỮ KIỆN THỪA: Tất cả dữ kiện xuất hiện trong đề phải phục vụ trực tiếp cho câu hỏi cuối.
+7. ⭐ NẾU CÓ 2 NHÂN VẬT/2 BỘ DỮ KIỆN RIÊNG: câu hỏi cuối phải khai thác cả hai (ưu tiên so sánh/chọn phương án), không được hỏi chỉ một phía.
 
 [ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
 ${problemTypeGuidance}
@@ -332,7 +338,7 @@ ${contextInjection}
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
   "suy_luan": "Phân tích bối cảnh bài toán cho mức ${competencyLevel}. Loại bài PHẢI khác hoàn toàn với Bài 1 luyện tập. Đảm bảo câu hỏi cuối cùng hỏi đúng kiến thức ${topicName}.",
-  "de_bai": "Chỉ sinh 1 bài toán ngắn gọn theo đúng Độ dài bắt buộc. Cấm trắc nghiệm. Không tiêu đề. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp. GHI ĐẦY ĐỦ ĐƠN VỊ."
+  "de_bai": "Chỉ sinh 1 bài toán ngắn gọn theo đúng Độ dài bắt buộc. Cấm trắc nghiệm. Không tiêu đề. PHẢI dùng dấu phẩy (,) cho số thập phân, CHỈ dùng số thập phân đẹp. GHI ĐẦY ĐỦ ĐƠN VỊ. ⭐ Không có dữ kiện thừa: mọi dữ kiện đều phải dùng cho câu hỏi cuối; nếu có 2 nhân vật thì câu hỏi cuối phải dùng cả hai (ưu tiên so sánh/chọn phương án)."
 }`;
 
     try {

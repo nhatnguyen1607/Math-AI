@@ -15,6 +15,9 @@ const FacultyExamLobbyPage = () => {
   const [startingExam, setStartingExam] = useState(false);
   const navigate = useNavigate();
 
+  // Determine display duration based on exercise count
+  const displayDuration = exam?.exercises?.length === 1 ? 5 : 7;
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -163,7 +166,7 @@ const FacultyExamLobbyPage = () => {
           <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
             <div className="text-3xl mb-2">⏱️</div>
             <div className="text-sm text-gray-500 font-semibold uppercase mb-2">Thời lượng</div>
-            <div className="text-lg font-bold text-blue-600">7 phút</div>
+            <div className="text-lg font-bold text-blue-600">{displayDuration} phút</div>
           </div>
 
           <div className="bg-white rounded-2xl p-6 text-center shadow-lg">

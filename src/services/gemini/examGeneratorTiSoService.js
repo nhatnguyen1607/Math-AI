@@ -18,7 +18,8 @@ class ExamGeneratorTiSoService {
    */
   async generateExamFromSamples(params) {
     try {
-      const { topicName, lessonName, sampleExams, contextId } = params;
+      const { topicName, lessonName, sampleExams, contextId, exerciseCount } = params;
+      const isSingleExercise = exerciseCount === 1;
 
       if (!sampleExams || sampleExams.length === 0) {
         throw new Error('Chưa có đề mẫu nào để tạo đề');
@@ -40,7 +41,7 @@ class ExamGeneratorTiSoService {
 - **CHỦ ĐỀ BỐI CẢNH**: ${selectedContext.name}
 - **MÔ TẢ**: ${selectedContext.description}
 ${CHARACTER_GUIDE}
-- **YÊU CẦU**: Context (đoạn văn bối cảnh) của cả Bài 1 và Bài 2 PHẢI là một câu chuyện thuộc chủ đề "${selectedContext.name}", có sự xuất hiện của Mai, Việt, hoặc Nam.
+- **YÊU CẦU**: Context (đoạn văn bối cảnh) của ${isSingleExercise ? 'Bài tập' : 'cả Bài 1 và Bài 2'} PHẢI là một câu chuyện thuộc chủ đề "${selectedContext.name}", có sự xuất hiện của Mai, Việt, hoặc Nam.
 
 📋 **CÁC ĐỀ MẪU THAM KHẢO (chỉ tham khảo cấu trúc & phong cách)**:
 ${sampleExams.map((sample, idx) => `
@@ -138,11 +139,36 @@ ${this._formatSampleContent(sample.content)}
    → Nếu phải tính, chọn số chia hết: 24÷8 = 3, 15÷5 = 3, 80÷4 = 20
    → TUYỆT ĐỐI đừng dùng: 1÷3, 2÷3, 1÷6, 1÷7, 5÷6, 4÷9, bất kỳ số nào ra vô hạn tuần hoàn
 
+🚫 **CẤM**: Dùng dấu phẩy (,) để ngăn cách hàng nghìn trong số tiền
+   → CHỈ dùng dấu chấm (.) hoặc không dấu cho số tiền
+   → Ví dụ SAI: 15,000 đồng, 2,500,000 đồng
+   → Ví dụ ĐÚNG: 15.000 đồng, 2.500.000 đồng (hoặc 15000 đồng, 2500000 đồng)
+   → Lý do: Dấu phẩy được dành riêng cho số thập phân theo chuẩn tiếng Việt
+
 ═══════════════════════════════════════════════════════════════
 📋 **CẤU TRÚC PHẦN 1 (VẬN DỤNG - 2 phút)**
 ═══════════════════════════════════════════════════════════════
 
+${!isSingleExercise ? `
 **Mục tiêu**: Nhận diện, tóm tắt bài toán tỉ số cơ bản
+
+**Số câu hỏi**: 4-5 câu
+**Thời gian**: 120 giây
+
+**Nội dung**: Context nhỏ, đơn giản, chủ yếu hỏi về:
+- Khái niệm (Tỉ số là gì? Bản đồ tỉ lệ có ý nghĩa gì?)
+- Nhận diện dữ kiện (Cho biết gì? Cần tìm gì?)
+- Tính toán cơ bản
+
+**Ví dụ Context Bài 1:**
+"Trong vườn hoa của trường, cô giáo trồng hoa hồng đỏ và hoa hồng hồng. Cô đã trồng 24 bông hoa hồng đỏ và 36 bông hoa hồng hồng. Tỉ số giữa số hoa hồng đỏ so với số hoa hồng hồng là bao nhiêu? Rút gọn tỉ số này."
+
+═══════════════════════════════════════════════════════════════
+📋 **CẤU TRÚC PHẦN 2 (GQVĐ - 3 phút 30 giây/5 phút)**
+═══════════════════════════════════════════════════════════════
+` : `
+**Mục tiêu**: Giải bài toán Tỉ số Nâng cao / GQVĐ
+`}
 
 **Số câu hỏi**: 4-5 câu
 **Thời gian**: 120 giây
@@ -177,9 +203,8 @@ ${this._formatSampleContent(sample.content)}
 🎯 **QUY TẮC TRỌNG TÂM**
 ═══════════════════════════════════════════════════════════════
 
-1. **BÀI 1 và BÀI 2 phải CÙNG bài học**: Không được chuyển sang bài học khác!
-2. **BÀI 2 khó hơn BÀI 1**: Thêm bước tính, so sánh, hoặc dữ liệu phức tạp
-3. **Mỗi bài TỐI THIỂU 2 CÂU HỎI BƯỚC 4**: Kiểm tra lại kết quả (BẮAT BUỘC!)
+1. **BÀI TẬP phải thuộc đúng bài học**: Không được chuyển sang bài học khác!
+2. **Mỗi bài TỐI THIỂU 2 CÂU HỎI BƯỚC 4**: Kiểm tra lại kết quả (BẮT BUỘC!)
 4. **Số liệu hợp lý**: Chia hết hoặc ra số nguyên/phân số đẹp
 5. **Context phải hoàn chỉnh**: Nêu rõ dữ kiện và yêu cầu
 
@@ -191,7 +216,7 @@ ${this._formatSampleContent(sample.content)}
   "topicName": "${topicName}",
   "lessonName": "${lessonName}",
   "exercises": [
-    {
+${!isSingleExercise ? `    {
       "name": "Bài 1: [Tên liên quan ${lessonName}]",
       "duration": 120,
       "context": "[BỐI CẢNH ĐÚNG VỚI ${lessonName}]",
@@ -207,11 +232,25 @@ ${this._formatSampleContent(sample.content)}
       ]
     },
     {
-      "name": "Bài 2: [Tên khác VẦN VỀ ${lessonName}]",
+      "name": "Bài 2: [Tên khác VẪN VỀ ${lessonName}]",
       "duration": 210,
-      "context": "[BỐI CẢNH PHỨC TẠP, VẲN ĐÚNG ${lessonName}]",
+      "context": "[BỐI CẢNH PHỨC TẠP, VẪN ĐÚNG ${lessonName}]",
       "questions": [...]
-    }
+    }` : `    {
+      "name": "Bài 1: [Tên liên quan ${lessonName}]",
+      "duration": 300,
+      "context": "[BỐI CẢNH PHỨC TẠP, ĐÚNG VỚI ${lessonName}]",
+      "questions": [
+        {
+          "id": "q1",
+          "question": "[Câu hỏi]",
+          "type": "single",
+          "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+          "correctAnswers": [0],
+          "explanation": "[Giải thích tại sao đúng/sai cho từng đáp án]"
+        }
+      ]
+    }`}
   ]
 }
 
@@ -225,7 +264,7 @@ ${this._formatSampleContent(sample.content)}
 
 ═══════════════════════════════════════════════════════════════
 
-**BẮT ĐẦU**: Tạo đề cho bài "${lessonName}". CẢ 2 BÀI đều phải về "${lessonName}". Mỗi bài có TỐI THIỂU 2 CÂU HỎI BƯỚC 4. Trả về JSON thuần túy, bắt đầu bằng { kết thúc bằng }.`;
+**BẮT ĐẦU**: Tạo đề cho bài "${lessonName}". TẤT CẢ GỒM ${isSingleExercise ? '1' : '2'} BÀI đều phải về "${lessonName}". Mỗi bài có TỐI THIỂU 2 CÂU HỎI BƯỚC 4. Trả về JSON thuần túy, bắt đầu bằng dấu mở ngoặc và kết thúc bằng dấu đóng ngoặc.`;
 
       const result = await geminiServiceInstance._feedbackService._rateLimitedGenerate(prompt);
       let responseText = result ? result.response.text() : '';

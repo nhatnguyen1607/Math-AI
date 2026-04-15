@@ -5,7 +5,7 @@ export const EXAM_CONTEXTS = [
     name: 'Siêu thị thông minh',
     description: 'Boi canh di mua sam, tinh tong chi phi, tinh % giam gia combo, so sanh gia giua cac cua hang, lua chon phuong an mua hop li voi ngan sach co dinh.',
     aiRole: 'Robot thu ngân',
-    aiRoleDescription: 'Kiem tra hoa don, phat hien sai sot cua hoc sinh khi mua hang hoa.'
+    aiRoleDescription: 'Kiem tra cách tính tiền, phát hiện sai sót của học sinh khi mua hàng hóa.'
   },
   {
     id: 'tieu_vat',

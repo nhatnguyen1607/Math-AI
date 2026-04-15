@@ -26,7 +26,8 @@ class ExamGeneratorChuyenDongService {
    */
   async generateExamFromSamples(params) {
     try {
-      const { topicName, lessonName, sampleExams, contextId } = params;
+      const { topicName, lessonName, sampleExams, contextId, exerciseCount } = params;
+      const isSingleExercise = exerciseCount === 1;
 
       if (!sampleExams || sampleExams.length === 0) {
         throw new Error('Chưa có đề mẫu nào để tạo đề');
@@ -48,7 +49,7 @@ class ExamGeneratorChuyenDongService {
 - **CHỦ ĐỀ BỐI CẢNH**: ${selectedContext.name}
 - **MÔ TẢ**: ${selectedContext.description}
 ${CHARACTER_GUIDE}
-- **YÊU CẦU**: Context (đoạn văn bối cảnh) của cả Bài 1 và Bài 2 PHẢI là một câu chuyện thuộc chủ đề "${selectedContext.name}", có sự xuất hiện của Mai, Việt, hoặc Nam. Số liệu quãng đường, vận tốc, thời gian phải thực tế.
+- **YÊU CẦU**: Context (đoạn văn bối cảnh) của ${isSingleExercise ? 'Bài tập' : 'cả Bài 1 và Bài 2'} PHẢI là một câu chuyện thuộc chủ đề "${selectedContext.name}", có sự xuất hiện của Mai, Việt, hoặc Nam. Số liệu quãng đường, vận tốc, thời gian phải thực tế.
 - **QUY TẮC DIỄN ĐẠT THỜI GIAN**: Nếu đề có "nghỉ giữa các vòng/chặng" thì khi hỏi đội nào hoàn thành nhanh hơn, phải tính tổng thời gian BAO GỒM cả thời gian nghỉ. Chỉ dùng "được trừ X giây mỗi vòng" khi có cơ chế thưởng/trừ thời gian và nêu rõ quy tắc trừ.
 
 📋 **CÁC ĐỀ MẪU THAM KHẢO (chỉ tham khảo cấu trúc & phong cách)**:
@@ -166,7 +167,32 @@ ${this._formatSampleContent(sample.content)}
 📋 **CẤU TRÚC PHẦN 1 (VẬN DỤNG - 2 phút)**
 ═══════════════════════════════════════════════════════════════
 
+${!isSingleExercise ? `
 **Mục tiêu**: Nhận diện đại lượng s, v, t và áp dụng công thức cơ bản + ĐỔI ĐƠN VỊ
+
+**Số câu hỏi**: 4-6 câu
+**Thời gian**: 120 giây
+
+**Nội dung**: 
+- Context kết thúc bằng 1 câu hỏi chính rõ ràng
+- Sau đó là 4-6 câu nhỏ theo 4 bước Polya để giải câu hỏi chính
+- Hỏi về đổi đơn vị (km/h ↔ m/s hoặc kg ↔ tạ...)
+- Tính toán cơ bản một trong ba đại lượng (s, v, t)
+- Chỉ dùng m/s hoặc km/h (KHÔNG m/phút)
+
+**Ví dụ Bối cảnh Bài 1:**
+Phương tiện: Người đi bộ, xe đạp, xe máy hoặc ô tô
+Yêu cầu: Cho quãng đường (m hoặc km) + thời gian → Tìm vận tốc
+Chú ý: PHẢI CÓ ĐỔI ĐƠN VỊ (km→m, giờ→phút hoặc ngược lại)
+Kết thúc context bằng 1 CÂU HỎI CHÍNH rõ ràng (in đậm hoặc tách riêng)
+Sau đó là 4-6 câu nhỏ theo 4 bước Polya để giải"
+
+═══════════════════════════════════════════════════════════════
+📋 **CẤU TRÚC PHẦN 2 (GQVĐ - 3 phút 30 giây/5 phút)**
+═══════════════════════════════════════════════════════════════
+` : `
+**Mục tiêu**: Giải toán chuyển động khó / GQVĐ (Tính s/v/t nâng cao, so sánh)
+`}
 
 **Số câu hỏi**: 4-6 câu
 **Thời gian**: 120 giây
@@ -229,7 +255,7 @@ Sau đó là 6-10 câu nhỏ theo 4 bước Polya để giải"
   "topicName": "${topicName}",
   "lessonName": "${lessonName}",
   "exercises": [
-    {
+${!isSingleExercise ? `    {
       "name": "Bài 1: [Tên liên quan ${lessonName}]",
       "duration": 120,
       "context": "[BỐI CẢNH TÍNH s/v/t + ĐỔI ĐƠN VỊ]",
@@ -249,7 +275,21 @@ Sau đó là 6-10 câu nhỏ theo 4 bước Polya để giải"
       "duration": 210,
       "context": "[BỐI CẢNH SO SÁNH 2+ CHUYỂN ĐỘNG]",
       "questions": [...]
-    }
+    }` : `    {
+      "name": "Bài 1: [Tên liên quan ${lessonName}]",
+      "duration": 300,
+      "context": "[BỐI CẢNH SO SÁNH HOẶC GQVĐ CỦA ${lessonName}]",
+      "questions": [
+        {
+          "id": "q1",
+          "question": "[Câu hỏi]",
+          "type": "single",
+          "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+          "correctAnswers": [0],
+          "explanation": "[Giải thích tại sao đúng/sai cho từng đáp án]"
+        }
+      ]
+    }`}
   ]
 }
 
@@ -278,12 +318,11 @@ Sau đó là 6-10 câu nhỏ theo 4 bước Polya để giải"
 - Thay vì "xe đạp +  bộ" → "thuyền 1 + thuyền 2"
 - Thay vì "1200 m, 20 phút" → "2400 m, 1 giờ" (số liệu khác)
 
-═══════════════════════════════════════════════════════════════ 
-- Phần 1: Context có 1 câu hỏi chính cuối cùng (tính s/v/t + đổi đơn vị), sau đó là 4-6 câu nhỏ theo 4 bước
-- Phần 2: Context có 1 câu hỏi chính cuối cùng (so sánh), sau đó là 6-10 câu nhỏ theo 4 bước
+- Phần 1: Context có 1 câu hỏi chính cuối cùng.
+- CẤU TRÚC: ${isSingleExercise ? 'Tạo đúng 1 bài với nội dung GQVĐ/So sánh (khoảng 6-10 câu), duration 300s.' : 'Tạo 2 bài (Bài 1 120s, Bài 2 210s)'}
 - Chỉ dùng m/s hoặc km/h (KHÔNG dùng m/phút)
 - Mỗi bài có TỐI THIỂU 2 CÂU HỎI BƯỚC 4
-- Trả về JSON thuần túy, bắt đầu bằng { kết thúc bằng }.`;
+- Trả về JSON thuần túy, bắt đầu bằng dấu mở ngoặc và kết thúc bằng dấu đóng ngoặc.`;
 
       const result = await geminiServiceInstance._feedbackService._rateLimitedGenerate(prompt);
       let responseText = result ? result.response.text() : '';

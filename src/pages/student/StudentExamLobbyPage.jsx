@@ -177,6 +177,10 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
     };
   }, [showCountdown, actualSessionId, navigate, session]);
 
+  // Determine display duration based on exercise count
+  const exerciseCount = exam?.exercises?.length || 0;
+  const displayDuration = exerciseCount === 1 ? 5 : 7;
+
   // Handler: Tham gia phòng thi
   const handleJoinExam = async () => {
     try {
@@ -340,7 +344,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
             <div className="text-4xl mb-3">⏱️</div>
             <div className="text-sm text-gray-700 font-bold font-quicksand mb-2">Thời lượng</div>
             <div className="text-xl font-bold text-green-700 font-quicksand">
-              {7} phút
+              {displayDuration} phút
             </div>
           </div>
 
@@ -415,7 +419,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
         {!joined && session.status === 'waiting' && (
           <div className="flex items-center gap-3 bg-yellow-400 text-white px-6 py-4 rounded-max shadow-lg mb-8 font-quicksand">
             <span className="text-2xl">⚠️</span>
-            <span>Chuẩn bị sẵn sàng: Bạn sẽ có 7 phút để hoàn thành .</span>
+            <span>Chuẩn bị sẵn sàng: Bạn sẽ có {displayDuration} phút để hoàn thành .</span>
           </div>
         )}
 
@@ -494,7 +498,7 @@ const StudentExamLobbyPage = ({ user, onSignOut }) => {
             </li>
             <li className="flex items-start gap-3 text-gray-700 font-quicksand">
               <span className="text-3xl flex-shrink-0">✓</span>
-              <span className="text-lg">Quản lý thời gian hợp lý (7 phút cho tất cả)</span>
+              <span className="text-lg">Quản lý thời gian hợp lý ({displayDuration} phút cho tất cả)</span>
             </li>
           </ul>
         </div>

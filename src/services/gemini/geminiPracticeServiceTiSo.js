@@ -237,6 +237,9 @@ Bài 36: Tỉ số, Tỉ số phần trăm -> Bài 37: Tỉ lệ bản đồ -> 
 2. CÂU HỎI CUỐI CÙNG của đề bài BẮT BUỘC phải hỏi ĐÚNG DẠNG của bài "${topicName}". (Ví dụ: Đang ở bài 40 thì phải hỏi "tỉ số phần trăm là bao nhiêu?", cấm hỏi ngược lại giá trị cụ thể của bài 41).
 3. CHỈ dùng dấu PHẨY (,) cho số thập phân, KHÔNG dùng dấu chấm (.). Ví dụ: 2,5, 0,75, 12,4%, 33,33%
 4. CHỈ dùng số thập phân "ĐẸP" - HỮU HẠN không lặp lại. CÁCH: 2,3, 3,45, 0,5, 1,25, 0,75, 12,5. TUYỆT ĐỐI KHÔNG: 0,333... (1/3), 0,6666... (2/3), 0,1666... (1/6)
+5. CHỈ dùng dấu chấm (.) hoặc không dấu cho số tiền - KHÔNG dùng phẩy (,)
+   → Ví dụ SAI: 15,000 đồng, 2,500,000 đồng
+   → Ví dụ ĐÚNG: 15.000 đồng, 2.500.000 đồng (hoặc 15000 đồng)
 
 [ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
 ${problemTypeGuidance}
@@ -323,6 +326,9 @@ Bài 36: Tỉ số, Tỉ số phần trăm -> Bài 37: Tỉ lệ bản đồ -> 
 2. CÂU HỎI CUỐI CÙNG của đề bài BẮT BUỘC phải là dạng toán "${topicName}". Không được nhầm lẫn sang bài khác.
 3. CHỈ dùng dấu PHẨY (,) cho số thập phân, KHÔNG dùng dấu chấm (.). Ví dụ: 2,5, 0,75, 12,4%, 33,33%
 4. CHỈ dùng số thập phân "ĐẸP" - HỮU HẠN không lặp lại. CÁCH: 2,3, 3,45, 0,5, 1,25, 0,75, 12,5. TUYỆT ĐỐI KHÔNG: 0,333... (1/3), 0,6666... (2/3), 0,1666... (1/6)
+5. CHỈ dùng dấu chấm (.) hoặc không dấu cho số tiền - KHÔNG dùng phẩy (,)
+   → Ví dụ SAI: 15,000 đồng, 2,500,000 đồng
+   → Ví dụ ĐÚNG: 15.000 đồng, 2.500.000 đồng (hoặc 15000 đồng)
 
 [ĐÁNH GIÁ NĂNG LỰC & ĐỘ KHÓ]
 ${problemTypeGuidance}

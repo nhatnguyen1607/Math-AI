@@ -70,6 +70,7 @@ const FacultyExamManagementPage = () => {
     description: '',
   });
   const [editingExam, setEditingExam] = useState(null);
+  const [exerciseCount, setExerciseCount] = useState(2);
 
   // Exercises state
   const [exercises, setExercises] = useState([
@@ -354,7 +355,8 @@ const FacultyExamManagementPage = () => {
         topicName: topic.name,
         lessonName: formData.title,
         sampleExams: topic.sampleExams,
-        contextId: selectedContextId
+        contextId: selectedContextId,
+        exerciseCount: exerciseCount
       });
       
       const serviceInfo = examGeneratorRouter.getServiceInfo(formData.title);
@@ -555,6 +557,8 @@ const FacultyExamManagementPage = () => {
       title: exam.title || '',
       description: exam.description || ''
     });
+    const count = exam.exercises?.length || 2;
+    setExerciseCount(count);
     setExercises(exam.exercises || [
       { name: 'Bài tập 1 - BT vận dụng, ứng dụng', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
       { name: 'Bài tập 2 - BT GQVĐ', duration: 300, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 240 } }
@@ -585,6 +589,7 @@ const FacultyExamManagementPage = () => {
       title: '',
       description: '',
     });
+    setExerciseCount(2);
     setExercises([
       { name: 'Bài tập 1 - BT vận dụng, ứng dụng', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
       { name: 'Bài tập 2 - BT GQVĐ', duration: 300, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 240 } }
@@ -742,6 +747,34 @@ const FacultyExamManagementPage = () => {
                     {EXAM_CONTEXTS.map((ctx) => (
                       <option key={ctx.id} value={ctx.id}>{ctx.name}</option>
                     ))}
+                  </select>
+                </div>
+
+                <div className="mb-5">
+                  <label className="block mb-2 text-gray-700 font-semibold">Tạo số lượng bài *</label>
+                  <select
+                    value={exerciseCount}
+                    onChange={(e) => {
+                      const count = Number(e.target.value);
+                      setExerciseCount(count);
+                      if (count === 1) {
+                        setExercises([
+                          { name: 'Bài tập 1 - BT GQVĐ', duration: 300, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 240 } }
+                        ]);
+                      } else {
+                        setExercises([
+                          { name: 'Bài tập 1 - BT vận dụng, ứng dụng', duration: 120, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 60 } },
+                          { name: 'Bài tập 2 - BT GQVĐ', duration: 300, context: '', questions: [], scoring: { correct: 12, incorrect: 2, bonus: 4, bonusTimeThreshold: 240 } }
+                        ]);
+                      }
+                      setCurrentExerciseIndex(0);
+                      setCurrentQuestionIndex(0);
+                    }}
+                    required
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                  >
+                    <option value={1}>1 Bài (GQVĐ - 5 phút)</option>
+                    <option value={2}>2 Bài (120s + 300s = 7 phút)</option>
                   </select>
                 </div>
                 

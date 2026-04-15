@@ -78,6 +78,10 @@ const StudentExamSelectionPage = ({
           <div className="space-y-6">
             {topicExams && topicExams.length > 0 ? (
               topicExams.map((exam, idx) => {
+                // Display time based on exercise count
+                const exerciseCount = exam.exercises?.length || 0;
+                const displayDuration = exerciseCount === 1 ? '5' : '7';
+
                 return (
                   <div 
                     key={exam.id} 
@@ -104,7 +108,7 @@ const StudentExamSelectionPage = ({
                       </div>
                       <div className="text-center">
                         <div className="text-3xl font-bold text-green-600 font-quicksand">
-                          7
+                          {displayDuration}
                         </div>
                         <div className="text-sm text-gray-600 font-quicksand">phút</div>
                       </div>

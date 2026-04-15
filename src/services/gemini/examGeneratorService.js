@@ -22,7 +22,8 @@ class ExamGeneratorService {
    */
   async generateExamFromSamples(params) {
     try {
-      const { topicName, lessonName, sampleExams, contextId } = params;
+      const { topicName, lessonName, sampleExams, contextId, exerciseCount } = params;
+      const isSingleExercise = exerciseCount === 1;
 
       if (!sampleExams || sampleExams.length === 0) {
         throw new Error('Chưa có đề mẫu nào để tạo đề');
@@ -45,7 +46,7 @@ class ExamGeneratorService {
 - **CHỦ ĐỀ BỐI CẢNH**: ${selectedContext.name}
 - **MÔ TẢ**: ${selectedContext.description}
 ${CHARACTER_GUIDE}
-- **YÊU CẦU**: Context (đoạn văn bối cảnh) của cả Bài 1 và Bài 2 PHẢI là một câu chuyện thuộc chủ đề "${selectedContext.name}", có sự xuất hiện của Mai, Việt, hoặc Nam.
+- **YÊU CẦU**: Context (đoạn văn bối cảnh) của ${isSingleExercise ? 'Bài tập' : 'cả Bài 1 và Bài 2'} PHẢI là một câu chuyện thuộc chủ đề "${selectedContext.name}", có sự xuất hiện của Mai, Việt, hoặc Nam.
 
 📋 **CÁC ĐỀ MẪU THAM KHẢO (chỉ tham khảo cấu trúc)**:
 ${sampleExams.map((sample, idx) => `
@@ -263,7 +264,7 @@ ${this._formatSampleContent(sample.content)}
 - Bài 2: Bài toán phức tạp so sánh hoặc tối ưu hóa.
 
 ═══════════════════════════════════════════════════════════════
-🎯 **QUY TẮC BẮT BUỘC: CẢ 2 BÀI ĐỀU PHẢI ĐÚNG VỚI TÊN BÀI HỌC**
+🎯 **QUY TẮC BẮT BUỘC: CÁC BÀI ĐỀU PHẢI ĐÚNG VỚI TÊN BÀI HỌC**
 ═══════════════════════════════════════════════════════════════
 
 🔴🔴🔴 **CẢNH BÁO: CÁC BÀI HỌC VỀ TỈ SỐ RẤT DỄ NHẦM LẪN!** 🔴🔴🔴
@@ -319,17 +320,14 @@ Bài học: "Tìm tỉ số phần trăm của hai số"
 ❌ Bài 2: Tìm hai số khi biết tổng và tỉ số (SAI - ĐÂY LÀ BÀI HỌC KHÁC!)
 
 **QUY TẮC BẮT BUỘC:**
-- Bài học "${lessonName}" → Bài 1 phải về "${lessonName}"
-- Bài học "${lessonName}" → Bài 2 CŨNG phải về "${lessonName}" (chỉ khó hơn)
-- TUYỆT ĐỐI KHÔNG được tạo Bài 2 thuộc bài học khác!
+- Bài học "${lessonName}" → Bài tập phải về "${lessonName}"
+- TUYỆT ĐỐI KHÔNG được tạo Bài thuộc bài học khác!
 
 **VÍ DỤ ĐÚNG cho bài "Tìm tỉ số phần trăm của hai số":**
-- Bài 1: Context về tìm % (đơn giản)
-- Bài 2: Context về tìm % (phức tạp hơn, có so sánh 2 tỉ lệ %)
+- Bài 1: Context về tìm % (có so sánh 2 tỉ lệ %)
 
 **VÍ DỤ SAI:**
-- Bài 1: Tìm tỉ số phần trăm
-- Bài 2: Tìm hai số khi biết tổng và tỉ số ← SAI! Đây là BÀI 38, không phải BÀI 40!
+- Bài tập: Tìm hai số khi biết tổng và tỉ số ← SAI! Đây là BÀI 38, không phải BÀI 40!
 
 ═══════════════════════════════════════════════════════════════
 📐 **CẤU TRÚC BÀI TẬP VÀ CÂU HỎI THEO 4 BƯỚC POLYA**
@@ -445,12 +443,16 @@ Câu hỏi mẫu (CHỌN 1-2 trong các dạng sau):
 ⚡ **BÀI 2 PHẢI KHÓ HƠN BÀI 1**
 ═══════════════════════════════════════════════════════════════
 
+${!isSingleExercise ? `
 **BÀI 1 - CƠ BẢN (4-5 câu, 300s):**
 - Context đơn giản, 2-3 dữ kiện
 - Chỉ cần 1-2 bước tính
 - Số liệu đơn giản, dễ tính
 
 **BÀI 2 - NÂNG CAO (6-10 câu, 480s) - VẪN CÙNG BÀI HỌC:**
+` : `
+**BÀI 1 (GQVĐ) - NÂNG CAO (6-10 câu, 300s):**
+`}
 - Context phức tạp hơn, 3-5 dữ kiện, NHƯNG VẪN VỀ "${lessonName}"
 - Cần 2-4 bước tính
 - Có thể có: so sánh 2 phương án, dữ kiện thừa, tư duy ngược, điều chỉnh sau tính toán
@@ -464,7 +466,7 @@ Câu hỏi mẫu (CHỌN 1-2 trong các dạng sau):
   "topicName": "${topicName}",
   "lessonName": "${lessonName}",
   "exercises": [
-    {
+${!isSingleExercise ? `    {
       "name": "Bài 1: [Tên liên quan ${lessonName}]",
       "duration": 300,
       "context": "[BỐI CẢNH ĐÚNG VỚI ${lessonName}]",
@@ -484,7 +486,21 @@ Câu hỏi mẫu (CHỌN 1-2 trong các dạng sau):
       "duration": 480,
       "context": "[BỐI CẢNH PHỨC TẠP HƠN, VẪN ĐÚNG ${lessonName}]",
       "questions": [...]
-    }
+    }` : `    {
+      "name": "Bài 1: [Tên liên quan ${lessonName}]",
+      "duration": 300,
+      "context": "[BỐI CẢNH PHỨC TẠP HƠN, ĐÚNG VỚI ${lessonName}]",
+      "questions": [
+        {
+          "id": "q1",
+          "question": "[Câu hỏi]",
+          "type": "single",
+          "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+          "correctAnswers": [0],
+          "explanation": "[Giải thích tại sao đúng/sai cho từng đáp án]"
+        }
+      ]
+    }`}
   ]
 }
 
@@ -494,9 +510,8 @@ Câu hỏi mẫu (CHỌN 1-2 trong các dạng sau):
 - Đề mới phải độc lập, KHÔNG COPY từ đề mẫu
 
 🔴🔴🔴 **KIỂM TRA BẮT BUỘC TRƯỚC KHI OUTPUT:** 🔴🔴🔴
-1. ⚠️ Bài 1 và Bài 2 có CÙNG thuộc bài học "${lessonName}" không? (QUAN TRỌNG NHẤT!)
-2. Context Bài 1 có đúng với "${lessonName}" không? (Nếu sai → sửa lại!)
-3. Context Bài 2 có đúng với "${lessonName}" không? (Nếu sai → sửa lại!)
+1. ⚠️ Bài tập có thuộc đúng bài học "${lessonName}" không? (QUAN TRỌNG NHẤT!)
+2. Context có đúng với "${lessonName}" không? (Nếu sai → sửa lại!)
 4. Nếu bài học có "phần trăm" → context PHẢI có ký hiệu % hoặc hỏi "chiếm bao nhiêu %"
 5. Nếu bài học có "bản đồ" → context PHẢI có "bản đồ tỉ lệ 1:xxx"
 6. Nếu bài học có "tổng và tỉ số" → context PHẢI cho TỔNG và TỈ SỐ
@@ -554,7 +569,7 @@ Nếu bài chỉ có Bước 1, 2, 3 mà thiếu Bước 4:
 
 ═══════════════════════════════════════════════════════════════
 
-**BẮT ĐẦU**: Tạo đề cho bài "${lessonName}". CẢ 2 BÀI đều phải về "${lessonName}". Mỗi bài phải có TỐI THIỂU 2 CÂU HỎI BƯỚC 4 (kiểm tra lại kết quả). Trả về JSON bắt đầu bằng { kết thúc bằng }`;
+**BẮT ĐẦU**: Tạo đề cho bài "${lessonName}". TẤT CẢ GỒM ${isSingleExercise ? '1' : '2'} BÀI đều phải về "${lessonName}". Mỗi bài phải có TỐI THIỂU 2 CÂU HỎI BƯỚC 4 (kiểm tra lại kết quả). Trả về JSON bắt đầu bằng dấu mở ngoặc và kết thúc bằng dấu đóng ngoặc.`;
 
       // call through geminiService wrapper which itself queues the requests and handles retries
       const result = await geminiServiceInstance._practiceService._rateLimitedGenerate(prompt);

@@ -73,6 +73,10 @@ const ExamCard = ({ exam, onEdit, onDelete, onActivate, onStart, onViewResults, 
 
   const statusInfo = getStatusInfo(exam.status, exam.isLocked);
 
+  // Display time based on exercise count
+  const exerciseCount = exam.exercises?.length || 0;
+  const displayDuration = exerciseCount === 1 ? '5' : '7';
+
   return (
     <div className={`flex h-full flex-col overflow-hidden rounded-3xl border-2 border-gray-100 bg-white p-4 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-indigo-300 hover:shadow-soft-lg sm:p-5 lg:p-6 ${statusInfo.animation || ''}`}>
       {/* Status Badge */}
@@ -107,8 +111,8 @@ const ExamCard = ({ exam, onEdit, onDelete, onActivate, onStart, onViewResults, 
             })}
           </span>
         )}
-        <span className="text-gray-600 flex items-center gap-2">⏱️ 7 phút</span>
-        <span className="text-gray-600 flex items-center gap-2">❓ {exam.exercises?.reduce((sum, e) => sum + e.questions.length, 0) || 0} câu</span>
+        <span className="text-gray-600 flex items-center gap-2">⏱️ {displayDuration} phút</span>
+        <span className="text-gray-600 flex items-center gap-2">❓ {exam.exercises?.reduce((sum, e) => sum + (e.questions?.length || 0), 0) || 0} câu</span>
       </div>
 
       {/* Action Buttons */}

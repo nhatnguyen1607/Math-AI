@@ -20,6 +20,7 @@ const FacultyStudentExamResultPage = () => {
   const [practiceData, setPracticeData] = useState(null);
   const [loadingPractice, setLoadingPractice] = useState(true);
   const [aiAssessment, setAiAssessment] = useState(null);
+  const [assessmentStage, setAssessmentStage] = useState(null);
   const [loadingAiAssessment, setLoadingAiAssessment] = useState(false);
   
   // Re-evaluation states for practice and van dung
@@ -67,6 +68,9 @@ const FacultyStudentExamResultPage = () => {
         // Load saved AI assessment if exists
         if (result.data?.assessment?.aiProgressAssessment) {
           setAiAssessment(result.data.assessment.aiProgressAssessment);
+          if (result.data?.assessment?.aiProgressAssessmentStage) {
+            setAssessmentStage(result.data.assessment.aiProgressAssessmentStage);
+          }
         }
 
         // Get student info from updated leaderboard (from student_exam_progress)
@@ -132,8 +136,8 @@ const FacultyStudentExamResultPage = () => {
     loadPracticeData();
   }, [userId, examId, activeTab]);
 
-  // Check if all 3 parts are completed
-  const isCompetencyCompletionValid = useCallback(() => {
+  // Check if khởi động + luyện tập are completed
+  const isLuyenTapCompletionValid = useCallback(() => {
     try {
       // Check khởi động: has submitted answers
       const khoiDongAnswers = studentResult?.data?.parts?.khoiDong?.answers;
@@ -148,14 +152,23 @@ const FacultyStudentExamResultPage = () => {
         practiceData?.bai1?.status === "completed" &&
         practiceData?.bai2?.status === "completed";
 
-      // Check vận dụng: marked as completed
-      const vanDungCompleted = practiceData?.vanDung?.status === "completed";
-
-      return khoiDongCompleted && luyenTapCompleted && vanDungCompleted;
+      return khoiDongCompleted && luyenTapCompleted;
     } catch (err) {
       return false;
     }
   }, [studentResult, practiceData]);
+
+  // Check if all 3 parts are completed
+  const isCompetencyCompletionValid = useCallback(() => {
+    try {
+      return (
+        isLuyenTapCompletionValid() &&
+        practiceData?.vanDung?.status === "completed"
+      );
+    } catch (err) {
+      return false;
+    }
+  }, [isLuyenTapCompletionValid, practiceData]);
 
   // Re-evaluate competency using AI
   const handleReEvaluateCompetency = useCallback(async () => {
@@ -217,16 +230,46 @@ const FacultyStudentExamResultPage = () => {
   }, [studentResult, exam, userId, examId]);
 
   // Fallback assessment when AI generation fails
-  const createFallbackAssessment = useCallback(() => {
+  const createFallbackAssessment = useCallback(async (includeVanDung) => {
     const khoiDongEval = studentResult.competencyEvaluation || {};
+    const luyenTapBai1 = practiceData?.bai1?.evaluation || {};
+    const luyenTapBai2 = practiceData?.bai2?.evaluation || {};
     const vanDungEval = practiceData?.vanDung?.evaluation || {};
 
     // Tính điểm khởi động
     const khoiDongTotal = khoiDongEval.totalCompetencyScore || 0;
 
+    // Tính điểm luyện tập trung bình
+    const luyenTapTotal = Math.round(
+      ((luyenTapBai1.tongDiem || 0) + (luyenTapBai2.tongDiem || 0)) / 2,
+    );
+
     // Tính điểm vận dụng (sử dụng totalCompetencyScore hoặc tongDiem)
     const vanDungTotal =
       vanDungEval.totalCompetencyScore || vanDungEval.tongDiem || 0;
+
+    if (!includeVanDung) {
+      const improvementLT = luyenTapTotal - khoiDongTotal;
+      let assessment = "";
+
+      if (improvementLT >= 3) {
+        assessment = `Học sinh có tiến bộ tốt từ giai đoạn khởi động sang luyện tập. Điểm tăng từ ${khoiDongTotal} lên ${luyenTapTotal} (+${improvementLT} điểm), cho thấy em tiếp thu nhanh và cải thiện rõ qua quá trình thực hành.\n\nTiếp tục duy trì cách học hiện tại, đồng thời thử thêm bài nâng cao để củng cố tư duy giải quyết vấn đề.`;
+      } else if (improvementLT >= 0) {
+        assessment = `Học sinh có sự tiến triển ổn định từ khởi động sang luyện tập. Điểm chuyển từ ${khoiDongTotal} lên ${luyenTapTotal} (${improvementLT >= 0 ? "+" : ""}${improvementLT} điểm). Em cần tiếp tục rèn các tiêu chí còn yếu để bứt phá hơn ở giai đoạn tiếp theo.\n\nNên tập trung trình bày lời giải rõ ràng hơn và tăng bước tự kiểm tra kết quả sau khi giải.`;
+      } else {
+        assessment = `Học sinh có dấu hiệu giảm hiệu quả khi chuyển từ khởi động sang luyện tập. Điểm từ ${khoiDongTotal} xuống ${luyenTapTotal} (${improvementLT} điểm). Em cần rà soát lại phương pháp làm bài và mức độ hiểu đề trước khi triển khai lời giải.\n\nNên chia nhỏ bài toán thành từng bước, kiểm tra lại mỗi bước và chủ động hỏi hỗ trợ khi gặp khó khăn.`;
+      }
+
+      setAiAssessment(assessment);
+      setAssessmentStage("luyenTap");
+      await resultService.updateAiProgressAssessment(
+        userId,
+        examId,
+        assessment,
+        "luyenTap",
+      );
+      return;
+    }
 
     const totalImprovement = vanDungTotal - khoiDongTotal;
     let assessment = "";
@@ -239,10 +282,17 @@ const FacultyStudentExamResultPage = () => {
       assessment = `Học sinh có xu hướng suy giảm trong quá trình học tập. Điểm số từ ${khoiDongTotal} xuống ${vanDungTotal} (${totalImprovement} điểm). Em cần xem xét lại chiến lược học tập.\n\nTìm những khó khăn cụ thể để có phương hướng cải thiện. Yêu cầu hỗ trợ thêm nếu cần thiết.`;
     }
     setAiAssessment(assessment);
-  }, [studentResult, practiceData]);
+    setAssessmentStage("vanDung");
+    await resultService.updateAiProgressAssessment(
+      userId,
+      examId,
+      assessment,
+      "vanDung",
+    );
+  }, [studentResult, practiceData, userId, examId]);
 
   // AI Assessment Generation
-  const generateAiAssessment = useCallback(async () => {
+  const generateAiAssessment = useCallback(async (includeVanDung) => {
     try {
       setLoadingAiAssessment(true);
 
@@ -258,29 +308,51 @@ const FacultyStudentExamResultPage = () => {
         const bai2Total = luyenTapBai2.tongDiem || 0;
         return Math.round((bai1Total + bai2Total) / 2);
       };
-      const vanDungTotal = vanDungEval.totalCompetencyScore || 0;
+      const vanDungTotal =
+        vanDungEval.totalCompetencyScore || vanDungEval.tongDiem || 0;
 
       const luyenTapTotalScore = getLuyenTapTotal();
 
-      const prompt = `Bạn là một giáo viên toán học. Hãy viết nhận xét ngắn gọn về tiến độ phát triển của học sinh:
+            const prompt = includeVanDung
+        ? `Bạn là một giáo viên toán học. Hãy viết nhận xét ngắn gọn về tiến độ phát triển của học sinh:
 
-Học sinh: ${student?.name || "Học sinh"}
-Điểm: ${khoiDongTotal}/8 (khởi động) → ${luyenTapTotalScore}/8 (luyện tập) → ${vanDungTotal}/8 (vận dụng)
-Thay đổi: ${vanDungTotal - khoiDongTotal >= 0 ? "+" : ""}${vanDungTotal - khoiDongTotal} điểm
+      Học sinh: ${student?.name || "Học sinh"}
+      Điểm: ${khoiDongTotal}/8 (khởi động) → ${luyenTapTotalScore}/8 (luyện tập) → ${vanDungTotal}/8 (vận dụng)
+      Thay đổi: ${vanDungTotal - khoiDongTotal >= 0 ? "+" : ""}${vanDungTotal - khoiDongTotal} điểm
 
-Hãy viết nhận xét chi tiết (5-6 câu) về:
-- Xu hướng phát triển của học sinh
-- Điều học sinh làm tốt
-- Cần cải thiện ở đâu
+      Hãy viết nhận xét chi tiết (5-6 câu) về:
+      - Xu hướng phát triển của học sinh
+      - Điều học sinh làm tốt
+      - Cần cải thiện ở đâu
 
-Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
+      Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`
+        : `Bạn là một giáo viên toán học. Hãy viết nhận xét ngắn gọn về tiến độ phát triển của học sinh:
+
+      Học sinh: ${student?.name || "Học sinh"}
+      Điểm: ${khoiDongTotal}/8 (khởi động) → ${luyenTapTotalScore}/8 (luyện tập)
+      Thay đổi: ${luyenTapTotalScore - khoiDongTotal >= 0 ? "+" : ""}${luyenTapTotalScore - khoiDongTotal} điểm
+
+      Hãy viết nhận xét chi tiết (4-5 câu) về:
+      - Xu hướng phát triển của học sinh từ khởi động sang luyện tập
+      - Điều học sinh làm tốt trong giai đoạn luyện tập
+      - Cần cải thiện ở đâu trước khi bước sang vận dụng
+
+      Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
 
       const response = await geminiService.processExamQuestion(prompt);
       const assessment = response.message || response;
+      const stage = includeVanDung ? "vanDung" : "luyenTap";
 
       setAiAssessment(assessment);
+      setAssessmentStage(stage);
+      await resultService.updateAiProgressAssessment(
+        userId,
+        examId,
+        assessment,
+        stage,
+      );
     } catch (err) {
-      createFallbackAssessment();
+      await createFallbackAssessment(includeVanDung);
     } finally {
       setLoadingAiAssessment(false);
     }
@@ -288,8 +360,16 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
     studentResult,
     practiceData,
     student,
+    userId,
+    examId,
     createFallbackAssessment,
   ]);
+
+  const handleReevaluateProgressAssessment = useCallback(async () => {
+    if (loadingAiAssessment) return;
+    const includeVanDung = isCompetencyCompletionValid();
+    await generateAiAssessment(includeVanDung);
+  }, [loadingAiAssessment, isCompetencyCompletionValid, generateAiAssessment]);
 
   // Re-evaluate practice/van dung competency
   const handleReevaluateCompetency = useCallback(async (type, baiNumber) => {
@@ -382,28 +462,52 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
     }
   }, [practiceData, exam?.title, exam?.name]);
 
-  // Load AI assessment when viewing the competency evaluation tab
+  // Set assessment stage from saved DB assessment based on current completion state
   useEffect(() => {
-    if (activeTab === "danhGia" && studentResult && practiceData) {
-      // Check if already have assessment in DB
-      if (studentResult.data?.assessment?.aiProgressAssessment) {
-        setAiAssessment(studentResult.data.assessment.aiProgressAssessment);
-        setLoadingAiAssessment(false);
-      } else if (
-        !aiAssessment &&
-        !loadingAiAssessment &&
-        isCompetencyCompletionValid()
-      ) {
-        // Only generate if not already in state and all parts are completed
-        generateAiAssessment();
+    if (!studentResult || !practiceData) return;
+    const savedAssessment = studentResult.data?.assessment?.aiProgressAssessment;
+    if (!savedAssessment) return;
+
+    const savedStage = studentResult.data?.assessment?.aiProgressAssessmentStage;
+    if (savedStage === "luyenTap" || savedStage === "vanDung") {
+      setAssessmentStage(savedStage);
+      return;
+    }
+
+    if (practiceData?.vanDung?.status === "completed") {
+      setAssessmentStage("vanDung");
+    } else if (
+      practiceData?.bai1?.status === "completed" &&
+      practiceData?.bai2?.status === "completed"
+    ) {
+      setAssessmentStage("luyenTap");
+    }
+  }, [studentResult, practiceData]);
+
+  // Auto-generate assessment by milestones:
+  // 1) khởi động + luyện tập completed -> evaluate progress from khởi động to luyện tập
+  // 2) vận dụng completed -> re-evaluate full 3-stage progress
+  useEffect(() => {
+    if (!studentResult || !practiceData || loadingAiAssessment) return;
+    if (!isLuyenTapCompletionValid()) return;
+
+    if (isCompetencyCompletionValid()) {
+      if (assessmentStage !== "vanDung") {
+        generateAiAssessment(true);
       }
+      return;
+    }
+
+    if (!aiAssessment || assessmentStage !== "luyenTap") {
+      generateAiAssessment(false);
     }
   }, [
-    activeTab,
     studentResult,
     practiceData,
     aiAssessment,
+    assessmentStage,
     loadingAiAssessment,
+    isLuyenTapCompletionValid,
     isCompetencyCompletionValid,
     generateAiAssessment,
   ]);
@@ -437,7 +541,7 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
       id: "danhGia",
       label: "📈 Đánh giá năng lực",
       icon: "📈",
-      disabled: !isCompetencyCompletionValid(),
+      disabled: !isLuyenTapCompletionValid(),
     },
   ];
 
@@ -562,7 +666,7 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
                 </button>
                 {tab.disabled && tab.id === "danhGia" && (
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max bg-gray-800 text-white text-xs rounded px-3 py-2 hidden group-hover:block z-10 whitespace-nowrap">
-                    Hoàn thành 3 phần (🚀 🎯 ⚡) trước tiên
+                    Hoàn thành 🚀 Khởi động và 📚 Luyện tập trước tiên
                   </div>
                 )}
               </div>
@@ -1366,19 +1470,32 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
         {/* Đánh giá Năng lực Tab */}
         {activeTab === "danhGia" && (
           <div className="bg-white rounded-3xl shadow-soft-lg p-6 lg:p-8 border-t-4 border-purple-300">
-            <h3 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-8 flex items-center gap-3">
-              <span>📈</span> Đánh giá Tiến độ Phát triển Năng lực
-            </h3>
+            <div className="flex items-center justify-between gap-4 mb-8">
+              <h3 className="text-2xl lg:text-3xl font-bold text-gray-800 flex items-center gap-3">
+                <span>📈</span> Đánh giá Tiến độ Phát triển Năng lực
+              </h3>
+              <button
+                onClick={handleReevaluateProgressAssessment}
+                disabled={loadingAiAssessment || !isLuyenTapCompletionValid()}
+                className={`px-4 py-2 rounded-full font-semibold transition-all whitespace-nowrap ${
+                  loadingAiAssessment || !isLuyenTapCompletionValid()
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-indigo-500 hover:bg-indigo-600 text-white hover:shadow-lg"
+                }`}
+              >
+                {loadingAiAssessment ? "🔄 Đang đánh giá..." : "🔄 Đánh giá lại quá trình"}
+              </button>
+            </div>
 
-            {!isCompetencyCompletionValid() ? (
+            {!isLuyenTapCompletionValid() ? (
               <div className="bg-yellow-50 border-3 border-yellow-300 rounded-3xl p-8 text-center">
                 <div className="text-6xl mb-4">🔒</div>
                 <h4 className="text-2xl font-bold text-yellow-800 mb-3">
                   Chưa có dữ liệu đánh giá
                 </h4>
                 <p className="text-yellow-700 text-lg mb-6">
-                  Vui lòng hoàn thành đủ 3 phần (🚀 Khởi động, 📚 Luyện tập, ⚡
-                  Vận dụng) trước khi xem đánh giá năng lực.
+                  Vui lòng hoàn thành phần 🚀 Khởi động và đủ 2 bài 📚 Luyện tập
+                  trước khi xem đánh giá năng lực.
                 </p>
                 <div className="flex justify-center gap-4">
                   <button
@@ -1392,12 +1509,6 @@ Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
                     className="px-6 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition"
                   >
                     → Phần Luyện tập
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("vanDung")}
-                    className="px-6 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition"
-                  >
-                    → Phần Vận dụng
                   </button>
                 </div>
               </div>

@@ -1108,17 +1108,18 @@ class ResultService {
 
   /**
    * Lưu AI Progress Assessment (nhận xét chung về quá trình phát triển)
-   * - Lần đầu: tạo mới
-   * - Những lần sau: không ghi đè, chỉ load lại từ DB
+   * @param {string} stage - 'luyenTap' | 'vanDung'
    */
-  async updateAiProgressAssessment(userId, examId, assessment) {
+  async updateAiProgressAssessment(userId, examId, assessment, stage = null) {
     try {
       const docId = `${userId}_${examId}`;
       const progressRef = doc(db, 'student_exam_progress', docId);
 
       await updateDoc(progressRef, {
         'assessment.aiProgressAssessment': assessment,
-        'assessment.aiAssessmentGeneratedAt': serverTimestamp()
+        'assessment.aiAssessmentGeneratedAt': serverTimestamp(),
+        'assessment.aiProgressAssessmentStage': stage,
+        lastUpdatedAt: serverTimestamp()
       });
 
     } catch (error) {
@@ -1155,7 +1156,9 @@ class ResultService {
 
       await updateDoc(progressRef, {
         'assessment.aiProgressAssessment': null,
-        'assessment.aiAssessmentGeneratedAt': null
+        'assessment.aiAssessmentGeneratedAt': null,
+        'assessment.aiProgressAssessmentStage': null,
+        lastUpdatedAt: serverTimestamp()
       });
 
     } catch (error) {

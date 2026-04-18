@@ -1526,6 +1526,9 @@ const FacultyStudentExamResultPage = () => {
                 const luyenTapBai1 = practiceData?.bai1?.evaluation || {};
                 const luyenTapBai2 = practiceData?.bai2?.evaluation || {};
                 const vanDungEval = practiceData?.vanDung?.evaluation || {};
+                const hasVanDungCompleted =
+                  practiceData?.vanDung?.status === "completed" &&
+                  !!practiceData?.vanDung?.evaluation;
 
                 // Get average score for luyenTap (average of bai1 and bai2 TOTAL scores)
                 const getLuyenTapTotal = () => {
@@ -1567,19 +1570,20 @@ const FacultyStudentExamResultPage = () => {
                     (khoiDongEval.TC3?.score || 0) +
                     (khoiDongEval.TC4?.score || 0);
                 const luyenTapTotal = getLuyenTapTotal();
-                const vanDungTotal =
-                  vanDungEval.totalCompetencyScore ||
-                  vanDungEval.tongDiem ||
-                  (vanDungEval.TC1?.diem || 0) +
-                    (vanDungEval.TC2?.diem || 0) +
-                    (vanDungEval.TC3?.diem || 0) +
-                    (vanDungEval.TC4?.diem || 0);
+                const vanDungTotal = hasVanDungCompleted
+                  ? vanDungEval.totalCompetencyScore ||
+                    vanDungEval.tongDiem ||
+                    (vanDungEval.TC1?.diem || 0) +
+                      (vanDungEval.TC2?.diem || 0) +
+                      (vanDungEval.TC3?.diem || 0) +
+                      (vanDungEval.TC4?.diem || 0)
+                  : null;
 
                 // Analyze development for each TC - sử dụng đúng field names
                 const analyzeTC = (tc) => {
                   const kd = khoiDongEval[tc]?.score || 0;
                   const lt = getLuyenTapScore(tc);
-                  const vd = vanDungEval[tc]?.diem || 0;
+                  const vd = hasVanDungCompleted ? (vanDungEval[tc]?.diem || 0) : null;
 
                   let development = [];
                   if (lt > kd) {
@@ -1596,33 +1600,50 @@ const FacultyStudentExamResultPage = () => {
                     );
                   }
 
-                  if (vd > lt) {
-                    development.push(
-                      `↑ Vận dụng: nâng từ ${getLevelLabel(lt)} lên ${getLevelLabel(vd)}`,
-                    );
-                  } else if (vd < lt) {
-                    development.push(
-                      `↓ Vận dụng: giảm từ ${getLevelLabel(lt)} xuống ${getLevelLabel(vd)}`,
-                    );
-                  } else {
-                    development.push(
-                      `→ Vận dụng: duy trì mức ${getLevelLabel(lt)}`,
-                    );
-                  }
+                  if (hasVanDungCompleted && vd !== null) {
+                    if (vd > lt) {
+                      development.push(
+                        `↑ Vận dụng: nâng từ ${getLevelLabel(lt)} lên ${getLevelLabel(vd)}`,
+                      );
+                    } else if (vd < lt) {
+                      development.push(
+                        `↓ Vận dụng: giảm từ ${getLevelLabel(lt)} xuống ${getLevelLabel(vd)}`,
+                      );
+                    } else {
+                      development.push(
+                        `→ Vận dụng: duy trì mức ${getLevelLabel(lt)}`,
+                      );
+                    }
 
-                  // Overall trend
-                  if (vd > kd) {
-                    development.push(
-                      `📈 Xu hướng chung: cải thiện từ ${getLevelLabel(kd)} lên ${getLevelLabel(vd)}`,
-                    );
-                  } else if (vd < kd) {
-                    development.push(
-                      `📉 Xu hướng chung: suy giảm từ ${getLevelLabel(kd)} xuống ${getLevelLabel(vd)}`,
-                    );
+                    // Overall trend when all 3 phases are available
+                    if (vd > kd) {
+                      development.push(
+                        `📈 Xu hướng chung: cải thiện từ ${getLevelLabel(kd)} lên ${getLevelLabel(vd)}`,
+                      );
+                    } else if (vd < kd) {
+                      development.push(
+                        `📉 Xu hướng chung: suy giảm từ ${getLevelLabel(kd)} xuống ${getLevelLabel(vd)}`,
+                      );
+                    } else {
+                      development.push(
+                        `📊 Xu hướng chung: ổn định ở mức ${getLevelLabel(kd)}`,
+                      );
+                    }
                   } else {
-                    development.push(
-                      `📊 Xu hướng chung: ổn định ở mức ${getLevelLabel(kd)}`,
-                    );
+                    // Overall trend when only Khởi động -> Luyện tập is available
+                    if (lt > kd) {
+                      development.push(
+                        `📈 Xu hướng chung: cải thiện từ ${getLevelLabel(kd)} lên ${getLevelLabel(lt)}`,
+                      );
+                    } else if (lt < kd) {
+                      development.push(
+                        `📉 Xu hướng chung: suy giảm từ ${getLevelLabel(kd)} xuống ${getLevelLabel(lt)}`,
+                      );
+                    } else {
+                      development.push(
+                        `📊 Xu hướng chung: ổn định ở mức ${getLevelLabel(kd)}`,
+                      );
+                    }
                   }
 
                   return development;
@@ -1652,9 +1673,9 @@ const FacultyStudentExamResultPage = () => {
                     {/* Overall Score Comparison */}
                     <div className="bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 rounded-3xl p-6 lg:p-8 border-3 border-purple-300 shadow-soft-lg">
                       <h4 className="text-xl font-bold text-gray-800 mb-6">
-                        📊 So sánh tổng điểm toàn bộ 3 phần
+                        📊 So sánh tổng điểm {hasVanDungCompleted ? "toàn bộ 3 phần" : "2 phần đã hoàn thành"}
                       </h4>
-                      <div className="grid grid-cols-3 gap-4 lg:gap-6">
+                      <div className={`grid ${hasVanDungCompleted ? "grid-cols-3" : "grid-cols-2"} gap-4 lg:gap-6`}>
                         {/* Khởi động */}
                         <div className="bg-white rounded-2xl p-5 border-l-4 border-indigo-500 text-center shadow-soft hover:shadow-soft-lg transition-shadow">
                           <div className="text-sm text-gray-600 font-semibold mb-2">
@@ -1686,19 +1707,21 @@ const FacultyStudentExamResultPage = () => {
                         </div>
 
                         {/* Vận dụng */}
-                        <div className="bg-white rounded-2xl p-5 border-l-4 border-orange-500 text-center shadow-soft hover:shadow-soft-lg transition-shadow">
-                          <div className="text-sm text-gray-600 font-semibold mb-2">
-                            ⚡ Vận dụng
+                        {hasVanDungCompleted && vanDungTotal !== null && (
+                          <div className="bg-white rounded-2xl p-5 border-l-4 border-orange-500 text-center shadow-soft hover:shadow-soft-lg transition-shadow">
+                            <div className="text-sm text-gray-600 font-semibold mb-2">
+                              ⚡ Vận dụng
+                            </div>
+                            <div
+                              className={`text-4xl font-bold mb-2 ${vanDungTotal >= 7 ? "text-green-600" : vanDungTotal >= 4 ? "text-blue-600" : "text-orange-600"}`}
+                            >
+                              {vanDungTotal}/8
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {getLevelLabel(Math.round(vanDungTotal / 4))}
+                            </div>
                           </div>
-                          <div
-                            className={`text-4xl font-bold mb-2 ${vanDungTotal >= 7 ? "text-green-600" : vanDungTotal >= 4 ? "text-blue-600" : "text-orange-600"}`}
-                          >
-                            {vanDungTotal}/8
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {getLevelLabel(Math.round(vanDungTotal / 4))}
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </div>
 
@@ -1711,7 +1734,7 @@ const FacultyStudentExamResultPage = () => {
                       {["TC1", "TC2", "TC3", "TC4"].map((tc) => {
                         const kdScore = khoiDongEval[tc]?.score || 0;
                         const ltScore = getLuyenTapScore(tc);
-                        const vdScore = vanDungEval[tc]?.diem || 0;
+                        const vdScore = hasVanDungCompleted ? (vanDungEval[tc]?.diem || 0) : null;
                         const development = analyzeTC(tc);
 
                         return (
@@ -1734,7 +1757,7 @@ const FacultyStudentExamResultPage = () => {
                             </div>
 
                             {/* Score Comparison Row */}
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                            <div className={`grid grid-cols-1 ${hasVanDungCompleted ? "lg:grid-cols-3" : "lg:grid-cols-2"} gap-4 mb-6`}>
                               {/* Khởi động */}
                               <div
                                 className={`rounded-xl p-4 border-2 ${getBgColor(kdScore)}`}
@@ -1791,36 +1814,38 @@ const FacultyStudentExamResultPage = () => {
                               </div>
 
                               {/* Vận dụng */}
-                              <div
-                                className={`rounded-xl p-4 border-2 ${getBgColor(vdScore)}`}
-                              >
-                                <div className="text-xs text-gray-600 font-semibold mb-2">
-                                  ⚡ Vận dụng
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <div
-                                      className={`text-3xl font-bold ${getLevelColor(vdScore)}`}
-                                    >
-                                      {vdScore}
-                                    </div>
-                                    <div
-                                      className={`text-xs font-semibold mt-1 ${getLevelColor(vdScore)}`}
-                                    >
-                                      {getLevelLabel(vdScore)}
-                                    </div>
+                              {hasVanDungCompleted && vdScore !== null && (
+                                <div
+                                  className={`rounded-xl p-4 border-2 ${getBgColor(vdScore)}`}
+                                >
+                                  <div className="text-xs text-gray-600 font-semibold mb-2">
+                                    ⚡ Vận dụng
                                   </div>
-                                  {vdScore > ltScore && (
-                                    <div className="text-2xl">📈</div>
-                                  )}
-                                  {vdScore < ltScore && (
-                                    <div className="text-2xl">📉</div>
-                                  )}
-                                  {vdScore === ltScore && (
-                                    <div className="text-2xl">→</div>
-                                  )}
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <div
+                                        className={`text-3xl font-bold ${getLevelColor(vdScore)}`}
+                                      >
+                                        {vdScore}
+                                      </div>
+                                      <div
+                                        className={`text-xs font-semibold mt-1 ${getLevelColor(vdScore)}`}
+                                      >
+                                        {getLevelLabel(vdScore)}
+                                      </div>
+                                    </div>
+                                    {vdScore > ltScore && (
+                                      <div className="text-2xl">📈</div>
+                                    )}
+                                    {vdScore < ltScore && (
+                                      <div className="text-2xl">📉</div>
+                                    )}
+                                    {vdScore === ltScore && (
+                                      <div className="text-2xl">→</div>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
+                              )}
                             </div>
 
                             {/* Development Analysis */}

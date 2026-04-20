@@ -145,8 +145,19 @@ export class GeminiChatServiceSoThapPhan {
     ) && /(thay\s*đổi\s*số\s*liệu|thay\s*doi\s*so\s*lieu|kiểm\s*tra\s*lại|kiem\s*tra\s*lai|bước\s*4|buoc\s*4)/i.test(text);
   }
 
-  _hasStep4VerificationEvidence(answer = "") {
-    const check = this._analyzeStep4Answer(answer);
+  _buildStep4EvidenceText(answer = "", chatHistory = []) {
+    const recentUserText = Array.isArray(chatHistory)
+      ? chatHistory
+          .filter((m) => m?.role === "user")
+          .slice(-6)
+          .map((m) => m?.parts?.[0]?.text || "")
+          .join(" ")
+      : "";
+    return `${recentUserText} ${String(answer || "")}`.toLowerCase();
+  }
+
+  _hasStep4VerificationEvidence(answer = "", chatHistory = []) {
+    const check = this._analyzeStep4Answer(answer, chatHistory);
     return check.isValid;
   }
 
@@ -161,14 +172,14 @@ export class GeminiChatServiceSoThapPhan {
     return Array.from(new Set([compact, comma, String(num)]));
   }
 
-  _analyzeStep4Answer(answer = "") {
-    const text = String(answer || "").toLowerCase();
+  _analyzeStep4Answer(answer = "", chatHistory = []) {
+    const text = this._buildStep4EvidenceText(answer, chatHistory);
     const hasComputedResult =
       /(=\s*-?\d+(?:[.,]\d+)?|kết\s*quả\s*(mới)?\s*là\s*-?\d+(?:[.,]\d+)?|đáp\s*số\s*(mới)?\s*là\s*-?\d+(?:[.,]\d+)?)/i.test(
         text,
       );
     const hasRelationship =
-      /(tỉ\s*lệ\s*thuận|tỉ\s*lệ\s*nghịch|khi\s+.*\s+thì\s+.*|nên|do\s*đó|vì\s*vậy|mối\s*liên\s*hệ)/i.test(
+      /(tỉ\s*lệ\s*thuận|tỉ\s*lệ\s*nghịch|khi\s+.*\s+thì\s+.*|nếu\s+.*\s+thì\s+.*|nên|do\s*đó|vì\s*vậy|mối\s*liên\s*hệ)/i.test(
         text,
       ) && /(tăng|giảm|lớn\s*hơn|nhỏ\s*hơn)/i.test(text);
 
@@ -181,13 +192,7 @@ export class GeminiChatServiceSoThapPhan {
         toValues.some((value) => text.includes(String(value).toLowerCase()));
     }
 
-    if (!hasComputedResult) {
-      return {
-        isValid: false,
-        message: "Mình thấy bạn chưa tính ra kết quả mới sau khi thay số liệu. Bạn hãy viết rõ phép tính hoặc kết quả mới trước nhé.",
-      };
-    }
-
+    const guides = [];
     if (!hasChangedDataReference) {
       const fromText = this.step4ChangedData
         ? this._formatStep4ValueVariants(this.step4ChangedData.from)[1] || this.step4ChangedData.from
@@ -195,20 +200,26 @@ export class GeminiChatServiceSoThapPhan {
       const toText = this.step4ChangedData
         ? this._formatStep4ValueVariants(this.step4ChangedData.to)[1] || this.step4ChangedData.to
         : "giá trị mới";
-      return {
-        isValid: false,
-        message: `Mình thấy bạn chưa dùng đúng số liệu đã đổi (${fromText} -> ${toText}). Bạn hãy tính lại theo dữ liệu đã thay đổi nhé.`,
-      };
+      guides.push(`nêu đúng số liệu đã đổi từ ${fromText} lên ${toText}`);
     }
-
+    if (!hasComputedResult) {
+      guides.push("ghi rõ phép tính hoặc kết quả mới bằng số");
+    }
     if (!hasRelationship) {
+      guides.push("nêu mối liên hệ theo mẫu: dữ liệu tăng/giảm thì đáp số tăng/giảm tương ứng");
+    }
+
+    if (guides.length > 0) {
       return {
         isValid: false,
-        message: "Mình thấy bạn chưa nêu mối liên hệ giữa số liệu thay đổi và đáp số. Bạn bổ sung rõ khi dữ liệu tăng/giảm thì kết quả thay đổi ra sao nhé.",
+        hasComputedResult,
+        hasChangedDataReference,
+        hasRelationship,
+        message: `Bạn làm đúng được một phần rồi. Để hoàn thành bước 4, bạn bổ sung giúp mình: ${guides.join("; ")}.`,
       };
     }
 
-    return { isValid: true };
+    return { isValid: true, hasComputedResult, hasChangedDataReference, hasRelationship };
   }
 
   _ensureSpecificStep4WrongFeedback(feedback = "") {
@@ -534,17 +545,10 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 
       // ⚠️ POST-FIX: Bước 4 (Kiểm tra) - XỬ LÝ HOÀN THÀNH PHIÊN
       if (this.currentStep === 4) {
-        const isStatusCorrect = data.status && data.status.toLowerCase() === "correct";
         const refusedToCheck = this._isRefusingStep4Check(studentAnswer);
         const askedClarification = this._isAskingStep4Clarification(studentAnswer);
-        const step4Validation = this._analyzeStep4Answer(studentAnswer);
+        const step4Validation = this._analyzeStep4Answer(studentAnswer, chatHistory);
         const hasVerificationEvidence = step4Validation.isValid;
-
-        // 🔴 Kiểm tra CẢ feedback VÀ next_question cho step 3 contamination
-        const combinedText = `${data.feedback || ''} ${data.next_question || ''}`;
-        const containsStep3Text = /trình bày.*lời giải|thực hiện.*kế hoạch|bắt đầu.*giải.*bài|hãy.*giải.*bài/i.test(combinedText);
-        const containsStep2Text = /bạn sẽ.*giải.*thế nào|nêu.*cách giải|lập.*kế hoạch/i.test(combinedText);
-        const containsStep1Text = /bài toán.*cho.*thông tin|đề bài.*cho.*biết/i.test(combinedText);
 
         // ✅ Nếu HS né kiểm tra hoặc chưa có minh chứng kiểm tra thì bắt buộc STAY
         if (refusedToCheck || !hasVerificationEvidence) {
@@ -555,38 +559,12 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
             : step4Validation.message;
           data.next_question = this._buildStep4RecheckQuestion();
         }
-        // ✅ Nếu AI trả MOVE_NEXT ở bước 4 và đã có kiểm tra đủ thì hoàn thành
-        else if (data.step_status === "MOVE_NEXT") {
-          data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
-          data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
-        }
-        // ✅ Nếu AI dính câu hỏi bước 1/2/3 vào response ở bước 4 → sửa lại
-        else if (containsStep3Text || containsStep2Text || containsStep1Text) {
-          // Nếu CORRECT nhưng STAY + dính text sai bước → kết thúc luôn
-          if (isStatusCorrect) {
-            data.step_status = "MOVE_NEXT";
-            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
-            data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
-          } else {
-            // WRONG + dính text sai bước → chỉ sửa câu hỏi, giữ STAY
-            data.next_question = this._buildStep4RecheckQuestion();
-          }
-        }
-        // ✅ Chỉ cho kết thúc nếu đúng và đã có minh chứng kiểm tra
-        else if (isStatusCorrect && hasVerificationEvidence) {
+        // ✅ Nếu validator nội bộ xác nhận đã kiểm tra đủ thì luôn hoàn thành, không phụ thuộc AI chấm đúng/sai
+        else {
+          data.status = "CORRECT";
           data.step_status = "MOVE_NEXT";
           data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
           data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
-        }
-        // ✅ Nếu STAY nhưng câu hỏi quá ngắn/generic → thay bằng câu hỏi kiểm tra
-        else {
-          if (!isStatusCorrect) {
-            data.feedback = this._ensureSpecificStep4WrongFeedback(data.feedback);
-          }
-          if (!data.next_question || data.next_question.length < 20 ||
-              !/nếu|thay đổi|kiểm tra|hợp lý/i.test(data.next_question)) {
-            data.next_question = this._buildStep4RecheckQuestion();
-          }
         }
       }
 

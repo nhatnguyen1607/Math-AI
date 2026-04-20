@@ -8,6 +8,7 @@ export class GeminiChatServiceTimeVelocity {
     this.isSessionComplete = false;
     this.currentContextId = EXAM_CONTEXTS[0]?.id || '';
     this.wrongAttemptCount = 0; // 🆕 Đếm số lần trả lời sai/không biết liên tiếp tại mỗi bước
+    this.step4ChangedData = null; // Lưu dữ liệu đã đổi ở bước 4 để kiểm tra câu trả lời
   }
 
   _getContext() {
@@ -323,6 +324,7 @@ export class GeminiChatServiceTimeVelocity {
         if (!isNaN(value)) {
           const delta = Math.max(value >= 10 ? 2 : 1, Math.round(Math.abs(value) * 0.2));
           const newValue = value + delta;
+          this.step4ChangedData = { field: "distance", from: value, to: newValue, unit };
           return `Mình chọn sẵn để bạn kiểm tra nhé: giữ nguyên thời gian như đề bài, chỉ đổi quãng đường từ ${toVnNumber(value)}${unit} lên ${toVnNumber(newValue)}${unit}. Bạn hãy tính vận tốc mới (ghi đúng đơn vị km/h hoặc m/s), rồi nêu mối liên hệ giữa việc tăng quãng đường và đáp số.`;
         }
       }
@@ -334,6 +336,7 @@ export class GeminiChatServiceTimeVelocity {
         if (!isNaN(value) && value > 0) {
           const delta = Math.max(1, Math.round(Math.abs(value) * 0.2));
           const newValue = Math.max(1, value - delta);
+          this.step4ChangedData = { field: "time", from: value, to: newValue, unit };
           return `Mình chọn sẵn để bạn kiểm tra nhé: giữ nguyên quãng đường như đề bài, chỉ đổi thời gian từ ${toVnNumber(value)} ${unit} xuống ${toVnNumber(newValue)} ${unit}. Bạn hãy tính vận tốc mới (ghi đúng đơn vị km/h hoặc m/s), rồi nêu mối liên hệ giữa việc giảm thời gian và đáp số.`;
         }
       }
@@ -351,11 +354,13 @@ export class GeminiChatServiceTimeVelocity {
         if (!isNaN(base)) {
           const delta = Math.max(1, Math.round(Math.abs(base) * 0.2));
           const next = base + delta;
+          this.step4ChangedData = { field: "generic", from: base, to: next, unit: "" };
           return `Mình chọn sẵn để bạn kiểm tra nhé: đổi một dữ kiện trong đề từ ${toVnNumber(base)} lên ${toVnNumber(next)} (các dữ kiện còn lại giữ nguyên). Bạn hãy tính vận tốc mới, ghi đơn vị đúng (km/h hoặc m/s), rồi nêu mối liên hệ giữa dữ kiện thay đổi và đáp số.`;
         }
       }
     }
 
+    this.step4ChangedData = { field: "distance", from: 10, to: 12, unit: "km" };
     return "Mình chọn sẵn để bạn kiểm tra nhé: giữ nguyên thời gian, đổi quãng đường từ 10 km lên 12 km. Bạn hãy tính vận tốc mới (ghi đúng đơn vị km/h hoặc m/s), rồi nêu mối liên hệ giữa dữ liệu thay đổi và đáp số.";
   }
 
@@ -373,17 +378,42 @@ export class GeminiChatServiceTimeVelocity {
     ) && /(thay\s*đổi\s*số\s*liệu|thay\s*doi\s*so\s*lieu|kiểm\s*tra\s*lại|kiem\s*tra\s*lai|bước\s*4|buoc\s*4)/i.test(text);
   }
 
-  _hasStep4VerificationEvidence(answer = "") {
-    return this._analyzeStep4Verification(answer).isValid;
+  _isAskingWhereWrong(answer = "") {
+    const text = String(answer || "").toLowerCase().trim();
+    return /(sai\s*chỗ\s*nào|sai\s*ở\s*đâu|thiếu\s*chỗ\s*nào|cần\s*bổ\s*sung\s*gì|bo\s*sung\s*gi)/i.test(text);
   }
 
-  _analyzeStep4Verification(answer = "") {
-    const text = String(answer || "").toLowerCase();
+  _buildStep4EvidenceText(answer = "", chatHistory = []) {
+    const recentUserText = Array.isArray(chatHistory)
+      ? chatHistory
+          .filter((m) => m?.role === "user")
+          .slice(-6)
+          .map((m) => m?.parts?.[0]?.text || "")
+          .join(" ")
+      : "";
+    return `${recentUserText} ${String(answer || "")}`.toLowerCase();
+  }
+
+  _hasStep4VerificationEvidence(answer = "", chatHistory = []) {
+    return this._analyzeStep4Verification(answer, chatHistory).isValid;
+  }
+
+  _analyzeStep4Verification(answer = "", chatHistory = []) {
+    const text = this._buildStep4EvidenceText(answer, chatHistory);
+    const toVariants = this.step4ChangedData?.to !== undefined
+      ? [String(this.step4ChangedData.to), String(this.step4ChangedData.to).replace(".", ",")]
+      : [];
+    const fromVariants = this.step4ChangedData?.from !== undefined
+      ? [String(this.step4ChangedData.from), String(this.step4ChangedData.from).replace(".", ",")]
+      : [];
 
     const hasChangedInputMention =
       /(thay|đổi|doi).*?(thành|thanh|sang|ra)/i.test(text) ||
       /(từ|tu)\s*\d+[.,]?\d*\s*(thành|thanh|lên|len|đến|den)\s*\d+[.,]?\d*/i.test(text) ||
-      /(tăng|giảm)\s+.*?(từ|tu)\s*\d+[.,]?\d*\s*(lên|len|xuống|xuong|đến|den)\s*\d+[.,]?\d*/i.test(text);
+      /(tăng|giảm)\s+.*?(từ|tu)\s*\d+[.,]?\d*\s*(lên|len|xuống|xuong|đến|den)\s*\d+[.,]?\d*/i.test(text) ||
+      toVariants.some((value) => value && text.includes(value.toLowerCase())) ||
+      (fromVariants.some((value) => value && text.includes(value.toLowerCase())) &&
+        /(tăng|giảm|lên|xuống|giữ\s*nguyên)/i.test(text));
 
     // Much more flexible: look for "number with unit" anywhere in text (allows words between parts)
     const hasNewComputedResult =
@@ -393,9 +423,9 @@ export class GeminiChatServiceTimeVelocity {
     const hasVelocityUnit = /(km\s*\/\s*h|m\s*\/\s*s|km\s*\/\s*giờ|m\s*\/\s*giây)/i.test(text);
 
     const hasRelationshipReasoning =
-      /(tỉ\s*lệ\s*thuận|tỉ\s*lệ\s*nghịch|khi\s+.*\s+thì\s+.*|nên|do\s*đó|vì\s*vậy|mối\s*liên\s*hệ|qua\s*đó|cho\s*thấy|suy\s*ra)/i.test(
+      /(tỉ\s*lệ\s*thuận|tỉ\s*lệ\s*nghịch|khi\s+.*\s+thì\s+.*|nếu\s+.*\s+thì\s+.*|nên|do\s*đó|vì\s*vậy|vậy\s*thì|mối\s*liên\s*hệ|qua\s*đó|cho\s*thấy|suy\s*ra)/i.test(
         text,
-      ) && /(tăng|giảm|lớn\s*hơn|nhỏ\s*hơn|tăng\s*theo|giảm\s*theo)/i.test(text);
+      ) && /(tăng|giảm|lớn\s*hơn|nhỏ\s*hơn|nhanh\s*hơn|chậm\s*hơn|cao\s*hơn|thấp\s*hơn|tăng\s*theo|giảm\s*theo)/i.test(text);
 
     const isValid =
       hasChangedInputMention &&
@@ -413,26 +443,25 @@ export class GeminiChatServiceTimeVelocity {
   }
 
   _buildStep4VerificationFeedback(analysis = {}) {
-    const missingParts = [];
-
+    const guides = [];
     if (!analysis.hasChangedInputMention) {
-      missingParts.push("chưa nêu rõ bạn đã thay đổi số liệu nào trong đề");
+      guides.push("Bạn nêu rõ dữ liệu đã đổi theo mẫu: đổi quãng đường từ ... lên ...");
     }
     if (!analysis.hasNewComputedResult) {
-      missingParts.push("chưa tính ra kết quả mới bằng số");
+      guides.push("Bạn ghi lại phép tính và kết quả vận tốc mới bằng số");
     }
     if (!analysis.hasVelocityUnit) {
-      missingParts.push("kết quả vận tốc mới chưa kèm đơn vị đúng (km/h hoặc m/s)");
+      guides.push("Bạn thêm đơn vị vào kết quả: km/h hoặc m/s");
     }
     if (!analysis.hasRelationshipReasoning) {
-      missingParts.push("chưa nêu rõ mối liên hệ giữa dữ liệu thay đổi và đáp số");
+      guides.push("Bạn kết luận mối liên hệ theo mẫu: giữ nguyên thời gian, quãng đường tăng thì vận tốc tăng");
     }
 
-    if (missingParts.length === 0) {
+    if (guides.length === 0) {
       return "Bạn đã kiểm tra khá đầy đủ rồi. Bạn xem lại thêm một lần để đảm bảo các bước đều hợp lý nhé.";
     }
 
-    return `Mình thấy câu trả lời của bạn còn thiếu/chưa rõ ở phần: ${missingParts.join("; ")}. Bạn bổ sung lại đúng các ý này là hoàn thành bước 4 nhé.`;
+    return `Bạn làm đúng được một phần rồi. Để hoàn thành bước 4, bạn bổ sung giúp mình: ${guides.join("; ")}.`;
   }
 
   // 🆕 Post-processing: tự động fix xưng hô từ "em" → "bạn"
@@ -512,6 +541,7 @@ export class GeminiChatServiceTimeVelocity {
   restoreSession(problemText, chatHistory, examContextId = '') {
     this.currentProblem = problemText;
     this.wrongAttemptCount = 0; // Reset khi restore
+    this.step4ChangedData = null;
     if (examContextId) {
       this.currentContextId = examContextId;
     }
@@ -629,6 +659,7 @@ LUÔN TRẢ VỀ JSON:
     this.currentStep = 1;
     this.isSessionComplete = false;
     this.wrongAttemptCount = 0; // 🆕 Reset bộ đếm
+    this.step4ChangedData = null;
     if (examContextId) {
       this.currentContextId = examContextId;
     }
@@ -657,7 +688,11 @@ LUÔN TRẢ VỀ JSON:
       };
     }
 
-    const computationCheck = this._validateStudentComputation(studentAnswer);
+    // Ở bước 4, ưu tiên đánh giá theo tiêu chí "kiểm tra lại" để tránh chặn sớm
+    // do cách học sinh ghi phép chia dạng "a:b/c" có thể gây hiểu sai thứ tự tính.
+    const computationCheck = this.currentStep === 4
+      ? { isValid: true }
+      : this._validateStudentComputation(studentAnswer);
     if (!computationCheck.isValid) {
       this.wrongAttemptCount++; // 🆕 Tăng bộ đếm
       return {
@@ -768,17 +803,11 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 
       // ⚠️ POST-FIX: Bước 4 (Kiểm tra) - XỬ LÝ HOÀN THÀNH PHIÊN
       if (this.currentStep === 4) {
-        const isStatusCorrect = data.status && data.status.toLowerCase() === "correct";
         const refusedToCheck = this._isRefusingStep4Check(studentAnswer);
         const askedClarification = this._isAskingStep4Clarification(studentAnswer);
-        const step4Analysis = this._analyzeStep4Verification(studentAnswer);
+        const askedWhereWrong = this._isAskingWhereWrong(studentAnswer);
+        const step4Analysis = this._analyzeStep4Verification(studentAnswer, chatHistory);
         const hasVerificationEvidence = step4Analysis.isValid;
-
-        // 🔴 Kiểm tra CẢ feedback VÀ next_question cho step 3 contamination
-        const combinedText = `${data.feedback || ''} ${data.next_question || ''}`;
-        const containsStep3Text = /trình bày.*lời giải|thực hiện.*kế hoạch|bắt đầu.*giải.*bài|hãy.*giải.*bài/i.test(combinedText);
-        const containsStep2Text = /bạn sẽ.*giải.*thế nào|nêu.*cách giải|lập.*kế hoạch/i.test(combinedText);
-        const containsStep1Text = /bài toán.*cho.*thông tin|đề bài.*cho.*biết/i.test(combinedText);
 
         // ✅ Bắt buộc có kiểm tra lại đầy đủ trước khi cho hoàn thành
         if (refusedToCheck || !hasVerificationEvidence) {
@@ -788,36 +817,17 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
             ? "'Thay đổi số liệu' nghĩa là mình giữ nguyên các dữ kiện còn lại, chỉ đổi 1 dữ kiện rồi tính lại kết quả mới để so sánh."
             : refusedToCheck
               ? "Bước 4 bắt buộc phải kiểm tra lại, nên mình chưa thể kết thúc bài ở đây nhé."
-              : this._buildStep4VerificationFeedback(step4Analysis);
+              : askedWhereWrong
+                ? this._buildStep4VerificationFeedback(step4Analysis)
+                : (this._buildStep4VerificationFeedback(step4Analysis) || data.feedback);
           data.next_question = this._buildStep4RecheckQuestion();
         }
-        // ✅ Nếu AI trả MOVE_NEXT ở bước 4 và HS đã có kiểm tra đủ thì hoàn thành
-        else if (data.step_status === "MOVE_NEXT") {
+        // ✅ Nếu validator nội bộ xác nhận đã kiểm tra đủ thì luôn hoàn thành, không phụ thuộc AI chấm đúng/sai
+        else {
+          data.status = "CORRECT";
+          data.step_status = "MOVE_NEXT";
           data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
           data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
-        }
-        // ✅ Nếu AI dính câu hỏi bước 1/2/3 vào response ở bước 4 → sửa lại
-        else if (containsStep3Text || containsStep2Text || containsStep1Text) {
-          if (isStatusCorrect) {
-            data.step_status = "MOVE_NEXT";
-            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
-            data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
-          } else {
-            data.next_question = this._buildStep4RecheckQuestion();
-          }
-        }
-        // ✅ Chỉ cho kết thúc nếu đúng và đã có minh chứng kiểm tra
-        else if (isStatusCorrect && hasVerificationEvidence) {
-          data.step_status = "MOVE_NEXT";
-          data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán theo rồi đó!";
-          data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
-        }
-        // ✅ Nếu STAY + câu hỏi quá ngắn → thay bằng câu hỏi kiểm tra
-        else {
-          if (!data.next_question || data.next_question.length < 20 ||
-              !/nếu|thay đổi|kiểm tra|hợp lý/i.test(data.next_question)) {
-            data.next_question = this._buildStep4RecheckQuestion();
-          }
         }
       }
 

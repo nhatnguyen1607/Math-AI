@@ -16,6 +16,27 @@ const extractJSON = (text) => {
   }
 };
 
+const hasBai3FinalAnswer = (text) => {
+  if (!text || typeof text !== 'string') return false;
+
+  const normalized = text.toLowerCase().replace(/\r/g, '').trim();
+  if (!normalized || normalized === 'không có' || normalized === '(không có)') return false;
+
+  const lines = normalized.split('\n').map((line) => line.trim()).filter(Boolean);
+  if (lines.length === 0) return false;
+
+  const lastPart = lines.slice(-2).join(' ');
+  const hasConclusionKeyword = /(kết\s*luận|đáp\s*số|vậy|nên|do\s*đó|suy\s*ra|kết\s*quả)/i.test(lastPart);
+  const hasComparisonConclusion = /(nhanh\s*hơn|chậm\s*hơn|lớn\s*hơn|nhỏ\s*hơn|nhiều\s*hơn|ít\s*hơn)/i.test(lastPart);
+  const hasFinalStatementWithValue = /(là|bằng|chiếm|còn)\s*-?\d+(?:[.,]\d+)?(?:\s*%|\s*[a-zà-ỹ]+)/i.test(lastPart);
+  const looksLikeOnlyComputation = /[+\-*/×÷:]=?/.test(lastPart) && !hasConclusionKeyword;
+
+  if (hasComparisonConclusion) return true;
+  if (hasConclusionKeyword && /\d+(?:[.,]\d+)?/.test(lastPart)) return true;
+  if (hasFinalStatementWithValue && !looksLikeOnlyComputation) return true;
+  return false;
+};
+
 export const evaluateWorksheet = async (studentAnswers, worksheet) => {
   try {
     const evaluations = {
@@ -151,6 +172,7 @@ export const evaluateBai3 = async (studentAnswers, worksheet) => {
   try {
     const bai_lam = studentAnswers?.bai_3?.bai_lam || 'Không có';
     const giai_thich = studentAnswers?.bai_3?.giai_thich || 'Không có';
+    const hasFinalAnswer = hasBai3FinalAnswer(bai_lam);
 
     const prompt = `Bạn là một giáo viên chuyên môn cao.
 
@@ -159,11 +181,12 @@ Bài giải:
 ${bai_lam}
 Giải thích:
 ${giai_thich}
+CÓ ĐÁP SỐ/KẾT LUẬN CUỐI CÙNG?: ${hasFinalAnswer ? 'Có' : 'Không'}
 
 [YÊU CẦU ĐẦU RA]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
-  "suy_luan": "Đọc kỹ phần bài làm và giải thích. LƯU Ý QUAN TRỌNG: Học sinh BẮT BUỘC phải giải thích được chi tiết ý nghĩa các bước tính toán (Ví dụ: tại sao phải tìm tổng số phần, tại sao dùng phép chia/nhân đó...). Nếu giải thích hời hợt kiểu 'vì nó dễ/ngắn hơn' hoặc không có giải thích toán học cụ thể -> KHÔNG ĐƯỢC 2 ĐIỂM (chỉ cho tối đa 1 điểm nếu phép tính bài giải đúng). Đánh giá điểm chính xác (0, 1 hoặc 2).",
+  "suy_luan": "Bắt buộc kiểm tra điều kiện có đáp số/kết luận cuối cùng trước. Nếu chưa có kết luận cuối thì chấm 0 điểm ngay. Nếu đã có kết luận cuối thì mới tiếp tục đánh giá chất lượng phép tính và phần giải thích. LƯU Ý: giải thích hời hợt thì tối đa 1 điểm.",
   "diem": (0, 1 hoặc 2),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
   "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Nhận xét trực tiếp năng lực tính toán và đánh giá xem phần lập luận/giải thích của em ấy có thực sự hiểu bản chất không. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'quy định'."
@@ -172,7 +195,20 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
     const result = await geminiModelManager.generateContent(prompt);
     const parsed = extractJSON(result.response.text());
     
-    if (parsed) return { evaluation: { ...parsed, muc_nang_luc: String(parsed.muc_nang_luc || 'cần cố gắng').toLowerCase() } };
+    if (parsed) {
+      const evaluation = { ...parsed, muc_nang_luc: String(parsed.muc_nang_luc || 'cần cố gắng').toLowerCase() };
+      if (!hasFinalAnswer) {
+        return {
+          evaluation: {
+            ...evaluation,
+            diem: 0,
+            muc_nang_luc: 'cần cố gắng',
+            nhan_xet: "Học sinh chưa nêu đáp số hoặc kết luận cuối cùng của bài toán nên chưa đạt yêu cầu tối thiểu. Dù có thể đã thực hiện một số bước tính trung gian, bài làm chưa trả lời dứt điểm câu hỏi của đề. Giáo viên cần nhắc học sinh luôn chốt kết quả ở cuối bài bằng một câu kết luận rõ ràng."
+          }
+        };
+      }
+      return { evaluation };
+    }
     return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi không thể phân tích kết quả.' } };
   } catch (error) {
     console.error('Error evaluating Bài 3:', error);

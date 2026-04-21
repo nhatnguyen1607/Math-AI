@@ -42,6 +42,66 @@ const isAnswerOnlyResult = (answer) => {
   return false;
 };
 
+const hasBai3FinalAnswer = (text, questionText = '') => {
+  if (!text || typeof text !== 'string') return false;
+
+  const normalized = text
+    .toLowerCase()
+    .replace(/\r/g, '')
+    .trim();
+
+  if (!normalized || normalized === 'không có') return false;
+
+  const lines = normalized
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) return false;
+
+  const lastPart = lines.slice(-2).join(' ');
+  const hasFinalEquation = /=\s*-?\d+(?:[.,]\d+)?(?:\s*[a-zà-ỹ/%]+)?/i.test(lastPart);
+  const hasConclusionKeyword = /(kết\s*luận|đáp\s*số|vậy|nên|do\s*đó|suy\s*ra|robot\s*[ab]\s*(nhanh|chậm)\s*hơn)/i.test(lastPart);
+  const hasFinalNumber = /\d+(?:[.,]\d+)?/.test(lastPart);
+  const hasComparisonConclusion = /(nhanh\s*hơn|chậm\s*hơn|lớn\s*hơn|nhỏ\s*hơn|nhiều\s*hơn|ít\s*hơn)/i.test(lastPart);
+
+  const questionNormalized = String(questionText || '').toLowerCase();
+  const requiresComparisonConclusion =
+    /(so\s*sánh|nhanh\s*hơn|chậm\s*hơn|ai\s+.*nhanh|rô-bốt\s*nào|robot\s*nào)/i.test(questionNormalized);
+
+  // Với bài yêu cầu so sánh (VD: robot nào nhanh hơn), đáp số cuối phải có kết luận so sánh.
+  // Chỉ có phép tính cuối mà chưa kết luận robot nào nhanh hơn thì chưa đạt.
+  if (requiresComparisonConclusion) {
+    return hasComparisonConclusion;
+  }
+
+  return hasFinalEquation || (hasConclusionKeyword && hasFinalNumber) || hasComparisonConclusion;
+};
+
+const hasMeaningfulExplanation = (text) => {
+  if (!text || typeof text !== 'string') return false;
+  const normalized = text.toLowerCase().trim();
+  if (!normalized || normalized === 'không có' || normalized === '(không có)') return false;
+  return normalized.length >= 20;
+};
+
+const hasCorrectRobotVelocityComputation = (text) => {
+  if (!text || typeof text !== 'string') return false;
+
+  const normalized = text
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/,/g, '.');
+
+  const hasAData = normalized.includes('0.36') && normalized.includes('0.05');
+  const hasBData = normalized.includes('0.45') && (normalized.includes('1/12') || normalized.includes('0.0833'));
+  const hasAResult = /7\.2(?:[^0-9]|$)/.test(normalized);
+  const hasBResult = /5\.4(?:[^0-9]|$)/.test(normalized);
+  const hasComparison = /(a.*nhanhhon|7\.2>5\.4|5\.4<7\.2|a> b|a>b)/i.test(normalized);
+
+  return hasAData && hasBData && hasAResult && hasBResult && hasComparison;
+};
+
 export const evaluateWorksheet = async (studentAnswers, worksheet) => {
   try {
     const evaluations = {
@@ -145,27 +205,69 @@ export const evaluateBai3 = async (studentAnswers, worksheet) => {
   try {
     const bai_lam = studentAnswers?.bai_3?.bai_lam || 'Không có';
     const giai_thich = studentAnswers?.bai_3?.giai_thich || 'Không có';
+    const bai3QuestionText = worksheet?.bai_3?.question || worksheet?.bai_3?.prompt || worksheet?.bai_3?.title || '';
+    const hasFinalAnswer = hasBai3FinalAnswer(bai_lam, bai3QuestionText);
+    const hasDeterministicCorrectResult = hasCorrectRobotVelocityComputation(bai_lam);
+    const explanationOk = hasMeaningfulExplanation(giai_thich);
 
     const prompt = `Bạn là giáo viên chấm Bài 3 (Trình bày bài giải - Vận tốc Rô-bốt).
 [BÀI LÀM CỦA HỌC SINH]
 Bài giải: ${bai_lam}
 Giải thích: ${giai_thich}
+CÓ ĐÁP SỐ/KẾT LUẬN CUỐI CÙNG?: ${hasFinalAnswer ? 'Có' : 'Không'}
 
 [BAREM CHẤM ĐIỂM BẮT BUỘC]
+- Điều kiện tiên quyết: Bài làm PHẢI có đáp số hoặc kết luận cuối cùng. Nếu chưa ra kết quả/kết luận cuối cùng thì CHỈ CHẤM 0 ĐIỂM.
 - Mức Tốt (2 điểm): Tính vận tốc đúng, so sánh đúng VÀ CÓ GIẢI THÍCH hợp lý (VD: tại sao phải đổi đơn vị).
-- Mức Đạt (1 điểm): Tính đúng NHƯNG thiếu phần giải thích hoặc hời hợt.
-- Mức Cần cố gắng (0 điểm): Tính sai nhiều, đổi sai đơn vị.
+- Mức Đạt (1 điểm): Tính đúng và so sánh đúng NHƯNG phần giải thích thiếu chiều sâu hoặc hời hợt.
+- Mức Cần cố gắng (0 điểm): Tính sai nhiều hoặc so sánh sai.
+
+[QUY ƯỚC QUY ĐỔI HỢP LỆ - KHÔNG ĐƯỢC CHẤM SAI]
+- 360 m = 0,36 km là ĐÚNG.
+- 0,05 giờ là ĐÚNG (tương đương 3 phút hoặc 1/20 giờ).
+- 5 phút = 1/12 giờ là ĐÚNG.
+- Học sinh có thể trình bày theo số thập phân HOẶC phân số nếu tương đương giá trị.
+- KHÔNG được đánh dấu sai chỉ vì khác cách biểu diễn thời gian (ví dụ 0,05 giờ và 1/20 giờ là cùng một giá trị).
 
 [YÊU CẦU ĐẦU RA JSON]
 {
-  "suy_luan": "Kiểm tra kỹ quy đổi đơn vị. Bắt buộc đọc phần Giải thích, nếu sơ sài -> tối đa 1 điểm.",
+  "suy_luan": "Bắt buộc kiểm tra điều kiện có đáp số/kết luận cuối cùng trước. Nếu chưa có thì chấm 0 điểm ngay. Nếu đã có thì mới kiểm tra tính đúng sai theo giá trị tương đương khi đổi đơn vị; không bắt lỗi khác biểu diễn cùng giá trị. Sau đó mới đánh giá độ hợp lý của phần giải thích (nếu sơ sài thì tối đa 1 điểm).",
   "diem": (0, 1 hoặc 2),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
   "nhan_xet": "Viết 3-4 câu BÁO CÁO CHO GIÁO VIÊN. BẮT BUỘC dùng ngôi thứ 3 ('học sinh', 'em ấy'). TUYỆT ĐỐI KHÔNG xưng hô trực tiếp với học sinh. Đánh giá kỹ năng đổi đơn vị và tư duy lập luận của học sinh."
 }`;
     const result = await geminiModelManager.generateContent(prompt);
     const parsed = extractJSON(result.response.text());
-    return { evaluation: parsed || { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi parse JSON.' } };
+    const evaluation = parsed || { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi parse JSON.' };
+
+    if (!hasFinalAnswer) {
+      return {
+        evaluation: {
+          ...evaluation,
+          diem: 0,
+          muc_nang_luc: 'cần cố gắng',
+          nhan_xet: "Học sinh chưa đưa ra đáp số hoặc kết luận cuối cùng nên chưa đạt yêu cầu tối thiểu của bài. Dù có một số bước tính trung gian, bài làm chưa thể hiện rõ kết quả cuối cùng để trả lời câu hỏi của đề. Giáo viên cần nhắc học sinh hoàn thiện lời giải bằng một kết luận rõ ràng ở cuối bài."
+        }
+      };
+    }
+
+    // Chốt cứng: nếu học sinh đã tính đúng trường hợp rô-bốt A/B theo dữ kiện chuẩn
+    // thì không để AI chấm 0 điểm do hiểu nhầm 0,05 giờ.
+    if (hasDeterministicCorrectResult && Number(evaluation?.diem || 0) <= 0) {
+      const forcedScore = explanationOk ? 2 : 1;
+      return {
+        evaluation: {
+          ...evaluation,
+          diem: forcedScore,
+          muc_nang_luc: forcedScore === 2 ? 'tốt' : 'đạt',
+          nhan_xet: forcedScore === 2
+            ? "Học sinh đã đổi đơn vị và tính toán đúng: vận tốc Rô-bốt A là 7,2 km/h, vận tốc Rô-bốt B là 5,4 km/h, kết luận Rô-bốt A nhanh hơn là chính xác. Phần giải thích cũng thể hiện được lý do lựa chọn cách làm. Bài làm đạt yêu cầu tốt về cả tính toán và lập luận."
+            : "Học sinh đã đổi đơn vị và tính toán đúng: vận tốc Rô-bốt A là 7,2 km/h, vận tốc Rô-bốt B là 5,4 km/h, kết luận Rô-bốt A nhanh hơn là chính xác. Phần giải thích còn ngắn hoặc chưa rõ ý nên chưa đạt mức tối đa. Giáo viên có thể nhắc học sinh bổ sung lý do đổi đơn vị đầy đủ hơn."
+        }
+      };
+    }
+
+    return { evaluation };
   } catch (error) { return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi chấm bài.' } }; }
 };
 

@@ -42,6 +42,27 @@ const isAnswerOnlyResult = (answer) => {
   return false;
 };
 
+const hasBai3FinalAnswer = (text) => {
+  if (!text || typeof text !== 'string') return false;
+
+  const normalized = text.toLowerCase().replace(/\r/g, '').trim();
+  if (!normalized || normalized === 'không có' || normalized === '(không có)') return false;
+
+  const lines = normalized.split('\n').map((line) => line.trim()).filter(Boolean);
+  if (lines.length === 0) return false;
+
+  const lastPart = lines.slice(-2).join(' ');
+  const hasConclusionKeyword = /(kết\s*luận|đáp\s*số|vậy|nên|do\s*đó|suy\s*ra|kết\s*quả)/i.test(lastPart);
+  const hasComparisonConclusion = /(nhanh\s*hơn|chậm\s*hơn|lớn\s*hơn|nhỏ\s*hơn|nhiều\s*hơn|ít\s*hơn)/i.test(lastPart);
+  const hasFinalStatementWithValue = /(là|bằng|chiếm|còn)\s*-?\d+(?:[.,]\d+)?(?:\s*%|\s*[a-zà-ỹ]+)/i.test(lastPart);
+  const looksLikeOnlyComputation = /[+\-*/×÷:]=?/.test(lastPart) && !hasConclusionKeyword;
+
+  if (hasComparisonConclusion) return true;
+  if (hasConclusionKeyword && /\d+(?:[.,]\d+)?/.test(lastPart)) return true;
+  if (hasFinalStatementWithValue && !looksLikeOnlyComputation) return true;
+  return false;
+};
+
 export const evaluateWorksheet = async (studentAnswers, worksheet) => {
   try {
     const evaluations = {
@@ -147,27 +168,43 @@ export const evaluateBai3 = async (studentAnswers, worksheet) => {
   try {
     const bai_lam = studentAnswers?.bai_3?.bai_lam || 'Không có';
     const giai_thich = studentAnswers?.bai_3?.giai_thich || 'Không có';
+    const hasFinalAnswer = hasBai3FinalAnswer(bai_lam);
 
     const prompt = `Bạn là giáo viên chấm Bài 3 (Trình bày bài giải - Tỉ số phần trăm).
 [BÀI LÀM CỦA HỌC SINH]
 Bài giải: ${bai_lam}
 Giải thích: ${giai_thich}
+CÓ ĐÁP SỐ/KẾT LUẬN CUỐI CÙNG?: ${hasFinalAnswer ? 'Có' : 'Không'}
 
 [BAREM CHẤM ĐIỂM BẮT BUỘC]
+- Điều kiện tiên quyết: Bài làm PHẢI có đáp số hoặc kết luận cuối cùng. Nếu chưa có kết luận cuối thì CHỈ CHẤM 0 ĐIỂM.
 - Mức Tốt (2 điểm): Thực hiện đúng các bước giải/phép tính, trình bày rõ ràng VÀ CÓ GIẢI THÍCH/lập luận hợp lý cho các bước.
 - Mức Đạt (1 điểm): Thực hiện đúng các phép tính cơ bản, trình bày rõ nhưng thiếu giải thích hoặc giải thích hời hợt/thiếu logic.
 - Mức Cần cố gắng (0 điểm): Tính toán sai nhiều, lời giải thiếu logic.
 
 [YÊU CẦU ĐẦU RA JSON]
 {
-  "suy_luan": "Kiểm tra tính chính xác của phép toán. Bắt buộc kiểm tra phần 'Giải thích', nếu sơ sài thì tối đa 1 điểm.",
+  "suy_luan": "Bắt buộc kiểm tra có đáp số/kết luận cuối cùng trước; nếu chưa có thì chấm 0 điểm ngay. Nếu đã có thì kiểm tra tính chính xác của phép toán. Bắt buộc kiểm tra phần 'Giải thích', nếu sơ sài thì tối đa 1 điểm.",
   "diem": (0, 1 hoặc 2),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
   "nhan_xet": "Viết 3-4 câu BÁO CÁO CHO GIÁO VIÊN. BẮT BUỘC dùng ngôi thứ 3 ('học sinh', 'em ấy'). TUYỆT ĐỐI KHÔNG xưng 'em', 'của em'. Nhận xét năng lực tính toán và đánh giá xem lập luận giải thích của học sinh có hợp lí không."
 }`;
     const result = await geminiModelManager.generateContent(prompt);
     const parsed = extractJSON(result.response.text());
-    return { evaluation: parsed || { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi parse JSON.' } };
+    const evaluation = parsed || { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi parse JSON.' };
+
+    if (!hasFinalAnswer) {
+      return {
+        evaluation: {
+          ...evaluation,
+          diem: 0,
+          muc_nang_luc: 'cần cố gắng',
+          nhan_xet: "Học sinh chưa nêu đáp số hoặc kết luận cuối cùng của bài toán nên chưa đạt yêu cầu tối thiểu. Bài làm có thể có một số bước tính trung gian nhưng chưa trả lời dứt điểm câu hỏi của đề. Giáo viên cần nhắc học sinh luôn chốt bài bằng câu kết luận rõ ràng ở cuối."
+        }
+      };
+    }
+
+    return { evaluation };
   } catch (error) { return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi chấm bài.' } }; }
 };
 

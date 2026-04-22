@@ -8,7 +8,8 @@ export class GeminiChatServiceTimeVelocity {
     this.isSessionComplete = false;
     this.currentContextId = EXAM_CONTEXTS[0]?.id || '';
     this.wrongAttemptCount = 0; // 🆕 Đếm số lần trả lời sai/không biết liên tiếp tại mỗi bước
-    this.step4ChangedData = null; // Lưu dữ liệu đã đổi ở bước 4 để kiểm tra câu trả lời
+    this.step4ChangedData = null; // Lưu dữ kiện gốc để kiểm tra ngược ở bước 4
+    this.step4Phase = "reverse_check"; // reverse_check -> extension_check
   }
 
   _getContext() {
@@ -301,67 +302,55 @@ export class GeminiChatServiceTimeVelocity {
 
   _buildStep4RecheckQuestion() {
     const toVnNumber = (num) => {
-      const rounded = Number(num).toFixed(2).replace(/\.00$/, "").replace(/(,\d*?)0+$/, "$1");
+      const rounded = Number(num).toFixed(2).replace(/\.00$/, "").replace(/(\.\d*?)0+$/, "$1");
       return rounded.replace(".", ",");
     };
 
-    if (this.currentProblem && this.currentProblem.trim()) {
-      const text = String(this.currentProblem || "").toLowerCase();
+    const text = String(this.currentProblem || "").toLowerCase();
+    const roundInfo = this._extractRoundBasedTotalDistance(text);
+    const distanceMatch = text.match(/(\d+(?:[,.]\d+)?)\s*(km|m)\b/i);
+    const timeMatch = text.match(/(\d+(?:[,.]\d+)?)\s*(giờ|phút|giây|h|s)\b/i);
 
-      const distanceMatches = [
-        ...text.matchAll(/(\d+(?:[,.]\d+)?)\s*km\b/gi),
-        ...text.matchAll(/(\d+(?:[,.]\d+)?)\s*m\b/gi),
-      ];
-      const timeMatches = [
-        ...text.matchAll(/(\d+(?:[,.]\d+)?)\s*giờ\b/gi),
-        ...text.matchAll(/(\d+(?:[,.]\d+)?)\s*phút\b/gi),
-      ];
+    const distanceValue = roundInfo?.totalDistance ?? (distanceMatch ? parseFloat(distanceMatch[1].replace(",", ".")) : null);
+    const distanceUnit = roundInfo?.distanceUnit || (distanceMatch ? distanceMatch[2] : "quãng đường");
+    const timeValue = timeMatch ? parseFloat(timeMatch[1].replace(",", ".")) : null;
+    const timeUnit = timeMatch ? timeMatch[2] : "thời gian";
 
-      if (distanceMatches.length > 0) {
-        const raw = distanceMatches[0][1];
-        const unit = /km/i.test(distanceMatches[0][0]) ? "km" : "m";
-        const value = parseFloat(raw.replace(",", "."));
-        if (!isNaN(value)) {
-          const delta = Math.max(value >= 10 ? 2 : 1, Math.round(Math.abs(value) * 0.2));
-          const newValue = value + delta;
-          this.step4ChangedData = { field: "distance", from: value, to: newValue, unit };
-          return `Mình chọn sẵn để bạn kiểm tra nhé: giữ nguyên thời gian như đề bài, chỉ đổi quãng đường từ ${toVnNumber(value)}${unit} lên ${toVnNumber(newValue)}${unit}. Bạn hãy tính vận tốc mới (ghi đúng đơn vị km/h hoặc m/s), rồi nêu mối liên hệ giữa việc tăng quãng đường và đáp số.`;
-        }
+    this.step4ChangedData = {
+      distanceValue: Number.isFinite(distanceValue) ? distanceValue : null,
+      distanceUnit,
+      timeValue: Number.isFinite(timeValue) ? timeValue : null,
+      timeUnit,
+      roundInfo: roundInfo || null,
+    };
+
+    if (Number.isFinite(distanceValue) && Number.isFinite(timeValue)) {
+      if (roundInfo) {
+        return `Kết quả vận tốc mà bạn vừa tìm được là bao nhiêu? Để kiểm tra lại, bạn dùng tổng quãng đường (${toVnNumber(roundInfo.roundCount)} vòng × ${toVnNumber(roundInfo.lapDistance)} ${roundInfo.distanceUnit} = ${toVnNumber(distanceValue)} ${distanceUnit}) cùng với ${toVnNumber(timeValue)} ${timeUnit} để thực hiện phép tính ngược nào?`;
       }
-
-      if (timeMatches.length > 0) {
-        const raw = timeMatches[0][1];
-        const unit = /giờ/i.test(timeMatches[0][0]) ? "giờ" : "phút";
-        const value = parseFloat(raw.replace(",", "."));
-        if (!isNaN(value) && value > 0) {
-          const delta = Math.max(1, Math.round(Math.abs(value) * 0.2));
-          const newValue = Math.max(1, value - delta);
-          this.step4ChangedData = { field: "time", from: value, to: newValue, unit };
-          return `Mình chọn sẵn để bạn kiểm tra nhé: giữ nguyên quãng đường như đề bài, chỉ đổi thời gian từ ${toVnNumber(value)} ${unit} xuống ${toVnNumber(newValue)} ${unit}. Bạn hãy tính vận tốc mới (ghi đúng đơn vị km/h hoặc m/s), rồi nêu mối liên hệ giữa việc giảm thời gian và đáp số.`;
-        }
-      }
-
-      const numberMatches = this.currentProblem.match(/\d+(?:[,.]\d+)?/g);
-      const validNumbers = numberMatches
-        ? numberMatches.filter((num) => {
-            const parsed = parseFloat(num.replace(",", "."));
-            return !isNaN(parsed) && num.length > 0;
-          })
-        : [];
-
-      if (validNumbers.length > 0) {
-        const base = parseFloat(validNumbers[0].replace(",", "."));
-        if (!isNaN(base)) {
-          const delta = Math.max(1, Math.round(Math.abs(base) * 0.2));
-          const next = base + delta;
-          this.step4ChangedData = { field: "generic", from: base, to: next, unit: "" };
-          return `Mình chọn sẵn để bạn kiểm tra nhé: đổi một dữ kiện trong đề từ ${toVnNumber(base)} lên ${toVnNumber(next)} (các dữ kiện còn lại giữ nguyên). Bạn hãy tính vận tốc mới, ghi đơn vị đúng (km/h hoặc m/s), rồi nêu mối liên hệ giữa dữ kiện thay đổi và đáp số.`;
-        }
-      }
+      return `Kết quả vận tốc mà bạn vừa tìm được là bao nhiêu? Để kiểm tra kết quả đó đúng, bạn sẽ thực hiện phép tính gì với ${toVnNumber(timeValue)} ${timeUnit} và quãng đường ${toVnNumber(distanceValue)} ${distanceUnit}?`;
     }
 
-    this.step4ChangedData = { field: "distance", from: 10, to: 12, unit: "km" };
-    return "Mình chọn sẵn để bạn kiểm tra nhé: giữ nguyên thời gian, đổi quãng đường từ 10 km lên 12 km. Bạn hãy tính vận tốc mới (ghi đúng đơn vị km/h hoặc m/s), rồi nêu mối liên hệ giữa dữ liệu thay đổi và đáp số.";
+    return "Kết quả vận tốc mà bạn vừa tìm được là bao nhiêu? Để kiểm tra kết quả đó đúng, bạn sẽ thực hiện phép tính gì?";
+  }
+
+  _extractRoundBasedTotalDistance(problemText = "") {
+    const text = String(problemText || "").toLowerCase();
+    const roundPattern = /(\d+(?:[,.]\d+)?)\s*vòng[^.?!\n]*?(?:mỗi|mỗi\s*một)\s*vòng[^.?!\n]*?(\d+(?:[,.]\d+)?)\s*(km|m)\b/i;
+    const match = text.match(roundPattern);
+    if (!match) return null;
+
+    const roundCount = parseFloat(String(match[1]).replace(",", "."));
+    const lapDistance = parseFloat(String(match[2]).replace(",", "."));
+    const distanceUnit = match[3];
+    if (!Number.isFinite(roundCount) || !Number.isFinite(lapDistance) || !distanceUnit) return null;
+
+    return {
+      roundCount,
+      lapDistance,
+      distanceUnit,
+      totalDistance: roundCount * lapDistance,
+    };
   }
 
   _isRefusingStep4Check(answer = "") {
@@ -375,12 +364,19 @@ export class GeminiChatServiceTimeVelocity {
     const text = String(answer || "").toLowerCase().trim();
     return /(là\s*sao|la\s*sao|nghĩa\s*là\s*gì|nghia\s*la\s*gi|mình\s*chưa\s*hiểu|toi\s*khong\s*hieu|không\s*hiểu|ko\s*hiểu)/i.test(
       text,
-    ) && /(thay\s*đổi\s*số\s*liệu|thay\s*doi\s*so\s*lieu|kiểm\s*tra\s*lại|kiem\s*tra\s*lai|bước\s*4|buoc\s*4)/i.test(text);
+    ) && /(kiểm\s*tra\s*lại|kiem\s*tra\s*lai|làm\s*ngược|lam\s*nguoc|bước\s*4|buoc\s*4|phép\s*tính\s*gì)/i.test(text);
   }
 
   _isAskingWhereWrong(answer = "") {
     const text = String(answer || "").toLowerCase().trim();
     return /(sai\s*chỗ\s*nào|sai\s*ở\s*đâu|thiếu\s*chỗ\s*nào|cần\s*bổ\s*sung\s*gì|bo\s*sung\s*gi)/i.test(text);
+  }
+
+  _isPointingOutSingleLapConfusion(answer = "") {
+    const text = String(answer || "").toLowerCase().trim();
+    return /(1\s*vòng|một\s*vòng).*(0[,.]?\d*|quãng\s*đường)|0[,.]\d+\s*km.*(1\s*vòng|một\s*vòng|chỉ\s*là)/i.test(
+      text,
+    );
   }
 
   _buildStep4EvidenceText(answer = "", chatHistory = []) {
@@ -400,68 +396,171 @@ export class GeminiChatServiceTimeVelocity {
 
   _analyzeStep4Verification(answer = "", chatHistory = []) {
     const text = this._buildStep4EvidenceText(answer, chatHistory);
-    const toVariants = this.step4ChangedData?.to !== undefined
-      ? [String(this.step4ChangedData.to), String(this.step4ChangedData.to).replace(".", ",")]
+    const distanceVariants = Number.isFinite(this.step4ChangedData?.distanceValue)
+      ? [
+          String(this.step4ChangedData.distanceValue),
+          String(this.step4ChangedData.distanceValue).replace(".", ","),
+        ]
       : [];
-    const fromVariants = this.step4ChangedData?.from !== undefined
-      ? [String(this.step4ChangedData.from), String(this.step4ChangedData.from).replace(".", ",")]
+
+    const hasReverseOperation =
+      /(nhân|\*)/i.test(text) &&
+      /(vận\s*tốc|kết\s*quả\s*vừa\s*tìm|đáp\s*số)/i.test(text) &&
+      /(thời\s*gian|giờ|phút|giây)/i.test(text);
+
+    const hasRecomputedDistance = /(quãng\s*đường|tính\s*lại\s*quãng\s*đường|ra\s*quãng\s*đường)/i.test(text);
+
+    const hasComparisonWithOriginal =
+      (/(bằng|khớp|trùng|đúng|chính\s*xác|không\s*trùng|không\s*khớp|sai)/i.test(text) &&
+        /(quãng\s*đường\s*(ban\s*đầu|đề\s*bài)|dữ\s*kiện\s*ban\s*đầu|đề\s*bài)/i.test(text)) ||
+      distanceVariants.some((value) => value && text.includes(value.toLowerCase()));
+
+    const hasConclusionRule =
+      /(nếu\s+.*(bằng|khớp|trùng).*(đúng|chính\s*xác)|ngược\s*lại|không\s*(bằng|khớp|trùng).*(xem\s*lại|kiểm\s*tra|sai\s*sót))/i.test(
+        text,
+      );
+
+    const isValid =
+      hasReverseOperation &&
+      hasRecomputedDistance &&
+      (hasComparisonWithOriginal || hasConclusionRule);
+
+    return {
+      isValid,
+      hasReverseOperation,
+      hasRecomputedDistance,
+      hasComparisonWithOriginal,
+      hasConclusionRule,
+    };
+  }
+
+  _buildStep4VerificationFeedback(analysis = {}) {
+    const timeValue = this.step4ChangedData?.timeValue;
+    const timeUnit = this.step4ChangedData?.timeUnit || "thời gian";
+    const distanceValue = this.step4ChangedData?.distanceValue;
+    const distanceUnit = this.step4ChangedData?.distanceUnit || "quãng đường";
+
+    const displayTime = Number.isFinite(timeValue)
+      ? `${String(timeValue).replace(".", ",")} ${timeUnit}`
+      : "thời gian của đề bài";
+    const displayDistance = Number.isFinite(distanceValue)
+      ? `${String(distanceValue).replace(".", ",")} ${distanceUnit}`
+      : "quãng đường ban đầu của đề bài";
+
+    const roundInfo = this.step4ChangedData?.roundInfo;
+    const roundNote = roundInfo
+      ? ` Lưu ý: ${String(roundInfo.roundCount).replace(".", ",")} vòng × ${String(roundInfo.lapDistance).replace(".", ",")} ${roundInfo.distanceUnit} = ${displayDistance} (tổng quãng đường).`
+      : "";
+    return `Từ công thức tính vận tốc là lấy quãng đường chia cho thời gian, bạn hãy làm ngược lại bằng cách lấy vận tốc vừa tìm được nhân với ${displayTime} để tính lại quãng đường. Nếu quãng đường tính lại đúng bằng ${displayDistance} thì kết quả tìm được là chính xác. Ngược lại, nếu hai kết quả không trùng nhau thì bạn cần xem lại các bước làm vì có thể đã xảy ra sai sót.${roundNote}`;
+  }
+
+  _buildStep4ExtensionQuestion() {
+    const toVnNumber = (num) => {
+      const rounded = Number(num).toFixed(2).replace(/\.00$/, "").replace(/(\.\d*?)0+$/, "$1");
+      return rounded.replace(".", ",");
+    };
+
+    const baseDistance = this.step4ChangedData?.distanceValue;
+    const baseDistanceUnit = this.step4ChangedData?.distanceUnit || "km";
+    const baseTime = this.step4ChangedData?.timeValue;
+    const baseTimeUnit = this.step4ChangedData?.timeUnit || "giờ";
+
+    if (Number.isFinite(baseDistance)) {
+      const delta = Math.max(baseDistance >= 10 ? 2 : 1, Math.round(Math.abs(baseDistance) * 0.2));
+      const nextDistance = baseDistance + delta;
+      this.step4ChangedData = {
+        ...this.step4ChangedData,
+        extension: {
+          field: "distance",
+          from: baseDistance,
+          to: nextDistance,
+          unit: baseDistanceUnit,
+          fixedTime: Number.isFinite(baseTime) ? baseTime : null,
+          fixedTimeUnit: baseTimeUnit,
+        },
+      };
+      const timeText = Number.isFinite(baseTime) ? `, giữ nguyên thời gian ${toVnNumber(baseTime)} ${baseTimeUnit}` : "";
+      return `Tuyệt vời! Vậy bây giờ hãy thử mở rộng thêm 1 chút nhé: nếu đổi quãng đường từ ${toVnNumber(baseDistance)} ${baseDistanceUnit} thành ${toVnNumber(nextDistance)} ${baseDistanceUnit}${timeText} thì vận tốc cuối sẽ thay đổi như thế nào? Bạn hãy tính vận tốc mới và nêu mối liên hệ.`;
+    }
+
+    if (Number.isFinite(baseTime) && baseTime > 0) {
+      const delta = Math.max(1, Math.round(Math.abs(baseTime) * 0.2));
+      const nextTime = Math.max(1, baseTime - delta);
+      this.step4ChangedData = {
+        ...this.step4ChangedData,
+        extension: {
+          field: "time",
+          from: baseTime,
+          to: nextTime,
+          unit: baseTimeUnit,
+          fixedDistance: Number.isFinite(baseDistance) ? baseDistance : null,
+          fixedDistanceUnit: baseDistanceUnit,
+        },
+      };
+      const distanceText = Number.isFinite(baseDistance) ? `, giữ nguyên quãng đường ${toVnNumber(baseDistance)} ${baseDistanceUnit}` : "";
+      return `Tuyệt vời! Vậy bây giờ hãy thử mở rộng thêm 1 chút nhé: nếu đổi thời gian từ ${toVnNumber(baseTime)} ${baseTimeUnit} thành ${toVnNumber(nextTime)} ${baseTimeUnit}${distanceText} thì vận tốc cuối sẽ thay đổi như thế nào? Bạn hãy tính vận tốc mới và nêu mối liên hệ.`;
+    }
+
+    this.step4ChangedData = {
+      ...this.step4ChangedData,
+      extension: { field: "generic", from: 10, to: 12, unit: "" },
+    };
+    return "Tuyệt vời! Vậy bây giờ hãy thử mở rộng thêm 1 chút nhé: nếu thay đổi một dữ kiện trong đề bài thì vận tốc cuối sẽ thay đổi như thế nào? Bạn hãy tính kết quả mới và nêu mối liên hệ.";
+  }
+
+  _analyzeStep4Extension(answer = "", chatHistory = []) {
+    const text = this._buildStep4EvidenceText(answer, chatHistory);
+    const ext = this.step4ChangedData?.extension || {};
+
+    const fromVariants = ext?.from !== undefined
+      ? [String(ext.from), String(ext.from).replace(".", ",")]
+      : [];
+    const toVariants = ext?.to !== undefined
+      ? [String(ext.to), String(ext.to).replace(".", ",")]
       : [];
 
     const hasChangedInputMention =
       /(thay|đổi|doi).*?(thành|thanh|sang|ra)/i.test(text) ||
-      /(từ|tu)\s*\d+[.,]?\d*\s*(thành|thanh|lên|len|đến|den)\s*\d+[.,]?\d*/i.test(text) ||
-      /(tăng|giảm)\s+.*?(từ|tu)\s*\d+[.,]?\d*\s*(lên|len|xuống|xuong|đến|den)\s*\d+[.,]?\d*/i.test(text) ||
-      toVariants.some((value) => value && text.includes(value.toLowerCase())) ||
+      /(từ|tu)\s*\d+[.,]?\d*\s*(thành|thanh|lên|len|xuống|xuong|đến|den)\s*\d+[.,]?\d*/i.test(text) ||
       (fromVariants.some((value) => value && text.includes(value.toLowerCase())) &&
-        /(tăng|giảm|lên|xuống|giữ\s*nguyên)/i.test(text));
+        toVariants.some((value) => value && text.includes(value.toLowerCase())));
 
-    // Much more flexible: look for "number with unit" anywhere in text (allows words between parts)
     const hasNewComputedResult =
       /\d+[.,]?\d*\s*(km\s*\/\s*h|m\s*\/\s*s|km\s*\/\s*giờ|m\s*\/\s*giây)/i.test(text) ||
       /(=\s*\d+[.,]?\d*|kết\s*quả\s*(mới)?\s*là\s*\d+[.,]?\d*|vận\s*tốc\s+[^.]*?(là|=)\s*\d+[.,]?\d*)/i.test(text);
 
-    const hasVelocityUnit = /(km\s*\/\s*h|m\s*\/\s*s|km\s*\/\s*giờ|m\s*\/\s*giây)/i.test(text);
-
     const hasRelationshipReasoning =
-      /(tỉ\s*lệ\s*thuận|tỉ\s*lệ\s*nghịch|khi\s+.*\s+thì\s+.*|nếu\s+.*\s+thì\s+.*|nên|do\s*đó|vì\s*vậy|vậy\s*thì|mối\s*liên\s*hệ|qua\s*đó|cho\s*thấy|suy\s*ra)/i.test(
+      /(tỉ\s*lệ\s*thuận|tỉ\s*lệ\s*nghịch|khi\s+.*\s+thì\s+.*|nếu\s+.*\s+thì\s+.*|nên|do\s*đó|vì\s*vậy|mối\s*liên\s*hệ|suy\s*ra)/i.test(
         text,
-      ) && /(tăng|giảm|lớn\s*hơn|nhỏ\s*hơn|nhanh\s*hơn|chậm\s*hơn|cao\s*hơn|thấp\s*hơn|tăng\s*theo|giảm\s*theo)/i.test(text);
+      ) && /(tăng|giảm|lớn\s*hơn|nhỏ\s*hơn|nhanh\s*hơn|chậm\s*hơn|cao\s*hơn|thấp\s*hơn)/i.test(text);
 
-    const isValid =
-      hasChangedInputMention &&
-      hasNewComputedResult &&
-      hasRelationshipReasoning &&
-      hasVelocityUnit;
+    const isValid = hasChangedInputMention && hasNewComputedResult && hasRelationshipReasoning;
 
     return {
       isValid,
       hasChangedInputMention,
       hasNewComputedResult,
       hasRelationshipReasoning,
-      hasVelocityUnit,
     };
   }
 
-  _buildStep4VerificationFeedback(analysis = {}) {
+  _buildStep4ExtensionFeedback(analysis = {}) {
     const guides = [];
     if (!analysis.hasChangedInputMention) {
-      guides.push("Bạn nêu rõ dữ liệu đã đổi theo mẫu: đổi quãng đường từ ... lên ...");
+      guides.push("nêu rõ dữ kiện đã đổi từ ... thành ...");
     }
     if (!analysis.hasNewComputedResult) {
-      guides.push("Bạn ghi lại phép tính và kết quả vận tốc mới bằng số");
-    }
-    if (!analysis.hasVelocityUnit) {
-      guides.push("Bạn thêm đơn vị vào kết quả: km/h hoặc m/s");
+      guides.push("ghi phép tính và kết quả vận tốc mới");
     }
     if (!analysis.hasRelationshipReasoning) {
-      guides.push("Bạn kết luận mối liên hệ theo mẫu: giữ nguyên thời gian, quãng đường tăng thì vận tốc tăng");
+      guides.push("nêu mối liên hệ: dữ kiện tăng/giảm thì vận tốc thay đổi như thế nào");
     }
 
     if (guides.length === 0) {
-      return "Bạn đã kiểm tra khá đầy đủ rồi. Bạn xem lại thêm một lần để đảm bảo các bước đều hợp lý nhé.";
+      return "Bạn đã mở rộng đúng rồi, bạn rà lại một lần nữa cho chắc nhé.";
     }
 
-    return `Bạn làm đúng được một phần rồi. Để hoàn thành bước 4, bạn bổ sung giúp mình: ${guides.join("; ")}.`;
+    return `Bạn làm đúng được một phần rồi. Để hoàn thành phần mở rộng, bạn bổ sung giúp mình: ${guides.join("; ")}.`;
   }
 
   // 🆕 Post-processing: tự động fix xưng hô từ "em" → "bạn"
@@ -483,6 +582,44 @@ export class GeminiChatServiceTimeVelocity {
       .replace(/\bem\s+ơi/g, 'bạn')
       // Fix variations like "em hãy", "em cần", etc.
       .replace(/\bem\s+(hãy|cần|có|là|vừa)/g, 'bạn $1');
+  }
+
+  _normalizeForCompare(text = "") {
+    return String(text || "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  _dedupeConsecutiveSentences(text = "") {
+    const parts = String(text || "").match(/[^.!?]+[.!?]?/g) || [];
+    const deduped = [];
+    let prevNorm = "";
+
+    for (const part of parts) {
+      const cleaned = part.replace(/\s+/g, " ").trim();
+      if (!cleaned) continue;
+      const norm = this._normalizeForCompare(cleaned);
+      if (!norm || norm === prevNorm) continue;
+      deduped.push(cleaned);
+      prevNorm = norm;
+    }
+
+    return deduped.join(" ").trim();
+  }
+
+  _mergeFeedbackAndQuestion(feedback = "", nextQuestion = "") {
+    const fb = String(feedback || "").trim();
+    const nq = String(nextQuestion || "").trim();
+
+    if (!fb && !nq) return "";
+    if (!nq) return this._dedupeConsecutiveSentences(fb);
+    if (!fb) return this._dedupeConsecutiveSentences(nq);
+
+    const fbNorm = this._normalizeForCompare(fb);
+    const nqNorm = this._normalizeForCompare(nq);
+    const merged = fbNorm.includes(nqNorm) ? fb : `${fb} ${nq}`;
+    return this._dedupeConsecutiveSentences(merged);
   }
 
   // 🆕 Xác định mức hỗ trợ theo số lần sai liên tiếp
@@ -542,6 +679,8 @@ export class GeminiChatServiceTimeVelocity {
     this.currentProblem = problemText;
     this.wrongAttemptCount = 0; // Reset khi restore
     this.step4ChangedData = null;
+    this.step4Phase = "reverse_check";
+    this.isSessionComplete = false;
     if (examContextId) {
       this.currentContextId = examContextId;
     }
@@ -552,10 +691,32 @@ export class GeminiChatServiceTimeVelocity {
         fixedHistory.unshift({ role: 'user', parts: [{ text: problemText }] });
       }
       const fullText = fixedHistory.map(m => m.parts[0]?.text || '').join(' ');
-      if (fullText.includes("Kiểm tra")) this.currentStep = 4;
+      const normalized = String(fullText || "").toLowerCase();
+      const hasCompletionSignal =
+        /đã hoàn thành bài toán|bạn đã hoàn thành bài toán|hãy nộp bài luyện tập này|nhấn nút 'nộp bài'|nhấn nút "nộp bài"/i.test(
+          normalized,
+        );
+      const hasStep4Signal =
+        /kiểm tra lại|phép tính ngược|tổng quãng đường|thay đổi một dữ kiện|vận tốc mới|bước 4/i.test(normalized);
+
+      if (hasCompletionSignal) {
+        this.currentStep = 4;
+        this.step4Phase = "extension_check";
+        this.isSessionComplete = true;
+        return;
+      }
+
+      if (hasStep4Signal || fullText.includes("Kiểm tra")) this.currentStep = 4;
       else if (fullText.includes("Thực hiện")) this.currentStep = 3;
       else if (fullText.includes("Lập kế hoạch")) this.currentStep = 2;
       else if (fullText.includes("Hiểu bài")) this.currentStep = 1;
+
+      if (
+        this.currentStep === 4 &&
+        /mở rộng|thay\s*đổi\s*(số\s*liệu|dữ\s*kiện)|vận\s*tốc\s*mới/i.test(fullText)
+      ) {
+        this.step4Phase = "extension_check";
+      }
     }
   }
 
@@ -628,11 +789,10 @@ CHI TIẾT PHẢN HỒI THEO BƯỚC:
    - KHÔNG được nêu cụ thể các con số, KHÔNG được nêu chi tiết phép tính
   - Để HS tự thực hiện và trình bày đầy đủ theo kế hoạch đã nêu
    
-4. 🔵 KIỂM TRA (Bước 4 - MỞ RỘNG):
-  - Chỉ MOVE_NEXT khi HS đã kiểm tra thật sự: tính được kết quả mới khi thay đổi dữ liệu và nêu được mối liên hệ giữa dữ liệu thay đổi với đáp số.
-   - Không chỉ hỏi "có/không", phải giúp HS trả lời ngắn, giải thích
-  - Câu hỏi kiểm tra phải yêu cầu tính ra kết quả mới, không chấp nhận trả lời chỉ "tăng" hoặc "giảm".
-   - ⚠️ TUYỆT ĐỐI CẤM hỏi tính lại quãng đường hoặc các phép toán phức tạp khác để kiểm tra
+4. 🔵 KIỂM TRA (Bước 4 - 2 TẦNG):
+  - Tầng 1: Hỏi HS cách kiểm tra lại đáp số vận tốc bằng phép tính ngược.
+  - Khi HS làm đúng tầng 1, CHƯA kết thúc bài ngay: chuyển sang Tầng 2 (mở rộng), yêu cầu thay đổi một dữ kiện rồi tính vận tốc mới và nêu mối liên hệ.
+  - Chỉ MOVE_NEXT khi HS hoàn thành cả 2 tầng ở bước 4.
 
 ⚠️ LƯU Ý TUYỆT ĐỐI:
 - KHÔNG ĐƯỢC xưng "em" bất kỳ ở đâu, ĐỔI THÀNH "bạn" ở mọi nơi
@@ -642,6 +802,7 @@ CHI TIẾT PHẢN HỒI THEO BƯỚC:
 - Ở bước 2, CHỈ hỏi sơ bộ cách giải (sẽ dùng công thức/qui luật gì), TUYỆT ĐỐI KHÔNG hỏi lại con số hay thông tin bài toán (đó là bước 1)
 - Nếu đề cần đổi đơn vị thì ở bước 2 phải yêu cầu nêu bước đổi đơn vị, chưa nêu thì chưa được MOVE_NEXT.
 - Ở bước 3, để HS tính toán. TUYỆT ĐỐI KHÔNG ĐƯỢC hỏi các câu hỏi của bước 1 hay bước 2 (như "đề bài cho biết gì?", "bạn cần tìm gì?", "bạn sẽ giải bài này thế nào?"). CHỈ nhận xét lỗi tính toán và yêu cầu tính tiếp.
+- Ở bước 4, bắt buộc đi theo 2 tầng: kiểm tra ngược trước, sau đó mở rộng thay đổi dữ kiện rồi mới kết thúc.
 
 LUÔN TRẢ VỀ JSON:
 {
@@ -660,6 +821,7 @@ LUÔN TRẢ VỀ JSON:
     this.isSessionComplete = false;
     this.wrongAttemptCount = 0; // 🆕 Reset bộ đếm
     this.step4ChangedData = null;
+    this.step4Phase = "reverse_check";
     if (examContextId) {
       this.currentContextId = examContextId;
     }
@@ -743,9 +905,11 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 3. TẠI BƯỚC 2: KHÔNG hỏi lại dữ kiện. CHỈ hỏi kế hoạch giải.
 3.1. Nếu đề cần đổi đơn vị thì ở bước 2 phải yêu cầu nêu bước đổi đơn vị, chưa nêu thì chưa được MOVE_NEXT.
 4. TẠI BƯỚC 3: KHÔNG hỏi lại bước 1/2. CHỈ yêu cầu trình bày lời giải hoặc hỗ trợ tính toán.
-5. TẠI BƯỚC 4: BẮT BUỘC yêu cầu tính lại kết quả khi thay đổi dữ liệu và nêu mối liên hệ; KHÔNG chấp nhận chỉ trả lời tăng/giảm.
-6. Ở bước 4, ưu tiên nêu sẵn một thay đổi dữ liệu cụ thể để HS làm trực tiếp.
-7. Chỉ MOVE_NEXT khi HS trả lời đúng và đủ ý.
+5. TẠI BƯỚC 4: đi theo 2 tầng bắt buộc.
+  - Tầng 1: kiểm tra ngược đáp số vận tốc bằng phép nhân vận tốc với thời gian để tính lại quãng đường và đối chiếu dữ kiện ban đầu.
+  - Tầng 2: mở rộng bằng thay đổi một dữ kiện rồi tính vận tốc mới và nêu mối liên hệ.
+6. Sau khi HS làm đúng tầng 1 thì CHƯA hoàn thành bài, phải hỏi tiếp tầng 2.
+7. Chỉ MOVE_NEXT khi HS hoàn thành đủ cả tầng 1 và tầng 2 ở bước 4.
 8. ⚠️ NẾU HS nhập dấu chấm (0.7), nhắc dùng dấu phẩy (0,7).
 `;
 
@@ -792,6 +956,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 
       // ✅ Sau khi hoàn thành bước 3, chuyển sang câu hỏi kiểm tra bắt buộc có tính lại kết quả
       if (this.currentStep === 3 && data.step_status === "MOVE_NEXT") {
+        this.step4Phase = "reverse_check";
         data.feedback = data.feedback || "Bạn đã thực hiện lời giải tốt lắm!";
         data.next_question = this._buildStep4RecheckQuestion();
       }
@@ -806,28 +971,49 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
         const refusedToCheck = this._isRefusingStep4Check(studentAnswer);
         const askedClarification = this._isAskingStep4Clarification(studentAnswer);
         const askedWhereWrong = this._isAskingWhereWrong(studentAnswer);
-        const step4Analysis = this._analyzeStep4Verification(studentAnswer, chatHistory);
-        const hasVerificationEvidence = step4Analysis.isValid;
+        const pointedSingleLap = this._isPointingOutSingleLapConfusion(studentAnswer);
+        if (this.step4Phase !== "extension_check") {
+          const step4Analysis = this._analyzeStep4Verification(studentAnswer, chatHistory);
+          const hasVerificationEvidence = step4Analysis.isValid;
 
-        // ✅ Bắt buộc có kiểm tra lại đầy đủ trước khi cho hoàn thành
-        if (refusedToCheck || !hasVerificationEvidence) {
-          data.status = "WRONG";
-          data.step_status = "STAY";
-          data.feedback = askedClarification
-            ? "'Thay đổi số liệu' nghĩa là mình giữ nguyên các dữ kiện còn lại, chỉ đổi 1 dữ kiện rồi tính lại kết quả mới để so sánh."
-            : refusedToCheck
-              ? "Bước 4 bắt buộc phải kiểm tra lại, nên mình chưa thể kết thúc bài ở đây nhé."
-              : askedWhereWrong
-                ? this._buildStep4VerificationFeedback(step4Analysis)
-                : (this._buildStep4VerificationFeedback(step4Analysis) || data.feedback);
-          data.next_question = this._buildStep4RecheckQuestion();
-        }
-        // ✅ Nếu validator nội bộ xác nhận đã kiểm tra đủ thì luôn hoàn thành, không phụ thuộc AI chấm đúng/sai
-        else {
-          data.status = "CORRECT";
-          data.step_status = "MOVE_NEXT";
-          data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
-          data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
+          if (refusedToCheck || !hasVerificationEvidence) {
+            data.status = "WRONG";
+            data.step_status = "STAY";
+            data.feedback = askedClarification
+              ? "'Kiểm tra lại' nghĩa là bạn làm phép tính ngược: lấy vận tốc vừa tìm được nhân với thời gian để tính lại quãng đường rồi so sánh với dữ kiện ban đầu."
+              : refusedToCheck
+                ? "Bước 4 bắt buộc phải kiểm tra lại, nên mình chưa thể kết thúc bài ở đây nhé."
+                : askedWhereWrong
+                  ? this._buildStep4VerificationFeedback(step4Analysis)
+                  : pointedSingleLap
+                    ? `Bạn nhận xét rất đúng: ${this.step4ChangedData?.roundInfo ? "quãng đường 0,9 km chỉ là 1 vòng, còn kiểm tra phải dùng tổng quãng đường của tất cả các vòng." : "nếu đề có nhiều vòng thì phải dùng tổng quãng đường của tất cả các vòng."} Mình cùng kiểm tra lại bằng phép tính ngược nhé.`
+                  : (this._buildStep4VerificationFeedback(step4Analysis) || data.feedback);
+            data.next_question = this._buildStep4RecheckQuestion();
+          } else {
+            this.step4Phase = "extension_check";
+            data.status = "CORRECT";
+            data.step_status = "STAY";
+            data.feedback = "Tuyệt vời! Bạn đã kiểm tra kết quả một cách hợp lý rồi.";
+            data.next_question = this._buildStep4ExtensionQuestion();
+          }
+        } else {
+          const extensionAnalysis = this._analyzeStep4Extension(studentAnswer, chatHistory);
+
+          if (refusedToCheck || !extensionAnalysis.isValid) {
+            data.status = "WRONG";
+            data.step_status = "STAY";
+            data.feedback = askedClarification
+              ? "Ở phần mở rộng, bạn chỉ cần đổi 1 dữ kiện theo câu hỏi, tính vận tốc mới rồi nêu mối liên hệ tăng/giảm với đáp số."
+              : refusedToCheck
+                ? "Phần mở rộng ở bước 4 là bắt buộc, mình cùng làm thêm một ý nữa nhé."
+                : this._buildStep4ExtensionFeedback(extensionAnalysis);
+            data.next_question = this._buildStep4ExtensionQuestion();
+          } else {
+            data.status = "CORRECT";
+            data.step_status = "MOVE_NEXT";
+            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
+            data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
+          }
         }
       }
 
@@ -837,11 +1023,14 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
           this.wrongAttemptCount = 0; // 🆕 Reset bộ đếm khi chuyển bước
         } else {
           this.isSessionComplete = true; 
+          this.step4Phase = "reverse_check";
         }
       }
 
       // Tạo câu phản hồi chuẩn từ feedback và next_question, không cắt ráp từ khóa nữa
-      let finalMessage = this._fixPronouns(`${data.feedback} ${data.next_question || ""}`).trim();
+      let finalMessage = this._fixPronouns(
+        this._mergeFeedbackAndQuestion(data.feedback, data.next_question),
+      ).trim();
 
       return {
         message: finalMessage,
@@ -858,7 +1047,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 
   async getHint() {
     const model = geminiModelManager.getModel();
-    const result = await model.generateContent(`Đưa ra duy nhất 1 câu hỏi gợi ý cho HS lớp 5 ở bước ${this.currentStep} bài: ${this.currentProblem}. Không giải thích.`);
+    const result = await model.generateContent(`Đưa ra duy nhất 1 câu hỏi gợi ý cho HS lớp 5 ở bước ${this.currentStep} bài: ${this.currentProblem}. Không giải thích. Nếu là bước 4 thì hỏi cách kiểm tra ngược đáp số vận tốc bằng phép nhân vận tốc với thời gian rồi đối chiếu quãng đường ban đầu.`);
     return this._fixPronouns(result.response.text());
   }
 }

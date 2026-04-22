@@ -166,24 +166,6 @@ function ProblemSolverPage({ user, onBack, problem }) {
     }
   };
 
-  // Yêu cầu gợi ý
-  const handleHint = async () => {
-    setIsLoading(true);
-    try {
-      const hint = await geminiService.getHint();
-      setMessages(prev => [...prev, {
-        type: 'ai',
-        content: `💡 Gợi ý: ${hint}`,
-        timestamp: new Date(),
-        isHint: true
-      }]);
-    } catch (error) {
-      alert('Không thể lấy gợi ý. Vui lòng thử lại!');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const getEvaluationBadge = (evaluation) => {
     if (!evaluation) return null;
     
@@ -394,14 +376,6 @@ function ProblemSolverPage({ user, onBack, problem }) {
               </div>
             ) : (
               <>
-                <button 
-                  className="w-12 h-12 rounded-full bg-yellow-400 hover:bg-yellow-500 text-2xl flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                  onClick={handleHint}
-                  disabled={isLoading}
-                  title="Nhận gợi ý"
-                >
-                  💡
-                </button>
                 <input
                   type="text"
                   className="flex-1 px-5 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors disabled:bg-gray-100"

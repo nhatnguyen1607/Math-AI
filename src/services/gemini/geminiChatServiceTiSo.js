@@ -8,7 +8,8 @@ export class GeminiChatServiceTiSo {
     this.isSessionComplete = false;
     this.currentContextId = EXAM_CONTEXTS[0]?.id || '';
     this.wrongAttemptCount = 0; // 🆕 Đếm số lần trả lời sai/không biết liên tiếp tại mỗi bước
-    this.step4ChangedData = null; // Lưu dữ liệu đã đổi ở bước 4 để kiểm tra câu trả lời
+    this.step4ChangedData = null; // Lưu dữ kiện gốc để kiểm tra ngược ở bước 4
+    this.step4Phase = "reverse_check"; // reverse_check -> extension_check
   }
 
   _getContext() {
@@ -217,25 +218,35 @@ export class GeminiChatServiceTiSo {
       return rounded.replace(".", ",");
     };
 
-    if (this.currentProblem && this.currentProblem.trim()) {
-      const numberMatches = this.currentProblem.match(/\d+(?:[,.]\d+)?/g);
-      const validNumbers = numberMatches
-        ? numberMatches
-            .map((num) => parseFloat(num.replace(",", ".")))
-            .filter((num) => !isNaN(num) && num > 0)
-        : [];
+    const roundInfo = this._extractRoundBasedTotalDistance(this.currentProblem);
+    const numberMatches = String(this.currentProblem || "").match(/\d+(?:[,.]\d+)?/g) || [];
+    let values = numberMatches
+      .map((num) => parseFloat(num.replace(",", ".")))
+      .filter((num) => Number.isFinite(num) && num > 0);
 
-      if (validNumbers.length > 0) {
-        const base = validNumbers[0];
-        const delta = Math.max(1, Math.round(Math.abs(base) * 0.2));
-        const next = base + delta;
-        this.step4ChangedData = { from: base, to: next };
-        return `Mình chọn sẵn để bạn kiểm tra nhé: giữ nguyên các dữ kiện còn lại, chỉ đổi một dữ kiện từ ${toVnNumber(base)} lên ${toVnNumber(next)}. Bạn hãy tính lại kết quả mới (nếu là tỉ lệ phần trăm thì nhớ ghi %), rồi nêu mối liên hệ giữa dữ liệu thay đổi và đáp số.`;
-      }
+    if (roundInfo) {
+      const filtered = values.filter(
+        (num) => Math.abs(num - roundInfo.roundCount) > 1e-9 && Math.abs(num - roundInfo.lapDistance) > 1e-9,
+      );
+      values = [roundInfo.totalDistance, ...filtered];
     }
 
-    this.step4ChangedData = { from: 10, to: 12 };
-    return "Mình chọn sẵn để bạn kiểm tra nhé: giữ nguyên các dữ kiện còn lại, chỉ đổi một dữ kiện từ 10 lên 12. Bạn hãy tính lại kết quả mới (nếu là tỉ lệ phần trăm thì nhớ ghi %), rồi nêu mối liên hệ giữa dữ liệu thay đổi và đáp số.";
+    const firstValue = values[0];
+    const secondValue = values[1];
+    this.step4ChangedData = {
+      firstValue: Number.isFinite(firstValue) ? firstValue : null,
+      secondValue: Number.isFinite(secondValue) ? secondValue : null,
+      roundInfo: roundInfo || null,
+    };
+
+    if (Number.isFinite(firstValue) && Number.isFinite(secondValue)) {
+      if (roundInfo) {
+        return `Kết quả bạn vừa tìm là tỉ số phần trăm giữa ${toVnNumber(firstValue)} (tổng quãng đường = ${toVnNumber(roundInfo.roundCount)} vòng × ${toVnNumber(roundInfo.lapDistance)} ${roundInfo.distanceUnit}) và ${toVnNumber(secondValue)}. Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?`;
+      }
+      return `Kết quả bạn vừa tìm là tỉ số phần trăm giữa ${toVnNumber(firstValue)} và ${toVnNumber(secondValue)}. Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?`;
+    }
+
+    return "Kết quả bạn vừa tìm là tỉ số phần trăm giữa hai đại lượng trong đề bài. Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?";
   }
 
   _isRefusingStep4Check(answer = "") {
@@ -249,7 +260,33 @@ export class GeminiChatServiceTiSo {
     const text = String(answer || "").toLowerCase().trim();
     return /(là\s*sao|la\s*sao|nghĩa\s*là\s*gì|nghia\s*la\s*gi|mình\s*chưa\s*hiểu|không\s*hiểu|ko\s*hiểu)/i.test(
       text,
-    ) && /(thay\s*đổi\s*số\s*liệu|thay\s*doi\s*so\s*lieu|kiểm\s*tra\s*lại|kiem\s*tra\s*lai|bước\s*4|buoc\s*4)/i.test(text);
+    ) && /(kiểm\s*tra\s*lại|kiem\s*tra\s*lai|làm\s*ngược|lam\s*nguoc|bước\s*4|buoc\s*4|phép\s*tính\s*gì)/i.test(text);
+  }
+
+  _isPointingOutSingleLapConfusion(answer = "") {
+    const text = String(answer || "").toLowerCase().trim();
+    return /(1\s*vòng|một\s*vòng).*(0[,.]?\d*|quãng\s*đường)|0[,.]\d+\s*km.*(1\s*vòng|một\s*vòng|chỉ\s*là)/i.test(
+      text,
+    );
+  }
+
+  _extractRoundBasedTotalDistance(problemText = "") {
+    const text = String(problemText || "").toLowerCase();
+    const roundPattern = /(\d+(?:[,.]\d+)?)\s*vòng[^.?!\n]*?(?:mỗi|mỗi\s*một)\s*vòng[^.?!\n]*?(\d+(?:[,.]\d+)?)\s*(km|m)\b/i;
+    const match = text.match(roundPattern);
+    if (!match) return null;
+
+    const roundCount = parseFloat(String(match[1]).replace(",", "."));
+    const lapDistance = parseFloat(String(match[2]).replace(",", "."));
+    const distanceUnit = match[3];
+    if (!Number.isFinite(roundCount) || !Number.isFinite(lapDistance) || !distanceUnit) return null;
+
+    return {
+      roundCount,
+      lapDistance,
+      distanceUnit,
+      totalDistance: roundCount * lapDistance,
+    };
   }
 
   _buildStep4EvidenceText(answer = "", chatHistory = []) {
@@ -281,60 +318,188 @@ export class GeminiChatServiceTiSo {
 
   _analyzeStep4Answer(answer = "", chatHistory = []) {
     const text = this._buildStep4EvidenceText(answer, chatHistory);
-    const hasComputedResult =
-      /(=\s*-?\d+(?:[.,]\d+)?|kết\s*quả\s*(mới)?\s*là\s*-?\d+(?:[.,]\d+)?|đáp\s*số\s*(mới)?\s*là\s*-?\d+(?:[.,]\d+)?)/i.test(
+    const firstVariants = Number.isFinite(this.step4ChangedData?.firstValue)
+      ? this._formatStep4ValueVariants(this.step4ChangedData.firstValue)
+      : [];
+    const secondVariants = Number.isFinite(this.step4ChangedData?.secondValue)
+      ? this._formatStep4ValueVariants(this.step4ChangedData.secondValue)
+      : [];
+
+    const hasReverseOperation =
+      /(chia\s*cho\s*100|\/\s*100|chia\s*100)/i.test(text) &&
+      /(nhân|\*)/i.test(text) &&
+      /(dữ\s*kiện\s*thứ\s*hai|số\s*thứ\s*hai|giá\s*trị\s*thứ\s*hai|đại\s*lượng\s*thứ\s*hai|mẫu\s*số|số\s*đem\s*so\s*sánh)/i.test(
         text,
       );
-    const hasRelationship =
-      /(tỉ\s*lệ\s*thuận|tỉ\s*lệ\s*nghịch|khi\s+.*\s+thì\s+.*|nếu\s+.*\s+thì\s+.*|nên|do\s*đó|vì\s*vậy|mối\s*liên\s*hệ)/i.test(
+
+    const hasComparisonWithOriginal =
+      (/(bằng|khớp|trùng|đúng|chính\s*xác|không\s*trùng|không\s*khớp|sai)/i.test(text) &&
+        /(dữ\s*kiện\s*thứ\s*nhất|số\s*thứ\s*nhất|giá\s*trị\s*thứ\s*nhất|đại\s*lượng\s*thứ\s*nhất|đề\s*bài|ban\s*đầu)/i.test(
+          text,
+        )) ||
+      firstVariants.some((value) => value && text.includes(String(value).toLowerCase()));
+
+    const mentionsSecondData = secondVariants.some((value) =>
+      value ? text.includes(String(value).toLowerCase()) : false,
+    );
+
+    const hasConclusionRule =
+      /(nếu\s+.*(bằng|khớp|trùng).*(đúng|chính\s*xác)|ngược\s*lại|không\s*(bằng|khớp|trùng).*(xem\s*lại|kiểm\s*tra|sai\s*sót))/i.test(
         text,
-      ) && /(tăng|giảm|lớn\s*hơn|nhỏ\s*hơn)/i.test(text);
+      );
 
-    const mentionChangePhrase = /(thay|đổi|từ|thành|giữ\s*nguyên)/i.test(text);
-    let hasChangedDataReference = mentionChangePhrase;
-    if (this.step4ChangedData) {
-      const toValues = this._formatStep4ValueVariants(this.step4ChangedData.to);
-      hasChangedDataReference =
-        hasChangedDataReference ||
-        toValues.some((value) => text.includes(String(value).toLowerCase()));
-    }
+    const isValid = hasReverseOperation && (hasComparisonWithOriginal || hasConclusionRule || mentionsSecondData);
 
-    const guides = [];
-    if (!hasChangedDataReference) {
-      const fromText = this.step4ChangedData
-        ? this._formatStep4ValueVariants(this.step4ChangedData.from)[1] || this.step4ChangedData.from
-        : "giá trị cũ";
-      const toText = this.step4ChangedData
-        ? this._formatStep4ValueVariants(this.step4ChangedData.to)[1] || this.step4ChangedData.to
-        : "giá trị mới";
-      guides.push(`nêu đúng dữ liệu đã đổi từ ${fromText} lên ${toText}`);
-    }
-    if (!hasComputedResult) {
-      guides.push("ghi rõ phép tính hoặc kết quả mới bằng số");
-    }
-    if (!hasRelationship) {
-      guides.push("nêu mối liên hệ theo mẫu: dữ liệu tăng/giảm thì đáp số tăng/giảm tương ứng");
-    }
-
-    if (guides.length > 0) {
-      return {
-        isValid: false,
-        hasComputedResult,
-        hasChangedDataReference,
-        hasRelationship,
-        message: `Bạn làm đúng được một phần rồi. Để hoàn thành bước 4, bạn bổ sung giúp mình: ${guides.join("; ")}.`,
-      };
-    }
-
-    return { isValid: true, hasComputedResult, hasChangedDataReference, hasRelationship };
+    return {
+      isValid,
+      hasReverseOperation,
+      hasComparisonWithOriginal,
+      hasConclusionRule,
+      mentionsSecondData,
+      message: isValid ? "" : this._ensureSpecificStep4WrongFeedback(),
+    };
   }
 
   _ensureSpecificStep4WrongFeedback(feedback = "") {
-    const text = String(feedback || "").trim();
-    if (/sai|nhầm|thiếu|chưa|lỗi|khớp|đơn\s*vị|%/i.test(text)) {
-      return text;
+    const first = this.step4ChangedData?.firstValue;
+    const second = this.step4ChangedData?.secondValue;
+    const displayFirst = Number.isFinite(first)
+      ? this._formatStep4ValueVariants(first)[1] || this._formatStep4ValueVariants(first)[0]
+      : "dữ kiện thứ nhất";
+    const displaySecond = Number.isFinite(second)
+      ? this._formatStep4ValueVariants(second)[1] || this._formatStep4ValueVariants(second)[0]
+      : "dữ kiện thứ hai";
+    const roundInfo = this.step4ChangedData?.roundInfo;
+    const roundNote = roundInfo
+      ? ` Lưu ý: tổng quãng đường cần dùng là ${String(roundInfo.roundCount).replace(".", ",")} × ${String(roundInfo.lapDistance).replace(".", ",")} ${roundInfo.distanceUnit} = ${displayFirst}.`
+      : "";
+
+    return `Từ kết quả phần trăm vừa tìm được, bạn hãy lấy kết quả chia cho 100 rồi nhân với ${displaySecond}. Nếu kết quả tính lại đúng bằng ${displayFirst} của đề bài thì kết quả là chính xác. Ngược lại, nếu không trùng khớp thì bạn cần xem lại các bước làm vì có thể đã xảy ra sai sót.${roundNote}`;
+  }
+
+  _buildStep4ExtensionQuestion() {
+    const toVnNumber = (num) => {
+      const rounded = Number(num).toFixed(2).replace(/\.00$/, "").replace(/(\.\d*?)0+$/, "$1");
+      return rounded.replace(".", ",");
+    };
+
+    const first = this.step4ChangedData?.firstValue;
+    const second = this.step4ChangedData?.secondValue;
+
+    if (Number.isFinite(first)) {
+      const delta = Math.max(1, Math.round(Math.abs(first) * 0.2));
+      const nextFirst = first + delta;
+      this.step4ChangedData = {
+        ...this.step4ChangedData,
+        extension: {
+          field: "first",
+          from: first,
+          to: nextFirst,
+          unit: "",
+          fixedSecond: Number.isFinite(second) ? second : null,
+        },
+      };
+
+      const secondText = Number.isFinite(second)
+        ? `, giữ nguyên dữ kiện thứ hai là ${toVnNumber(second)}`
+        : "";
+
+      return `Tuyệt vời! Vậy bây giờ hãy thử mở rộng thêm 1 chút nhé: nếu đổi dữ kiện thứ nhất từ ${toVnNumber(first)} thành ${toVnNumber(nextFirst)}${secondText} thì tỉ số phần trăm cuối sẽ thay đổi như thế nào? Bạn hãy tính kết quả mới và nêu mối liên hệ.`;
     }
-    return "Mình thấy phần kiểm tra lại của bạn chưa đúng. Bạn hãy rà lại phép tính để ra kết quả mới theo dữ liệu đã đổi, rồi nêu rõ mối liên hệ tăng/giảm và nhớ ghi đơn vị %.";
+
+    if (Number.isFinite(second)) {
+      const delta = Math.max(1, Math.round(Math.abs(second) * 0.2));
+      const nextSecond = second + delta;
+      this.step4ChangedData = {
+        ...this.step4ChangedData,
+        extension: {
+          field: "second",
+          from: second,
+          to: nextSecond,
+          unit: "",
+          fixedFirst: Number.isFinite(first) ? first : null,
+        },
+      };
+
+      const firstText = Number.isFinite(first)
+        ? `, giữ nguyên dữ kiện thứ nhất là ${toVnNumber(first)}`
+        : "";
+
+      return `Tuyệt vời! Vậy bây giờ hãy thử mở rộng thêm 1 chút nhé: nếu đổi dữ kiện thứ hai từ ${toVnNumber(second)} thành ${toVnNumber(nextSecond)}${firstText} thì tỉ số phần trăm cuối sẽ thay đổi như thế nào? Bạn hãy tính kết quả mới và nêu mối liên hệ.`;
+    }
+
+    this.step4ChangedData = {
+      ...this.step4ChangedData,
+      extension: { field: "generic", from: 10, to: 12, unit: "" },
+    };
+
+    return "Tuyệt vời! Vậy bây giờ hãy thử mở rộng thêm 1 chút nhé: nếu thay đổi một dữ kiện trong đề bài thì tỉ số phần trăm cuối sẽ thay đổi như thế nào? Bạn hãy tính kết quả mới và nêu mối liên hệ.";
+  }
+
+  _analyzeStep4Extension(answer = "", chatHistory = []) {
+    const text = this._buildStep4EvidenceText(answer, chatHistory);
+    const ext = this.step4ChangedData?.extension || {};
+
+    const fromVariants = ext?.from !== undefined
+      ? [String(ext.from), String(ext.from).replace(".", ",")]
+      : [];
+    const toVariants = ext?.to !== undefined
+      ? [String(ext.to), String(ext.to).replace(".", ",")]
+      : [];
+
+    const hasChangedInputMention =
+      /(thay|đổi|doi).*?(thành|thanh|sang|ra)/i.test(text) ||
+      /(từ|tu)\s*\d+[.,]?\d*\s*(thành|thanh|lên|len|xuống|xuong|đến|den)\s*\d+[.,]?\d*/i.test(text) ||
+      (fromVariants.some((value) => value && text.includes(value.toLowerCase())) &&
+        toVariants.some((value) => value && text.includes(value.toLowerCase())));
+
+    const hasNewComputedResult =
+      /(=\s*\d+[.,]?\d*\s*%?|kết\s*quả\s*(mới)?\s*là\s*\d+[.,]?\d*\s*%?|đáp\s*số\s*(mới)?\s*là\s*\d+[.,]?\d*\s*%?)/i.test(
+        text,
+      );
+
+    const hasRelationshipReasoning =
+      /(tỉ\s*lệ\s*thuận|tỉ\s*lệ\s*nghịch|khi\s+.*\s+thì\s+.*|nếu\s+.*\s+thì\s+.*|nên|do\s*đó|vì\s*vậy|mối\s*liên\s*hệ)/i.test(
+        text,
+      ) && /(tăng|giảm|lớn\s*hơn|nhỏ\s*hơn|cao\s*hơn|thấp\s*hơn)/i.test(text);
+
+    const hasPercentUnit = /%|phần\s*trăm/i.test(text);
+
+    const isValid =
+      hasChangedInputMention &&
+      hasNewComputedResult &&
+      hasRelationshipReasoning &&
+      hasPercentUnit;
+
+    return {
+      isValid,
+      hasChangedInputMention,
+      hasNewComputedResult,
+      hasRelationshipReasoning,
+      hasPercentUnit,
+    };
+  }
+
+  _buildStep4ExtensionFeedback(analysis = {}) {
+    const guides = [];
+    if (!analysis.hasChangedInputMention) {
+      guides.push("nêu rõ dữ kiện đã đổi từ ... thành ...");
+    }
+    if (!analysis.hasNewComputedResult) {
+      guides.push("ghi phép tính và kết quả phần trăm mới");
+    }
+    if (!analysis.hasPercentUnit) {
+      guides.push("thêm đơn vị % cho kết quả");
+    }
+    if (!analysis.hasRelationshipReasoning) {
+      guides.push("nêu mối liên hệ giữa dữ kiện thay đổi và đáp số");
+    }
+
+    if (guides.length === 0) {
+      return "Bạn đã mở rộng đúng rồi, bạn rà lại thêm một lần nữa cho chắc nhé.";
+    }
+
+    return `Bạn làm đúng được một phần rồi. Để hoàn thành phần mở rộng, bạn bổ sung giúp mình: ${guides.join("; ")}.`;
   }
 
   _hasStep1Complete(answer = "", chatHistory = []) {
@@ -421,6 +586,44 @@ export class GeminiChatServiceTiSo {
       .replace(/\bem\s+(hãy|cần|có|là|vừa)/g, 'bạn $1');
   }
 
+  _normalizeForCompare(text = "") {
+    return String(text || "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  _dedupeConsecutiveSentences(text = "") {
+    const parts = String(text || "").match(/[^.!?]+[.!?]?/g) || [];
+    const deduped = [];
+    let prevNorm = "";
+
+    for (const part of parts) {
+      const cleaned = part.replace(/\s+/g, " ").trim();
+      if (!cleaned) continue;
+      const norm = this._normalizeForCompare(cleaned);
+      if (!norm || norm === prevNorm) continue;
+      deduped.push(cleaned);
+      prevNorm = norm;
+    }
+
+    return deduped.join(" ").trim();
+  }
+
+  _mergeFeedbackAndQuestion(feedback = "", nextQuestion = "") {
+    const fb = String(feedback || "").trim();
+    const nq = String(nextQuestion || "").trim();
+
+    if (!fb && !nq) return "";
+    if (!nq) return this._dedupeConsecutiveSentences(fb);
+    if (!fb) return this._dedupeConsecutiveSentences(nq);
+
+    const fbNorm = this._normalizeForCompare(fb);
+    const nqNorm = this._normalizeForCompare(nq);
+    const merged = fbNorm.includes(nqNorm) ? fb : `${fb} ${nq}`;
+    return this._dedupeConsecutiveSentences(merged);
+  }
+
   // 🆕 Xác định mức hỗ trợ theo số lần sai liên tiếp
   _getScaffoldingLevel() {
     if (this.wrongAttemptCount <= 1) return 1; // Lần 1: Động viên + kêu kiểm tra lại
@@ -478,6 +681,8 @@ export class GeminiChatServiceTiSo {
     this.currentProblem = problemText;
     this.wrongAttemptCount = 0; // Reset khi restore
     this.step4ChangedData = null;
+    this.step4Phase = "reverse_check";
+    this.isSessionComplete = false;
     if (examContextId) {
       this.currentContextId = examContextId;
     }
@@ -488,10 +693,32 @@ export class GeminiChatServiceTiSo {
         fixedHistory.unshift({ role: 'user', parts: [{ text: problemText }] });
       }
       const fullText = fixedHistory.map(m => m.parts[0]?.text || '').join(' ');
-      if (fullText.includes("Kiểm tra")) this.currentStep = 4;
+      const normalized = String(fullText || "").toLowerCase();
+      const hasCompletionSignal =
+        /đã hoàn thành bài toán|bạn đã hoàn thành bài toán|hãy nộp bài luyện tập này|nhấn nút 'nộp bài'|nhấn nút "nộp bài"/i.test(
+          normalized,
+        );
+      const hasStep4Signal =
+        /kiểm tra lại|phép tính ngược|tỉ số phần trăm|thay đổi một dữ kiện|kết quả phần trăm mới|bước 4/i.test(normalized);
+
+      if (hasCompletionSignal) {
+        this.currentStep = 4;
+        this.step4Phase = "extension_check";
+        this.isSessionComplete = true;
+        return;
+      }
+
+      if (hasStep4Signal || fullText.includes("Kiểm tra")) this.currentStep = 4;
       else if (fullText.includes("Thực hiện")) this.currentStep = 3;
       else if (fullText.includes("Lập kế hoạch")) this.currentStep = 2;
       else if (fullText.includes("Hiểu bài")) this.currentStep = 1;
+
+      if (
+        this.currentStep === 4 &&
+        /mở rộng|thay\s*đổi\s*(số\s*liệu|dữ\s*kiện)|kết\s*quả\s*mới/i.test(fullText)
+      ) {
+        this.step4Phase = "extension_check";
+      }
     }
   }
 
@@ -548,9 +775,10 @@ CHI TIẾT PHẢN HỒI THEO BƯỚC:
   - Yêu cầu HS trình bày lời giải đầy đủ theo kế hoạch đã nêu.
   - TUYỆT ĐỐI KHÔNG ĐƯỢC lặp lại các câu hỏi của bước 1 hay bước 2 (như "đề bài cho biết gì?", "bạn cần tìm gì?", "bạn sẽ giải bài này thế nào?"). CHỈ nhận xét lỗi tính toán và yêu cầu tính tiếp.
   - KHÔNG đưa số cụ thể vào gợi ý.
-4. 🔵 KIỂM TRA (Bước 4):
-  - Chỉ MOVE_NEXT khi HS đã kiểm tra thật sự: tính được kết quả mới khi thay đổi dữ liệu và nêu được mối liên hệ giữa dữ liệu thay đổi với đáp số.
-  - Không chấp nhận câu trả lời chỉ nói "tăng/giảm" mà không có phép tính và kết quả mới.
+4. 🔵 KIỂM TRA (Bước 4 - 2 TẦNG):
+  - Tầng 1: Hỏi HS cách kiểm tra lại tỉ số phần trăm vừa tìm được bằng phép làm ngược.
+  - Khi HS làm đúng tầng 1, CHƯA kết thúc bài ngay: chuyển sang Tầng 2 (mở rộng), yêu cầu thay đổi một dữ kiện rồi tính kết quả phần trăm mới và nêu mối liên hệ.
+  - Chỉ MOVE_NEXT khi HS hoàn thành cả 2 tầng ở bước 4.
 
 LUÔN TRẢ VỀ JSON:
 {
@@ -568,6 +796,7 @@ LUÔN TRẢ VỀ JSON:
     this.isSessionComplete = false;
     this.wrongAttemptCount = 0; // 🆕 Reset bộ đếm
     this.step4ChangedData = null;
+    this.step4Phase = "reverse_check";
     if (examContextId) {
       this.currentContextId = examContextId;
     }
@@ -653,9 +882,12 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 3. TẠI BƯỚC 2: KHÔNG hỏi lại dữ kiện. CHỈ hỏi kế hoạch giải.
 3.1. Nếu đề cần đổi đơn vị thì ở bước 2 phải yêu cầu nêu bước đổi đơn vị, chưa nêu thì chưa được MOVE_NEXT.
 4. TẠI BƯỚC 3: KHÔNG hỏi lại bước 1/2. CHỈ yêu cầu trình bày lời giải hoặc hỗ trợ tính toán.
-5. TẠI BƯỚC 4: BẮT BUỘC yêu cầu tính lại kết quả khi thay đổi dữ liệu và nêu mối liên hệ; KHÔNG chấp nhận chỉ trả lời tăng/giảm.
-6. Chỉ MOVE_NEXT khi HS trả lời đúng và đủ ý.
-7. ⚠️ NẾU HS nhập dấu chấm (0.7), nhắc dùng dấu phẩy (0,7).
+5. TẠI BƯỚC 4: đi theo 2 tầng bắt buộc.
+  - Tầng 1: kiểm tra ngược kết quả phần trăm bằng cách lấy kết quả chia 100 rồi nhân với dữ kiện thứ hai để đối chiếu dữ kiện thứ nhất ban đầu.
+  - Tầng 2: mở rộng bằng thay đổi một dữ kiện rồi tính kết quả phần trăm mới và nêu mối liên hệ.
+6. Sau khi HS làm đúng tầng 1 thì CHƯA hoàn thành bài, phải hỏi tiếp tầng 2.
+7. Chỉ MOVE_NEXT khi HS trả lời đúng và đủ ý.
+8. ⚠️ NẾU HS nhập dấu chấm (0.7), nhắc dùng dấu phẩy (0,7).
 `;
 
     try {
@@ -708,6 +940,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 
       // ✅ Sau khi hoàn thành bước 3, chuyển sang câu hỏi kiểm tra bắt buộc có tính lại kết quả
       if (this.currentStep === 3 && data.step_status === "MOVE_NEXT") {
+        this.step4Phase = "reverse_check";
         data.feedback = data.feedback || "Bạn đã thực hiện lời giải tốt lắm!";
         data.next_question = this._buildStep4RecheckQuestion();
       }
@@ -721,24 +954,43 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
       if (this.currentStep === 4) {
         const refusedToCheck = this._isRefusingStep4Check(studentAnswer);
         const askedClarification = this._isAskingStep4Clarification(studentAnswer);
-        const step4Validation = this._analyzeStep4Answer(studentAnswer, chatHistory);
-        const hasVerificationEvidence = step4Validation.isValid;
+        const pointedSingleLap = this._isPointingOutSingleLapConfusion(studentAnswer);
+        if (this.step4Phase !== "extension_check") {
+          const step4Validation = this._analyzeStep4Answer(studentAnswer, chatHistory);
+          const hasVerificationEvidence = step4Validation.isValid;
 
-        // ✅ Bắt buộc có kiểm tra lại đầy đủ trước khi cho hoàn thành
-        if (refusedToCheck || !hasVerificationEvidence) {
-          data.status = "WRONG";
-          data.step_status = "STAY";
-          data.feedback = askedClarification
-            ? "'Thay đổi số liệu' nghĩa là giữ nguyên các dữ kiện còn lại, chỉ đổi 1 dữ kiện rồi tính lại đáp số mới để so sánh."
-            : step4Validation.message;
-          data.next_question = this._buildStep4RecheckQuestion();
-        }
-        // ✅ Nếu validator nội bộ xác nhận đã kiểm tra đủ thì luôn hoàn thành, không phụ thuộc AI chấm đúng/sai
-        else {
-          data.status = "CORRECT";
-          data.step_status = "MOVE_NEXT";
-          data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
-          data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
+          if (refusedToCheck || !hasVerificationEvidence) {
+            data.status = "WRONG";
+            data.step_status = "STAY";
+            data.feedback = askedClarification
+              ? "'Kiểm tra lại' nghĩa là bạn làm phép tính ngược: lấy kết quả phần trăm vừa tìm được chia cho 100 rồi nhân với dữ kiện thứ hai để đối chiếu lại dữ kiện thứ nhất ban đầu."
+              : pointedSingleLap
+                ? "Bạn nhận xét rất đúng: nếu đề có nhiều vòng thì phải lấy tổng quãng đường của tất cả các vòng, không chỉ quãng đường của 1 vòng. Mình cùng kiểm tra lại theo hướng đó nhé."
+              : step4Validation.message;
+            data.next_question = this._buildStep4RecheckQuestion();
+          } else {
+            this.step4Phase = "extension_check";
+            data.status = "CORRECT";
+            data.step_status = "STAY";
+            data.feedback = "Tuyệt vời! Bạn đã kiểm tra kết quả một cách hợp lý rồi.";
+            data.next_question = this._buildStep4ExtensionQuestion();
+          }
+        } else {
+          const extensionAnalysis = this._analyzeStep4Extension(studentAnswer, chatHistory);
+
+          if (refusedToCheck || !extensionAnalysis.isValid) {
+            data.status = "WRONG";
+            data.step_status = "STAY";
+            data.feedback = askedClarification
+              ? "Ở phần mở rộng, bạn chỉ cần đổi 1 dữ kiện theo câu hỏi, tính kết quả phần trăm mới rồi nêu mối liên hệ."
+              : this._buildStep4ExtensionFeedback(extensionAnalysis);
+            data.next_question = this._buildStep4ExtensionQuestion();
+          } else {
+            data.status = "CORRECT";
+            data.step_status = "MOVE_NEXT";
+            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
+            data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
+          }
         }
       }
 
@@ -749,11 +1001,14 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
           this.wrongAttemptCount = 0; // 🆕 Reset bộ đếm khi chuyển bước
         } else {
           this.isSessionComplete = true; 
+          this.step4Phase = "reverse_check";
         }
       }
 
       // Tạo câu phản hồi chuẩn từ feedback và next_question, không cắt ráp từ khóa nữa
-      let finalMessage = this._fixPronouns(`${data.feedback} ${data.next_question || ""}`).trim();
+      let finalMessage = this._fixPronouns(
+        this._mergeFeedbackAndQuestion(data.feedback, data.next_question),
+      ).trim();
 
       return {
         message: finalMessage,
@@ -770,7 +1025,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 
   async getHint() {
     const model = geminiModelManager.getModel();
-    const result = await model.generateContent(`Đưa ra duy nhất 1 câu hỏi gợi ý cho HS lớp 5 ở bước ${this.currentStep} (${this._getStepName(this.currentStep)}) bài toán tỉ số: ${this.currentProblem}. Không giải thích, xưng bạn. Nếu là bước 4 thì nêu sẵn một dữ liệu cần thay đổi để HS tính trực tiếp.`);
+    const result = await model.generateContent(`Đưa ra duy nhất 1 câu hỏi gợi ý cho HS lớp 5 ở bước ${this.currentStep} (${this._getStepName(this.currentStep)}) bài toán tỉ số: ${this.currentProblem}. Không giải thích, xưng bạn. Nếu là bước 4 thì theo 2 tầng: (1) kiểm tra ngược bằng chia 100 rồi nhân dữ kiện thứ hai, (2) sau đó hỏi mở rộng thay đổi dữ kiện để tính kết quả phần trăm mới.`);
     return this._fixPronouns(result.response.text());
   }
 }

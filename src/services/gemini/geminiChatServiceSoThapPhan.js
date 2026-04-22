@@ -11,6 +11,7 @@ export class GeminiChatServiceSoThapPhan {
     this.isSessionComplete = false;
     this.wrongAttemptCount = 0; // 🆕 Đếm số lần trả lời sai/không biết liên tiếp tại mỗi bước
     this.step4ChangedData = null; // Lưu dữ liệu đã đổi ở bước 4 để kiểm tra câu trả lời
+    this.step4Phase = "reverse_check"; // reverse_check -> extension_check
   }
 
   _getStepName(step) {
@@ -44,6 +45,44 @@ export class GeminiChatServiceSoThapPhan {
         .replace(/\bem\s+ơi/g, "bạn")
         .replace(/\bem\s+(hãy|cần|có|là|vừa)/g, "bạn $1")
     );
+  }
+
+  _normalizeForCompare(text = "") {
+    return String(text || "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  _dedupeConsecutiveSentences(text = "") {
+    const parts = String(text || "").match(/[^.!?]+[.!?]?/g) || [];
+    const deduped = [];
+    let prevNorm = "";
+
+    for (const part of parts) {
+      const cleaned = part.replace(/\s+/g, " ").trim();
+      if (!cleaned) continue;
+      const norm = this._normalizeForCompare(cleaned);
+      if (!norm || norm === prevNorm) continue;
+      deduped.push(cleaned);
+      prevNorm = norm;
+    }
+
+    return deduped.join(" ").trim();
+  }
+
+  _mergeFeedbackAndQuestion(feedback = "", nextQuestion = "") {
+    const fb = String(feedback || "").trim();
+    const nq = String(nextQuestion || "").trim();
+
+    if (!fb && !nq) return "";
+    if (!nq) return this._dedupeConsecutiveSentences(fb);
+    if (!fb) return this._dedupeConsecutiveSentences(nq);
+
+    const fbNorm = this._normalizeForCompare(fb);
+    const nqNorm = this._normalizeForCompare(nq);
+    const merged = fbNorm.includes(nqNorm) ? fb : `${fb} ${nq}`;
+    return this._dedupeConsecutiveSentences(merged);
   }
 
   // 🆕 Kiểm tra lỗi phổ biến với số thập phân
@@ -104,25 +143,40 @@ export class GeminiChatServiceSoThapPhan {
     );
   }
 
+  _buildStep4ReverseCheckQuestion() {
+    return "Kết quả bạn vừa tính được là bao nhiêu? Để kiểm tra kết quả đó đúng, bạn sẽ làm thế nào (ví dụ: tính ngược hoặc thử lại rồi đối chiếu với dữ kiện ban đầu)?";
+  }
+
   _buildStep4RecheckQuestion() {
     const toVnNumber = (num) => {
       const rounded = Number(num).toFixed(2).replace(/\.00$/, "").replace(/(\.\d*?)0+$/, "$1");
       return rounded.replace(".", ",");
     };
 
+    const roundInfo = this._extractRoundBasedTotalDistance(this.currentProblem);
     if (this.currentProblem && this.currentProblem.trim()) {
       const numberMatches = this.currentProblem.match(/\d+(?:[,.]\d+)?/g);
-      const validNumbers = numberMatches
+      let validNumbers = numberMatches
         ? numberMatches
             .map((num) => parseFloat(num.replace(",", ".")))
             .filter((num) => !isNaN(num) && num > 0)
         : [];
 
+      if (roundInfo) {
+        const filtered = validNumbers.filter(
+          (num) => Math.abs(num - roundInfo.roundCount) > 1e-9 && Math.abs(num - roundInfo.lapDistance) > 1e-9,
+        );
+        validNumbers = [roundInfo.totalDistance, ...filtered];
+      }
+
       if (validNumbers.length > 0) {
         const base = validNumbers[0];
         const delta = Math.max(1, Math.round(Math.abs(base) * 0.2));
         const next = base + delta;
-        this.step4ChangedData = { from: base, to: next };
+        this.step4ChangedData = { from: base, to: next, roundInfo: roundInfo || null };
+        if (roundInfo) {
+          return `Mình chọn sẵn để bạn kiểm tra nhé: ở đề có ${toVnNumber(roundInfo.roundCount)} vòng, mỗi vòng ${toVnNumber(roundInfo.lapDistance)} ${roundInfo.distanceUnit} nên tổng là ${toVnNumber(roundInfo.totalDistance)} ${roundInfo.distanceUnit}. Giữ nguyên các dữ kiện còn lại, chỉ đổi số này từ ${toVnNumber(base)} lên ${toVnNumber(next)}. Bạn hãy tính lại kết quả mới và nêu mối liên hệ giữa số liệu thay đổi với đáp số.`;
+        }
         return `Mình chọn sẵn để bạn kiểm tra nhé: giữ nguyên các dữ kiện còn lại, chỉ đổi một số từ ${toVnNumber(base)} lên ${toVnNumber(next)}. Bạn hãy tính lại kết quả mới và nêu mối liên hệ giữa số liệu thay đổi với đáp số.`;
       }
     }
@@ -142,7 +196,33 @@ export class GeminiChatServiceSoThapPhan {
     const text = String(answer || "").toLowerCase().trim();
     return /(là\s*sao|la\s*sao|nghĩa\s*là\s*gì|nghia\s*la\s*gi|mình\s*chưa\s*hiểu|không\s*hiểu|ko\s*hiểu)/i.test(
       text,
-    ) && /(thay\s*đổi\s*số\s*liệu|thay\s*doi\s*so\s*lieu|kiểm\s*tra\s*lại|kiem\s*tra\s*lai|bước\s*4|buoc\s*4)/i.test(text);
+    ) && /(thay\s*đổi\s*số\s*liệu|thay\s*doi\s*so\s*lieu|kiểm\s*tra\s*lại|kiem\s*tra\s*lai|làm\s*ngược|lam\s*nguoc|bước\s*4|buoc\s*4)/i.test(text);
+  }
+
+  _isPointingOutSingleLapConfusion(answer = "") {
+    const text = String(answer || "").toLowerCase().trim();
+    return /(1\s*vòng|một\s*vòng).*(0[,.]?\d*|quãng\s*đường)|0[,.]\d+\s*km.*(1\s*vòng|một\s*vòng|chỉ\s*là)/i.test(
+      text,
+    );
+  }
+
+  _extractRoundBasedTotalDistance(problemText = "") {
+    const text = String(problemText || "").toLowerCase();
+    const roundPattern = /(\d+(?:[,.]\d+)?)\s*vòng[^.?!\n]*?(?:mỗi|mỗi\s*một)\s*vòng[^.?!\n]*?(\d+(?:[,.]\d+)?)\s*(km|m)\b/i;
+    const match = text.match(roundPattern);
+    if (!match) return null;
+
+    const roundCount = parseFloat(String(match[1]).replace(",", "."));
+    const lapDistance = parseFloat(String(match[2]).replace(",", "."));
+    const distanceUnit = match[3];
+    if (!Number.isFinite(roundCount) || !Number.isFinite(lapDistance) || !distanceUnit) return null;
+
+    return {
+      roundCount,
+      lapDistance,
+      distanceUnit,
+      totalDistance: roundCount * lapDistance,
+    };
   }
 
   _buildStep4EvidenceText(answer = "", chatHistory = []) {
@@ -170,6 +250,26 @@ export class GeminiChatServiceSoThapPhan {
       .replace(/(\.\d*?)0+$/, "$1");
     const comma = compact.replace(".", ",");
     return Array.from(new Set([compact, comma, String(num)]));
+  }
+
+  _analyzeStep4ReverseCheck(answer = "", chatHistory = []) {
+    const text = this._buildStep4EvidenceText(answer, chatHistory);
+
+    const hasReverseIdea =
+      /(kiểm\s*tra|đối\s*chiếu|thử\s*lại|làm\s*ngược|tính\s*ngược|thế\s*lại|thay\s*lại)/i.test(text);
+
+    const hasMethodDetail =
+      /(phép\s*tính\s*ngược|đổi\s*ngược|tính\s*lại|so\s*sánh\s*với\s*đề|so\s*sánh\s*dữ\s*kiện|kiểm\s*tra\s*dấu\s*phẩy|đơn\s*vị)/i.test(
+        text,
+      );
+
+    const isValid = hasReverseIdea && hasMethodDetail;
+
+    return { isValid, hasReverseIdea, hasMethodDetail };
+  }
+
+  _buildStep4ReverseCheckFeedback() {
+    return "Ở phần kiểm tra, bạn hãy nêu rõ cách làm: dùng phép tính ngược hoặc thử tính lại rồi đối chiếu với dữ kiện ban đầu, đồng thời kiểm tra vị trí dấu phẩy và đơn vị. Bạn thử trả lời lại theo hướng đó nhé.";
   }
 
   _analyzeStep4Answer(answer = "", chatHistory = []) {
@@ -287,6 +387,8 @@ export class GeminiChatServiceSoThapPhan {
     this.currentProblem = problemText;
     this.wrongAttemptCount = 0; // Reset khi restore
     this.step4ChangedData = null;
+    this.step4Phase = "reverse_check";
+    this.isSessionComplete = false;
     const model = geminiModelManager.getModel();
     if (model && chatHistory && chatHistory.length > 0) {
       let fixedHistory = Array.isArray(chatHistory) ? [...chatHistory] : [];
@@ -296,10 +398,32 @@ export class GeminiChatServiceSoThapPhan {
       const fullText = fixedHistory
         .map((m) => m.parts[0]?.text || "")
         .join(" ");
-      if (fullText.includes("Kiểm tra")) this.currentStep = 4;
+      const normalized = String(fullText || "").toLowerCase();
+      const hasCompletionSignal =
+        /đã hoàn thành bài toán|bạn đã hoàn thành bài toán|hãy nộp bài luyện tập này|nhấn nút 'nộp bài'|nhấn nút "nộp bài"/i.test(
+          normalized,
+        );
+      const hasStep4Signal =
+        /kiểm tra lại|phép tính ngược|thử lại rồi đối chiếu|thay đổi một số liệu|kết quả mới|bước 4/i.test(normalized);
+
+      if (hasCompletionSignal) {
+        this.currentStep = 4;
+        this.step4Phase = "extension_check";
+        this.isSessionComplete = true;
+        return;
+      }
+
+      if (hasStep4Signal || fullText.includes("Kiểm tra")) this.currentStep = 4;
       else if (fullText.includes("Thực hiện")) this.currentStep = 3;
       else if (fullText.includes("Lập kế hoạch")) this.currentStep = 2;
       else if (fullText.includes("Hiểu bài")) this.currentStep = 1;
+
+      if (
+        this.currentStep === 4 &&
+        /mở rộng|thay\s*đổi\s*(số\s*liệu|dữ\s*kiện)|kết\s*quả\s*mới/i.test(fullText)
+      ) {
+        this.step4Phase = "extension_check";
+      }
     }
   }
 
@@ -363,11 +487,10 @@ CHI TIẾT PHẢN HỒI THEO BƯỚC:
    - TUYỆT ĐỐI KHÔNG ĐƯỢC lặp lại các câu hỏi của bước 1 hay bước 2 (như "đề bài cho biết gì?", "bạn cần tìm gì?", "bạn sẽ giải bài này thế nào?").
    - ⚠️ PHÁT HIỆN LỖI CỤ THỂ: Nếu HS sai, chỉ rõ lỗi (dấu phẩy sai, thiếu đơn vị, v.v.) để HS biết sửa và yêu cầu tính lại.
 
-4. 🔵 KIỂM TRA (Bước 4 - CẬP NHẬT):
-   - KIỂM TRA CHẶT CHẼ từng bước:
-     * Hỏi bắt buộc theo dạng: "Nếu thay đổi một số liệu ban đầu thì kết quả mới là bao nhiêu?" (HS phải tính ra kết quả mới, không chỉ nói tăng/giảm).
-     * Hỏi về logic: "Kết quả có hợp lý không? Bạn hãy kiểm tra lại: đơn vị có đúng? Dấu phẩy có đúng? Độ lớn của kết quả có hợp lý?"
-   - Chỉ MOVE_NEXT khi HS đã thực sự kiểm tra: có tính kết quả mới + nêu được mối liên hệ giữa dữ liệu thay đổi và đáp số.
+4. 🔵 KIỂM TRA (Bước 4 - 2 TẦNG):
+  - Tầng 1 (kiểm tra ngược): Hỏi cách kiểm tra lại đáp số bằng phép tính ngược/thử lại rồi đối chiếu dữ kiện ban đầu, đồng thời kiểm tra dấu phẩy và đơn vị.
+  - Tầng 2 (mở rộng): Sau khi đúng tầng 1 thì CHƯA kết thúc; yêu cầu thay đổi một số liệu rồi tính kết quả mới và nêu mối liên hệ.
+  - Chỉ MOVE_NEXT khi HS hoàn thành cả 2 tầng ở bước 4.
 
 ⚠️ LƯU Ý TUYỆT ĐỐI:
 - CHẶN: Không xưng "em", "học sinh", "học sinh của mình"
@@ -393,6 +516,7 @@ LUÔN TRẢ VỀ JSON:
     this.isSessionComplete = false;
     this.wrongAttemptCount = 0; // 🆕 Reset bộ đếm
     this.step4ChangedData = null;
+    this.step4Phase = "reverse_check";
 
     const msg = `Chào bạn! Mình là trợ lý học tập của bạn. Chúng ta cùng giải bài toán này nhé!\n\nBài toán: ${problemText}\n\nTrước tiên, bạn hãy cho mình biết bài toán đã cho những thông tin gì?`;
     return { message: msg, step: 1, stepName: this._getStepName(1) };
@@ -455,9 +579,12 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 3. TẠI BƯỚC 2: KHÔNG hỏi lại dữ kiện. CHỈ hỏi cách giải.
 3.1. Nếu đề cần đổi đơn vị thì ở bước 2 phải yêu cầu nêu bước đổi đơn vị, chưa nêu thì chưa được MOVE_NEXT.
 4. TẠI BƯỚC 3: KHÔNG hỏi lại bước 1/2. CHỈ yêu cầu trình bày lời giải hoặc hỗ trợ tính toán.
-5. TẠI BƯỚC 4: BẮT BUỘC yêu cầu tính lại kết quả khi thay đổi dữ liệu và nêu mối liên hệ; KHÔNG chấp nhận chỉ trả lời tăng/giảm.
-6. Chỉ MOVE_NEXT khi HS trả lời đúng và đủ ý.
-7. ⚠️ NẾU HS nhập số có dấu chấm (0.7, 1.5), nhắc dùng dấu phẩy (0,7  1,5).
+5. TẠI BƯỚC 4: đi theo 2 tầng bắt buộc.
+  - Tầng 1: yêu cầu nêu cách kiểm tra ngược đáp số (tính ngược/thử lại và đối chiếu dữ kiện, kiểm tra dấu phẩy + đơn vị).
+  - Tầng 2: yêu cầu đổi 1 số liệu, tính kết quả mới và nêu mối liên hệ.
+6. Sau khi HS làm đúng tầng 1 thì CHƯA hoàn thành bài, phải hỏi tiếp tầng 2.
+7. Chỉ MOVE_NEXT khi HS trả lời đúng và đủ ý ở cả hai tầng bước 4.
+8. ⚠️ NẾU HS nhập số có dấu chấm (0.7, 1.5), nhắc dùng dấu phẩy (0,7  1,5).
 `;
 
     try {
@@ -501,70 +628,54 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
         }
       }
 
-      // ⚠️ POST-FIX: Sau Bước 3 thành công → Chúc mừng + Chuyển sang Bước 4 với câu hỏi cụ thể
+      // ⚠️ POST-FIX: Sau Bước 3 thành công → sang Bước 4 tầng 1 (kiểm tra ngược)
       if (this.currentStep === 3 && data.step_status === "MOVE_NEXT") {
+        this.step4Phase = "reverse_check";
         data.feedback = data.feedback || "Tuyệt vời! Bạn tính toán rất chính xác!";
-        
-        // Extract số từ bài toán để tạo câu hỏi cụ thể
-        if (this.currentProblem && this.currentProblem.trim()) {
-          const numberMatches = this.currentProblem.match(/\d+(?:[,.]\d+)?/g);
-          // Lọc chỉ những số hợp lệ (không phải NaN)
-          const validNumbers = numberMatches 
-            ? numberMatches.filter(num => {
-                const parsed = parseFloat(num.replace(',', '.'));
-                return !isNaN(parsed) && num.length > 0;
-              })
-            : [];
-          
-          if (validNumbers && validNumbers.length > 0) {
-            // Chọn ngẫu nhiên 1 số từ bài toán
-            const randomNumber = validNumbers[Math.floor(Math.random() * validNumbers.length)];
-            // Tạo số mới (thêm 5)
-            const numValue = parseFloat(randomNumber.replace(',', '.'));
-            
-            // Double-check không phải NaN
-            if (!isNaN(numValue)) {
-              const newValue = numValue + 5;
-              const newNumber = newValue.toFixed(2).replace('.', ',');
-              this.step4ChangedData = { from: numValue, to: newValue };
-              data.next_question = 
-                `Bạn hãy kiểm tra lại bằng cách tính kết quả mới khi thay ${randomNumber} thành ${newNumber}, rồi nêu mối liên hệ giữa sự thay đổi dữ liệu và đáp số nhé.`;
-            } else {
-              // Fallback nếu parse fail
-              data.next_question = this._buildStep4RecheckQuestion();
-            }
-          } else {
-            // Fallback nếu không extract được số
-            data.next_question = this._buildStep4RecheckQuestion();
-          }
-        } else {
-          // Fallback nếu không có bài toán
-          data.next_question = this._buildStep4RecheckQuestion();
-        }
+        data.next_question = this._buildStep4ReverseCheckQuestion();
       }
 
       // ⚠️ POST-FIX: Bước 4 (Kiểm tra) - XỬ LÝ HOÀN THÀNH PHIÊN
       if (this.currentStep === 4) {
         const refusedToCheck = this._isRefusingStep4Check(studentAnswer);
         const askedClarification = this._isAskingStep4Clarification(studentAnswer);
-        const step4Validation = this._analyzeStep4Answer(studentAnswer, chatHistory);
-        const hasVerificationEvidence = step4Validation.isValid;
+        const pointedSingleLap = this._isPointingOutSingleLapConfusion(studentAnswer);
+        if (this.step4Phase !== "extension_check") {
+          const reverseCheck = this._analyzeStep4ReverseCheck(studentAnswer, chatHistory);
 
-        // ✅ Nếu HS né kiểm tra hoặc chưa có minh chứng kiểm tra thì bắt buộc STAY
-        if (refusedToCheck || !hasVerificationEvidence) {
-          data.status = "WRONG";
-          data.step_status = "STAY";
-          data.feedback = askedClarification
-            ? "'Thay đổi số liệu' nghĩa là giữ nguyên các số liệu còn lại, chỉ đổi 1 số rồi tính lại kết quả mới để so sánh."
-            : step4Validation.message;
-          data.next_question = this._buildStep4RecheckQuestion();
-        }
-        // ✅ Nếu validator nội bộ xác nhận đã kiểm tra đủ thì luôn hoàn thành, không phụ thuộc AI chấm đúng/sai
-        else {
-          data.status = "CORRECT";
-          data.step_status = "MOVE_NEXT";
-          data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
-          data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
+          if (refusedToCheck || !reverseCheck.isValid) {
+            data.status = "WRONG";
+            data.step_status = "STAY";
+            data.feedback = askedClarification
+              ? "'Kiểm tra lại' nghĩa là bạn nêu cách tính ngược/thử lại để đối chiếu dữ kiện ban đầu, đồng thời kiểm tra dấu phẩy và đơn vị."
+              : pointedSingleLap
+                ? "Bạn nhận xét rất đúng: nếu đề có nhiều vòng thì phải dùng tổng quãng đường của tất cả các vòng, không chỉ quãng đường của 1 vòng. Mình cùng kiểm tra lại theo hướng đó nhé."
+              : this._buildStep4ReverseCheckFeedback();
+            data.next_question = this._buildStep4ReverseCheckQuestion();
+          } else {
+            this.step4Phase = "extension_check";
+            data.status = "CORRECT";
+            data.step_status = "STAY";
+            data.feedback = "Tuyệt vời! Bạn đã nêu cách kiểm tra kết quả hợp lý rồi.";
+            data.next_question = this._buildStep4RecheckQuestion();
+          }
+        } else {
+          const step4Validation = this._analyzeStep4Answer(studentAnswer, chatHistory);
+          const hasVerificationEvidence = step4Validation.isValid;
+
+          if (refusedToCheck || !hasVerificationEvidence) {
+            data.status = "WRONG";
+            data.step_status = "STAY";
+            data.feedback = askedClarification
+              ? "'Thay đổi số liệu' nghĩa là giữ nguyên các số liệu còn lại, chỉ đổi 1 số rồi tính lại kết quả mới để so sánh."
+              : step4Validation.message;
+            data.next_question = this._buildStep4RecheckQuestion();
+          } else {
+            data.status = "CORRECT";
+            data.step_status = "MOVE_NEXT";
+            data.feedback = "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
+            data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
+          }
         }
       }
 
@@ -575,11 +686,14 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
           this.wrongAttemptCount = 0; // 🆕 Reset bộ đếm khi chuyển bước
         } else {
           this.isSessionComplete = true;
+          this.step4Phase = "reverse_check";
         }
       }
 
       // Tạo câu phản hồi chuẩn từ feedback và next_question, không cắt ráp từ khóa nữa
-      let finalMessage = this._fixPronouns(`${data.feedback} ${data.next_question || ""}`).trim();
+      let finalMessage = this._fixPronouns(
+        this._mergeFeedbackAndQuestion(data.feedback, data.next_question),
+      ).trim();
 
       return {
         message: finalMessage,
@@ -604,7 +718,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
       - Bước 1: Hỏi dữ kiện - không cho đáp án, xưng "bạn".
       - Bước 2: Hỏi "bạn sẽ giải thế nào" - không gợi ý phép tính, xưng "bạn".
       - Bước 3: Hỏi "bạn hãy trình bày lời giải" - nếu HS sai PHẢI CHỈ RÕ lỗi (dấu phẩy sai, thiếu đơn vị, tính sai...) để HS biết sửa, xưng "bạn".
-      - Bước 4: Hỏi kiểm tra lại kết quả bằng cách nêu sẵn một dữ liệu cần thay đổi để HS tính trực tiếp, xưng "bạn".`,
+      - Bước 4: Theo 2 tầng, tầng 1 hỏi cách kiểm tra ngược kết quả; tầng 2 hỏi mở rộng thay đổi một dữ liệu để HS tính kết quả mới và nêu mối liên hệ, xưng "bạn".`,
     );
     return this._fixPronouns(result.response.text());
   }

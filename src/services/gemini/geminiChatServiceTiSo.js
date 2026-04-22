@@ -531,24 +531,82 @@ export class GeminiChatServiceTiSo {
         text,
       );
 
+    const parseNumber = (val) => {
+      if (val === null || val === undefined) return null;
+      const num = parseFloat(String(val).replace(",", "."));
+      return Number.isFinite(num) ? num : null;
+    };
+
+    const normalized = String(answer || "").replace(/,/g, ".");
+    const percentCandidates = [];
+    let m;
+    const pctRegex = /(\d+(?:\.\d+)?)\s*%/g;
+    while ((m = pctRegex.exec(normalized)) !== null) {
+      const num = parseNumber(m[1]);
+      if (Number.isFinite(num)) percentCandidates.push(num);
+    }
+
+    const eqRegex = /=\s*(\d+(?:\.\d+)?)/g;
+    while ((m = eqRegex.exec(normalized)) !== null) {
+      const num = parseNumber(m[1]);
+      if (Number.isFinite(num)) percentCandidates.push(num);
+    }
+
+    let expectedPercent = null;
+    if (ext?.field === "first" && Number.isFinite(ext?.to) && Number.isFinite(ext?.fixedSecond) && ext.fixedSecond !== 0) {
+      expectedPercent = (ext.to / ext.fixedSecond) * 100;
+    } else if (ext?.field === "second" && Number.isFinite(ext?.fixedFirst) && Number.isFinite(ext?.to) && ext.to !== 0) {
+      expectedPercent = (ext.fixedFirst / ext.to) * 100;
+    }
+
+    const hasNumericallyCorrectResult = Number.isFinite(expectedPercent)
+      ? percentCandidates.some((candidate) => {
+          const diff = Math.abs(candidate - expectedPercent);
+          const tolerance = Math.max(1e-6, Math.abs(expectedPercent) * 0.02);
+          return diff <= tolerance;
+        })
+      : hasNewComputedResult;
+
     const hasRelationshipReasoning =
       /(tỉ\s*lệ\s*thuận|tỉ\s*lệ\s*nghịch|khi\s+.*\s+thì\s+.*|nếu\s+.*\s+thì\s+.*|nên|do\s*đó|vì\s*vậy|mối\s*liên\s*hệ)/i.test(
         text,
       ) && /(tăng|giảm|lớn\s*hơn|nhỏ\s*hơn|cao\s*hơn|thấp\s*hơn)/i.test(text);
+
+    const indicatesIncrease = /(tăng|lớn\s*hơn|cao\s*hơn)/i.test(text);
+    const indicatesDecrease = /(giảm|nhỏ\s*hơn|thấp\s*hơn)/i.test(text);
+
+    let expectedIncrease = null;
+    if (ext?.field === "first" && Number.isFinite(ext?.from) && Number.isFinite(ext?.to)) {
+      expectedIncrease = ext.to > ext.from;
+    } else if (ext?.field === "second" && Number.isFinite(ext?.from) && Number.isFinite(ext?.to)) {
+      expectedIncrease = ext.to < ext.from;
+    }
+
+    const hasConsistentRelationshipDirection = !hasRelationshipReasoning
+      ? false
+      : expectedIncrease === null
+        ? true
+        : expectedIncrease
+          ? indicatesIncrease && !indicatesDecrease
+          : indicatesDecrease && !indicatesIncrease;
 
     const hasPercentUnit = /%|phần\s*trăm/i.test(text);
 
     const isValid =
       hasChangedInputMention &&
       hasNewComputedResult &&
+      hasNumericallyCorrectResult &&
       hasRelationshipReasoning &&
+      hasConsistentRelationshipDirection &&
       hasPercentUnit;
 
     return {
       isValid,
       hasChangedInputMention,
       hasNewComputedResult,
+      hasNumericallyCorrectResult,
       hasRelationshipReasoning,
+      hasConsistentRelationshipDirection,
       hasPercentUnit,
     };
   }
@@ -561,11 +619,17 @@ export class GeminiChatServiceTiSo {
     if (!analysis.hasNewComputedResult) {
       guides.push("ghi phép tính và kết quả phần trăm mới");
     }
+    if (analysis.hasNewComputedResult && analysis.hasNumericallyCorrectResult === false) {
+      guides.push("tính lại phép chia để ra đúng kết quả phần trăm mới");
+    }
     if (!analysis.hasPercentUnit) {
       guides.push("thêm đơn vị % cho kết quả");
     }
     if (!analysis.hasRelationshipReasoning) {
       guides.push("nêu mối liên hệ giữa dữ kiện thay đổi và đáp số");
+    }
+    if (analysis.hasRelationshipReasoning && analysis.hasConsistentRelationshipDirection === false) {
+      guides.push("sửa lại chiều tăng/giảm của mối liên hệ cho đúng với dữ kiện đã đổi");
     }
 
     if (guides.length === 0) {

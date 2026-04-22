@@ -673,18 +673,83 @@ export class GeminiChatServiceTimeVelocity {
       /\d+[.,]?\d*\s*(km\s*\/\s*h|m\s*\/\s*s|km\s*\/\s*giờ|m\s*\/\s*giây)/i.test(text) ||
       /(=\s*\d+[.,]?\d*|kết\s*quả\s*(mới)?\s*là\s*\d+[.,]?\d*|vận\s*tốc\s+[^.]*?(là|=)\s*\d+[.,]?\d*)/i.test(text);
 
+    const parseNumber = (val) => {
+      if (val === null || val === undefined) return null;
+      const num = parseFloat(String(val).replace(",", "."));
+      return Number.isFinite(num) ? num : null;
+    };
+
+    const normalized = String(answer || "").replace(/,/g, ".");
+    const velocityNumberMatches = [];
+    const velocityRegex = /(\d+(?:\.\d+)?)\s*(?:km\s*\/\s*h|km\s*\/\s*giờ|m\s*\/\s*s|m\s*\/\s*giây)\b/gi;
+    let velocityMatch;
+    while ((velocityMatch = velocityRegex.exec(normalized)) !== null) {
+      const value = parseNumber(velocityMatch[1]);
+      if (Number.isFinite(value)) velocityNumberMatches.push(value);
+    }
+
+    const equationResultMatches = [];
+    const eqRegex = /=\s*(\d+(?:\.\d+)?)/g;
+    let eqMatch;
+    while ((eqMatch = eqRegex.exec(normalized)) !== null) {
+      const value = parseNumber(eqMatch[1]);
+      if (Number.isFinite(value)) equationResultMatches.push(value);
+    }
+
+    const allCandidates = [...velocityNumberMatches, ...equationResultMatches];
+
+    let expectedVelocity = null;
+    if (ext?.field === "distance" && Number.isFinite(ext?.to) && Number.isFinite(ext?.fixedTime) && ext.fixedTime > 0) {
+      expectedVelocity = ext.to / ext.fixedTime;
+    } else if (ext?.field === "time" && Number.isFinite(ext?.fixedDistance) && Number.isFinite(ext?.to) && ext.to > 0) {
+      expectedVelocity = ext.fixedDistance / ext.to;
+    }
+
+    const hasNumericallyCorrectResult = Number.isFinite(expectedVelocity)
+      ? allCandidates.some((candidate) => {
+          const diff = Math.abs(candidate - expectedVelocity);
+          const tolerance = Math.max(1e-6, Math.abs(expectedVelocity) * 0.02);
+          return diff <= tolerance;
+        })
+      : hasNewComputedResult;
+
     const hasRelationshipReasoning =
       /(tỉ\s*lệ\s*thuận|tỉ\s*lệ\s*nghịch|khi\s+.*\s+thì\s+.*|nếu\s+.*\s+thì\s+.*|nên|do\s*đó|vì\s*vậy|mối\s*liên\s*hệ|suy\s*ra)/i.test(
         text,
       ) && /(tăng|giảm|lớn\s*hơn|nhỏ\s*hơn|nhanh\s*hơn|chậm\s*hơn|cao\s*hơn|thấp\s*hơn)/i.test(text);
 
-    const isValid = hasChangedInputMention && hasNewComputedResult && hasRelationshipReasoning;
+    const indicatesIncrease = /(tăng|lớn\s*hơn|nhanh\s*hơn|cao\s*hơn)/i.test(text);
+    const indicatesDecrease = /(giảm|nhỏ\s*hơn|chậm\s*hơn|thấp\s*hơn)/i.test(text);
+
+    let expectedIncrease = null;
+    if (ext?.field === "distance" && Number.isFinite(ext?.from) && Number.isFinite(ext?.to)) {
+      expectedIncrease = ext.to > ext.from;
+    } else if (ext?.field === "time" && Number.isFinite(ext?.from) && Number.isFinite(ext?.to)) {
+      expectedIncrease = ext.to < ext.from;
+    }
+
+    const hasConsistentRelationshipDirection = !hasRelationshipReasoning
+      ? false
+      : expectedIncrease === null
+        ? true
+        : expectedIncrease
+          ? indicatesIncrease && !indicatesDecrease
+          : indicatesDecrease && !indicatesIncrease;
+
+    const isValid =
+      hasChangedInputMention &&
+      hasNewComputedResult &&
+      hasNumericallyCorrectResult &&
+      hasRelationshipReasoning &&
+      hasConsistentRelationshipDirection;
 
     return {
       isValid,
       hasChangedInputMention,
       hasNewComputedResult,
       hasRelationshipReasoning,
+      hasNumericallyCorrectResult,
+      hasConsistentRelationshipDirection,
     };
   }
 
@@ -696,8 +761,14 @@ export class GeminiChatServiceTimeVelocity {
     if (!analysis.hasNewComputedResult) {
       guides.push("ghi phép tính và kết quả vận tốc mới");
     }
+    if (analysis.hasNewComputedResult && analysis.hasNumericallyCorrectResult === false) {
+      guides.push("tính lại phép chia để ra đúng vận tốc mới theo dữ kiện đã đổi");
+    }
     if (!analysis.hasRelationshipReasoning) {
       guides.push("nêu mối liên hệ: dữ kiện tăng/giảm thì vận tốc thay đổi như thế nào");
+    }
+    if (analysis.hasRelationshipReasoning && analysis.hasConsistentRelationshipDirection === false) {
+      guides.push("sửa lại chiều mối liên hệ tăng/giảm cho đúng với dữ kiện (giữ thời gian thì quãng đường tăng -> vận tốc tăng; giữ quãng đường thì thời gian giảm -> vận tốc tăng)");
     }
 
     if (guides.length === 0) {

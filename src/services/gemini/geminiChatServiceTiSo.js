@@ -283,16 +283,46 @@ export class GeminiChatServiceTiSo {
     return null;
   }
 
-  _buildStep4RecheckQuestion(studentAnswer = "", chatHistory = []) {
-    const toVnNumber = (num) => {
-      const rounded = Number(num).toFixed(2).replace(/\.00$/, "").replace(/(\.\d*?)0+$/, "$1");
-      return rounded.replace(".", ",");
-    };
+  _cleanStep4QuantityLabel(label = "") {
+    let cleaned = String(label || "").replace(/\s+/g, " ").trim();
+    if (!cleaned) return "";
+    cleaned = cleaned
+      .replace(/^(là|chính là)\s+/i, "")
+      .replace(/\s+(là|bằng)\s*bao\s*nhiêu.*$/i, "")
+      .replace(/\s+(bao\s*nhiêu|là\s*bao\s*nhiêu)\s*$/i, "")
+      .replace(/[,:;]+$/g, "")
+      .trim();
+    return cleaned;
+  }
 
+  _extractComparedQuantityLabels(problemText = "") {
+    const text = String(problemText || "").replace(/\s+/g, " ").trim();
+    if (!text) return null;
+
+    const patterns = [
+      /bao\s*nhiêu\s*phần\s*trăm\s+(.+?)\s+so\s+với\s+(.+?)(?:[.?!]|$)/i,
+      /t[ỉiỷy]\s*s[ốo]\s*phần\s*trăm\s+(?:giữa\s+)?(.+?)\s+(?:và|so\s+với)\s+(.+?)(?:[.?!]|$)/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (!match) continue;
+      const firstLabel = this._cleanStep4QuantityLabel(match[1]);
+      const secondLabel = this._cleanStep4QuantityLabel(match[2]);
+      if (firstLabel && secondLabel) {
+        return { firstLabel, secondLabel };
+      }
+    }
+
+    return null;
+  }
+
+  _buildStep4RecheckQuestion(studentAnswer = "", chatHistory = []) {
     let firstValue = null;
     let secondValue = null;
     let roundInfo = this.step4ChangedData?.roundInfo || this._extractRoundBasedTotalDistance(this.currentProblem);
     let intermediateValues = this.step4ChangedData?.intermediateValues || this._extractIntermediateComparedValues(this.currentProblem);
+    let quantityLabels = this.step4ChangedData?.quantityLabels || this._extractComparedQuantityLabels(this.currentProblem);
 
     if (this.step4ChangedData && Number.isFinite(this.step4ChangedData.firstValue)) {
       firstValue = this.step4ChangedData.firstValue;
@@ -329,20 +359,15 @@ export class GeminiChatServiceTiSo {
         secondValue: Number.isFinite(secondValue) ? secondValue : null,
         roundInfo: roundInfo || null,
         intermediateValues: intermediateValues || null,
+        quantityLabels: quantityLabels || null,
       };
     }
 
     if (Number.isFinite(firstValue) && Number.isFinite(secondValue)) {
-      if (roundInfo && Math.abs(firstValue - roundInfo.totalDistance) < 1e-9) {
-        const segmentLabel = roundInfo.segmentLabel || "vòng";
-        return `Kết quả bạn vừa tìm là tỉ số phần trăm giữa ${toVnNumber(firstValue)} (tổng quãng đường = ${toVnNumber(roundInfo.roundCount)} ${segmentLabel} × ${toVnNumber(roundInfo.lapDistance)} ${roundInfo.distanceUnit}) và ${toVnNumber(secondValue)}. Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?`;
+      if (quantityLabels?.firstLabel && quantityLabels?.secondLabel) {
+        return `Kết quả bạn vừa tìm là tỉ số phần trăm giữa ${quantityLabels.firstLabel} và ${quantityLabels.secondLabel}. Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?`;
       }
-      if (intermediateValues && Math.abs(firstValue - intermediateValues.firstValue) < 1e-9 && Math.abs(secondValue - intermediateValues.secondValue) < 1e-9) {
-        const unitText = intermediateValues.unit ? ` ${intermediateValues.unit}` : "";
-        const relationText = intermediateValues.relation === "more" ? "nhiều hơn" : "ít hơn";
-        return `Kết quả bạn vừa tìm là tỉ số phần trăm giữa ${toVnNumber(firstValue)} và ${toVnNumber(secondValue)}${unitText}. Lưu ý dữ kiện thứ hai là giá trị trung gian (từ ${toVnNumber(firstValue)} ${relationText} ${toVnNumber(intermediateValues.delta)}${unitText}). Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?`;
-      }
-      return `Kết quả bạn vừa tìm là tỉ số phần trăm giữa ${toVnNumber(firstValue)} và ${toVnNumber(secondValue)}. Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?`;
+      return "Kết quả bạn vừa tìm là tỉ số phần trăm giữa hai đại lượng trong đề bài. Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?";
     }
 
     return "Kết quả bạn vừa tìm là tỉ số phần trăm giữa hai đại lượng trong đề bài. Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?";

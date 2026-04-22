@@ -573,29 +573,20 @@ export class GeminiChatServiceTimeVelocity {
 
   _buildStep4VerificationFeedback(analysis = {}) {
     const subjectName = this.step4ChangedData?.subjectName;
-    const timeValue = this.step4ChangedData?.timeValue;
-    const timeUnit = this.step4ChangedData?.timeUnit || "thời gian";
-    const distanceValue = this.step4ChangedData?.distanceValue;
-    const distanceUnit = this.step4ChangedData?.distanceUnit || "quãng đường";
-
-    const displayTime = Number.isFinite(timeValue)
-      ? `${String(timeValue).replace(".", ",")} ${timeUnit}`
-      : "thời gian của đề bài";
-    const displayDistance = Number.isFinite(distanceValue)
-      ? `${String(distanceValue).replace(".", ",")} ${distanceUnit}`
-      : "quãng đường ban đầu của đề bài";
+    const timeLabel = subjectName ? `thời gian di chuyển của bạn ${subjectName}` : "thời gian của đề bài";
+    const distanceLabel = subjectName ? `quãng đường của bạn ${subjectName}` : "quãng đường ban đầu của đề bài";
+    const speedLabel = subjectName ? `vận tốc của bạn ${subjectName}` : "vận tốc vừa tìm được";
 
     const roundInfo = this.step4ChangedData?.roundInfo;
-    const segmentLabel = roundInfo?.segmentLabel || "vòng";
     const totalTimeInfo = this.step4ChangedData?.totalTimeInfo;
     const roundNote = roundInfo
-      ? ` Lưu ý: ${String(roundInfo.roundCount).replace(".", ",")} ${segmentLabel} × ${String(roundInfo.lapDistance).replace(".", ",")} ${roundInfo.distanceUnit} = ${displayDistance} (tổng quãng đường).`
+      ? ` Lưu ý: khi đề cho dữ kiện theo từng vòng/chặng, bạn cần dùng tổng quãng đường của cả quá trình (không dùng quãng đường của một vòng/chặng).`
       : "";
     const timeNote = totalTimeInfo
-      ? ` Với thời gian, bạn cũng cần dùng tổng thời gian: ${String(totalTimeInfo.roundCount).replace(".", ",")} ${segmentLabel} × ${totalTimeInfo.lapDisplay}${totalTimeInfo.restSeconds > 0 ? ` + nghỉ ${totalTimeInfo.restDisplay}` : ""} = ${String(totalTimeInfo.displayValue).replace(".", ",")} ${totalTimeInfo.displayUnit}.`
+      ? ` Với thời gian, bạn cũng cần dùng tổng thời gian của cả quá trình, gồm cả phần nghỉ nếu đề có nêu.`
       : "";
     const subjectPrefix = subjectName ? `Với bạn ${subjectName}, ` : "";
-    return `${subjectPrefix}từ công thức tính vận tốc là lấy quãng đường chia cho thời gian, bạn hãy làm ngược lại bằng cách lấy vận tốc vừa tìm được nhân với ${displayTime} để tính lại quãng đường. Nếu quãng đường tính lại đúng bằng ${displayDistance} thì kết quả tìm được là chính xác. Ngược lại, nếu hai kết quả không trùng nhau thì bạn cần xem lại các bước làm vì có thể đã xảy ra sai sót.${roundNote}${timeNote}`;
+    return `${subjectPrefix}từ công thức tính vận tốc là lấy quãng đường chia cho thời gian, bạn hãy làm ngược lại bằng cách lấy ${speedLabel} nhân với ${timeLabel} để tính lại quãng đường. Nếu quãng đường tính lại đúng bằng ${distanceLabel} thì kết quả tìm được là chính xác. Ngược lại, nếu hai kết quả không trùng nhau thì bạn cần xem lại các bước làm vì có thể đã xảy ra sai sót.${roundNote}${timeNote}`;
   }
 
   _buildStep4ExtensionQuestion() {

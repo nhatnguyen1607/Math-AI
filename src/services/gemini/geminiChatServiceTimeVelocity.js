@@ -322,6 +322,86 @@ export class GeminiChatServiceTimeVelocity {
     return pairs;
   }
 
+  _parseDurationInfo(text = "") {
+    const src = String(text || "").toLowerCase();
+    const regex = /(\d+(?:[,.]\d+)?)\s*(giờ|phút|giây|h|s)\b/gi;
+    let match;
+    let totalSeconds = 0;
+    const tokens = [];
+    const units = new Set();
+
+    while ((match = regex.exec(src)) !== null) {
+      const value = parseFloat(String(match[1]).replace(",", "."));
+      const unit = String(match[2] || "").toLowerCase();
+      if (!Number.isFinite(value) || !unit) continue;
+
+      tokens.push(`${String(match[1]).replace(".", ",")} ${unit}`);
+      units.add(unit);
+
+      if (unit === "giờ" || unit === "h") totalSeconds += value * 3600;
+      else if (unit === "phút") totalSeconds += value * 60;
+      else totalSeconds += value;
+    }
+
+    return {
+      totalSeconds,
+      units,
+      displayText: tokens.join(" "),
+    };
+  }
+
+  _extractRoundBasedTotalTime(problemText = "", roundInfo = null) {
+    const text = String(problemText || "");
+    const roundCount = Number.isFinite(roundInfo?.roundCount) ? roundInfo.roundCount : null;
+    if (!roundCount || roundCount <= 0) return null;
+
+    const lower = text.toLowerCase();
+    const segmentRegex = /mỗi\s*(?:vòng|chặng)[^.?!\n]*/gi;
+    const scenarios = [];
+    let segmentMatch;
+
+    while ((segmentMatch = segmentRegex.exec(lower)) !== null) {
+      const segment = segmentMatch[0] || "";
+      if (!segment) continue;
+
+      const parts = segment.split(/nghỉ|dừng|chờ/i);
+      const lapPart = parts[0] || "";
+      const restPart = parts.slice(1).join(" ");
+
+      const lapInfo = this._parseDurationInfo(lapPart);
+      if (!Number.isFinite(lapInfo.totalSeconds) || lapInfo.totalSeconds <= 0) continue;
+
+      const restInfo = this._parseDurationInfo(restPart);
+      const totalSeconds = roundCount * lapInfo.totalSeconds + restInfo.totalSeconds;
+      if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) continue;
+
+      const allUnits = new Set([...lapInfo.units, ...restInfo.units]);
+      let displayUnit = "giây";
+      let displayValue = totalSeconds;
+
+      if (allUnits.has("giờ") || allUnits.has("h")) {
+        displayUnit = "giờ";
+        displayValue = totalSeconds / 3600;
+      } else if (allUnits.has("phút") && !(allUnits.has("giây") || allUnits.has("s"))) {
+        displayUnit = "phút";
+        displayValue = totalSeconds / 60;
+      }
+
+      scenarios.push({
+        roundCount,
+        lapSeconds: lapInfo.totalSeconds,
+        restSeconds: restInfo.totalSeconds,
+        totalSeconds,
+        displayUnit,
+        displayValue,
+        lapDisplay: lapInfo.displayText || "thời gian mỗi vòng",
+        restDisplay: restInfo.displayText || "0",
+      });
+    }
+
+    return scenarios.length ? scenarios[0] : null;
+  }
+
   _buildStep4RecheckQuestion() {
     const toVnNumber = (num) => {
       const rounded = Number(num).toFixed(2).replace(/\.00$/, "").replace(/(\.\d*?)0+$/, "$1");
@@ -330,6 +410,7 @@ export class GeminiChatServiceTimeVelocity {
 
     const text = String(this.currentProblem || "").toLowerCase();
     const roundInfo = this._extractRoundBasedTotalDistance(text);
+    const totalTimeInfo = this._extractRoundBasedTotalTime(text, roundInfo);
     const subjectPairs = this._extractSubjectDistanceTimePairs(this.currentProblem);
     const distanceMatch = text.match(/(\d+(?:[,.]\d+)?)\s*(km|m)\b/i);
     const timeMatch = text.match(/(\d+(?:[,.]\d+)?)\s*(giờ|phút|giây|h|s)\b/i);
@@ -344,10 +425,12 @@ export class GeminiChatServiceTimeVelocity {
       : (roundInfo?.distanceUnit || (distanceMatch ? distanceMatch[2] : "quãng đường"));
     const timeValue = chosenSubject
       ? chosenSubject.timeValue
-      : (timeMatch ? parseFloat(timeMatch[1].replace(",", ".")) : null);
+      : (Number.isFinite(totalTimeInfo?.displayValue)
+        ? totalTimeInfo.displayValue
+        : (timeMatch ? parseFloat(timeMatch[1].replace(",", ".")) : null));
     const timeUnit = chosenSubject
       ? chosenSubject.timeUnit
-      : (timeMatch ? timeMatch[2] : "thời gian");
+      : (totalTimeInfo?.displayUnit || (timeMatch ? timeMatch[2] : "thời gian"));
 
     this.step4ChangedData = {
       distanceValue: Number.isFinite(distanceValue) ? distanceValue : null,
@@ -356,6 +439,7 @@ export class GeminiChatServiceTimeVelocity {
       timeUnit,
       subjectName: chosenSubject?.name || null,
       roundInfo: roundInfo || null,
+      totalTimeInfo: totalTimeInfo || null,
     };
 
     if (Number.isFinite(distanceValue) && Number.isFinite(timeValue)) {
@@ -365,7 +449,10 @@ export class GeminiChatServiceTimeVelocity {
 
       if (roundInfo) {
         const segmentLabel = roundInfo.segmentLabel || "vòng";
-        return `Kết quả vận tốc mà bạn vừa tìm được là bao nhiêu? Để kiểm tra lại, bạn dùng tổng quãng đường (${toVnNumber(roundInfo.roundCount)} ${segmentLabel} × ${toVnNumber(roundInfo.lapDistance)} ${roundInfo.distanceUnit} = ${toVnNumber(distanceValue)} ${distanceUnit}) cùng với ${toVnNumber(timeValue)} ${timeUnit} để thực hiện phép tính ngược nào?`;
+        const timeNote = totalTimeInfo
+          ? ` và tổng thời gian (${toVnNumber(totalTimeInfo.roundCount)} ${segmentLabel} × ${totalTimeInfo.lapDisplay}${totalTimeInfo.restSeconds > 0 ? ` + nghỉ ${totalTimeInfo.restDisplay}` : ""} = ${toVnNumber(timeValue)} ${timeUnit})`
+          : "";
+        return `Kết quả vận tốc mà bạn vừa tìm được là bao nhiêu? Để kiểm tra lại, bạn dùng tổng quãng đường (${toVnNumber(roundInfo.roundCount)} ${segmentLabel} × ${toVnNumber(roundInfo.lapDistance)} ${roundInfo.distanceUnit} = ${toVnNumber(distanceValue)} ${distanceUnit})${timeNote} để thực hiện phép tính ngược nào?`;
       }
       return `Kết quả vận tốc mà bạn vừa tìm được là bao nhiêu? Để kiểm tra kết quả đó đúng, bạn sẽ thực hiện phép tính gì với ${toVnNumber(timeValue)} ${timeUnit} và quãng đường ${toVnNumber(distanceValue)} ${distanceUnit}?`;
     }
@@ -500,11 +587,15 @@ export class GeminiChatServiceTimeVelocity {
 
     const roundInfo = this.step4ChangedData?.roundInfo;
     const segmentLabel = roundInfo?.segmentLabel || "vòng";
+    const totalTimeInfo = this.step4ChangedData?.totalTimeInfo;
     const roundNote = roundInfo
       ? ` Lưu ý: ${String(roundInfo.roundCount).replace(".", ",")} ${segmentLabel} × ${String(roundInfo.lapDistance).replace(".", ",")} ${roundInfo.distanceUnit} = ${displayDistance} (tổng quãng đường).`
       : "";
+    const timeNote = totalTimeInfo
+      ? ` Với thời gian, bạn cũng cần dùng tổng thời gian: ${String(totalTimeInfo.roundCount).replace(".", ",")} ${segmentLabel} × ${totalTimeInfo.lapDisplay}${totalTimeInfo.restSeconds > 0 ? ` + nghỉ ${totalTimeInfo.restDisplay}` : ""} = ${String(totalTimeInfo.displayValue).replace(".", ",")} ${totalTimeInfo.displayUnit}.`
+      : "";
     const subjectPrefix = subjectName ? `Với bạn ${subjectName}, ` : "";
-    return `${subjectPrefix}từ công thức tính vận tốc là lấy quãng đường chia cho thời gian, bạn hãy làm ngược lại bằng cách lấy vận tốc vừa tìm được nhân với ${displayTime} để tính lại quãng đường. Nếu quãng đường tính lại đúng bằng ${displayDistance} thì kết quả tìm được là chính xác. Ngược lại, nếu hai kết quả không trùng nhau thì bạn cần xem lại các bước làm vì có thể đã xảy ra sai sót.${roundNote}`;
+    return `${subjectPrefix}từ công thức tính vận tốc là lấy quãng đường chia cho thời gian, bạn hãy làm ngược lại bằng cách lấy vận tốc vừa tìm được nhân với ${displayTime} để tính lại quãng đường. Nếu quãng đường tính lại đúng bằng ${displayDistance} thì kết quả tìm được là chính xác. Ngược lại, nếu hai kết quả không trùng nhau thì bạn cần xem lại các bước làm vì có thể đã xảy ra sai sót.${roundNote}${timeNote}`;
   }
 
   _buildStep4ExtensionQuestion() {

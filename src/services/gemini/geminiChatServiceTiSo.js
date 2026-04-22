@@ -204,6 +204,59 @@ export class GeminiChatServiceTiSo {
     );
   }
 
+  _extractIntermediateComparedValues(problemText = "") {
+    const text = String(problemText || "").toLowerCase();
+    if (!text) return null;
+
+    const numberRegex = /(\d+(?:[,.]\d+)?)\s*(kg|g|km|m|lít|l|ml|gam)?\b/gi;
+    const values = [];
+    let match;
+    while ((match = numberRegex.exec(text)) !== null) {
+      const value = parseFloat(String(match[1]).replace(",", "."));
+      const unit = (match[2] || "").trim();
+      if (!Number.isFinite(value)) continue;
+      values.push({ value, unit });
+    }
+    if (!values.length) return null;
+
+    const base = values[0];
+
+    const moreMatch = text.match(/(?:nhiều\s*hơn|hơn)\s*[^\d]{0,20}(\d+(?:[,.]\d+)?)\s*(kg|g|km|m|lít|l|ml|gam)?\b/i);
+    if (moreMatch) {
+      const delta = parseFloat(String(moreMatch[1]).replace(",", "."));
+      const deltaUnit = (moreMatch[2] || "").trim();
+      if (Number.isFinite(delta) && (base.unit === deltaUnit || !deltaUnit || !base.unit)) {
+        return {
+          firstValue: base.value,
+          secondValue: base.value + delta,
+          unit: base.unit || deltaUnit || "",
+          relation: "more",
+          delta,
+        };
+      }
+    }
+
+    const lessMatch = text.match(/(?:ít\s*hơn|kém)\s*[^\d]{0,20}(\d+(?:[,.]\d+)?)\s*(kg|g|km|m|lít|l|ml|gam)?\b/i);
+    if (lessMatch) {
+      const delta = parseFloat(String(lessMatch[1]).replace(",", "."));
+      const deltaUnit = (lessMatch[2] || "").trim();
+      if (Number.isFinite(delta) && (base.unit === deltaUnit || !deltaUnit || !base.unit)) {
+        const second = base.value - delta;
+        if (second > 0) {
+          return {
+            firstValue: base.value,
+            secondValue: second,
+            unit: base.unit || deltaUnit || "",
+            relation: "less",
+            delta,
+          };
+        }
+      }
+    }
+
+    return null;
+  }
+
   _buildStep4RecheckQuestion() {
     const toVnNumber = (num) => {
       const rounded = Number(num).toFixed(2).replace(/\.00$/, "").replace(/(\.\d*?)0+$/, "$1");
@@ -211,10 +264,15 @@ export class GeminiChatServiceTiSo {
     };
 
     const roundInfo = this._extractRoundBasedTotalDistance(this.currentProblem);
+    const intermediateValues = this._extractIntermediateComparedValues(this.currentProblem);
     const numberMatches = String(this.currentProblem || "").match(/\d+(?:[,.]\d+)?/g) || [];
     let values = numberMatches
       .map((num) => parseFloat(num.replace(",", ".")))
       .filter((num) => Number.isFinite(num) && num > 0);
+
+    if (intermediateValues) {
+      values = [intermediateValues.firstValue, intermediateValues.secondValue];
+    }
 
     if (roundInfo) {
       const filtered = values.filter(
@@ -229,12 +287,18 @@ export class GeminiChatServiceTiSo {
       firstValue: Number.isFinite(firstValue) ? firstValue : null,
       secondValue: Number.isFinite(secondValue) ? secondValue : null,
       roundInfo: roundInfo || null,
+      intermediateValues: intermediateValues || null,
     };
 
     if (Number.isFinite(firstValue) && Number.isFinite(secondValue)) {
       if (roundInfo) {
         const segmentLabel = roundInfo.segmentLabel || "vòng";
         return `Kết quả bạn vừa tìm là tỉ số phần trăm giữa ${toVnNumber(firstValue)} (tổng quãng đường = ${toVnNumber(roundInfo.roundCount)} ${segmentLabel} × ${toVnNumber(roundInfo.lapDistance)} ${roundInfo.distanceUnit}) và ${toVnNumber(secondValue)}. Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?`;
+      }
+      if (intermediateValues) {
+        const unitText = intermediateValues.unit ? ` ${intermediateValues.unit}` : "";
+        const relationText = intermediateValues.relation === "more" ? "nhiều hơn" : "ít hơn";
+        return `Kết quả bạn vừa tìm là tỉ số phần trăm giữa ${toVnNumber(firstValue)} và ${toVnNumber(secondValue)}${unitText}. Lưu ý dữ kiện thứ hai là giá trị trung gian (từ ${toVnNumber(firstValue)} ${relationText} ${toVnNumber(intermediateValues.delta)}${unitText}). Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?`;
       }
       return `Kết quả bạn vừa tìm là tỉ số phần trăm giữa ${toVnNumber(firstValue)} và ${toVnNumber(secondValue)}. Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?`;
     }
@@ -375,11 +439,15 @@ export class GeminiChatServiceTiSo {
       : "dữ kiện thứ hai";
     const roundInfo = this.step4ChangedData?.roundInfo;
     const segmentLabel = roundInfo?.segmentLabel || "vòng";
+    const intermediateValues = this.step4ChangedData?.intermediateValues;
     const roundNote = roundInfo
       ? ` Lưu ý: tổng quãng đường cần dùng là ${String(roundInfo.roundCount).replace(".", ",")} ${segmentLabel} × ${String(roundInfo.lapDistance).replace(".", ",")} ${roundInfo.distanceUnit} = ${displayFirst}.`
       : "";
+    const intermediateNote = intermediateValues
+      ? ` Lưu ý: dữ kiện thứ hai là giá trị trung gian, được tính từ ${String(intermediateValues.firstValue).replace(".", ",")} ${intermediateValues.relation === "more" ? "nhiều hơn" : "ít hơn"} ${String(intermediateValues.delta).replace(".", ",")}${intermediateValues.unit ? ` ${intermediateValues.unit}` : ""}.`
+      : "";
 
-    return `Từ kết quả phần trăm vừa tìm được, bạn hãy lấy kết quả chia cho 100 rồi nhân với ${displaySecond}. Nếu kết quả tính lại đúng bằng ${displayFirst} của đề bài thì kết quả là chính xác. Ngược lại, nếu không trùng khớp thì bạn cần xem lại các bước làm vì có thể đã xảy ra sai sót.${roundNote}`;
+    return `Từ kết quả phần trăm vừa tìm được, bạn hãy lấy kết quả chia cho 100 rồi nhân với ${displaySecond}. Nếu kết quả tính lại đúng bằng ${displayFirst} của đề bài thì kết quả là chính xác. Ngược lại, nếu không trùng khớp thì bạn cần xem lại các bước làm vì có thể đã xảy ra sai sót.${roundNote}${intermediateNote}`;
   }
 
   _buildStep4ExtensionQuestion() {

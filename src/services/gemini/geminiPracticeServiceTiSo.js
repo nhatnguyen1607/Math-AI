@@ -74,17 +74,16 @@ export class GeminiPracticeServiceTiSo extends GeminiPracticeService {
     return guidance[lessonName] || "Toán về tỉ số lớp 5.";
   }
 
-  // CẬP NHẬT MỚI: Định nghĩa lại độ khó sắc bén hơn, khóa chặt dạng toán
   _getDifficultyGuidance(competencyLevel, topicName) {
     const level = String(competencyLevel || "Đạt").toLowerCase();
     if (level.includes("cần cố gắng")) {
-      return `🔴 MỨC DỄ: 1 phép tính trực tiếp đúng chuẩn dạng "${topicName}". Cho sẵn các số liệu cần thiết. (Ví dụ nếu bài là 'Tìm tỉ số % của hai số', hãy cho luôn 2 số và bắt tính tỉ số %). Lời văn cực kỳ đơn giản, không bẫy.`;
+      return `🔴 MỨC DỄ: Chính xác 1 phép tính trực tiếp đúng chuẩn dạng "${topicName}". CẤM yêu cầu nội suy hay tính trung gian. BẮT BUỘC cho SẴN 2 số liệu cuối cùng cần dùng để tính. Lời văn cực kỳ đơn giản, minh bạch.`;
     } else if (level.includes("đạt")) {
-      return `🟡 MỨC TRUNG BÌNH: 2 phép tính. Học sinh phải thực hiện 1 bước tính toán trung gian (cộng/trừ đơn giản hoặc đổi đơn vị) để tìm ra số liệu, SAU ĐÓ mới dùng số liệu đó để giải quyết yêu cầu của bài "${topicName}".`;
+      return `🟡 MỨC TRUNG BÌNH: Chính xác 2 phép tính. TUYỆT ĐỐI KHÔNG cho sẵn số liệu để tính thẳng ra đáp số. BẮT BUỘC học sinh phải thực hiện 1 phép tính trung gian đơn giản (tìm tổng, tìm hiệu/phần còn lại, hoặc đổi đơn vị) để tìm ra 1 số liệu bị ẩn, SAU ĐÓ mới dùng số liệu ẩn đó thao tác tính cuối giải quyết bài "${topicName}".`;
     } else if (level.includes("tốt")) {
-      return `🟢 MỨC KHÁ: 3-4 phép tính mạch lạc. BẮT BUỘC có ít nhất 2 bước trung gian (ví dụ: tìm phần còn lại rồi mới tính tỉ số %, hoặc tính tổng từ các phần rồi mới suy ra tỉ lệ), sau đó chốt câu hỏi đúng dạng "${topicName}". Được phép có 1-2 điều kiện phụ nhưng không đánh đố.`;
+      return `🟢 MỨC KHÁ: 3-4 phép tính. TẠO ĐỘ PHÂN HÓA RÕ so với mức Trung bình. BẮT BUỘC phải thực hiện ít nhất 2 bước tính trung gian (ví dụ: cần tính phần thứ 3 từ số tổng và 2 phần kia, hoặc đổi chiều dữ kiện), sau đó bước cuối mới chốt bằng yêu cầu của bài "${topicName}". Bài toán cần có bối cảnh đan xen thông tin để học sinh phân tích kĩ năng tư duy.`;
     } else {
-      return `🟢 MỨC KHÓ (VẬN DỤNG CAO): 3 phép tính trở lên. Số liệu bị ẩn giấu kỹ trong một tình huống thực tế. Học sinh phải lập luận, tính tổng/hiệu/tích/thương qua nhiều bước để tìm ra các đại lượng ẩn, BƯỚC CUỐI CÙNG mới áp dụng công thức của bài "${topicName}" để trả lời câu hỏi.`;
+      return `🟢 MỨC KHÓ (VẬN DỤNG CAO): 3-5 phép tính. Số liệu bị ẩn giấu kỹ trong một tình huống thực tế phức tạp. Học sinh phải lập luận, tính tổng/hiệu/tích/thương qua nhiều bước để tìm ra các đại lượng ẩn, BƯỚC CUỐI CÙNG mới áp dụng công thức của bài "${topicName}" để trả lời câu hỏi.`;
     }
   }
 
@@ -105,11 +104,11 @@ export class GeminiPracticeServiceTiSo extends GeminiPracticeService {
   _getProblemTypeLimitForBai(baiNumber = 1) {
     // BÀI 1: Tập trung vào loại bài tính trực tiếp một dạng tỉ số/tỉ số phần trăm
     if (baiNumber === 1) {
-      return `⭐ LOẠI BÀI 1: BẮT BUỘC tập trung vào loại câu hỏi chính sau:
-  - Tính tỉ số của hai đại lượng (ví dụ: a : b hoặc a/b).
-  - Hoặc: Tính tỉ số phần trăm của hai số cho sẵn.
+      return `⭐ LOẠI BÀI 1: BẮT BUỘC tập trung vào loại câu hỏi chính sau (được điều chỉnh bởi độ khó MỨC DỄ/TRUNG BÌNH/KHÁ phía trên):
+  - Tính tỉ số của hai đại lượng.
+  - Hoặc: Tính tỉ số phần trăm của hai đại lượng.
   - Hoặc: Chia một đại lượng theo tỉ số cho trước.
-  TUYỆT ĐỐI KHÔNG được hỏi so sánh giữa 2-3 trường hợp khác nhau hay multiple-choice tỉ số.`;
+  TUYỆT ĐỐI KHÔNG được hỏi so sánh đa nhân vật/phương án hay multiple-choice tỉ số. Để dành cho Loại Bài 2.`;
     } else {
       // BÀI 2: Tập trung vào loại bài khác nhau: so sánh hoặc tính giá trị phần trăm từ tỉ số
       return `⭐ LOẠI BÀI 2: BẮT BUỘC phải KHÁC HOÀN TOÀN với Bài 1. Chọn một trong các loại:

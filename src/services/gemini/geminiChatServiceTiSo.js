@@ -257,45 +257,87 @@ export class GeminiChatServiceTiSo {
     return null;
   }
 
-  _buildStep4RecheckQuestion() {
+  _extractDividedValuesFromHistory(chatHistory = [], studentAnswer = "") {
+    const recentText = Array.isArray(chatHistory)
+      ? chatHistory.filter((m) => m?.role === "user").map((m) => m?.parts?.[0]?.text || "").join("\n")
+      : "";
+    const fullText = `${recentText}\n${String(studentAnswer || "")}`;
+    if (!fullText.trim()) return null;
+
+    const normalized = this._normalizeMathText(fullText);
+    const divisionRegex = /(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/g;
+    let match;
+    let lastMatch = null;
+    while ((match = divisionRegex.exec(normalized)) !== null) {
+      if (Math.abs(parseFloat(match[2]) - 100) > 1e-9) {
+        lastMatch = match;
+      }
+    }
+    
+    if (lastMatch) {
+       return {
+         firstValue: parseFloat(lastMatch[1]),
+         secondValue: parseFloat(lastMatch[2])
+       };
+    }
+    return null;
+  }
+
+  _buildStep4RecheckQuestion(studentAnswer = "", chatHistory = []) {
     const toVnNumber = (num) => {
       const rounded = Number(num).toFixed(2).replace(/\.00$/, "").replace(/(\.\d*?)0+$/, "$1");
       return rounded.replace(".", ",");
     };
 
-    const roundInfo = this._extractRoundBasedTotalDistance(this.currentProblem);
-    const intermediateValues = this._extractIntermediateComparedValues(this.currentProblem);
-    const numberMatches = String(this.currentProblem || "").match(/\d+(?:[,.]\d+)?/g) || [];
-    let values = numberMatches
-      .map((num) => parseFloat(num.replace(",", ".")))
-      .filter((num) => Number.isFinite(num) && num > 0);
+    let firstValue = null;
+    let secondValue = null;
+    let roundInfo = this.step4ChangedData?.roundInfo || this._extractRoundBasedTotalDistance(this.currentProblem);
+    let intermediateValues = this.step4ChangedData?.intermediateValues || this._extractIntermediateComparedValues(this.currentProblem);
 
-    if (intermediateValues) {
-      values = [intermediateValues.firstValue, intermediateValues.secondValue];
+    if (this.step4ChangedData && Number.isFinite(this.step4ChangedData.firstValue)) {
+      firstValue = this.step4ChangedData.firstValue;
+      secondValue = this.step4ChangedData.secondValue;
+    } else {
+      const historyValues = this._extractDividedValuesFromHistory(chatHistory, studentAnswer);
+      if (historyValues) {
+        firstValue = historyValues.firstValue;
+        secondValue = historyValues.secondValue;
+      } else if (intermediateValues) {
+        firstValue = intermediateValues.firstValue;
+        secondValue = intermediateValues.secondValue;
+      } else if (roundInfo) {
+        const numberMatches = String(this.currentProblem || "").match(/\d+(?:[,.]\d+)?/g) || [];
+        const fallbackValues = numberMatches
+          .map((num) => parseFloat(num.replace(",", ".")))
+          .filter((num) => Number.isFinite(num) && num > 0);
+        const filtered = fallbackValues.filter(
+          (num) => Math.abs(num - roundInfo.roundCount) > 1e-9 && Math.abs(num - roundInfo.lapDistance) > 1e-9,
+        );
+        firstValue = roundInfo.totalDistance;
+        secondValue = filtered[0];
+      } else {
+        const numberMatches = String(this.currentProblem || "").match(/\d+(?:[,.]\d+)?/g) || [];
+        const fallbackValues = numberMatches
+          .map((num) => parseFloat(num.replace(",", ".")))
+          .filter((num) => Number.isFinite(num) && num > 0);
+        firstValue = fallbackValues[0];
+        secondValue = fallbackValues[1];
+      }
+
+      this.step4ChangedData = {
+        firstValue: Number.isFinite(firstValue) ? firstValue : null,
+        secondValue: Number.isFinite(secondValue) ? secondValue : null,
+        roundInfo: roundInfo || null,
+        intermediateValues: intermediateValues || null,
+      };
     }
-
-    if (roundInfo) {
-      const filtered = values.filter(
-        (num) => Math.abs(num - roundInfo.roundCount) > 1e-9 && Math.abs(num - roundInfo.lapDistance) > 1e-9,
-      );
-      values = [roundInfo.totalDistance, ...filtered];
-    }
-
-    const firstValue = values[0];
-    const secondValue = values[1];
-    this.step4ChangedData = {
-      firstValue: Number.isFinite(firstValue) ? firstValue : null,
-      secondValue: Number.isFinite(secondValue) ? secondValue : null,
-      roundInfo: roundInfo || null,
-      intermediateValues: intermediateValues || null,
-    };
 
     if (Number.isFinite(firstValue) && Number.isFinite(secondValue)) {
-      if (roundInfo) {
+      if (roundInfo && Math.abs(firstValue - roundInfo.totalDistance) < 1e-9) {
         const segmentLabel = roundInfo.segmentLabel || "vòng";
         return `Kết quả bạn vừa tìm là tỉ số phần trăm giữa ${toVnNumber(firstValue)} (tổng quãng đường = ${toVnNumber(roundInfo.roundCount)} ${segmentLabel} × ${toVnNumber(roundInfo.lapDistance)} ${roundInfo.distanceUnit}) và ${toVnNumber(secondValue)}. Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?`;
       }
-      if (intermediateValues) {
+      if (intermediateValues && Math.abs(firstValue - intermediateValues.firstValue) < 1e-9 && Math.abs(secondValue - intermediateValues.secondValue) < 1e-9) {
         const unitText = intermediateValues.unit ? ` ${intermediateValues.unit}` : "";
         const relationText = intermediateValues.relation === "more" ? "nhiều hơn" : "ít hơn";
         return `Kết quả bạn vừa tìm là tỉ số phần trăm giữa ${toVnNumber(firstValue)} và ${toVnNumber(secondValue)}${unitText}. Lưu ý dữ kiện thứ hai là giá trị trung gian (từ ${toVnNumber(firstValue)} ${relationText} ${toVnNumber(intermediateValues.delta)}${unitText}). Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?`;
@@ -966,7 +1008,7 @@ LUÔN TRẢ VỀ JSON:
     }
 
     // Với chủ đề tỉ số: khi HS đã nêu kết quả dạng số thì cần có đơn vị %
-    if (this.currentStep >= 3) {
+    if (this.currentStep === 3) {
       const percentCheck = this._checkPercentUnit(studentAnswer);
       if (percentCheck.hasError) {
         this.wrongAttemptCount++; // 🆕 Tăng bộ đếm
@@ -1070,7 +1112,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
       if (this.currentStep === 3 && data.step_status === "MOVE_NEXT") {
         this.step4Phase = "reverse_check";
         data.feedback = data.feedback || "Bạn đã thực hiện lời giải tốt lắm!";
-        data.next_question = this._buildStep4RecheckQuestion();
+        data.next_question = this._buildStep4RecheckQuestion(studentAnswer, chatHistory);
       }
 
 
@@ -1096,7 +1138,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
             data.feedback = roundInfo
               ? `Bạn góp ý rất chuẩn: đề bài yêu cầu dùng tổng quãng đường, tức ${String(roundInfo.roundCount).replace(".", ",")} ${segmentLabel} × ${String(roundInfo.lapDistance).replace(".", ",")} ${roundInfo.distanceUnit}. Mình đã cập nhật lại gợi ý theo đúng dữ kiện rồi.`
               : "Bạn góp ý rất đúng. Mình đã rà lại và điều chỉnh câu hỏi kiểm tra theo đúng dữ kiện đề bài.";
-            data.next_question = this._buildStep4RecheckQuestion();
+            data.next_question = this._buildStep4RecheckQuestion(studentAnswer, chatHistory);
             this.wrongAttemptCount = Math.max(0, this.wrongAttemptCount - 1);
           } else if (refusedToCheck || !hasVerificationEvidence) {
             data.status = "WRONG";
@@ -1105,7 +1147,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
               ? "'Kiểm tra lại' nghĩa là bạn làm phép tính ngược: lấy kết quả phần trăm vừa tìm được chia cho 100 rồi nhân với dữ kiện thứ hai để đối chiếu lại dữ kiện thứ nhất ban đầu. Bạn thử viết phép tính kiểm tra ngược cụ thể của bài này nhé."
               : step4Validation.message;
             data.next_question = shouldUseDefaultRecheckQuestion
-              ? this._buildStep4RecheckQuestion()
+              ? this._buildStep4RecheckQuestion(studentAnswer, chatHistory)
               : "";
           } else {
             this.step4Phase = "extension_check";

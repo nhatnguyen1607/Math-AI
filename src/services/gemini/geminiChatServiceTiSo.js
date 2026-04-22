@@ -24,7 +24,13 @@ export class GeminiChatServiceTiSo {
   _normalizeMathText(text = "") {
     return String(text)
       .replace(/,/g, ".")
+      .replace(/\b(chia\s*cho|chia)\b/gi, "/")
+      .replace(/\b(nhân\s*với|nhan\s*voi|nhân|nhan)\b/gi, "*")
+      .replace(/\b(cộng\s*với|cong\s*voi|cộng|cong)\b/gi, "+")
+      .replace(/\b(trừ\s*đi|tru\s*di|trừ|tru)\b/gi, "-")
+      .replace(/\b(bằng|bang)\b/gi, "=")
       .replace(/[xX×]/g, "*")
+      .replace(/÷/g, "/")
       .replace(/:/g, "/");
   }
 
@@ -198,20 +204,6 @@ export class GeminiChatServiceTiSo {
     );
   }
 
-  _hasUnitConversionPlan(answer = "", chatHistory = []) {
-    const recentUserText = Array.isArray(chatHistory)
-      ? chatHistory
-          .filter((m) => m?.role === "user")
-          .slice(-6)
-          .map((m) => m?.parts?.[0]?.text || "")
-          .join(" ")
-      : "";
-    const fullText = `${recentUserText} ${String(answer || "")}`.toLowerCase();
-    return /đổi\s*đơn\s*vị|quy\s*đổi|đưa\s*về\s*cùng\s*đơn\s*vị|cùng\s*đơn\s*vị|đổi\s*ra/i.test(
-      fullText,
-    );
-  }
-
   _buildStep4RecheckQuestion() {
     const toVnNumber = (num) => {
       const rounded = Number(num).toFixed(2).replace(/\.00$/, "").replace(/(\.\d*?)0+$/, "$1");
@@ -241,7 +233,8 @@ export class GeminiChatServiceTiSo {
 
     if (Number.isFinite(firstValue) && Number.isFinite(secondValue)) {
       if (roundInfo) {
-        return `Kết quả bạn vừa tìm là tỉ số phần trăm giữa ${toVnNumber(firstValue)} (tổng quãng đường = ${toVnNumber(roundInfo.roundCount)} vòng × ${toVnNumber(roundInfo.lapDistance)} ${roundInfo.distanceUnit}) và ${toVnNumber(secondValue)}. Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?`;
+        const segmentLabel = roundInfo.segmentLabel || "vòng";
+        return `Kết quả bạn vừa tìm là tỉ số phần trăm giữa ${toVnNumber(firstValue)} (tổng quãng đường = ${toVnNumber(roundInfo.roundCount)} ${segmentLabel} × ${toVnNumber(roundInfo.lapDistance)} ${roundInfo.distanceUnit}) và ${toVnNumber(secondValue)}. Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?`;
       }
       return `Kết quả bạn vừa tìm là tỉ số phần trăm giữa ${toVnNumber(firstValue)} và ${toVnNumber(secondValue)}. Để kiểm tra kết quả đó là đúng, bạn sẽ thực hiện phép tính gì?`;
     }
@@ -265,25 +258,36 @@ export class GeminiChatServiceTiSo {
 
   _isPointingOutSingleLapConfusion(answer = "") {
     const text = String(answer || "").toLowerCase().trim();
-    return /(1\s*vòng|một\s*vòng).*(0[,.]?\d*|quãng\s*đường)|0[,.]\d+\s*km.*(1\s*vòng|một\s*vòng|chỉ\s*là)/i.test(
+    return /((1|một)\s*(vòng|chặng)).*(0[,.]?\d*|quãng\s*đường)|(0[,.]\d+\s*km).*((1|một)\s*(vòng|chặng)|chỉ\s*là)|tổng\s*quãng\s*đường.*(nhân|\*)/i.test(
       text,
     );
   }
 
   _extractRoundBasedTotalDistance(problemText = "") {
     const text = String(problemText || "").toLowerCase();
-    const roundPattern = /(\d+(?:[,.]\d+)?)\s*vòng[^.?!\n]*?(?:mỗi|mỗi\s*một)\s*vòng[^.?!\n]*?(\d+(?:[,.]\d+)?)\s*(km|m)\b/i;
-    const match = text.match(roundPattern);
+    const patterns = [
+      /(\d+(?:[,.]\d+)?)\s*(vòng|chặng)\b[^.?!\n]*?(?:mỗi|mỗi\s*một)\s*(?:vòng|chặng)\b[^.?!\n]*?(\d+(?:[,.]\d+)?)\s*(km|m)\b/i,
+      /(\d+(?:[,.]\d+)?)\s*(vòng|chặng)\b[^.?!\n]*?(?:1|một)\s*(?:vòng|chặng)\b[^.?!\n]*?(?:dài|là|được)?\s*(\d+(?:[,.]\d+)?)\s*(km|m)\b/i,
+      /(\d+(?:[,.]\d+)?)\s*(vòng|chặng)\b[^.?!\n]*?(\d+(?:[,.]\d+)?)\s*(km|m)\s*\/\s*(?:vòng|chặng)\b/i,
+    ];
+
+    let match = null;
+    for (const pattern of patterns) {
+      match = text.match(pattern);
+      if (match) break;
+    }
     if (!match) return null;
 
     const roundCount = parseFloat(String(match[1]).replace(",", "."));
-    const lapDistance = parseFloat(String(match[2]).replace(",", "."));
-    const distanceUnit = match[3];
+    const segmentLabel = match[2];
+    const lapDistance = parseFloat(String(match[3]).replace(",", "."));
+    const distanceUnit = match[4];
     if (!Number.isFinite(roundCount) || !Number.isFinite(lapDistance) || !distanceUnit) return null;
 
     return {
       roundCount,
       lapDistance,
+      segmentLabel,
       distanceUnit,
       totalDistance: roundCount * lapDistance,
     };
@@ -370,8 +374,9 @@ export class GeminiChatServiceTiSo {
       ? this._formatStep4ValueVariants(second)[1] || this._formatStep4ValueVariants(second)[0]
       : "dữ kiện thứ hai";
     const roundInfo = this.step4ChangedData?.roundInfo;
+    const segmentLabel = roundInfo?.segmentLabel || "vòng";
     const roundNote = roundInfo
-      ? ` Lưu ý: tổng quãng đường cần dùng là ${String(roundInfo.roundCount).replace(".", ",")} × ${String(roundInfo.lapDistance).replace(".", ",")} ${roundInfo.distanceUnit} = ${displayFirst}.`
+      ? ` Lưu ý: tổng quãng đường cần dùng là ${String(roundInfo.roundCount).replace(".", ",")} ${segmentLabel} × ${String(roundInfo.lapDistance).replace(".", ",")} ${roundInfo.distanceUnit} = ${displayFirst}.`
       : "";
 
     return `Từ kết quả phần trăm vừa tìm được, bạn hãy lấy kết quả chia cho 100 rồi nhân với ${displaySecond}. Nếu kết quả tính lại đúng bằng ${displayFirst} của đề bài thì kết quả là chính xác. Ngược lại, nếu không trùng khớp thì bạn cần xem lại các bước làm vì có thể đã xảy ra sai sót.${roundNote}`;
@@ -782,7 +787,7 @@ CHI TIẾT PHẢN HỒI THEO BƯỚC:
 
 LUÔN TRẢ VỀ JSON:
 {
-  "reasoning_process": "Tự duy luận: 1. Đang ở bước mấy? 2. Học sinh đúng hay sai? Phân tích cụ thể chỗ đúng/sai. 3. Đây là lần sai thứ mấy (wrong_attempt_count)? Cần hỗ trợ mức nào? 4. Ở bước này được hỏi gì và BỊ CẤM hỏi gì? 5. Quyết định câu trả lời phù hợp với mức hỗ trợ.",
+  "reasoning_process": "Tự duy luận: 1. Đang ở bước mấy? 2. Học sinh đúng hay sai? Phân tích cụ thể chỗ đúng/sai. 3. Đây là lần sai thứ mấy (wrong_attempt_count)? Cần hỗ trợ mức nào? 4. Ở bước này được hỏi gì và BỊ CẤM hỏi gì? 5. Nếu đang ở bước 2 và đề cần đổi đơn vị: học sinh đã nêu rõ đổi từ đơn vị nào sang đơn vị nào chưa? 6. Quyết định câu trả lời phù hợp với mức hỗ trợ.",
   "status": "CORRECT" hoặc "WRONG",
   "step_status": "STAY" hoặc "MOVE_NEXT",
   "feedback": "Lời khích lệ hoặc nhận xét kết quả, xưng 'bạn', không xưng 'em'. Phải phù hợp với mức scaffolding.",
@@ -863,6 +868,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 - HS đang ở bước nào trong 4 bước Polya?
 - HS đã hoàn thành những bước nào rồi? (Nếu đã qua bước 1 và 2 thì TUYỆT ĐỐI KHÔNG quay lại hỏi bước 1/2)
 - HS đang bế tắc ở CHỖ NÀO CỤ THỂ tại bước hiện tại?
+- Nếu đang ở bước 2 và đề có đổi đơn vị: HS đã nêu rõ đổi từ đơn vị nào sang đơn vị nào chưa?
 
 ⚠️ HƯỚNG DẪN HỖ TRỢ THEO CẤP ĐỘ (dựa vào wrong_attempt_count):
 - wrong_attempt_count = 0: Lần sai ĐẦU TIÊN → MỨC 1: Động viên + kêu kiểm tra lại. KHÔNG chỉ ra lỗi cụ thể.
@@ -920,16 +926,6 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
       if (this.currentStep === 2) {
         // Lưu step_status gốc trước khi POST-FIX
         const originalStep2Status = data.step_status;
-        const requiresUnitConversion = this._needsUnitConversion(this.currentProblem);
-        const hasUnitConversionPlan = this._hasUnitConversionPlan(studentAnswer, chatHistory);
-
-        if (requiresUnitConversion && !hasUnitConversionPlan) {
-          data.status = "WRONG";
-          data.step_status = "STAY";
-          data.feedback = "Bạn đã nêu được cách giải cơ bản rồi. Tuy nhiên bài này cần đổi đơn vị trước khi tính.";
-          data.next_question =
-            "Bạn hãy bổ sung vào kế hoạch: bạn sẽ đổi đơn vị nào về đơn vị nào trước khi thực hiện phép tính?";
-        }
 
         // ✅ MOVE_NEXT: HS đã nêu kế hoạch xong → chuyển sang bước 3
         if (data.step_status === "MOVE_NEXT" && originalStep2Status === "MOVE_NEXT") {
@@ -958,16 +954,27 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
         if (this.step4Phase !== "extension_check") {
           const step4Validation = this._analyzeStep4Answer(studentAnswer, chatHistory);
           const hasVerificationEvidence = step4Validation.isValid;
+          const shouldUseDefaultRecheckQuestion = !askedClarification;
 
-          if (refusedToCheck || !hasVerificationEvidence) {
+          if (pointedSingleLap) {
+            const roundInfo = this.step4ChangedData?.roundInfo;
+            const segmentLabel = roundInfo?.segmentLabel || "vòng";
+            data.status = "CORRECT";
+            data.step_status = "STAY";
+            data.feedback = roundInfo
+              ? `Bạn góp ý rất chuẩn: đề bài yêu cầu dùng tổng quãng đường, tức ${String(roundInfo.roundCount).replace(".", ",")} ${segmentLabel} × ${String(roundInfo.lapDistance).replace(".", ",")} ${roundInfo.distanceUnit}. Mình đã cập nhật lại gợi ý theo đúng dữ kiện rồi.`
+              : "Bạn góp ý rất đúng. Mình đã rà lại và điều chỉnh câu hỏi kiểm tra theo đúng dữ kiện đề bài.";
+            data.next_question = this._buildStep4RecheckQuestion();
+            this.wrongAttemptCount = Math.max(0, this.wrongAttemptCount - 1);
+          } else if (refusedToCheck || !hasVerificationEvidence) {
             data.status = "WRONG";
             data.step_status = "STAY";
             data.feedback = askedClarification
-              ? "'Kiểm tra lại' nghĩa là bạn làm phép tính ngược: lấy kết quả phần trăm vừa tìm được chia cho 100 rồi nhân với dữ kiện thứ hai để đối chiếu lại dữ kiện thứ nhất ban đầu."
-              : pointedSingleLap
-                ? "Bạn nhận xét rất đúng: nếu đề có nhiều vòng thì phải lấy tổng quãng đường của tất cả các vòng, không chỉ quãng đường của 1 vòng. Mình cùng kiểm tra lại theo hướng đó nhé."
+              ? "'Kiểm tra lại' nghĩa là bạn làm phép tính ngược: lấy kết quả phần trăm vừa tìm được chia cho 100 rồi nhân với dữ kiện thứ hai để đối chiếu lại dữ kiện thứ nhất ban đầu. Bạn thử viết phép tính kiểm tra ngược cụ thể của bài này nhé."
               : step4Validation.message;
-            data.next_question = this._buildStep4RecheckQuestion();
+            data.next_question = shouldUseDefaultRecheckQuestion
+              ? this._buildStep4RecheckQuestion()
+              : "";
           } else {
             this.step4Phase = "extension_check";
             data.status = "CORRECT";
@@ -992,6 +999,26 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
             data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
           }
         }
+      }
+
+      const completionSignal = /(đã\s*hoàn\s*thành\s*bài\s*toán|hoàn\s*thành\s*xuất\s*sắc|xuất\s*sắc!\s*bạn\s*đã\s*hoàn\s*thành)/i.test(
+        `${data.feedback || ""} ${data.next_question || ""}`,
+      );
+      const defaultRecheckSignal = /kết\s*quả\s*bạn\s*vừa\s*tìm\s*là\s*tỉ\s*số\s*phần\s*trăm|để\s*kiểm\s*tra\s*kết\s*quả\s*đó\s*là\s*đúng\s*,?\s*bạn\s*sẽ\s*thực\s*hiện\s*phép\s*tính\s*gì\??/i.test(
+        String(data.next_question || ""),
+      );
+
+      if (completionSignal) {
+        data.status = "CORRECT";
+        data.step_status = "MOVE_NEXT";
+        data.feedback = /hoàn\s*thành\s*bài\s*toán/i.test(String(data.feedback || ""))
+          ? data.feedback
+          : "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
+        data.next_question = /nộp\s*bài/i.test(String(data.next_question || ""))
+          ? data.next_question
+          : "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
+      } else if (defaultRecheckSignal && /hoàn\s*thành|xuất\s*sắc/i.test(String(data.feedback || ""))) {
+        data.next_question = "";
       }
 
       // Logic chuyển bước

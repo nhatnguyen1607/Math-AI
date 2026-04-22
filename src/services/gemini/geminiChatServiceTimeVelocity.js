@@ -24,7 +24,13 @@ export class GeminiChatServiceTimeVelocity {
   _normalizeMathText(text = "") {
     return String(text)
       .replace(/,/g, ".")
+      .replace(/\b(chia\s*cho|chia)\b/gi, "/")
+      .replace(/\b(nhân\s*với|nhan\s*voi|nhân|nhan)\b/gi, "*")
+      .replace(/\b(cộng\s*với|cong\s*voi|cộng|cong)\b/gi, "+")
+      .replace(/\b(trừ\s*đi|tru\s*di|trừ|tru)\b/gi, "-")
+      .replace(/\b(bằng|bang)\b/gi, "=")
       .replace(/[xX×]/g, "*")
+      .replace(/÷/g, "/")
       .replace(/:/g, "/");
   }
 
@@ -286,18 +292,34 @@ export class GeminiChatServiceTimeVelocity {
     );
   }
 
-  _hasUnitConversionPlan(answer = "", chatHistory = []) {
-    const recentUserText = Array.isArray(chatHistory)
-      ? chatHistory
-          .filter((m) => m?.role === "user")
-          .slice(-6)
-          .map((m) => m?.parts?.[0]?.text || "")
-          .join(" ")
-      : "";
-    const fullText = `${recentUserText} ${String(answer || "")}`.toLowerCase();
-    return /đổi\s*đơn\s*vị|quy\s*đổi|đưa\s*về\s*cùng\s*đơn\s*vị|cùng\s*đơn\s*vị|đổi\s*ra/i.test(
-      fullText,
-    );
+  _extractSubjectDistanceTimePairs(problemText = "") {
+    const text = String(problemText || "");
+    if (!text) return [];
+
+    // Tìm các cụm dạng: "Việt chạy 4,2 km trong 18 phút"
+    const pattern = /([A-ZÀ-Ỹ][a-zà-ỹ]+)\s+[^.?!;\n]*?(\d+(?:[,.]\d+)?)\s*(km|m)\b[^.?!;\n]*?(\d+(?:[,.]\d+)?)\s*(giờ|phút|giây|h|s)\b/gi;
+    const pairs = [];
+    let match;
+
+    while ((match = pattern.exec(text)) !== null) {
+      const name = match[1];
+      const distanceValue = parseFloat(String(match[2]).replace(",", "."));
+      const distanceUnit = match[3];
+      const timeValue = parseFloat(String(match[4]).replace(",", "."));
+      const timeUnit = match[5];
+
+      if (!name || !Number.isFinite(distanceValue) || !Number.isFinite(timeValue)) continue;
+
+      pairs.push({
+        name,
+        distanceValue,
+        distanceUnit,
+        timeValue,
+        timeUnit,
+      });
+    }
+
+    return pairs;
   }
 
   _buildStep4RecheckQuestion() {
@@ -308,25 +330,42 @@ export class GeminiChatServiceTimeVelocity {
 
     const text = String(this.currentProblem || "").toLowerCase();
     const roundInfo = this._extractRoundBasedTotalDistance(text);
+    const subjectPairs = this._extractSubjectDistanceTimePairs(this.currentProblem);
     const distanceMatch = text.match(/(\d+(?:[,.]\d+)?)\s*(km|m)\b/i);
     const timeMatch = text.match(/(\d+(?:[,.]\d+)?)\s*(giờ|phút|giây|h|s)\b/i);
 
-    const distanceValue = roundInfo?.totalDistance ?? (distanceMatch ? parseFloat(distanceMatch[1].replace(",", ".")) : null);
-    const distanceUnit = roundInfo?.distanceUnit || (distanceMatch ? distanceMatch[2] : "quãng đường");
-    const timeValue = timeMatch ? parseFloat(timeMatch[1].replace(",", ".")) : null;
-    const timeUnit = timeMatch ? timeMatch[2] : "thời gian";
+    const chosenSubject = subjectPairs.length >= 2 ? subjectPairs[0] : null;
+
+    const distanceValue = chosenSubject
+      ? chosenSubject.distanceValue
+      : (roundInfo?.totalDistance ?? (distanceMatch ? parseFloat(distanceMatch[1].replace(",", ".")) : null));
+    const distanceUnit = chosenSubject
+      ? chosenSubject.distanceUnit
+      : (roundInfo?.distanceUnit || (distanceMatch ? distanceMatch[2] : "quãng đường"));
+    const timeValue = chosenSubject
+      ? chosenSubject.timeValue
+      : (timeMatch ? parseFloat(timeMatch[1].replace(",", ".")) : null);
+    const timeUnit = chosenSubject
+      ? chosenSubject.timeUnit
+      : (timeMatch ? timeMatch[2] : "thời gian");
 
     this.step4ChangedData = {
       distanceValue: Number.isFinite(distanceValue) ? distanceValue : null,
       distanceUnit,
       timeValue: Number.isFinite(timeValue) ? timeValue : null,
       timeUnit,
+      subjectName: chosenSubject?.name || null,
       roundInfo: roundInfo || null,
     };
 
     if (Number.isFinite(distanceValue) && Number.isFinite(timeValue)) {
+      if (chosenSubject) {
+        return `Bài này có nhiều bạn nên mình chọn kiểm tra lại riêng bạn ${chosenSubject.name} nhé. Kết quả vận tốc của bạn ${chosenSubject.name} là bao nhiêu? Để kiểm tra lại, bạn sẽ làm phép tính ngược nào với ${toVnNumber(timeValue)} ${timeUnit} và quãng đường ${toVnNumber(distanceValue)} ${distanceUnit}?`;
+      }
+
       if (roundInfo) {
-        return `Kết quả vận tốc mà bạn vừa tìm được là bao nhiêu? Để kiểm tra lại, bạn dùng tổng quãng đường (${toVnNumber(roundInfo.roundCount)} vòng × ${toVnNumber(roundInfo.lapDistance)} ${roundInfo.distanceUnit} = ${toVnNumber(distanceValue)} ${distanceUnit}) cùng với ${toVnNumber(timeValue)} ${timeUnit} để thực hiện phép tính ngược nào?`;
+        const segmentLabel = roundInfo.segmentLabel || "vòng";
+        return `Kết quả vận tốc mà bạn vừa tìm được là bao nhiêu? Để kiểm tra lại, bạn dùng tổng quãng đường (${toVnNumber(roundInfo.roundCount)} ${segmentLabel} × ${toVnNumber(roundInfo.lapDistance)} ${roundInfo.distanceUnit} = ${toVnNumber(distanceValue)} ${distanceUnit}) cùng với ${toVnNumber(timeValue)} ${timeUnit} để thực hiện phép tính ngược nào?`;
       }
       return `Kết quả vận tốc mà bạn vừa tìm được là bao nhiêu? Để kiểm tra kết quả đó đúng, bạn sẽ thực hiện phép tính gì với ${toVnNumber(timeValue)} ${timeUnit} và quãng đường ${toVnNumber(distanceValue)} ${distanceUnit}?`;
     }
@@ -336,18 +375,29 @@ export class GeminiChatServiceTimeVelocity {
 
   _extractRoundBasedTotalDistance(problemText = "") {
     const text = String(problemText || "").toLowerCase();
-    const roundPattern = /(\d+(?:[,.]\d+)?)\s*vòng[^.?!\n]*?(?:mỗi|mỗi\s*một)\s*vòng[^.?!\n]*?(\d+(?:[,.]\d+)?)\s*(km|m)\b/i;
-    const match = text.match(roundPattern);
+    const patterns = [
+      /(\d+(?:[,.]\d+)?)\s*(vòng|chặng)\b[^.?!\n]*?(?:mỗi|mỗi\s*một)\s*(?:vòng|chặng)\b[^.?!\n]*?(\d+(?:[,.]\d+)?)\s*(km|m)\b/i,
+      /(\d+(?:[,.]\d+)?)\s*(vòng|chặng)\b[^.?!\n]*?(?:1|một)\s*(?:vòng|chặng)\b[^.?!\n]*?(?:dài|là|được)?\s*(\d+(?:[,.]\d+)?)\s*(km|m)\b/i,
+      /(\d+(?:[,.]\d+)?)\s*(vòng|chặng)\b[^.?!\n]*?(\d+(?:[,.]\d+)?)\s*(km|m)\s*\/\s*(?:vòng|chặng)\b/i,
+    ];
+
+    let match = null;
+    for (const pattern of patterns) {
+      match = text.match(pattern);
+      if (match) break;
+    }
     if (!match) return null;
 
     const roundCount = parseFloat(String(match[1]).replace(",", "."));
-    const lapDistance = parseFloat(String(match[2]).replace(",", "."));
-    const distanceUnit = match[3];
+    const segmentLabel = match[2];
+    const lapDistance = parseFloat(String(match[3]).replace(",", "."));
+    const distanceUnit = match[4];
     if (!Number.isFinite(roundCount) || !Number.isFinite(lapDistance) || !distanceUnit) return null;
 
     return {
       roundCount,
       lapDistance,
+      segmentLabel,
       distanceUnit,
       totalDistance: roundCount * lapDistance,
     };
@@ -374,7 +424,7 @@ export class GeminiChatServiceTimeVelocity {
 
   _isPointingOutSingleLapConfusion(answer = "") {
     const text = String(answer || "").toLowerCase().trim();
-    return /(1\s*vòng|một\s*vòng).*(0[,.]?\d*|quãng\s*đường)|0[,.]\d+\s*km.*(1\s*vòng|một\s*vòng|chỉ\s*là)/i.test(
+    return /((1|một)\s*(vòng|chặng)).*(0[,.]?\d*|quãng\s*đường)|(0[,.]\d+\s*km).*((1|một)\s*(vòng|chặng)|chỉ\s*là)|tổng\s*quãng\s*đường.*(nhân|\*)/i.test(
       text,
     );
   }
@@ -435,6 +485,7 @@ export class GeminiChatServiceTimeVelocity {
   }
 
   _buildStep4VerificationFeedback(analysis = {}) {
+    const subjectName = this.step4ChangedData?.subjectName;
     const timeValue = this.step4ChangedData?.timeValue;
     const timeUnit = this.step4ChangedData?.timeUnit || "thời gian";
     const distanceValue = this.step4ChangedData?.distanceValue;
@@ -448,10 +499,12 @@ export class GeminiChatServiceTimeVelocity {
       : "quãng đường ban đầu của đề bài";
 
     const roundInfo = this.step4ChangedData?.roundInfo;
+    const segmentLabel = roundInfo?.segmentLabel || "vòng";
     const roundNote = roundInfo
-      ? ` Lưu ý: ${String(roundInfo.roundCount).replace(".", ",")} vòng × ${String(roundInfo.lapDistance).replace(".", ",")} ${roundInfo.distanceUnit} = ${displayDistance} (tổng quãng đường).`
+      ? ` Lưu ý: ${String(roundInfo.roundCount).replace(".", ",")} ${segmentLabel} × ${String(roundInfo.lapDistance).replace(".", ",")} ${roundInfo.distanceUnit} = ${displayDistance} (tổng quãng đường).`
       : "";
-    return `Từ công thức tính vận tốc là lấy quãng đường chia cho thời gian, bạn hãy làm ngược lại bằng cách lấy vận tốc vừa tìm được nhân với ${displayTime} để tính lại quãng đường. Nếu quãng đường tính lại đúng bằng ${displayDistance} thì kết quả tìm được là chính xác. Ngược lại, nếu hai kết quả không trùng nhau thì bạn cần xem lại các bước làm vì có thể đã xảy ra sai sót.${roundNote}`;
+    const subjectPrefix = subjectName ? `Với bạn ${subjectName}, ` : "";
+    return `${subjectPrefix}từ công thức tính vận tốc là lấy quãng đường chia cho thời gian, bạn hãy làm ngược lại bằng cách lấy vận tốc vừa tìm được nhân với ${displayTime} để tính lại quãng đường. Nếu quãng đường tính lại đúng bằng ${displayDistance} thì kết quả tìm được là chính xác. Ngược lại, nếu hai kết quả không trùng nhau thì bạn cần xem lại các bước làm vì có thể đã xảy ra sai sót.${roundNote}`;
   }
 
   _buildStep4ExtensionQuestion() {
@@ -791,6 +844,7 @@ CHI TIẾT PHẢN HỒI THEO BƯỚC:
    
 4. 🔵 KIỂM TRA (Bước 4 - 2 TẦNG):
   - Tầng 1: Hỏi HS cách kiểm tra lại đáp số vận tốc bằng phép tính ngược.
+  - Nếu đề có từ 2 đối tượng trở lên (ví dụ Việt, Mai), phải chọn rõ 1 đối tượng để hỏi kiểm tra lại (ví dụ chỉ hỏi kiểm tra vận tốc của Việt), KHÔNG hỏi vận tốc chung chung gây mơ hồ.
   - Khi HS làm đúng tầng 1, CHƯA kết thúc bài ngay: chuyển sang Tầng 2 (mở rộng), yêu cầu thay đổi một dữ kiện rồi tính vận tốc mới và nêu mối liên hệ.
   - Chỉ MOVE_NEXT khi HS hoàn thành cả 2 tầng ở bước 4.
 
@@ -803,10 +857,11 @@ CHI TIẾT PHẢN HỒI THEO BƯỚC:
 - Nếu đề cần đổi đơn vị thì ở bước 2 phải yêu cầu nêu bước đổi đơn vị, chưa nêu thì chưa được MOVE_NEXT.
 - Ở bước 3, để HS tính toán. TUYỆT ĐỐI KHÔNG ĐƯỢC hỏi các câu hỏi của bước 1 hay bước 2 (như "đề bài cho biết gì?", "bạn cần tìm gì?", "bạn sẽ giải bài này thế nào?"). CHỈ nhận xét lỗi tính toán và yêu cầu tính tiếp.
 - Ở bước 4, bắt buộc đi theo 2 tầng: kiểm tra ngược trước, sau đó mở rộng thay đổi dữ kiện rồi mới kết thúc.
+- Nếu đề có nhiều đối tượng thì ở bước 4 phải nêu đích danh 1 đối tượng để kiểm tra, không hỏi vận tốc chung chung.
 
 LUÔN TRẢ VỀ JSON:
 {
-  "reasoning_process": "Tự duy luận: 1. Đang ở bước mấy? 2. Học sinh đúng hay sai? Phân tích cụ thể chỗ đúng/sai. 3. Đây là lần sai thứ mấy (wrong_attempt_count)? Cần hỗ trợ mức nào? 4. Ở bước này được hỏi gì và BỊ CẤM hỏi gì? 5. Quyết định câu trả lời phù hợp với mức hỗ trợ.",
+  "reasoning_process": "Tự duy luận: 1. Đang ở bước mấy? 2. Học sinh đúng hay sai? Phân tích cụ thể chỗ đúng/sai. 3. Đây là lần sai thứ mấy (wrong_attempt_count)? Cần hỗ trợ mức nào? 4. Ở bước này được hỏi gì và BỊ CẤM hỏi gì? 5. Nếu đang ở bước 2 và đề cần đổi đơn vị: học sinh đã nêu rõ đổi từ đơn vị nào sang đơn vị nào chưa? 6. Nếu đang ở bước 4 và đề có nhiều đối tượng: đã chọn rõ 1 đối tượng để kiểm tra chưa? 7. Quyết định câu trả lời phù hợp với mức hỗ trợ.",
   "status": "CORRECT" hoặc "WRONG",
   "step_status": "STAY" hoặc "MOVE_NEXT",
   "feedback": "Lời khích lệ hoặc nhận xét kết quả, xưng 'bạn', không xưng 'em'. Phải phù hợp với mức scaffolding.",
@@ -886,6 +941,8 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 - HS đang ở bước nào trong 4 bước Polya?
 - HS đã hoàn thành những bước nào rồi? (Nếu đã qua bước 1 và 2 thì TUYỆT ĐỐI KHÔNG quay lại hỏi bước 1/2)
 - HS đang bế tắc ở CHỖ NÀO CỤ THỂ tại bước hiện tại?
+- Nếu đang ở bước 2 và đề có đổi đơn vị: HS đã nêu rõ đổi từ đơn vị nào sang đơn vị nào chưa?
+- Nếu đang ở bước 4 và đề có từ 2 đối tượng trở lên: phải chọn rõ 1 đối tượng để kiểm tra lại, không hỏi vận tốc chung chung.
 
 ⚠️ HƯỚNG DẪN HỖ TRỢ THEO CẤP ĐỘ (dựa vào wrong_attempt_count):
 - wrong_attempt_count = 0: Lần sai ĐẦU TIÊN → MỨC 1: Động viên + kêu kiểm tra lại. KHÔNG chỉ ra lỗi cụ thể.
@@ -907,6 +964,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 4. TẠI BƯỚC 3: KHÔNG hỏi lại bước 1/2. CHỈ yêu cầu trình bày lời giải hoặc hỗ trợ tính toán.
 5. TẠI BƯỚC 4: đi theo 2 tầng bắt buộc.
   - Tầng 1: kiểm tra ngược đáp số vận tốc bằng phép nhân vận tốc với thời gian để tính lại quãng đường và đối chiếu dữ kiện ban đầu.
+  - Nếu đề có nhiều đối tượng, câu hỏi tầng 1 phải nêu đích danh 1 đối tượng (ví dụ Việt hoặc Mai) để HS kiểm tra.
   - Tầng 2: mở rộng bằng thay đổi một dữ kiện rồi tính vận tốc mới và nêu mối liên hệ.
 6. Sau khi HS làm đúng tầng 1 thì CHƯA hoàn thành bài, phải hỏi tiếp tầng 2.
 7. Chỉ MOVE_NEXT khi HS hoàn thành đủ cả tầng 1 và tầng 2 ở bước 4.
@@ -936,16 +994,6 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
       // ===== BƯỚC 2: XỬ LÝ KẾ HOẠCH =====
       if (this.currentStep === 2) {
         const originalStep2Status = data.step_status;
-        const requiresUnitConversion = this._needsUnitConversion(this.currentProblem);
-        const hasUnitConversionPlan = this._hasUnitConversionPlan(studentAnswer, chatHistory);
-
-        if (requiresUnitConversion && !hasUnitConversionPlan) {
-          data.status = "WRONG";
-          data.step_status = "STAY";
-          data.feedback = "Bạn đã nêu được cách giải cơ bản rồi. Tuy nhiên bài này cần đổi đơn vị trước khi tính.";
-          data.next_question =
-            "Bạn hãy bổ sung vào kế hoạch: bạn sẽ đổi đơn vị nào về đơn vị nào trước khi thực hiện phép tính?";
-        }
 
         // ✅ MOVE_NEXT: HS đã nêu kế hoạch xong → chuyển sang bước 3
         if (data.step_status === "MOVE_NEXT" && originalStep2Status === "MOVE_NEXT") {
@@ -975,20 +1023,31 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
         if (this.step4Phase !== "extension_check") {
           const step4Analysis = this._analyzeStep4Verification(studentAnswer, chatHistory);
           const hasVerificationEvidence = step4Analysis.isValid;
+          const shouldUseDefaultRecheckQuestion = !(askedClarification || askedWhereWrong);
 
-          if (refusedToCheck || !hasVerificationEvidence) {
+          if (pointedSingleLap) {
+            const roundInfo = this.step4ChangedData?.roundInfo;
+            const segmentLabel = roundInfo?.segmentLabel || "vòng";
+            data.status = "CORRECT";
+            data.step_status = "STAY";
+            data.feedback = roundInfo
+              ? `Bạn góp ý rất chuẩn: phải dùng tổng quãng đường là ${String(roundInfo.roundCount).replace(".", ",")} ${segmentLabel} × ${String(roundInfo.lapDistance).replace(".", ",")} ${roundInfo.distanceUnit}. Mình đã sửa lại gợi ý theo đúng đề bài.`
+              : "Bạn góp ý rất đúng. Mình đã điều chỉnh lại câu hỏi kiểm tra cho khớp đề bài rồi.";
+            data.next_question = this._buildStep4RecheckQuestion();
+            this.wrongAttemptCount = Math.max(0, this.wrongAttemptCount - 1);
+          } else if (refusedToCheck || !hasVerificationEvidence) {
             data.status = "WRONG";
             data.step_status = "STAY";
             data.feedback = askedClarification
-              ? "'Kiểm tra lại' nghĩa là bạn làm phép tính ngược: lấy vận tốc vừa tìm được nhân với thời gian để tính lại quãng đường rồi so sánh với dữ kiện ban đầu."
+              ? "'Kiểm tra lại' nghĩa là bạn làm phép tính ngược: lấy vận tốc vừa tìm được nhân với thời gian để tính lại quãng đường rồi so sánh với dữ kiện ban đầu. Bạn thử viết phép tính kiểm tra ngược cụ thể của bài này nhé."
               : refusedToCheck
                 ? "Bước 4 bắt buộc phải kiểm tra lại, nên mình chưa thể kết thúc bài ở đây nhé."
                 : askedWhereWrong
                   ? this._buildStep4VerificationFeedback(step4Analysis)
-                  : pointedSingleLap
-                    ? `Bạn nhận xét rất đúng: ${this.step4ChangedData?.roundInfo ? "quãng đường 0,9 km chỉ là 1 vòng, còn kiểm tra phải dùng tổng quãng đường của tất cả các vòng." : "nếu đề có nhiều vòng thì phải dùng tổng quãng đường của tất cả các vòng."} Mình cùng kiểm tra lại bằng phép tính ngược nhé.`
                   : (this._buildStep4VerificationFeedback(step4Analysis) || data.feedback);
-            data.next_question = this._buildStep4RecheckQuestion();
+            data.next_question = shouldUseDefaultRecheckQuestion
+              ? this._buildStep4RecheckQuestion()
+              : "";
           } else {
             this.step4Phase = "extension_check";
             data.status = "CORRECT";
@@ -1015,6 +1074,26 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
             data.next_question = "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
           }
         }
+      }
+
+      const completionSignal = /(đã\s*hoàn\s*thành\s*bài\s*toán|hoàn\s*thành\s*xuất\s*sắc|xuất\s*sắc!\s*bạn\s*đã\s*hoàn\s*thành)/i.test(
+        `${data.feedback || ""} ${data.next_question || ""}`,
+      );
+      const defaultRecheckSignal = /kết\s*quả\s*vận\s*tốc\s*mà\s*bạn\s*vừa\s*tìm\s*được\s*là\s*bao\s*nhiêu\??\s*để\s*kiểm\s*tra\s*kết\s*quả\s*đó\s*đúng\s*,?\s*bạn\s*sẽ\s*thực\s*hiện\s*phép\s*tính\s*gì\??/i.test(
+        String(data.next_question || ""),
+      );
+
+      if (completionSignal) {
+        data.status = "CORRECT";
+        data.step_status = "MOVE_NEXT";
+        data.feedback = /hoàn\s*thành\s*bài\s*toán/i.test(String(data.feedback || ""))
+          ? data.feedback
+          : "🎉 Xuất sắc! Bạn đã hoàn thành bài toán rồi đó!";
+        data.next_question = /nộp\s*bài/i.test(String(data.next_question || ""))
+          ? data.next_question
+          : "Bạn hãy nộp bài luyện tập này bằng cách nhấn nút 'Nộp bài' ở dưới để mình chấm điểm nhé!";
+      } else if (defaultRecheckSignal && /hoàn\s*thành|xuất\s*sắc/i.test(String(data.feedback || ""))) {
+        data.next_question = "";
       }
 
       if (data.step_status === "MOVE_NEXT") {

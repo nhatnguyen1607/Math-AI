@@ -605,8 +605,7 @@ export class GeminiChatServiceTiSo {
       if (fixedHistory.length > 0 && fixedHistory[0].role !== 'user') {
         fixedHistory.unshift({ role: 'user', parts: [{ text: problemText }] });
       }
-      const fullText = fixedHistory.map(m => m.parts[0]?.text || '').join(' ');
-      const normalized = String(fullText || "").toLowerCase();
+      const fullText = fixedHistory.map((m) => m?.parts?.[0]?.text || '').join(' ').toLowerCase();
       const recentAssistantText = fixedHistory
         .filter((m) => m?.role === 'model' || m?.role === 'assistant')
         .slice(-4)

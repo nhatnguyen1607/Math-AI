@@ -78,7 +78,7 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
       ['Lớp', className],
       ['Ngày nộp', result.submittedAt?.toDate?.()?.toLocaleDateString?.('vi-VN') || 'N/A'],
       [''],
-      ['Tổng điểm', (result.tongDiem || 0) + '/8'],
+      ['Tổng điểm', (result.tongDiem || 0) + '/10'],
       ['Mức năng lực chung', capitalizeLevelName(result.mucNangLucChung) || 'Chưa đánh giá'],
       ['Nhận xét chung', result.nhanXetChung || ''],
       [''],
@@ -552,7 +552,7 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
                       <td className="px-6 py-4 font-semibold text-gray-800">{result.studentName}</td>
                       <td className="px-6 py-4 text-center">
                         <span className="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full font-bold text-lg">
-                          {result.tongDiem || 0}/8
+                          {result.tongDiem || 0}/10
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">

@@ -403,7 +403,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
               <p className="text-lg font-semibold text-gray-700 mb-3">Tổng điểm</p>
               <p className="text-5xl font-bold text-orange-600">
                 {result.tongDiem || 0}
-                <span className="text-3xl text-gray-600">/8</span>
+                <span className="text-3xl text-gray-600">/10</span>
               </p>
             </div>
 
@@ -478,7 +478,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Điểm</p>
                     <p className="text-2xl font-bold text-gray-800">
-                      {result.bai_1.evaluation.diem || 0}/2
+                      {result.bai_1.evaluation.diem || 0}/2.5
                     </p>
                   </div>
                   <div className="text-center">
@@ -569,7 +569,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Điểm</p>
                     <p className="text-2xl font-bold text-gray-800">
-                      {result.bai_2.evaluation.diem || 0}/2
+                      {result.bai_2.evaluation.diem || 0}/2.5
                     </p>
                   </div>
                   <div className="text-center">
@@ -641,7 +641,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Điểm</p>
                     <p className="text-2xl font-bold text-gray-800">
-                      {result.bai_3.evaluation.diem || 0}/2
+                      {result.bai_3.evaluation.diem || 0}/2.5
                     </p>
                   </div>
                   <div className="text-center">
@@ -759,7 +759,7 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-600">Điểm</p>
                     <p className="text-2xl font-bold text-gray-800">
-                      {result.bai_4.evaluation.diem || 0}/2
+                      {result.bai_4.evaluation.diem || 0}/2.5
                     </p>
                   </div>
                   <div className="text-center">

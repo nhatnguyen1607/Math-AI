@@ -141,18 +141,20 @@ ${worksheet.bai_2.explanation}
 Các cách sắp xếp học sinh đã gửi:
 ${arrangementText}
 
-[LUẬT CHẤM ĐIỂM BẮT BUỘC]
+[LUẬT CHẤM ĐIỂM BẮT BUỘC (Tối đa 2.5 điểm)]
 QUAN TRỌNG: Mỗi cách PHẢI CÓ ĐỦ tất cả các bước cần thiết. Nếu một cách thiếu bước hoặc chỉ có 1-2 bước -> cách đó được tính là SAI HOÀN TOÀN.
 - Yêu cầu: Tối thiểu 2 CÁCH đầy đủ bước và đúng logic thứ tự.
-- Mức Tốt (2 điểm): Xếp đúng ≥2 cách (mỗi cách đầy đủ bước + thứ tự logic đúng).
-- Mức Đạt (1 điểm): ếp đúng 1 cách (đầy đủ bước + thứ tự logic đúng).
-- Mức Cần cố gắng (0 điểm): Xếp < 1 cách đầy đủ, HOẶC các cách bị thiếu bước, HOẶC thứ tự logic sai.
+- Mức Tốt (2.5 điểm): Xếp đúng ≥2 cách (mỗi cách đầy đủ bước + thứ tự logic đúng).
+- Mức Đạt (1.75 điểm): Xếp đúng 1 cách hoàn chỉnh (đầy đủ bước + thứ tự logic đúng).
+- Mức Cần cố gắng (0 - 0.75 điểm): 
+  + Xếp được 2 vị trí đúng của các bước giải trong từng cách -> 0.75 điểm.
+  + Xếp < 1 cách đầy đủ, HOẶC các cách bị thiếu bước, HOẶC thứ tự logic sai -> 0 điểm.
 
 [YÊU CẦU ĐẦU RA]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
-  "suy_luan": "Bước 1: ĐỌC KỸ 4 CÁCH GIẢI ĐÚNG: Cách 1: (1) → (2) → (3), Cách 2: (1) → (3) → (2), Cách 3: (1) → (2) → (4), Cách 4: (1) → (3) → (5). Bước 2: ĐỐI CHIẾU bài làm của HS với 4 cách đúng trên. Cách nào của HS khớp với một trong 4 cách đúng thì tính là XẾP ĐÚNG. Cách nào không khớp hoặc thiếu bước thì tính là SAI. Bước 3: Đếm có bao nhiêu cách HS xếp đúng. Kết luận: Nếu HS xếp đúng >= 2 cách (mỗi cách đầy đủ bước + thứ tự logic trùng 1 trong 4 cách đúng) -> 2 điểm. Nếu HS xếp đúng 1 cách -> 1 điểm. Nếu không có cách nào đúng -> 0 điểm.",
-  "diem": (0 ,1 hoặc 2),
+  "suy_luan": "Bước 1: ĐỌC KỸ 4 CÁCH GIẢI ĐÚNG: Cách 1: (1) → (2) → (3), Cách 2: (1) → (3) → (2), Cách 3: (1) → (2) → (4), Cách 4: (1) → (3) → (5). Bước 2: ĐỐI CHIẾU bài làm của HS với 4 cách đúng trên. Bước 3: Đếm số cách xếp đúng và xem xét vị trí đúng để cho điểm theo mức (0, 0.75, 1.75, 2.5).",
+  "diem": (0, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
   "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Nêu rõ: học sinh sắp xếp được mấy cách đầy đủ, những cách nào bị thiếu bước (và thiếu bước nào cụ thể). Nhắc nhở HS rằng mỗi cách phải trình bày đủ các phép tính từ đầu đến cuối. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'ID'."
 }`;
@@ -183,11 +185,20 @@ Giải thích:
 ${giai_thich}
 CÓ ĐÁP SỐ/KẾT LUẬN CUỐI CÙNG?: ${hasFinalAnswer ? 'Có' : 'Không'}
 
+[BAREM CHẤM ĐIỂM BẮT BUỘC (Tối đa 2.5 điểm)]
+- Điều kiện tiên quyết: Bài làm PHẢI có đáp số/kết luận. Nếu không có -> 0 điểm.
+- Mức Tốt (2.5 điểm): Thực hiện đúng các bước giải và phép tính. Trình bày rõ ràng, đầy đủ. Có giải thích hợp lý cho các bước.
+- Mức Đạt (1.75 điểm): Thực hiện đúng các bước giải và phép tính cơ bản. Trình bày rõ ràng, đầy đủ.
+- Mức Cần cố gắng (0 - 0.75 điểm):
+  + Thực hiện đúng 2/3 bước giải và phép tính cơ bản -> 0.75 điểm.
+  + Thực hiện đúng 1/3 bước giải và phép tính cơ bản -> 0.25 điểm.
+  + Tính toán sai hết hoặc thiếu logic -> 0 điểm.
+
 [YÊU CẦU ĐẦU RA]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
-  "suy_luan": "Bắt buộc kiểm tra điều kiện có đáp số/kết luận cuối cùng trước. Nếu chưa có kết luận cuối thì chấm 0 điểm ngay. Nếu đã có kết luận cuối thì mới tiếp tục đánh giá chất lượng phép tính và phần giải thích. LƯU Ý: giải thích hời hợt thì tối đa 1 điểm.",
-  "diem": (0, 1 hoặc 2),
+  "suy_luan": "Bắt buộc kiểm tra điều kiện có đáp số/kết luận cuối cùng trước. Nếu chưa có thì chấm 0 điểm ngay. Nếu đã có thì đối chiếu bài làm để cho điểm 0, 0.25, 0.75, 1.75 hoặc 2.5 theo barem.",
+  "diem": (0, 0.25, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
   "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Nhận xét trực tiếp năng lực tính toán và đánh giá xem phần lập luận/giải thích của em ấy có thực sự hiểu bản chất không. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'quy định'."
 }`;
@@ -289,19 +300,20 @@ export const evaluateBai4 = async (studentAnswers, worksheet) => {
 ${questionsInfo || 'Học sinh không làm bài.'}
 ${warningContext}
 
-[LUẬT CHẤM ĐIỂM BẮT BUỘC (QUAN TRỌNG)]
-- Câu a: Bắt buộc học sinh phải trình bày ĐẦY ĐỦ phép tính (VD: 28+56=84, 28/56=1/2). NẾU CHỈ GHI MỖI KẾT QUẢ (như 84, 1/2) HOẶC BỊ ĐÁNH DẤU "LỖI NGHIÊM TRỌNG" BÊN TRÊN -> TÍNH LÀ LÀM SAI CÂU A.
-- Câu b: Bắt buộc trình bày CẢ 2 CÁCH giải chi tiết từng bước. NẾU CHỈ GHI ĐÁP ÁN -> TÍNH LÀ LÀM SAI CÂU B.
-- TIÊU CHÍ ĐIỂM:
-  + Mức Tốt (2 điểm): Làm đúng câu a (có phép tính) VÀ làm đúng câu b (trình bày đủ các bước cho 2 cách) VÀ giải thích/nhận xét được câu c.
-  + Mức Đạt (1 điểm): CHỈ làm đúng câu a (có phép tính) HOẶC CHỈ làm đúng câu b (trình bày đủ bước).
-  + Mức Cần cố gắng (0 điểm): Không làm được bài HOẶC làm sai cả a và b HOẶC chỉ ghi kết quả mà không có phép tính/bước giải cho cả a và b.
+[LUẬT CHẤM ĐIỂM BẮT BUỘC (Tối đa 2.5 điểm)]
+- Bài có 3 yêu cầu: a (Kiểm tra lại kết quả), b (Giải bài toán mở rộng), c (Nhận xét/so sánh).
+- NẾU CHỈ GHI MỖI KẾT QUẢ HOẶC BỊ ĐÁNH DẤU "LỖI NGHIÊM TRỌNG" -> TÍNH LÀ LÀM SAI.
+- Mức Tốt (2.5 điểm): Làm được ĐỒNG THỜI cả a, b và c (Kiểm tra đúng, Giải bài toán mở rộng đúng, So sánh hợp lý).
+- Mức Đạt (1.75 điểm): Thực hiện được một trong hai yêu cầu: Kiểm tra được kết quả bài toán bằng phép tính HOẶC Giải được bài toán mở rộng.
+- Mức Cần cố gắng (0 - 0.75 điểm):
+  + Kiểm tra được một phần kết quả bài toán (ví dụ 1 trong 2 ý kiểm tra) -> 0.75 điểm.
+  + Không kiểm tra đúng và không giải được bài toán mở rộng -> 0 điểm.
 
 [YÊU CẦU ĐẦU RA]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
-  "suy_luan": "Đối chiếu bài làm với [LUẬT CHẤM ĐIỂM BẮT BUỘC]. Kiểm tra chặt chẽ việc ghi phép tính câu a và ghi đủ các bước câu b. Từ đó đưa ra quyết định điểm cuối cùng.",
-  "diem": (0, 1 hoặc 2),
+  "suy_luan": "Đối chiếu bài làm với [LUẬT CHẤM ĐIỂM BẮT BUỘC]. Kiểm tra chặt chẽ việc ghi phép tính. Từ đó đưa ra quyết định điểm cuối cùng (0, 0.75, 1.75, 2.5).",
+  "diem": (0, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
   "nhan_xet": "Viết 4-5 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Đánh giá rõ: (1) HS kiểm tra lại được kết quả hay không; (2) HS vận dụng kiến thức mở rộng đến mức độ nào và có thể giải quyết được bài toán mở rộng; (3) HS có so sánh được các phương pháp giải khác nhau mà mình đã thực hiện. ĐẶC BIỆT lưu ý nhắc nhở nếu em ấy có thói quen chỉ ghi đáp án mà không trình bày phép tính. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'tiêu chí'."
 }`;
@@ -318,7 +330,7 @@ Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 };
 
 const calculateOverallLevel = (score) => {
-  if (score >= 7) {
+  if (score >= 7.5) {
     return 'tốt';
   } else if (score >= 4) {
     return 'đạt';
@@ -334,9 +346,9 @@ export const generateOverallComment = async (evaluations, tongDiem, mucNangLucCh
     const bai_3_feedback = evaluations.bai_3?.evaluation?.nhan_xet || '';
     const bai_4_feedback = evaluations.bai_4?.evaluation?.nhan_xet || '';
 
-    const prompt = `Bạn là một trợ lý tổng hợp báo cáo đánh giá năng lực học sinh.
+    const prompt = `Bạn là một trợ lý tổng hợp báo cáo đánh giá năng lực học sinh. ĐÂY LÀ BÁO CÁO NỘI BỘ DÀNH RIÊNG CHO GIÁO VIÊN ĐỌC.
 
-TỔNG ĐIỂM: ${tongDiem}/8
+TỔNG ĐIỂM: ${tongDiem}/10
 MỨC NĂNG LỰC CHUNG: ${mucNangLucChung}
 CHI TIẾT:
 - Bài 1: ${bai_1_feedback}
@@ -344,15 +356,20 @@ CHI TIẾT:
 - Bài 3: ${bai_3_feedback}
 - Bài 4: ${bai_4_feedback}
 
-YÊU CẦU: 
-- Viết một đoạn văn 4-6 câu tổng hợp tình hình làm bài để BÁO CÁO CHO GIÁO VIÊN.
-- NGÔI XƯNG: Bắt buộc dùng ngôi thứ ba ('học sinh', 'em ấy'). TUYỆT ĐỐI KHÔNG xưng 'con', 'cô/thầy'.
-- Nêu rõ các kỹ năng em ấy nắm vững và những kỹ năng/kiến thức nào giáo viên cần chú ý bồi dưỡng thêm. KHÔNG dùng từ 'barem'.`;
+YÊU CẦU QUAN TRỌNG VỀ ĐỊNH DẠNG VÀ VĂN PHONG:
+- TRÌNH BÀY: Viết duy nhất một đoạn văn từ 4-6 câu, văn phong tự nhiên, mạch lạc. 
+- CẤU TRÚC ĐOẠN VĂN:
+    + Câu đầu tiên: Phải bắt đầu bằng "Học sinh có tổng điểm ${tongDiem}/10, mức năng lực chung ${mucNangLucChung}."
+    + Các câu tiếp theo: Tổng hợp tình hình làm bài từ chi tiết các bài 1, 2, 3, 4 ở trên. Kết nối các ý một cách tự nhiên (ví dụ: "Trong khi bài 1 em ấy làm tốt thì bài 2 còn lúng túng...").
+    + Các câu cuối: Đưa ra kiến nghị cụ thể cho giáo viên về những kỹ năng/kiến thức cần bồi dưỡng thêm.
+- ĐỊNH DẠNG: TRÌNH BÀY VĂN BẢN THUẦN TÚY, TUYỆT ĐỐI KHÔNG SỬ DỤNG DẤU SAO (**) ĐỂ IN ĐẬM, KHÔNG DÙNG TIÊU ĐỀ HAY CÁC NHÃN (như **TỔNG QUAN**, **CHI TIẾT**...).
+- NGÔI XƯNG: Bắt buộc dùng ngôi thứ ba ('học sinh', 'em ấy'). TUYỆT ĐỐI KHÔNG xưng 'con', 'cô/thầy' hay chào hỏi học sinh.
+- CẤM: Không dùng từ 'barem', 'tiêu chí', 'ID'.`;
 
     const result = await geminiModelManager.generateContent(prompt);
-    return result.response.text().trim() || `Học sinh đạt tổng điểm ${tongDiem}/8 với mức năng lực ${mucNangLucChung}.`;
+    return result.response.text().trim() || `Học sinh đạt tổng điểm ${tongDiem}/10 với mức năng lực ${mucNangLucChung}.`;
   } catch (error) {
     console.error('Error generating overall comment:', error);
-    return `Học sinh đạt tổng điểm ${tongDiem}/8 với mức năng lực ${mucNangLucChung}.`;
+    return `Học sinh đạt tổng điểm ${tongDiem}/10 với mức năng lực ${mucNangLucChung}.`;
   }
 };

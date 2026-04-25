@@ -16,7 +16,7 @@ const extractJSON = (text) => {
 };
 
 const calculateOverallLevel = (score) => {
-  if (score >= 7) return 'tốt';
+  if (score >= 7.5) return 'tốt';
   if (score >= 4) return 'đạt';
   return 'cần cố gắng';
 };
@@ -143,16 +143,20 @@ export const evaluateBai1 = async (studentAnswers, worksheet) => {
 Các ý học sinh đã chọn:
 ${selectedTexts.length > 0 ? selectedTexts.map(t => `- ${t}`).join('\n') : 'Không chọn gì'}
 
-[BAREM CHẤM ĐIỂM BẮT BUỘC]
+[BAREM CHẤM ĐIỂM BẮT BUỘC (Tối đa 2.5 điểm)]
 Có 4 phát biểu (1: Rô-bốt A..., 2: Rô-bốt B..., 3: Yêu cầu so sánh, 4: Vận tốc phụ thuộc S và t).
-- Mức Tốt (2 điểm): Chọn ĐÚNG CẢ 4 phát biểu.
-- Mức Đạt (1 điểm): Chỉ chọn đúng (1, 2, 3), thiếu ý 4.
-- Mức Cần cố gắng (0 điểm): Các trường hợp còn lại.
+- Mức Tốt (2.5 điểm): Chọn đúng 1, 2, 3, 4.
+- Mức Đạt (1.75 điểm): Chỉ chọn đúng (1, 2, 3), thiếu ý 4.
+- Mức Cần cố gắng (0 - 0.75 điểm):
+  + Chọn đúng 3 ý trong 4 ý nhưng thiếu (1), (2) hoặc (3) -> 0.75 điểm.
+  + Chọn đúng 2 ý trong 4 ý -> 0.5 điểm.
+  + Chọn đúng 1 ý trong 4 ý -> 0.25 điểm.
+  + Không chọn được ý nào -> 0 điểm.
 
 [YÊU CẦU ĐẦU RA JSON]
 {
-  "suy_luan": "Phân tích xem học sinh đã chọn đủ 4 ý hay thiếu ý số 4.",
-  "diem": (0, 1 hoặc 2),
+  "suy_luan": "Phân tích xem học sinh đã chọn đủ 4 ý hay thiếu ý nào, áp dụng điểm tương ứng.",
+  "diem": (0, 0.25, 0.5, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
   "nhan_xet": "Viết 3-4 câu BÁO CÁO CHO GIÁO VIÊN. BẮT BUỘC dùng ngôi thứ 3 ('học sinh', 'em ấy'). TUYỆT ĐỐI KHÔNG xưng hô trực tiếp với học sinh (CẤM dùng 'Chào em', 'của em'). Nêu rõ em ấy nhận biết thông số rô-bốt và yếu tố (S, t) tốt hay chưa."
 }`;
@@ -182,16 +186,18 @@ export const evaluateBai2 = async (studentAnswers, worksheet) => {
 [BÀI LÀM CỦA HỌC SINH]
 ${arrangementText}
 
-[BAREM CHẤM ĐIỂM BẮT BUỘC]
+[BAREM CHẤM ĐIỂM BẮT BUỘC (Tối đa 2.5 điểm)]
 Có 4 cách giải đổi đơn vị khác nhau để so sánh.
-- Mức Tốt (2 điểm): Xếp ĐÚNG TỪ 2 CÁCH TRỞ LÊN.
-- Mức Đạt (1 điểm): Xếp đúng ĐƯỢC 1 CÁCH.
-- Mức Cần cố gắng (0 điểm): Sắp xếp sai logic.
+- Mức Tốt (2.5 điểm): Xếp ĐÚNG TỪ 2 CÁCH TRỞ LÊN.
+- Mức Đạt (1.75 điểm): Xếp đúng ĐƯỢC 1 CÁCH.
+- Mức Cần cố gắng (0 - 0.75 điểm):
+  + Xếp được 2 vị trí đúng của các bước giải trong từng cách -> 0.75 điểm.
+  + Sắp xếp sai logic hoàn toàn -> 0 điểm.
 
 [YÊU CẦU ĐẦU RA JSON]
 {
-  "suy_luan": "Đếm số cách học sinh xếp đúng logic.",
-  "diem": (0, 1 hoặc 2),
+  "suy_luan": "Đếm số cách học sinh xếp đúng logic để cho điểm (0, 0.75, 1.75 hoặc 2.5).",
+  "diem": (0, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
   "nhan_xet": "Viết 3-4 câu BÁO CÁO CHO GIÁO VIÊN. BẮT BUỘC dùng ngôi thứ 3 ('học sinh', 'em ấy'). TUYỆT ĐỐI KHÔNG xưng hô trực tiếp với học sinh (CẤM dùng 'Chào em', 'của em'). Khen ngợi nếu em ấy đề xuất nhiều hướng đổi đơn vị, hoặc nhắc nhở nếu xếp lộn xộn."
 }`;
@@ -216,11 +222,14 @@ Bài giải: ${bai_lam}
 Giải thích: ${giai_thich}
 CÓ ĐÁP SỐ/KẾT LUẬN CUỐI CÙNG?: ${hasFinalAnswer ? 'Có' : 'Không'}
 
-[BAREM CHẤM ĐIỂM BẮT BUỘC]
+[BAREM CHẤM ĐIỂM BẮT BUỘC (Tối đa 2.5 điểm)]
 - Điều kiện tiên quyết: Bài làm PHẢI có đáp số hoặc kết luận cuối cùng. Nếu chưa ra kết quả/kết luận cuối cùng thì CHỈ CHẤM 0 ĐIỂM.
-- Mức Tốt (2 điểm): Tính vận tốc đúng, so sánh đúng VÀ CÓ GIẢI THÍCH hợp lý (VD: tại sao phải đổi đơn vị).
-- Mức Đạt (1 điểm): Tính đúng và so sánh đúng NHƯNG phần giải thích thiếu chiều sâu hoặc hời hợt.
-- Mức Cần cố gắng (0 điểm): Tính sai nhiều hoặc so sánh sai.
+- Mức Tốt (2.5 điểm): Tính vận tốc đúng, so sánh đúng VÀ CÓ GIẢI THÍCH hợp lý (VD: tại sao phải đổi đơn vị).
+- Mức Đạt (1.75 điểm): Tính đúng và so sánh đúng NHƯNG phần giải thích thiếu chiều sâu hoặc hời hợt.
+- Mức Cần cố gắng (0 - 0.75 điểm):
+  + Thực hiện đúng 2/3 bước giải và phép tính cơ bản -> 0.75 điểm.
+  + Thực hiện đúng 1/3 bước giải và phép tính cơ bản -> 0.25 điểm.
+  + Tính sai nhiều hoặc so sánh sai -> 0 điểm.
 
 [QUY ƯỚC QUY ĐỔI HỢP LỆ - KHÔNG ĐƯỢC CHẤM SAI]
 - 360 m = 0,36 km là ĐÚNG.
@@ -231,8 +240,8 @@ CÓ ĐÁP SỐ/KẾT LUẬN CUỐI CÙNG?: ${hasFinalAnswer ? 'Có' : 'Không'}
 
 [YÊU CẦU ĐẦU RA JSON]
 {
-  "suy_luan": "Bắt buộc kiểm tra điều kiện có đáp số/kết luận cuối cùng trước. Nếu chưa có thì chấm 0 điểm ngay. Nếu đã có thì mới kiểm tra tính đúng sai theo giá trị tương đương khi đổi đơn vị; không bắt lỗi khác biểu diễn cùng giá trị. Sau đó mới đánh giá độ hợp lý của phần giải thích (nếu sơ sài thì tối đa 1 điểm).",
-  "diem": (0, 1 hoặc 2),
+  "suy_luan": "Bắt buộc kiểm tra điều kiện có đáp số/kết luận cuối cùng trước. Nếu chưa có thì chấm 0 điểm ngay. Nếu đã có thì đối chiếu barem để cho điểm 0, 0.25, 0.75, 1.75 hoặc 2.5.",
+  "diem": (0, 0.25, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
   "nhan_xet": "Viết 3-4 câu BÁO CÁO CHO GIÁO VIÊN. BẮT BUỘC dùng ngôi thứ 3 ('học sinh', 'em ấy'). TUYỆT ĐỐI KHÔNG xưng hô trực tiếp với học sinh. Đánh giá kỹ năng đổi đơn vị và tư duy lập luận của học sinh."
 }`;
@@ -254,13 +263,13 @@ CÓ ĐÁP SỐ/KẾT LUẬN CUỐI CÙNG?: ${hasFinalAnswer ? 'Có' : 'Không'}
     // Chốt cứng: nếu học sinh đã tính đúng trường hợp rô-bốt A/B theo dữ kiện chuẩn
     // thì không để AI chấm 0 điểm do hiểu nhầm 0,05 giờ.
     if (hasDeterministicCorrectResult && Number(evaluation?.diem || 0) <= 0) {
-      const forcedScore = explanationOk ? 2 : 1;
+      const forcedScore = explanationOk ? 2.5 : 1.75;
       return {
         evaluation: {
           ...evaluation,
           diem: forcedScore,
-          muc_nang_luc: forcedScore === 2 ? 'tốt' : 'đạt',
-          nhan_xet: forcedScore === 2
+          muc_nang_luc: forcedScore === 2.5 ? 'tốt' : 'đạt',
+          nhan_xet: forcedScore === 2.5
             ? "Học sinh đã đổi đơn vị và tính toán đúng: vận tốc Rô-bốt A là 7,2 km/h, vận tốc Rô-bốt B là 5,4 km/h, kết luận Rô-bốt A nhanh hơn là chính xác. Phần giải thích cũng thể hiện được lý do lựa chọn cách làm. Bài làm đạt yêu cầu tốt về cả tính toán và lập luận."
             : "Học sinh đã đổi đơn vị và tính toán đúng: vận tốc Rô-bốt A là 7,2 km/h, vận tốc Rô-bốt B là 5,4 km/h, kết luận Rô-bốt A nhanh hơn là chính xác. Phần giải thích còn ngắn hoặc chưa rõ ý nên chưa đạt mức tối đa. Giáo viên có thể nhắc học sinh bổ sung lý do đổi đơn vị đầy đủ hơn."
         }
@@ -304,16 +313,18 @@ export const evaluateBai4 = async (studentAnswers, worksheet) => {
 ${questionsInfo || 'Học sinh không làm bài.'}
 ${validationWarnings ? `\n[CẢNH BÁO ĐỊNH DẠNG]\n${validationWarnings}\n` : ''}
 
-[BAREM CHẤM ĐIỂM BẮT BUỘC]
+[BAREM CHẤM ĐIỂM BẮT BUỘC (Tối đa 2.5 điểm)]
 Yêu cầu gồm: a (Kiểm tra lại), b (Giải bài mở rộng: tăng/giảm thời gian hoặc quãng đường), c (Nhận xét).
-- Mức Tốt (2 điểm): Làm ĐỒNG THỜI cả a, b và c.
-- Mức Đạt (1 điểm): Chỉ làm được a HOẶC b.
-- Mức Cần cố gắng (0 điểm): Không làm được cả a, b và c.
+- Mức Tốt (2.5 điểm): Làm ĐỒNG THỜI cả a, b và c.
+- Mức Đạt (1.75 điểm): Thực hiện được một trong hai yêu cầu: Kiểm tra được kết quả bài toán HOẶC Giải được bài toán mở rộng.
+- Mức Cần cố gắng (0 - 0.75 điểm):
+  + HS làm đúng 1 trong 2 ý của câu a hoặc làm đúng 1 trong 2 cách của câu b -> 0.75 điểm.
+  + Không kiểm tra đúng kết quả và không giải được bài toán mở rộng -> 0 điểm.
 
 [YÊU CẦU ĐẦU RA JSON]
 {
-  "suy_luan": "Đánh giá chi tiết bước 'thử lại' (câu a), và giải quyết sự biến thiên của s và t (câu b).",
-  "diem": (0, 1 hoặc 2),
+  "suy_luan": "Đánh giá chi tiết bước 'thử lại' (câu a), giải quyết sự biến thiên của s và t (câu b), đối chiếu barem cho điểm (0, 0.75, 1.75 hoặc 2.5).",
+  "diem": (0, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
   "nhan_xet": "Viết 3-4 câu BÁO CÁO CHO GIÁO VIÊN. BẮT BUỘC dùng ngôi thứ 3 ('học sinh', 'em ấy'). TUYỆT ĐỐI KHÔNG xưng hô trực tiếp với học sinh. Đánh giá khả năng hiểu sâu bản chất vận tốc khi s/t thay đổi."
 }`;
@@ -332,7 +343,7 @@ export const generateOverallComment = async (evaluations, tongDiem, mucNangLucCh
 
     const prompt = `Bạn là một trợ lý tổng hợp báo cáo đánh giá năng lực học sinh về chủ đề CHUYỂN ĐỘNG ĐỀU (VẬN TỐC). ĐÂY LÀ BÁO CÁO NỘI BỘ DÀNH RIÊNG CHO GIÁO VIÊN ĐỌC.
 
-TỔNG ĐIỂM: ${tongDiem}/8
+TỔNG ĐIỂM: ${tongDiem}/10
 MỨC NĂNG LỰC CHUNG: ${mucNangLucChung}
 CHI TIẾT CÁC BÀI:
 - Bài 1: ${bai_1_feedback}
@@ -340,16 +351,20 @@ CHI TIẾT CÁC BÀI:
 - Bài 3: ${bai_3_feedback}
 - Bài 4: ${bai_4_feedback}
 
-YÊU CẦU BẮT BUỘC: 
-- ĐỐI TƯỢNG ĐỌC: Báo cáo này để GIÁO VIÊN đọc. TUYỆT ĐỐI KHÔNG viết dưới dạng thư gửi học sinh.
-- CẤM: TUYỆT ĐỐI KHÔNG được dùng các từ: 'Chào em', 'của em', 'em nhé', 'cố gắng nhé'.
+YÊU CẦU QUAN TRỌNG VỀ ĐỊNH DẠNG VÀ VĂN PHONG:
+- TRÌNH BÀY: Viết duy nhất một đoạn văn từ 4-6 câu, văn phong tự nhiên, mạch lạc. 
+- CẤU TRÚC ĐOẠN VĂN:
+    + Câu đầu tiên: Phải bắt đầu bằng "Học sinh có tổng điểm ${tongDiem}/10, mức năng lực chung ${mucNangLucChung}."
+    + Các câu tiếp theo: Tổng hợp tình hình làm bài từ chi tiết các bài 1, 2, 3, 4 ở trên. Kết nối các ý một cách tự nhiên (ví dụ: "Trong khi bài 1 em ấy làm tốt thì bài 2 còn lúng túng...").
+    + Các câu cuối: Đưa ra kiến nghị cụ thể cho giáo viên về những kỹ năng/kiến thức cần bồi dưỡng thêm.
+- ĐỊNH DẠNG: TRÌNH BÀY VĂN BẢN THUẦN TÚY, TUYỆT ĐỐI KHÔNG SỬ DỤNG DẤU SAO (**) ĐỂ IN ĐẬM, KHÔNG DÙNG TIÊU ĐỀ HAY CÁC NHÃN (như **TỔNG QUAN**, **CHI TIẾT**...).
 - NGÔI XƯNG: Bắt buộc dùng ngôi thứ ba ('học sinh', 'em ấy').
-- NỘI DUNG: Viết 4-6 câu tổng hợp khả năng nắm bắt mối quan hệ S-v-t, sự cẩn thận khi đổi đơn vị và tư duy linh hoạt. Chỉ ra phần kiến thức giáo viên cần lưu ý củng cố thêm.`;
+- CẤM: TUYỆT ĐỐI KHÔNG được dùng các từ: 'Chào em', 'của em', 'em nhé', 'cố gắng nhé', 'barem'.`;
 
     const result = await geminiModelManager.generateContent(prompt);
-    return result.response.text().trim() || `Học sinh đạt tổng điểm ${tongDiem}/8 với mức năng lực ${mucNangLucChung}.`;
+    return result.response.text().trim() || `Học sinh đạt tổng điểm ${tongDiem}/10 với mức năng lực ${mucNangLucChung}.`;
   } catch (error) {
     console.error('Error generating overall comment for Output 2:', error);
-    return `Học sinh đạt tổng điểm ${tongDiem}/8 với mức năng lực ${mucNangLucChung}.`;
+    return `Học sinh đạt tổng điểm ${tongDiem}/10 với mức năng lực ${mucNangLucChung}.`;
   }
 };

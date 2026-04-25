@@ -1,5 +1,5 @@
 import * as InputService from './InputWorksheetEvaluationService';
-import * as Output1Service from './Ouput1WooksheetEvaluationService copy';
+import * as Output1Service from './Ouput1WooksheetEvaluationService';
 import * as Output2Service from './Ouput2WooksheetEvaluationService';
 
 export const getEvaluationService = (worksheet) => {

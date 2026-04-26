@@ -104,7 +104,6 @@ export const evaluateWorksheet = async (studentAnswers, worksheet) => {
   }
 };
 
-// Tiêu chí 1: Nhận biết được vấn đề cần giải quyết
 export const evaluateBai1 = async (studentAnswers, worksheet) => {
   try {
     let selections = studentAnswers?.bai_1?.selections || [];
@@ -115,7 +114,7 @@ export const evaluateBai1 = async (studentAnswers, worksheet) => {
       return matchedQ ? `(${matchedQ.id}) ${matchedQ.text}` : id;
     });
 
-    const prompt = `Bạn là giáo viên chấm Bài 1. PHẢI ĐỐI CHIẾU ID (1,2,3,4).
+    const prompt = `Bạn là giáo viên chuyên môn cao. PHẢI ĐỐI CHIẾU ID (1,2,3,4).
 [BÀI LÀM CỦA HỌC SINH]
 ${selectedTexts.length > 0 ? selectedTexts.join('\n') : 'Không chọn gì'}
 
@@ -130,10 +129,10 @@ ${selectedTexts.length > 0 ? selectedTexts.join('\n') : 'Không chọn gì'}
 
 [YÊU CẦU ĐẦU RA JSON]
 {
-  "suy_luan": "Liệt kê các ID học sinh đã chọn. Đối chiếu với barem để xác định điểm.",
+  "suy_luan": "Liệt kê ID học sinh chọn. Đối chiếu barem xác định điểm.",
   "diem": (0, 0.25, 0.5, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
-  "nhan_xet": "Viết 3-4 câu báo cáo giáo viên (ngôi thứ 3). Nhận xét xem học sinh xác định được thông tin đã cho (1,2), yêu cầu (3) và mối quan hệ đại lượng (4) chưa. TUYỆT ĐỐI KHÔNG dùng từ 'barem'."
+  "nhan_xet": "Viết 3-4 câu báo cáo (ngôi thứ 3). Nhận xét xem HS xác định thông số và mối quan hệ đại lượng tốt chưa. Không dùng từ 'barem'."
 }`;
     const result = await geminiModelManager.generateContent(prompt);
     const parsed = extractJSON(result.response.text());
@@ -141,7 +140,6 @@ ${selectedTexts.length > 0 ? selectedTexts.join('\n') : 'Không chọn gì'}
   } catch (error) { return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi chấm bài.' } }; }
 };
 
-// Tiêu chí 2: Nêu được cách thức GQVĐ
 export const evaluateBai2 = async (studentAnswers, worksheet) => {
   try {
     const arrangements = studentAnswers?.bai_2?.arrangements || {};
@@ -166,17 +164,17 @@ export const evaluateBai2 = async (studentAnswers, worksheet) => {
 ${arrangementText || 'Không làm bài.'}
 
 [BAREM CHẤM ĐIỂM (Tối đa 2.5 điểm)]
-- Mức Tốt (2.5 điểm): Sắp xếp đúng từ 2 cách giải trở lên trong số các cách trên.
+- Mức Tốt (2.5 điểm): Sắp xếp đúng từ 2 cách giải trở lên.
 - Mức Đạt (1.75 điểm): Sắp xếp đúng hoàn chỉnh DUY NHẤT 1 cách giải.
 - Mức Cần cố gắng (0.75 điểm): Xếp được ít nhất 2 vị trí đúng của các bước giải trong từng cách.
-- Mức Cần cố gắng (0 điểm): Không lựa chọn chính xác và xếp sai hoàn toàn cả 3 bước trong cùng 1 cách.
+- Mức Cần cố gắng (0 điểm): Không lựa chọn chính xác và xếp sai hoàn toàn cả 3 bước.
 
 [YÊU CẦU ĐẦU RA JSON]
 {
-  "suy_luan": "Đối chiếu thứ tự ID học sinh xếp với các cách giải đúng. Đếm số cách đúng hoàn toàn.",
+  "suy_luan": "Đối chiếu thứ tự ID học sinh xếp với các cách giải đúng.",
   "diem": (0, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
-  "nhan_xet": "Viết 3-4 câu báo cáo (ngôi thứ 3). Đánh giá việc nhận dạng dạng toán và lựa chọn phép tính. TUYỆT ĐỐI KHÔNG dùng từ 'ID', 'barem'."
+  "nhan_xet": "Viết 3-4 câu báo cáo (ngôi thứ 3). Đánh giá việc nhận dạng dạng toán. Không dùng từ 'ID', 'barem'."
 }`;
     const result = await geminiModelManager.generateContent(prompt);
     const parsed = extractJSON(result.response.text());
@@ -184,7 +182,6 @@ ${arrangementText || 'Không làm bài.'}
   } catch (error) { return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi chấm bài.' } }; }
 };
 
-// Tiêu chí 3: Trình bày được cách thức GQVĐ
 export const evaluateBai3 = async (studentAnswers, worksheet) => {
   try {
     const bai_lam = studentAnswers?.bai_3?.bai_lam || 'Không có';
@@ -204,23 +201,22 @@ Giải thích: ${giai_thich}
 Có đáp số/đơn vị?: ${hasFinalAnswer ? 'Có' : 'Không'}
 
 [BAREM CHẤM ĐIỂM (Tối đa 2.5 điểm)]
-- Mức Tốt (2.5 điểm): Đúng tất cả bước giải, phép tính và đơn vị; trình bày rõ ràng; có giải thích/lập luận hợp lý.
-- Mức Đạt (1.75 điểm): Đúng các bước giải, phép tính cơ bản và đơn vị; trình bày lời giải rõ ràng, đầy đủ.
-- Mức Cần cố gắng (0.75 điểm): Thực hiện đúng 2/3 bước giải và phép tính cơ bản của bước đó.
-- Mức Cần cố gắng (0.25 điểm): Thực hiện đúng 1/3 bước giải và phép tính cơ bản của bước đó.
+- Mức Tốt (2.5 điểm): Đúng tất cả bước giải, phép tính và đơn vị; có giải thích hợp lý.
+- Mức Đạt (1.75 điểm): Đúng các bước giải, phép tính cơ bản và đơn vị; trình bày rõ ràng.
+- Mức Cần cố gắng (0.75 điểm): Thực hiện đúng 2/3 bước giải và phép tính cơ bản.
+- Mức Cần cố gắng (0.25 điểm): Thực hiện đúng 1/3 bước giải và phép tính cơ bản.
 - Mức Cần cố gắng (0 điểm): Không thực hiện được bước nào hoặc sai hoàn toàn.
 
 [YÊU CẦU ĐẦU RA JSON]
 {
-  "suy_luan": "Đối chiếu phép tính và đơn vị với hướng dẫn giải. Kiểm tra logic trình bày và lập luận.",
+  "suy_luan": "Đối chiếu phép tính/đơn vị với hướng dẫn. Kiểm tra lập luận.",
   "diem": (0, 0.25, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
-  "nhan_xet": "Viết 3-4 câu báo cáo (ngôi thứ 3). Nhận xét tính toán, trình bày và lập luận. TUYỆT ĐỐI KHÔNG dùng từ 'barem'."
+  "nhan_xet": "Viết 3-4 câu báo cáo (ngôi thứ 3). Nhận xét tính toán và lập luận. Không dùng từ 'barem'."
 }`;
     const result = await geminiModelManager.generateContent(prompt);
     let parsed = extractJSON(result.response.text());
     
-    // Logic chốt cứng cho dữ liệu Vận tốc Rô-bốt
     if (hasDeterministicCorrectResult && (!parsed || parsed.diem < 1.75)) {
       const score = explanationOk ? 2.5 : 1.75;
       return { evaluation: { 
@@ -234,16 +230,21 @@ Có đáp số/đơn vị?: ${hasFinalAnswer ? 'Có' : 'Không'}
   } catch (error) { return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi chấm bài.' } }; }
 };
 
-// Tiêu chí 4: Kiểm tra được giải pháp đã thực hiện
 export const evaluateBai4 = async (studentAnswers, worksheet) => {
   try {
     const bai4Answers = studentAnswers?.bai_4?.answers || {};
     let questionsInfo = '';
+    let validationWarnings = ''; // Thêm biến chứa cảnh báo
     
     (worksheet?.bai_4?.questions || []).forEach((q) => {
       const rawAnswer = bai4Answers[q.id];
       const answer = (typeof rawAnswer === 'object' && rawAnswer !== null) ? Object.values(rawAnswer).join('; ') : (rawAnswer || 'trống');
       questionsInfo += `\n- Yêu cầu: ${q.text}\n  HS trả lời: ${answer}\n`;
+
+      // Khôi phục logic sử dụng các hàm bổ trợ để hết lỗi ESLint
+      if (requiresCalculation(q.text) && isAnswerOnlyResult(answer)) {
+        validationWarnings += `⚠️ CẢNH BÁO: Mục [${q.text}] yêu cầu phép tính nhưng HS chỉ ghi đáp số.\n`;
+      }
     });
 
     const prompt = `Bạn là giáo viên chấm Bài 4. 
@@ -252,19 +253,20 @@ ${worksheet.bai_4.explanation}
 
 [BÀI LÀM CỦA HỌC SINH]
 ${questionsInfo}
+${validationWarnings ? `\n[CẢNH BÁO TRÌNH BÀY]\n${validationWarnings}\n` : ''}
 
 [BAREM CHẤM ĐIỂM (Tối đa 2.5 điểm)]
-- Mức Tốt (2.5 điểm): Làm được đồng thời: Kiểm tra đúng kết quả (câu a); Giải đúng bài toán mở rộng (câu b); So sánh hoặc giải thích được cách giải hợp lý hơn (câu c).
-- Mức Đạt (1.75 điểm): Thực hiện được MỘT trong hai yêu cầu lớn: Kiểm tra được kết quả bài toán (a) HOẶC Giải được bài toán mở rộng (b).
+- Mức Tốt (2.5 điểm): Làm được đồng thời cả 3 phần: (a) Kiểm tra đúng; (b) Giải đúng bài toán mở rộng; (c) So sánh hợp lý.
+- Mức Đạt (1.75 điểm): Thực hiện được (a) Kiểm tra đúng HOẶC (b) Giải được bài toán mở rộng.
 - Mức Cần cố gắng (0.75 điểm): Làm đúng 1 trong 2 ý của câu (a) HOẶC đúng 1 trong 2 cách của câu (b).
-- Mức Cần cố gắng (0 điểm): Không kiểm tra đúng kết quả (a) và không giải được bài toán mở rộng (b).
+- Mức Cần cố gắng (0 điểm): Không làm được (a) và (b), hoặc thiếu trình bày phép tính chi tiết.
 
 [YÊU CẦU ĐẦU RA JSON]
 {
-  "suy_luan": "Xác định học sinh đã hoàn thành các phần a, b, c ở mức độ nào để cho điểm.",
+  "suy_luan": "Xác định HS hoàn thành các phần a, b, c thế nào. Chú ý cảnh báo thiếu phép tính.",
   "diem": (0, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
-  "nhan_xet": "Viết 3-4 câu báo cáo (ngôi thứ 3). Đánh giá kỹ năng tự kiểm tra và vận dụng mở rộng. TUYỆT ĐỐI KHÔNG dùng từ 'barem'."
+  "nhan_xet": "Viết 3-4 câu báo cáo (ngôi thứ 3). Đánh giá kỹ năng tự kiểm tra và vận dụng mở rộng. Không dùng từ 'barem'."
 }`;
     const result = await geminiModelManager.generateContent(prompt);
     const parsed = extractJSON(result.response.text());
@@ -281,18 +283,17 @@ export const generateOverallComment = async (evaluations, tongDiem, mucNangLucCh
       evaluations.bai_4?.evaluation?.nhan_xet
     ].filter(Boolean).join(' ');
 
-    const prompt = `Bạn là trợ lý tổng hợp báo cáo giáo dục. Viết báo cáo NỘI BỘ cho giáo viên.
+    const prompt = `Bạn là trợ lý tổng hợp báo cáo. Viết báo cáo NỘI BỘ cho giáo viên.
 TỔNG ĐIỂM: ${tongDiem}/10. MỨC: ${mucNangLucChung}.
 CHI TIẾT: ${feedbacks}
 
 YÊU CẦU:
 - Viết duy nhất 1 đoạn văn 4-6 câu.
 - Câu đầu: "Học sinh có tổng điểm ${tongDiem}/10, mức năng lực chung ${mucNangLucChung}."
-- Tổng hợp ưu/nhược điểm từ 4 tiêu chí trên. Đưa ra lời khuyên bồi dưỡng cụ thể.
-- Ngôi thứ ba ('học sinh', 'em ấy'). Không xưng hô trực tiếp.
-- TRÌNH BÀY VĂN BẢN THUẦN TÚY, CẤM: dấu sao (**), tiêu đề, từ 'barem', 'chào em'.`;
+- Tổng hợp ưu/nhược điểm. Ngôi thứ ba ('học sinh', 'em ấy').
+- CẤM: dấu sao (**), tiêu đề, từ 'barem', 'chào em'.`;
 
     const result = await geminiModelManager.generateContent(prompt);
-    return result.response.text().trim() || `Học sinh đạt tổng điểm ${tongDiem}/10 với mức năng lực ${mucNangLucChung}.`;
-  } catch (error) { return `Học sinh đạt tổng điểm ${tongDiem}/10 với mức năng lực ${mucNangLucChung}.`; }
+    return result.response.text().trim() || `Học sinh có tổng điểm ${tongDiem}/10, mức năng lực chung ${mucNangLucChung}.`;
+  } catch (error) { return `Học sinh có tổng điểm ${tongDiem}/10, mức năng lực chung ${mucNangLucChung}.`; }
 };

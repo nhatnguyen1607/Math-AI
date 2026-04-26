@@ -207,6 +207,7 @@ export const evaluateBai3 = async (studentAnswers, worksheet) => {
     const hasFinalAnswer = hasBai3FinalAnswer(bai_lam);
 
     const prompt = `Bạn là một giáo viên chuyên môn cao. Hãy chấm bài tập tự luận của học sinh dựa trên hướng dẫn giải và thang điểm dưới đây.
+PHẢI ĐỐI CHIẾU CHÍNH XÁC NỘI DUNG GIẢI THÍCH.
 
 [HƯỚNG DẪN GIẢI CHUẨN (Dùng để đối chiếu)]
 ${worksheet.bai_3.explanation}
@@ -220,10 +221,11 @@ ${worksheet.bai_3.explanation}
 1. Mức Tốt (2.5 điểm): 
    - Thực hiện đúng tất cả các bước giải và phép tính.
    - Trình bày rõ ràng, đầy đủ.
-   - Có phần "Giải thích/Lập luận" hợp lý cho các bước giải (thể hiện sự hiểu bản chất).
+   - CÓ phần "Giải thích/Lập luận" rõ ràng, hợp lý và liên quan trực tiếp đến toàn bộ các bước đã giải trong bài.
 2. Mức Đạt (1.75 điểm): 
    - Thực hiện đúng các bước giải và phép tính cơ bản.
-   - Trình bày lời giải rõ ràng, đầy đủ nhưng thiếu phần giải thích sâu hoặc phần lập luận chưa thực sự mạch lạc.
+   - Trình bày lời giải rõ ràng, đầy đủ. 
+   - LƯU Ý: Nếu phần giải thích nửa vời, không đúng trọng tâm, hoặc chỉ giải thích được 1 bước trong cách giải thì CHỈ được chấm ở mức Đạt (1.75 điểm) dù các bước tính toán khác đều đúng.
 3. Mức Cần cố gắng (0 - 0.75 điểm):
    - Thực hiện đúng 2/3 bước giải và phép tính cơ bản -> 0.75 điểm.
    - Thực hiện đúng 1/3 bước giải và phép tính cơ bản -> 0.25 điểm.
@@ -233,10 +235,10 @@ ${worksheet.bai_3.explanation}
 [YÊU CẦU ĐẦU RA]
 Trả về DUY NHẤT 1 OBJECT JSON:
 {
-  "suy_luan": "Phân tích xem học sinh làm đúng bao nhiêu phần so với hướng dẫn giải. Kiểm tra sự khớp nhau giữa kết quả và lập luận. Xác định mức điểm dựa trên số bước đúng.",
+  "suy_luan": "Phân tích kỹ phần Bài giải và Giải thích. Kiểm tra xem giải thích có rõ ràng, hợp lý và bao quát toàn bài không. Nếu giải thích sơ sài hoặc nửa vời, tuyệt đối không cho mức Tốt (2.5).",
   "diem": (0, 0.25, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
-  "nhan_xet": "Viết 3-4 câu sư phạm báo cáo cho giáo viên về học sinh (ngôi thứ 3). Nhận xét cụ thể về năng lực tính toán và khả năng trình bày/lập luận. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'quy định', 'tiêu chí'."
+  "nhan_xet": "Viết 3-4 câu sư phạm báo cáo cho giáo viên về học sinh (ngôi thứ 3). Nhận xét cụ thể về năng lực tính toán và đặc biệt là chất lượng lập luận/giải thích. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'quy định', 'tiêu chí'."
 }`;
 
     const result = await geminiModelManager.generateContent(prompt);

@@ -178,18 +178,18 @@ ${worksheet.bai_3.explanation}
 - Có đáp số/kết luận?: ${hasFinalAnswer ? 'Có' : 'Không'}
 
 [BAREM CHẤM ĐIỂM (Tối đa 2.5 điểm)]
-- Mức Tốt (2.5 điểm): Thực hiện đúng các bước giải, phép tính và đơn vị; trình bày rõ ràng; CÓ giải thích/lập luận hợp lý.
-- Mức Đạt (1.75 điểm): Thực hiện đúng các bước giải và phép tính cơ bản; trình bày lời giải rõ ràng, đầy đủ.
+- Mức Tốt (2.5 điểm): Thực hiện đúng các bước giải, phép tính và đơn vị; trình bày rõ ràng; CÓ phần Giải thích rõ ràng, hợp lý và liên quan trực tiếp đến toàn bộ các bước đã giải.
+- Mức Đạt (1.75 điểm): Thực hiện đúng các bước giải và phép tính cơ bản; trình bày lời giải rõ ràng, đầy đủ. LƯU Ý: Nếu phần giải thích nửa vời, không đúng trọng tâm, hoặc chỉ giải thích được 1 bước trong cách giải thì CHỈ được cho mức Đạt (1.75 điểm) dù tính toán đúng.
 - Mức Cần cố gắng (0.75 điểm): Thực hiện đúng 2/3 bước giải và phép tính tương ứng.
 - Mức Cần cố gắng (0.25 điểm): Thực hiện đúng 1/3 bước giải và phép tính tương ứng.
 - Mức Cần cố gắng (0 điểm): Không thực hiện được bước nào hoặc sai hoàn toàn.
 
 [YÊU CẦU ĐẦU RA JSON]
 {
-  "suy_luan": "So sánh các phép tính và đơn vị với hướng dẫn giải. Kiểm tra tính đầy đủ và lập luận.",
+  "suy_luan": "So sánh các phép tính với hướng dẫn giải. Đặc biệt kiểm tra kỹ phần Giải thích: phải rõ ràng, hợp lý và liên quan tới toàn bài mới cho mức Tốt (2.5). Nếu giải thích sơ sài hoặc nửa vời, hãy chốt mức Đạt (1.75) hoặc thấp hơn.",
   "diem": (0, 0.25, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
-  "nhan_xet": "Viết 3-4 câu báo cáo (ngôi thứ 3). Nhận xét về năng lực tính toán, cách trình bày và tính logic. TUYỆT ĐỐI KHÔNG dùng từ 'barem'."
+  "nhan_xet": "Viết 3-4 câu báo cáo (ngôi thứ 3). Nhận xét kỹ về năng lực tính toán, cách trình bày và đặc biệt là tính logic của phần giải thích. TUYỆT ĐỐI KHÔNG dùng từ 'barem'."
 }`;
     const result = await geminiModelManager.generateContent(prompt);
     const parsed = extractJSON(result.response.text());

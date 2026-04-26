@@ -90,7 +90,17 @@ export const evaluateBai1 = async (studentAnswers, worksheet) => {
       return matchedQ ? matchedQ.text : id; // Trả về nội dung câu văn, nếu không tìm thấy thì giữ id
     });
     
+    // Cung cấp danh sách đầy đủ các phát biểu để AI đối chiếu (1), (2), (3), (4)
+    const allQuestionsText = questionsList.map((q, idx) => `(${idx + 1}) ${q.text}`).join('\n');
+    
     const prompt = `Bạn là một giáo viên chuyên môn cao đang chấm bài. PHẢI ĐÁNH GIÁ CHÍNH XÁC NĂNG LỰC DỰA VÀO CÂU TRẢ LỜI CỦA HỌC SINH.
+
+[DANH SÁCH CÁC PHÁT BIỂU ĐÚNG CẦN CHỌN]
+${allQuestionsText}
+Ghi chú: 
+- (1) và (2) là thông tin đã cho.
+- (3) là yêu cầu của bài toán.
+- (4) là mối quan hệ giữa các đại lượng.
 
 [BÀI LÀM THỰC TẾ CỦA HỌC SINH]
 Học sinh đã đánh dấu vào các phát biểu sau:
@@ -99,10 +109,21 @@ ${selectedTexts.length > 0 ? selectedTexts.map(t => `- ${t}`).join('\n') : 'Khô
 [YÊU CẦU ĐẦU RA]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
-  "suy_luan": "Bước 1: So sánh đúng/sai. BẮT BUỘC ÁP DỤNG LUẬT SAU: Chọn đúng 3 ý đầu (1, 2, 3) -> 1 điểm. Chọn đúng đủ 4 ý (1, 2, 3, 4) -> 2 điểm. TẤT CẢ các trường hợp còn lại (chỉ chọn 1-2 ý, hoặc chọn sai ý) -> 0 điểm. Không du di.",
-  "diem": (0, 1 hoặc 2),
+  "suy_luan": "Bước 1: Đối chiếu các phát biểu học sinh chọn với danh sách (1, 2, 3, 4). Bước 2: ÁP DỤNG LUẬT CHẤM ĐIỂM SAU:
+  - Chọn đúng đủ 4 ý (1, 2, 3, 4) -> 2.5 điểm (Mức tốt).
+  - Chọn đúng 3 ý (1, 2, 3) -> 1.75 điểm (Mức đạt).
+  - Chọn 3 ý trong 4 ý nhưng thiếu (1) hoặc (2) hoặc (3) -> 0.75 điểm (Mức cần cố gắng).
+  - Chọn 2 ý trong 4 ý -> 0.5 điểm (Mức cần cố gắng).
+  - Chọn 1 ý trong 4 ý -> 0.25 điểm (Mức cần cố gắng).
+  - Không chọn ý nào -> 0 điểm (Mức cần cố gắng).
+  Không du di.",
+  "diem": (0, 0.25, 0.5, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
-  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên. Dùng ngôi thứ 3 ('học sinh', 'em ấy'). Chỉ rõ mức độ nhận diện vấn đề, thông tin nào em ấy đã tìm đúng, thông tin/mối quan hệ nào còn bỏ sót. TUYỆT ĐỐI KHÔNG dùng các từ: 'barem', 'mã định danh', 'ID', 'tiêu chí', 'như máy tính'."
+  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên. Dùng ngôi thứ 3 ('học sinh', 'em ấy').
+  - Nếu đạt 2.5 điểm: 'HS đã xác định được đầy đủ các thông tin đã cho (1,2), yêu cầu của bài toán (3), mối quan hệ giữa các đại lượng (4)'.
+  - Nếu đạt 1.75 điểm: 'HS đã xác định được các thông tin đã cho (1,2), yêu cầu của bài toán (3), nhưng chưa chỉ ra được mối quan hệ giữa các đại lượng (4)'.
+  - Nếu đạt từ 0 đến 0.75 điểm: 'HS chưa xác định được các thông tin đã cho (1,2), yêu cầu của bài toán (3), mối quan hệ giữa các đại lượng (4)'.
+  TUYỆT ĐỐI KHÔNG dùng các từ: 'barem', 'mã định danh', 'ID', 'tiêu chí', 'như máy tính'."
 }`;
 
     const result = await geminiModelManager.generateContent(prompt);
@@ -121,48 +142,55 @@ export const evaluateBai2 = async (studentAnswers, worksheet) => {
     const arrangements = studentAnswers?.bai_2?.arrangements || {};
     const questionsList = worksheet.bai_2.questions || [];
     
+    // Chuyển đổi dữ liệu sắp xếp của học sinh sang dạng text kèm ID để AI đối chiếu chính xác
     const arrangementText = Object.keys(arrangements).length > 0 
       ? Object.entries(arrangements).map(([key, arr]) => {
           const items = Array.isArray(arr) ? arr : Object.values(arr || {});
           const textItems = items.map(id => {
             const matchedQ = questionsList.find(q => q.id === id);
-            return matchedQ ? matchedQ.text : id;
+            // Gắn ID vào text để AI khớp với (1), (2), (3)... trong phần giải thích
+            return matchedQ ? `(${matchedQ.id}) ${matchedQ.text}` : id;
           });
           return `${key}:\n  -> ${textItems.join('\n  -> ')}`;
         }).join('\n\n')
       : 'Học sinh không có sắp xếp nào.';
 
-    const prompt = `Bạn là một giáo viên chuyên môn cao. CẤM BỊA ĐÁP ÁN, PHẢI ĐỌC KỸ TRÌNH TỰ CÁC BƯỚC MÀ HỌC SINH ĐÃ XẾP.
+    const prompt = `Bạn là một giáo viên chuyên môn cao. CẤM BỊA ĐÁP ÁN. 
+Bạn phải dựa vào trình tự các bước giải được quy định dưới đây để chấm bài.
 
-[BAREM CHẤM ĐIỂM - SỐ BƯỚC TỐI THIỂU MỖI CÁCH]
+[DỮ LIỆU GỐC & CÁC CÁCH GIẢI ĐÚNG]
 ${worksheet.bai_2.explanation}
 
 [BÀI LÀM THỰC TẾ CỦA HỌC SINH]
-Các cách sắp xếp học sinh đã gửi:
 ${arrangementText}
 
-[LUẬT CHẤM ĐIỂM BẮT BUỘC (Tối đa 2.5 điểm)]
-QUAN TRỌNG: Mỗi cách PHẢI CÓ ĐỦ tất cả các bước cần thiết. Nếu một cách thiếu bước hoặc chỉ có 1-2 bước -> cách đó được tính là SAI HOÀN TOÀN.
-- Yêu cầu: Tối thiểu 2 CÁCH đầy đủ bước và đúng logic thứ tự.
-- Mức Tốt (2.5 điểm): Xếp đúng ≥2 cách (mỗi cách đầy đủ bước + thứ tự logic đúng).
-- Mức Đạt (1.75 điểm): Xếp đúng 1 cách hoàn chỉnh (đầy đủ bước + thứ tự logic đúng).
-- Mức Cần cố gắng (0 - 0.75 điểm): 
-  + Xếp được 2 vị trí đúng của các bước giải trong từng cách -> 0.75 điểm.
-  + Xếp < 1 cách đầy đủ, HOẶC các cách bị thiếu bước, HOẶC thứ tự logic sai -> 0 điểm.
+[LUẬT CHẤM ĐIỂM BẮT BUỘC]
+1. Mức Tốt (2.5 điểm): Sắp xếp đúng hoàn chỉnh từ 2 cách giải trở lên (đúng thứ tự logic và đủ các bước).
+2. Mức Đạt (1.75 điểm): Sắp xếp đúng hoàn chỉnh duy nhất 1 cách giải.
+3. Mức Cần cố gắng (0.75 điểm): Chưa có cách nào hoàn chỉnh nhưng xếp được ít nhất 2 vị trí đúng trong tiến trình giải.
+4. Mức Cần cố gắng (0 điểm): Xếp sai hoàn toàn, thiếu bước trầm trọng hoặc không làm bài.
 
 [YÊU CẦU ĐẦU RA]
 Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
 {
-  "suy_luan": "Bước 1: ĐỌC KỸ 4 CÁCH GIẢI ĐÚNG: Cách 1: (1) → (2) → (3), Cách 2: (1) → (3) → (2), Cách 3: (1) → (2) → (4), Cách 4: (1) → (3) → (5). Bước 2: ĐỐI CHIẾU bài làm của HS với 4 cách đúng trên. Bước 3: Đếm số cách xếp đúng và xem xét vị trí đúng để cho điểm theo mức (0, 0.75, 1.75, 2.5).",
+  "suy_luan": "Bước 1: Đối chiếu các ID học sinh đã xếp với quy trình trong phần giải thích. Bước 2: Kiểm tra tính đầy đủ của các bước (phải đủ các bước của 1 chu trình mới tính là 1 cách đúng). Bước 3: Đếm số cách đúng và số vị trí đúng để quyết định điểm (0, 0.75, 1.75, 2.5).",
   "diem": (0, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
-  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Nêu rõ: học sinh sắp xếp được mấy cách đầy đủ, những cách nào bị thiếu bước (và thiếu bước nào cụ thể). Nhắc nhở HS rằng mỗi cách phải trình bày đủ các phép tính từ đầu đến cuối. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'ID'."
+  "nhan_xet": "Viết 3-4 câu nhận xét sư phạm ở ngôi thứ ba ('học sinh', 'em ấy'). Nêu rõ em ấy đúng được mấy cách, cách nào còn thiếu bước hoặc sai trình tự. Khuyến khích hoặc nhắc nhở học sinh về việc nhận diện dạng toán 'Tổng - Tỉ'. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'ID', 'JSON'."
 }`;
 
     const result = await geminiModelManager.generateContent(prompt);
     const parsed = extractJSON(result.response.text());
     
-    if (parsed) return { evaluation: { ...parsed, muc_nang_luc: String(parsed.muc_nang_luc || 'cần cố gắng').toLowerCase() } };
+    if (parsed) {
+      return { 
+        evaluation: { 
+          ...parsed, 
+          muc_nang_luc: String(parsed.muc_nang_luc || 'cần cố gắng').toLowerCase() 
+        } 
+      };
+    }
+    
     return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi không thể phân tích kết quả.' } };
   } catch (error) {
     console.error('Error evaluating Bài 2:', error);
@@ -174,56 +202,59 @@ export const evaluateBai3 = async (studentAnswers, worksheet) => {
   try {
     const bai_lam = studentAnswers?.bai_3?.bai_lam || 'Không có';
     const giai_thich = studentAnswers?.bai_3?.giai_thich || 'Không có';
+    
+    // Kiểm tra sơ bộ sự hiện diện của đáp số/kết luận (giữ nguyên logic check của bạn)
     const hasFinalAnswer = hasBai3FinalAnswer(bai_lam);
 
-    const prompt = `Bạn là một giáo viên chuyên môn cao.
+    const prompt = `Bạn là một giáo viên chuyên môn cao. Hãy chấm bài tập tự luận của học sinh dựa trên hướng dẫn giải và thang điểm dưới đây.
+
+[HƯỚNG DẪN GIẢI CHUẨN (Dùng để đối chiếu)]
+${worksheet.bai_3.explanation}
 
 [BÀI LÀM CỦA HỌC SINH]
-Bài giải:
-${bai_lam}
-Giải thích:
-${giai_thich}
-CÓ ĐÁP SỐ/KẾT LUẬN CUỐI CÙNG?: ${hasFinalAnswer ? 'Có' : 'Không'}
+- Bài giải: ${bai_lam}
+- Phần giải thích/Lập luận: ${giai_thich}
+- Có đáp số/kết luận cuối cùng không?: ${hasFinalAnswer ? 'Có' : 'Không'}
 
-[BAREM CHẤM ĐIỂM BẮT BUỘC (Tối đa 2.5 điểm)]
-- Điều kiện tiên quyết: Bài làm PHẢI có đáp số/kết luận. Nếu không có -> 0 điểm.
-- Mức Tốt (2.5 điểm): Thực hiện đúng các bước giải và phép tính. Trình bày rõ ràng, đầy đủ. Có giải thích hợp lý cho các bước.
-- Mức Đạt (1.75 điểm): Thực hiện đúng các bước giải và phép tính cơ bản. Trình bày rõ ràng, đầy đủ.
-- Mức Cần cố gắng (0 - 0.75 điểm):
-  + Thực hiện đúng 2/3 bước giải và phép tính cơ bản -> 0.75 điểm.
-  + Thực hiện đúng 1/3 bước giải và phép tính cơ bản -> 0.25 điểm.
-  + Tính toán sai hết hoặc thiếu logic -> 0 điểm.
+[THANG ĐIỂM VÀ TIÊU CHÍ (Tối đa 2.5 điểm)]
+1. Mức Tốt (2.5 điểm): 
+   - Thực hiện đúng tất cả các bước giải và phép tính.
+   - Trình bày rõ ràng, đầy đủ.
+   - Có phần "Giải thích/Lập luận" hợp lý cho các bước giải (thể hiện sự hiểu bản chất).
+2. Mức Đạt (1.75 điểm): 
+   - Thực hiện đúng các bước giải và phép tính cơ bản.
+   - Trình bày lời giải rõ ràng, đầy đủ nhưng thiếu phần giải thích sâu hoặc phần lập luận chưa thực sự mạch lạc.
+3. Mức Cần cố gắng (0 - 0.75 điểm):
+   - Thực hiện đúng 2/3 bước giải và phép tính cơ bản -> 0.75 điểm.
+   - Thực hiện đúng 1/3 bước giải và phép tính cơ bản -> 0.25 điểm.
+   - Không thực hiện được bước nào hoặc tính toán sai hoàn toàn -> 0 điểm.
+* LƯU Ý QUAN TRỌNG: Nếu học sinh hoàn toàn không có đáp số hoặc kết luận cuối cùng, hãy trừ điểm nặng hoặc đánh giá ở mức Cần cố gắng tùy theo mức độ hoàn thành các bước trung gian.
 
 [YÊU CẦU ĐẦU RA]
-Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
+Trả về DUY NHẤT 1 OBJECT JSON:
 {
-  "suy_luan": "Bắt buộc kiểm tra điều kiện có đáp số/kết luận cuối cùng trước. Nếu chưa có thì chấm 0 điểm ngay. Nếu đã có thì đối chiếu bài làm để cho điểm 0, 0.25, 0.75, 1.75 hoặc 2.5 theo barem.",
+  "suy_luan": "Phân tích xem học sinh làm đúng bao nhiêu phần so với hướng dẫn giải. Kiểm tra sự khớp nhau giữa kết quả và lập luận. Xác định mức điểm dựa trên số bước đúng.",
   "diem": (0, 0.25, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
-  "nhan_xet": "Viết 3-4 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Nhận xét trực tiếp năng lực tính toán và đánh giá xem phần lập luận/giải thích của em ấy có thực sự hiểu bản chất không. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'quy định'."
+  "nhan_xet": "Viết 3-4 câu sư phạm báo cáo cho giáo viên về học sinh (ngôi thứ 3). Nhận xét cụ thể về năng lực tính toán và khả năng trình bày/lập luận. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'quy định', 'tiêu chí'."
 }`;
 
     const result = await geminiModelManager.generateContent(prompt);
     const parsed = extractJSON(result.response.text());
     
     if (parsed) {
-      const evaluation = { ...parsed, muc_nang_luc: String(parsed.muc_nang_luc || 'cần cố gắng').toLowerCase() };
-      if (!hasFinalAnswer) {
-        return {
-          evaluation: {
-            ...evaluation,
-            diem: 0,
-            muc_nang_luc: 'cần cố gắng',
-            nhan_xet: "Học sinh chưa nêu đáp số hoặc kết luận cuối cùng của bài toán nên chưa đạt yêu cầu tối thiểu. Dù có thể đã thực hiện một số bước tính trung gian, bài làm chưa trả lời dứt điểm câu hỏi của đề. Giáo viên cần nhắc học sinh luôn chốt kết quả ở cuối bài bằng một câu kết luận rõ ràng."
-          }
-        };
-      }
-      return { evaluation };
+      return { 
+        evaluation: { 
+          ...parsed, 
+          muc_nang_luc: String(parsed.muc_nang_luc || 'cần cố gắng').toLowerCase() 
+        } 
+      };
     }
-    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi không thể phân tích kết quả.' } };
+    
+    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi không thể phân tích kết quả bài 3.' } };
   } catch (error) {
     console.error('Error evaluating Bài 3:', error);
-    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi trong quá trình chấm.' } };
+    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi trong quá trình chấm điểm tự luận.' } };
   }
 };
 
@@ -272,7 +303,7 @@ export const evaluateBai4 = async (studentAnswers, worksheet) => {
           const answer = getAnswerValue(bai4Answers[q.id], idx);
           questionsInfo += `  - Câu ${idx + 1}: ${sq.text}\n    Trả lời: ${answer || 'trống'}\n`;
           if (requiresCalculation(sq.text) && isAnswerOnlyResult(answer)) {
-            validationWarnings += `⚠️ LỖI NGHIÊM TRỌNG Câu ${q.label}.${idx + 1}: Học sinh CHỈ ghi kết quả, thiếu phép tính.\n`;
+            validationWarnings += `⚠️ LỖI: Câu ${q.label}.${idx + 1} chỉ ghi kết quả, thiếu phép tính.\n`;
           }
         });
       } else if (q.type === 'so_cach_giai') {
@@ -280,52 +311,56 @@ export const evaluateBai4 = async (studentAnswers, worksheet) => {
           const answer = getAnswerValue(bai4Answers[q.id], i);
           questionsInfo += `  - Cách ${i + 1}: ${answer || 'trống'}\n`;
           if (requiresCalculation(q.text) && isAnswerOnlyResult(answer)) {
-            validationWarnings += `⚠️ LỖI NGHIÊM TRỌNG Câu ${q.label} - Cách ${i + 1}: Yêu cầu trình bày chi tiết nhưng HS chỉ ghi kết quả.\n`;
+            validationWarnings += `⚠️ LỖI: Câu ${q.label} - Cách ${i + 1} thiếu trình bày phép tính.\n`;
           }
         }
       } else {
         const answer = bai4Answers[q.id];
         questionsInfo += `  Trả lời: ${answer || 'trống'}\n`;
         if (requiresCalculation(q.text) && isAnswerOnlyResult(answer)) {
-          validationWarnings += `⚠️ LỖI NGHIÊM TRỌNG Câu ${q.label}: Yêu cầu trình bày phép tính nhưng HS chỉ ghi kết quả.\n`;
+          validationWarnings += `⚠️ LỖI: Câu ${q.label} thiếu trình bày phép tính.\n`;
         }
       }
     });
 
-    const warningContext = validationWarnings ? `\n[CẢNH BÁO KIỂM TRA ĐỊNH DẠNG ĐÁP ÁN]\n${validationWarnings}\n` : '';
+    const warningContext = validationWarnings ? `\n[CẢNH BÁO TRÌNH BÀY]\n${validationWarnings}\n` : '';
 
-    const prompt = `Bạn là một giáo viên chuyên môn cao.
+    const prompt = `Bạn là một giáo viên chuyên môn cao. Hãy chấm Bài 4 dựa trên hướng dẫn giải và tiêu chí sau.
+
+[HƯỚNG DẪN GIẢI CHUẨN]
+${worksheet.bai_4.explanation}
 
 [BÀI LÀM CỦA HỌC SINH]
 ${questionsInfo || 'Học sinh không làm bài.'}
 ${warningContext}
 
-[LUẬT CHẤM ĐIỂM BẮT BUỘC (Tối đa 2.5 điểm)]
-- Bài có 3 yêu cầu: a (Kiểm tra lại kết quả), b (Giải bài toán mở rộng), c (Nhận xét/so sánh).
-- NẾU CHỈ GHI MỖI KẾT QUẢ HOẶC BỊ ĐÁNH DẤU "LỖI NGHIÊM TRỌNG" -> TÍNH LÀ LÀM SAI.
-- Mức Tốt (2.5 điểm): Làm được ĐỒNG THỜI cả a, b và c (Kiểm tra đúng, Giải bài toán mở rộng đúng, So sánh hợp lý).
-- Mức Đạt (1.75 điểm): Thực hiện được một trong hai yêu cầu: Kiểm tra được kết quả bài toán bằng phép tính HOẶC Giải được bài toán mở rộng.
-- Mức Cần cố gắng (0 - 0.75 điểm):
-  + Kiểm tra được một phần kết quả bài toán (ví dụ 1 trong 2 ý kiểm tra) -> 0.75 điểm.
-  + Không kiểm tra đúng và không giải được bài toán mở rộng -> 0 điểm.
+[THANG ĐIỂM BẮT BUỘC (Tối đa 2.5 điểm)]
+1. Mức Tốt (2.5 điểm): 
+   - Làm được ĐỒNG THỜI 3 yêu cầu: (a) Kiểm tra đúng kết quả; (b) Giải đúng bài toán mở rộng; (c) So sánh hoặc giải thích được cách giải hợp lý (câu c).
+2. Mức Đạt (1.75 điểm): 
+   - Thực hiện được MỘT trong hai yêu cầu lớn: Kiểm tra được kết quả (câu a) HOẶC Giải được bài toán mở rộng (câu b).
+3. Mức Cần cố gắng (0.75 điểm): 
+   - Làm được một phần nhỏ: Chỉ đúng 1 trong 2 ý kiểm tra ở câu a HOẶC chỉ giải được bài toán mở rộng bằng 1 cách (nếu câu b yêu cầu 2 cách) nhưng chưa hoàn thiện.
+4. Mức Cần cố gắng (0 điểm): 
+   - Không kiểm tra đúng và không giải được bài toán mở rộng, hoặc chỉ ghi đáp số mà không có phép tính ở các phần yêu cầu tính toán.
 
 [YÊU CẦU ĐẦU RA]
-Trả về DUY NHẤT 1 OBJECT JSON định dạng như sau:
+Trả về DUY NHẤT 1 OBJECT JSON:
 {
-  "suy_luan": "Đối chiếu bài làm với [LUẬT CHẤM ĐIỂM BẮT BUỘC]. Kiểm tra chặt chẽ việc ghi phép tính. Từ đó đưa ra quyết định điểm cuối cùng (0, 0.75, 1.75, 2.5).",
+  "suy_luan": "Đánh giá từng câu a, b, c của học sinh so với hướng dẫn giải. Lưu ý lỗi thiếu phép tính sẽ bị hạ mức điểm. Tổng hợp để chọn mức 0, 0.75, 1.75 hoặc 2.5.",
   "diem": (0, 0.75, 1.75 hoặc 2.5),
   "muc_nang_luc": "(cần cố gắng / đạt / tốt)",
-  "nhan_xet": "Viết 4-5 câu SƯ PHẠM báo cáo cho giáo viên bằng ngôi thứ 3 ('học sinh', 'em ấy'). Đánh giá rõ: (1) HS kiểm tra lại được kết quả hay không; (2) HS vận dụng kiến thức mở rộng đến mức độ nào và có thể giải quyết được bài toán mở rộng; (3) HS có so sánh được các phương pháp giải khác nhau mà mình đã thực hiện. ĐẶC BIỆT lưu ý nhắc nhở nếu em ấy có thói quen chỉ ghi đáp án mà không trình bày phép tính. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'tiêu chí'."
+  "nhan_xet": "Viết 4-5 câu sư phạm (ngôi thứ 3). Đánh giá cụ thể: (1) Khả năng kiểm tra lại kết quả; (2) Mức độ vận dụng vào bài toán mở rộng; (3) Khả năng so sánh các giải pháp. Nhắc nhở nếu em ấy thiếu trình bày phép tính chi tiết. TUYỆT ĐỐI KHÔNG dùng từ 'barem', 'quy định', 'tiêu chí'."
 }`;
 
     const result = await geminiModelManager.generateContent(prompt);
     const parsed = extractJSON(result.response.text());
     
     if (parsed) return { evaluation: { ...parsed, muc_nang_luc: String(parsed.muc_nang_luc || 'cần cố gắng').toLowerCase() } };
-    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi không thể phân tích kết quả.' } };
+    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi không thể phân tích kết quả bài 4.' } };
   } catch (error) {
     console.error('Error evaluating Bài 4:', error);
-    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi trong quá trình chấm.' } };
+    return { evaluation: { diem: 0, muc_nang_luc: 'cần cố gắng', nhan_xet: 'Lỗi trong quá trình chấm điểm bài 4.' } };
   }
 };
 

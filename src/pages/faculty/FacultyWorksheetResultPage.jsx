@@ -395,31 +395,14 @@ const FacultyWorksheetResultPage = ({ user, onSignOut }) => {
           <p className="text-xl text-gray-600">{worksheet.name}</p>
         </div>
 
-        {/* Overall Score and Competency */}
         <div className="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-3xl shadow-lg p-8 border-4 border-orange-300 mb-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="flex justify-center">
             {/* Score */}
             <div className="text-center">
               <p className="text-lg font-semibold text-gray-700 mb-3">Tổng điểm</p>
               <p className="text-5xl font-bold text-orange-600">
                 {result.tongDiem || 0}
                 <span className="text-3xl text-gray-600">/10</span>
-              </p>
-            </div>
-
-            {/* Competency Level */}
-            <div className="text-center">
-              <p className="text-lg font-semibold text-gray-700 mb-3">Mức năng lực</p>
-              <span className={`inline-block px-6 py-3 rounded-full font-bold text-white text-2xl bg-gradient-to-r ${getCompetencyColor(result.mucNangLucChung)}`}>
-                {result.mucNangLucChung ? (result.mucNangLucChung.charAt(0).toUpperCase() + result.mucNangLucChung.slice(1)) : 'Chưa đánh giá'}
-              </span>
-            </div>
-
-            {/* Percentage */}
-            <div className="text-center">
-              <p className="text-lg font-semibold text-gray-700 mb-3">Hoàn thành</p>
-              <p className="text-5xl font-bold text-blue-600">
-                {((result.tongDiem / 8) * 100).toFixed(0)}%
               </p>
             </div>
           </div>

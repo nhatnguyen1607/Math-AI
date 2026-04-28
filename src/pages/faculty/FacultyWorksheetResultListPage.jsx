@@ -540,8 +540,8 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
                     <th className="px-6 py-4 text-left font-bold">STT</th>
                     <th className="px-6 py-4 text-left font-bold">Tên học sinh</th>
                     <th className="px-6 py-4 text-center font-bold">Điểm</th>
-                    <th className="px-6 py-4 text-center font-bold">Mức năng lực</th>
-                    <th className="px-6 py-4 text-center font-bold">Ngày nộp</th>
+                    {/* <th className="px-6 py-4 text-center font-bold">Mức năng lực</th>
+                    <th className="px-6 py-4 text-center font-bold">Ngày nộp</th> */}
                     <th className="px-6 py-4 text-center font-bold">Hành động</th>
                   </tr>
                 </thead>
@@ -555,7 +555,7 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
                           {result.tongDiem || 0}/10
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      {/* <td className="px-6 py-4 text-center">
                         <span className={`px-4 py-2 rounded-full font-bold text-white ${
                           result.mucNangLucChung === 'tốt' || result.mucNangLucChung === 'Tốt' ? 'bg-green-500' :
                           result.mucNangLucChung === 'đạt' || result.mucNangLucChung === 'Đạt' ? 'bg-blue-500' :
@@ -567,7 +567,7 @@ const FacultyWorksheetResultListPage = ({ user, onSignOut }) => {
                       </td>
                       <td className="px-6 py-4 text-center text-gray-600">
                         {result.submittedAt?.toDate?.()?.toLocaleDateString?.('vi-VN') || 'N/A'}
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => navigate(

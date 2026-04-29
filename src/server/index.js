@@ -163,6 +163,90 @@ app.post('/api/vertexai-generate', async (req, res) => {
 });
 
 /**
+ * Google Cloud Text-to-Speech API endpoint
+ * Converts text to natural Vietnamese speech using WaveNet voices
+ */
+app.post('/api/tts', async (req, res) => {
+  try {
+    const { text, voiceGender = 'FEMALE' } = req.body;
+
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'text is required and must be a string'
+      });
+    }
+
+    // Giới hạn tối đa 5000 ký tự mỗi lần gọi
+    const trimmedText = text.slice(0, 5000);
+
+    const credentials = loadServiceAccountCredentials();
+    if (!credentials) {
+      return res.status(500).json({
+        success: false,
+        error: 'Service account credentials not configured'
+      });
+    }
+
+    const client = await getGoogleAuthClient();
+
+    // Chọn voice theo giới tính
+    const voiceName = voiceGender === 'MALE' ? 'vi-VN-Wavenet-B' : 'vi-VN-Wavenet-A';
+
+    const ttsEndpoint = 'https://texttospeech.googleapis.com/v1/text:synthesize';
+
+    console.log(`🔊 TTS Request - Voice: ${voiceName}, Text: "${trimmedText.substring(0, 50)}..."`);
+
+    const response = await client.request({
+      url: ttsEndpoint,
+      method: 'POST',
+      data: {
+        input: { text: trimmedText },
+        voice: {
+          languageCode: 'vi-VN',
+          name: voiceName,
+          ssmlGender: voiceGender
+        },
+        audioConfig: {
+          audioEncoding: 'MP3',
+          speakingRate: 1.0,
+          pitch: 0
+        }
+      }
+    });
+
+    const audioContent = response.data?.audioContent;
+
+    if (!audioContent) {
+      console.error('❌ TTS Error: No audioContent in response', response.data);
+      throw new Error('Google Cloud TTS không trả về nội dung âm thanh.');
+    }
+
+    console.log(`✅ TTS Success - Audio size: ${audioContent.length} bytes`);
+
+    res.json({
+      success: true,
+      audioContent: audioContent
+    });
+
+  } catch (error) {
+    console.error('❌ TTS API Error Details:', error.response?.data || error.message);
+    
+    let errorMessage = error.message;
+    if (error.response?.status === 403) {
+      errorMessage = 'Text-to-Speech API chưa được bật hoặc không có quyền truy cập. Hãy bật API trong Google Cloud Console.';
+    } else if (error.response?.status === 429) {
+      errorMessage = 'Đã hết hạn mức (Quota) cho dịch vụ Text-to-Speech.';
+    }
+
+    res.status(error.response?.status || 500).json({
+      success: false,
+      error: errorMessage
+    });
+  }
+});
+
+/**
  * Health check endpoint
  */
 app.get('/health', (req, res) => {

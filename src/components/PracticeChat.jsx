@@ -3,28 +3,9 @@ import resultService from '../services/faculty/resultService';
 import geminiChatServiceSoThapPhan from '../services/gemini/geminiChatServiceSoThapPhan';
 // import geminiChatServiceTimeVelocity from '../services/geminiChatServiceTimeVelocity';
 import { chatServiceRouter } from '../services/serviceRouter';
+import TypewriterMessage from './TypewriterMessage';
+import ttsService from '../services/ttsService';
 
-// Helper: check if topicName matches the Time/Velocity/Motion topic
-// Covers: "Số đo thời gian", "Vận tốc", "Chuyển động", "Quãng đường", "Tốc độ", etc.
-// const isTimeVelocityTopic = (topicName) => {
-//   if (!topicName) return false;
-//   const lower = topicName.toLowerCase();
-//   // Check if ANY keyword matches (OR logic, not AND)
-//   return (
-//     lower.includes('thời gian') || 
-//     lower.includes('vận tốc') || 
-//     lower.includes('chuyển động') || 
-//     lower.includes('quãng đường') || 
-//     lower.includes('tốc độ') ||
-//     lower.includes('tốc độ chuyển động') ||
-//     (lower.includes('số đo') && lower.includes('thời gian'))
-//   );
-// };
-
-/**
- * PracticeChat Component
- * Hiển thị chat giữa AI và học sinh trong phiên luyện tập Polya
- */
 const PracticeChat = ({ 
   userId, 
   examId, 
@@ -39,7 +20,9 @@ const PracticeChat = ({
   // parent may provide the scroll container ref (left column of page)
   scrollContainerRef = null,
   topicName = '',
-  examContextId = ''
+  examContextId = '',
+  ttsGender: propsTtsGender, // 🆕 Nhận từ prop
+  onTTSStateChange // 🆕 Callback thông báo đang phát âm thanh
 }) => {
   // Select the appropriate chat service based on topic using router
   const chatService = useMemo(() => {
@@ -60,6 +43,10 @@ const PracticeChat = ({
   const [isInitializing, setIsInitializing] = useState(true); // Track initialization state
   const [error, setError] = useState(null);
   const [isRecording, setIsRecording] = useState(false); // 🎤 Voice recording state
+  const [streamingMsgIdx, setStreamingMsgIdx] = useState(-1); // 🆕 Index of message currently being typed
+  const [isTypewriterPaused, setIsTypewriterPaused] = useState(false); // 🆕 Trạng thái tạm dừng của typewriter
+  const [ttsPlayingIdx, setTtsPlayingIdx] = useState(-1); // 🔊 Index of message currently being spoken
+  const [ttsLoadingIdx, setTtsLoadingIdx] = useState(-1); // 🔊 Index of message loading TTS
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null); // 🎤 Web Speech API instance
   const continueRecordingRef = useRef(false); // 🎤 Track if user wants to continue recording
@@ -281,6 +268,9 @@ const PracticeChat = ({
         };
 
         setMessages([aiMsg]);
+        // 🆕 Tự động phát TTS cho tin nhắn đầu tiên
+        handleTTS(0, response.message, true);
+        
         await saveChatMessage(aiMsg);
         if (onChatUpdate) {
           onChatUpdate([aiMsg]);
@@ -313,6 +303,72 @@ const PracticeChat = ({
     scrollToBottom();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
+
+  // 🔊 Cleanup TTS on unmount
+  useEffect(() => {
+    return () => {
+      ttsService.stop();
+    };
+  }, []);
+
+  // 🔊 Toggle TTS: phát hoặc dừng giọng nói cho tin nhắn AI
+  const handleTTS = useCallback((idx, text, autoStartTypewriter = false) => {
+    if (ttsPlayingIdx === idx) {
+      // Đang phát tin nhắn này → dừng
+      ttsService.stop();
+      setTtsPlayingIdx(-1);
+      return;
+    }
+
+    // Dừng audio cũ nếu có
+    ttsService.stop();
+    setTtsPlayingIdx(-1);
+    setTtsLoadingIdx(idx);
+
+    // Fallback: Nếu TTS quá lâu (>2s) mà chưa load xong, vẫn cho chạy chữ
+    let typewriterStarted = false;
+    const startTypewriterFallback = () => {
+      if (autoStartTypewriter && !typewriterStarted) {
+        typewriterStarted = true;
+        setStreamingMsgIdx(idx);
+        setIsTypewriterPaused(false);
+      }
+    };
+
+    if (autoStartTypewriter) {
+      setStreamingMsgIdx(idx);
+      setIsTypewriterPaused(true);
+    }
+    
+    const timeoutId = setTimeout(startTypewriterFallback, 2000);
+
+    ttsService.speak(text, {
+      voiceGender: propsTtsGender || 'FEMALE', // 🆕 Sử dụng giọng từ props
+      onStart: () => {
+        clearTimeout(timeoutId);
+        setTtsLoadingIdx(-1);
+        setTtsPlayingIdx(idx);
+        if (autoStartTypewriter) {
+          typewriterStarted = true;
+          setStreamingMsgIdx(idx);
+          setIsTypewriterPaused(false);
+        }
+      },
+      onEnd: () => {
+        setTtsPlayingIdx(-1);
+      },
+      onError: (err) => {
+        clearTimeout(timeoutId);
+        setTtsLoadingIdx(-1);
+        setTtsPlayingIdx(-1);
+        console.error('TTS error:', err.message);
+        startTypewriterFallback(); // Vẫn chạy chữ nếu lỗi âm thanh
+      }
+    });
+  }, [ttsPlayingIdx, propsTtsGender]); // 🆕 Cập nhật dependency
+
+  // 🔊 Đổi giọng đọc (Đã chuyển lên component cha)
+  /* const toggleTTSGender = useCallback(() => { ... }); */
 
 // Trong hàm handleSendMessage
 const handleSendMessage = async (e) => {
@@ -353,6 +409,9 @@ const handleSendMessage = async (e) => {
 
     setMessages(prev => {
       const next = [...prev, aiMsg];
+      // 🆕 Tự động phát TTS và đồng bộ Typewriter
+      handleTTS(next.length - 1, response.message, true);
+      
       if (onChatUpdate) {
         onChatUpdate(next);
       }
@@ -400,7 +459,7 @@ const handleSendMessage = async (e) => {
   return (
     <div className="practice-chat flex min-w-0 flex-col rounded-xl border border-gray-200 bg-white shadow-sm">
       {/* Header (sticky within the left column scroll container) */}
-      <div className="sticky top-0 z-10 rounded-t-xl bg-gradient-to-r from-blue-500 to-purple-500 px-[clamp(0.9rem,2.8vw,1.2rem)] py-[clamp(0.7rem,2vw,1rem)] text-white">
+      <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-xl bg-gradient-to-r from-blue-500 to-purple-500 px-[clamp(0.9rem,2.8vw,1.2rem)] py-[clamp(0.7rem,2vw,1rem)] text-white">
         <h3 className="font-quicksand text-[clamp(1rem,3vw,1.15rem)] font-bold">💬 Chat</h3>
       </div>
 
@@ -413,22 +472,82 @@ const handleSendMessage = async (e) => {
             </p>
           </div>
         ) : (
-          messages.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`flex min-w-0 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
+          messages.map((msg, idx) => {
+            const isAI = msg.role !== 'user';
+            const isStreaming = isAI && idx === streamingMsgIdx;
+            const isTTSPlaying = ttsPlayingIdx === idx;
+            const isTTSLoading = ttsLoadingIdx === idx;
+            return (
               <div
-                className={`min-w-0 max-w-[min(92%,44rem)] rounded-xl px-[clamp(0.75rem,2.2vw,1rem)] py-[clamp(0.6rem,1.8vw,0.85rem)] font-quicksand shadow-md ${
-                  msg.role === 'user'
-                    ? 'bg-blue-500 text-white rounded-br-none'
-                    : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-bl-none border-2 border-purple-400 font-semibold'
-                }`}
+                key={idx}
+                className={`flex min-w-0 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <p className="whitespace-pre-wrap text-[clamp(0.9rem,2.8vw,1rem)] leading-relaxed [overflow-wrap:anywhere] break-words">{msg.parts[0].text}</p>
+                <div className="flex flex-col min-w-0 max-w-[min(92%,44rem)]">
+                  <div
+                    className={`rounded-xl px-[clamp(0.75rem,2.2vw,1rem)] py-[clamp(0.6rem,1.8vw,0.85rem)] font-quicksand shadow-md ${
+                      msg.role === 'user'
+                        ? 'bg-blue-500 text-white rounded-br-none'
+                        : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-bl-none border-2 border-purple-400 font-semibold'
+                    }`}
+                  >
+                    {isStreaming ? (
+                      <TypewriterMessage
+                        text={msg.parts[0].text}
+                        speed={120} // 🆕 Chậm lại để khớp với tiếng nói (~150-200ms/token)
+                        onComplete={() => setStreamingMsgIdx(-1)}
+                        onTextUpdate={scrollToBottom}
+                        paused={isTypewriterPaused}
+                      />
+                    ) : (
+                      <p className="whitespace-pre-wrap text-[clamp(0.9rem,2.8vw,1rem)] leading-relaxed [overflow-wrap:anywhere] break-words">{msg.parts[0].text}</p>
+                    )}
+                  </div>
+                  {/* 🔊 TTS Button - chỉ hiện cho tin nhắn AI, ẩn khi đang streaming */}
+                  {isAI && !isStreaming && (
+                    <div className="mt-1 ml-1">
+                      <button
+                        type="button"
+                        onClick={() => handleTTS(idx, msg.parts[0].text)}
+                        disabled={isTTSLoading}
+                        className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[0.7rem] font-quicksand transition-all duration-200 ${
+                          isTTSPlaying
+                            ? 'bg-purple-100 text-purple-700 shadow-sm ring-1 ring-purple-300'
+                            : isTTSLoading
+                              ? 'bg-gray-100 text-gray-400 cursor-wait'
+                              : 'bg-gray-100 text-gray-500 hover:bg-purple-50 hover:text-purple-600'
+                        }`}
+                        title={isTTSPlaying ? 'Dừng đọc' : 'Nghe AI đọc'}
+                      >
+                        {isTTSLoading ? (
+                          <>
+                            <span className="inline-block w-3 h-3 border-2 border-gray-300 border-t-purple-500 rounded-full animate-spin" />
+                            <span>Đang tải...</span>
+                          </>
+                        ) : isTTSPlaying ? (
+                          <>
+                            <span className="text-sm">⏹</span>
+                            <span>Dừng đọc</span>
+                            {/* Sound wave animation */}
+                            <span className="flex items-end gap-[2px] h-3 ml-0.5">
+                              <span className="w-[2px] bg-purple-500 rounded-full animate-pulse" style={{ height: '40%', animationDelay: '0ms' }} />
+                              <span className="w-[2px] bg-purple-500 rounded-full animate-pulse" style={{ height: '70%', animationDelay: '150ms' }} />
+                              <span className="w-[2px] bg-purple-500 rounded-full animate-pulse" style={{ height: '100%', animationDelay: '300ms' }} />
+                              <span className="w-[2px] bg-purple-500 rounded-full animate-pulse" style={{ height: '55%', animationDelay: '450ms' }} />
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-sm">🔊</span>
+                            <span>Nghe</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
         {isLoading && (
           <div className="flex justify-start">
@@ -512,7 +631,6 @@ const handleSendMessage = async (e) => {
                         recognition.start();
                         recognitionStartedRef.current = true;
                       } catch (e) {
-                        console.error('🎤 [PracticeChat] Error starting recognition:', e.message);
                         setError('❌ Lỗi khi bắt đầu ghi âm. Vui lòng thử lại.');
                         continueRecordingRef.current = false;
                       }

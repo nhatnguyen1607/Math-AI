@@ -29,6 +29,10 @@ const StudentPracticePage = ({ user, onSignOut }) => {
   const [topicName, setTopicName] = useState('');
   const [examContextId, setExamContextId] = useState('');
   const [regeneratingProblem, setRegeneratingProblem] = useState(false);
+  const [ttsGender, setTtsGender] = useState(() => {
+    return localStorage.getItem('chat_tts_gender') || 'FEMALE';
+  }); // 🔊 Giới tính giọng đọc ('MALE' | 'FEMALE')
+  const [isTTSPlaying, setIsTTSPlaying] = useState(false); // Track trạng thái đang phát để khóa nút chọn giọng
   const leftColRef = useRef(null);
 
   const resolveCompetencyLevel = (competencyEvaluation) => {
@@ -317,6 +321,13 @@ const StudentPracticePage = ({ user, onSignOut }) => {
     }
   };
 
+  // 🔊 Đổi giọng đọc
+  const toggleTTSGender = () => {
+    const nextGender = ttsGender === 'FEMALE' ? 'MALE' : 'FEMALE';
+    setTtsGender(nextGender);
+    localStorage.setItem('chat_tts_gender', nextGender);
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 px-4">
@@ -471,6 +482,8 @@ const StudentPracticePage = ({ user, onSignOut }) => {
                   evaluation={currentBai.evaluation}
                   topicName={practiceData?.topicName || topicName}
                   examContextId={practiceData?.examContextId || examContextId}
+                  ttsGender={ttsGender}
+                  onTTSStateChange={(isPlaying) => setIsTTSPlaying(isPlaying)}
                   onCompleted={() => {
                     if (activeTab === 'bai1') {
                       handleSubmitPractice('bai1');
@@ -516,6 +529,23 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         <aside className="hidden lg:flex lg:flex-col lg:w-[350px] lg:flex-none">
           <div className="sticky top-[7.2rem] h-fit rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:top-[8.2rem]">
             <RobotCompanion status={robotStatus} message={robotMessage} />
+            
+            {/* 🔊 Voice Selector - Moved below robot to avoid being obscured */}
+            <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
+              <span className="text-sm font-bold text-gray-700 font-quicksand">Giọng đọc:</span>
+              <button 
+                onClick={toggleTTSGender}
+                disabled={isTTSPlaying}
+                className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold font-quicksand shadow-sm transition-all active:scale-95 ${
+                  isTTSPlaying
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:shadow-md'
+                }`}
+                title={isTTSPlaying ? "Đang đọc, không thể đổi giọng" : "Đổi giọng đọc Nam/Nữ"}
+              >
+                <span>{ttsGender === 'FEMALE' ? '👩 Giọng Nữ' : '👨 Giọng Nam'}</span>
+              </button>
+            </div>
           </div>
         </aside>
       </div>

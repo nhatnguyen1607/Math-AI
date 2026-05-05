@@ -44,9 +44,6 @@ const CompetencyEvaluationDisplay = ({ evaluation, showDetails = true }) => {
       {/* Header */}
       <div className="mb-6">
         <h3 className="text-2xl font-bold text-indigo-900 mb-2">📊 Đánh giá Năng lực</h3>
-        <p className="text-gray-600 text-base">
-          Đánh giá dựa trên 4 tiêu chí theo khung giáo dục. Tổng điểm: 0-8 (<span style={{ color: levelColor.color }} className="font-bold">{evaluation.totalCompetencyScore}/8 - {levelColor.label}</span>)
-        </p>
       </div>
 
       {/* Overall Score Display */}
@@ -58,12 +55,10 @@ const CompetencyEvaluationDisplay = ({ evaluation, showDetails = true }) => {
         <div>
           <div className="text-base text-gray-600 font-medium">Mức Năng lực Chung</div>
           <div className="text-3xl font-bold" style={{ color: levelColor.color }}>
-            {evaluation.totalCompetencyScore}/8 - {levelColor.label}
+            {levelColor.label}
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-5xl font-bold text-gray-300">{Math.round((evaluation.totalCompetencyScore / 8) * 100)}%</div>
-        </div>
+ 
       </div>
 
       {/* Individual Criteria */}
@@ -92,9 +87,6 @@ const CompetencyEvaluationDisplay = ({ evaluation, showDetails = true }) => {
                   <div className="inline-block px-3 py-1 rounded-full text-white text-base font-bold"
                        style={{ backgroundColor: color }}>
                     {getLevelLabel(level)}
-                  </div>
-                  <div className="text-3xl font-bold mt-2" style={{ color: color }}>
-                    {score}/2
                   </div>
                 </div>
               </div>
@@ -127,17 +119,17 @@ const CompetencyEvaluationDisplay = ({ evaluation, showDetails = true }) => {
           <div className="grid grid-cols-3 gap-4 text-base">
             <div className="text-center">
               <div className="w-4 h-4 rounded-full mx-auto mb-2" style={{ backgroundColor: '#10B981' }}></div>
-              <div className="font-bold text-gray-900">7-8 điểm</div>
+              <div className="font-bold text-gray-900">9 - 10 điểm</div>
               <div className="text-gray-600">Tốt</div>
             </div>
             <div className="text-center">
               <div className="w-4 h-4 rounded-full mx-auto mb-2" style={{ backgroundColor: '#F59E0B' }}></div>
-              <div className="font-bold text-gray-900">4-6 điểm</div>
+              <div className="font-bold text-gray-900">5,25 - 8,75 điểm</div>
               <div className="text-gray-600">Đạt</div>
             </div>
             <div className="text-center">
               <div className="w-4 h-4 rounded-full mx-auto mb-2" style={{ backgroundColor: '#EF4444' }}></div>
-              <div className="font-bold text-gray-900">0-3 điểm</div>
+              <div className="font-bold text-gray-900">0 - 5 điểm</div>
               <div className="text-gray-600">Cần cố gắng</div>
             </div>
           </div>

@@ -247,17 +247,26 @@ const FacultyStudentExamResultPage = () => {
     // Tính điểm vận dụng (sử dụng totalCompetencyScore hoặc tongDiem)
     const vanDungTotal =
       vanDungEval.totalCompetencyScore || vanDungEval.tongDiem || 0;
+    const getOverallLevel = (total) => {
+      if (total >= 7) return "Tốt";
+      if (total >= 4) return "Đạt";
+      return "Cần cố gắng";
+    };
 
     if (!includeVanDung) {
-      const improvementLT = luyenTapTotal - khoiDongTotal;
+      const khoiDongLevel = getOverallLevel(khoiDongTotal);
+      const luyenTapLevel = getOverallLevel(luyenTapTotal);
       let assessment = "";
 
-      if (improvementLT >= 3) {
-        assessment = `Học sinh có tiến bộ tốt từ giai đoạn khởi động sang luyện tập. Điểm tăng từ ${khoiDongTotal} lên ${luyenTapTotal} (+${improvementLT} điểm), cho thấy em tiếp thu nhanh và cải thiện rõ qua quá trình thực hành.\n\nTiếp tục duy trì cách học hiện tại, đồng thời thử thêm bài nâng cao để củng cố tư duy giải quyết vấn đề.`;
-      } else if (improvementLT >= 0) {
-        assessment = `Học sinh có sự tiến triển ổn định từ khởi động sang luyện tập. Điểm chuyển từ ${khoiDongTotal} lên ${luyenTapTotal} (${improvementLT >= 0 ? "+" : ""}${improvementLT} điểm). Em cần tiếp tục rèn các tiêu chí còn yếu để bứt phá hơn ở giai đoạn tiếp theo.\n\nNên tập trung trình bày lời giải rõ ràng hơn và tăng bước tự kiểm tra kết quả sau khi giải.`;
+      if (khoiDongLevel === luyenTapLevel) {
+        assessment = `Học sinh duy trì ổn định mức năng lực ${khoiDongLevel} từ giai đoạn khởi động sang luyện tập.\n\nEm cần tiếp tục rèn luyện tính rõ ràng khi trình bày và tăng bước tự kiểm tra để chuyển lên mức cao hơn ở giai đoạn tiếp theo.`;
+      } else if (
+        (khoiDongLevel === "Cần cố gắng" && (luyenTapLevel === "Đạt" || luyenTapLevel === "Tốt")) ||
+        (khoiDongLevel === "Đạt" && luyenTapLevel === "Tốt")
+      ) {
+        assessment = `Học sinh có tiến bộ tích cực về mức năng lực từ ${khoiDongLevel} lên ${luyenTapLevel} khi chuyển sang luyện tập.\n\nTiếp tục duy trì nhịp học hiện tại và tăng bài luyện nâng cao để củng cố tư duy giải quyết vấn đề.`;
       } else {
-        assessment = `Học sinh có dấu hiệu giảm hiệu quả khi chuyển từ khởi động sang luyện tập. Điểm từ ${khoiDongTotal} xuống ${luyenTapTotal} (${improvementLT} điểm). Em cần rà soát lại phương pháp làm bài và mức độ hiểu đề trước khi triển khai lời giải.\n\nNên chia nhỏ bài toán thành từng bước, kiểm tra lại mỗi bước và chủ động hỏi hỗ trợ khi gặp khó khăn.`;
+        assessment = `Học sinh có dấu hiệu giảm mức năng lực từ ${khoiDongLevel} xuống ${luyenTapLevel} khi bước vào luyện tập.\n\nEm cần rà soát lại cách hiểu đề, chia nhỏ các bước giải và chủ động kiểm tra từng bước để cải thiện độ chính xác.`;
       }
 
       setAiAssessment(assessment);
@@ -271,15 +280,19 @@ const FacultyStudentExamResultPage = () => {
       return;
     }
 
-    const totalImprovement = vanDungTotal - khoiDongTotal;
+    const khoiDongLevel = getOverallLevel(khoiDongTotal);
+    const vanDungLevel = getOverallLevel(vanDungTotal);
     let assessment = "";
 
-    if (totalImprovement >= 4) {
-      assessment = `Học sinh có tiến bộ rõ rệt trong quá trình học tập. Điểm số tăng từ ${khoiDongTotal} lên ${vanDungTotal} (+${totalImprovement} điểm). Em đã thể hiện sức cải thiện đáng kể qua từng giai đoạn luyện tập.\n\nTiếp tục duy trì tốc độ học tập này. Em có thể thử thách các bài toán khó hơn để phát triển tư duy toán học.`;
-    } else if (totalImprovement >= 0) {
-      assessment = `Học sinh có sự ổn định trong quá trình học tập. Điểm số từ ${khoiDongTotal} sang ${vanDungTotal} (${totalImprovement >= 0 ? "+" : ""}${totalImprovement} điểm). Em cần tập trung vào các phần yếu để có thể cải thiện.\n\nXác định những tiêu chí còn yếu và luyện tập những phần đó. Nâng cao mức độ chi tiết trong các bước giải.`;
+    if (khoiDongLevel === vanDungLevel) {
+      assessment = `Học sinh duy trì ổn định mức năng lực ${vanDungLevel} xuyên suốt quá trình từ khởi động đến vận dụng.\n\nEm nên tiếp tục tập trung vào các tiêu chí còn yếu để tăng sự chắc chắn khi giải các bài toán phức tạp hơn.`;
+    } else if (
+      (khoiDongLevel === "Cần cố gắng" && (vanDungLevel === "Đạt" || vanDungLevel === "Tốt")) ||
+      (khoiDongLevel === "Đạt" && vanDungLevel === "Tốt")
+    ) {
+      assessment = `Học sinh có tiến bộ rõ rệt về mức năng lực, từ ${khoiDongLevel} lên ${vanDungLevel} sau toàn bộ quá trình học.\n\nNên tiếp tục duy trì sự chủ động và thử thêm các bài toán nâng cao để phát triển tư duy toán học.`;
     } else {
-      assessment = `Học sinh có xu hướng suy giảm trong quá trình học tập. Điểm số từ ${khoiDongTotal} xuống ${vanDungTotal} (${totalImprovement} điểm). Em cần xem xét lại chiến lược học tập.\n\nTìm những khó khăn cụ thể để có phương hướng cải thiện. Yêu cầu hỗ trợ thêm nếu cần thiết.`;
+      assessment = `Học sinh có xu hướng suy giảm mức năng lực từ ${khoiDongLevel} xuống ${vanDungLevel} ở cuối quá trình học.\n\nCần xác định rõ khó khăn theo từng tiêu chí và điều chỉnh lại chiến lược học tập để phục hồi năng lực.`;
     }
     setAiAssessment(assessment);
     setAssessmentStage("vanDung");
@@ -310,33 +323,41 @@ const FacultyStudentExamResultPage = () => {
       };
       const vanDungTotal =
         vanDungEval.totalCompetencyScore || vanDungEval.tongDiem || 0;
+      const getOverallLevel = (total) => {
+        if (total >= 7) return "Tốt";
+        if (total >= 4) return "Đạt";
+        return "Cần cố gắng";
+      };
 
       const luyenTapTotalScore = getLuyenTapTotal();
+      const khoiDongLevel = getOverallLevel(khoiDongTotal);
+      const luyenTapLevel = getOverallLevel(luyenTapTotalScore);
+      const vanDungLevel = getOverallLevel(vanDungTotal);
 
             const prompt = includeVanDung
         ? `Bạn là một giáo viên toán học. Hãy viết nhận xét ngắn gọn về tiến độ phát triển của học sinh:
 
       Học sinh: ${student?.name || "Học sinh"}
-      Điểm: ${khoiDongTotal}/8 (khởi động) → ${luyenTapTotalScore}/8 (luyện tập) → ${vanDungTotal}/8 (vận dụng)
-      Thay đổi: ${vanDungTotal - khoiDongTotal >= 0 ? "+" : ""}${vanDungTotal - khoiDongTotal} điểm
+      Mức năng lực: ${khoiDongLevel} (khởi động) → ${luyenTapLevel} (luyện tập) → ${vanDungLevel} (vận dụng)
 
       Hãy viết nhận xét chi tiết (5-6 câu) về:
       - Xu hướng phát triển của học sinh
       - Điều học sinh làm tốt
       - Cần cải thiện ở đâu
 
+      Chỉ nhận xét theo mức năng lực, không nêu điểm số.
       Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`
         : `Bạn là một giáo viên toán học. Hãy viết nhận xét ngắn gọn về tiến độ phát triển của học sinh:
 
       Học sinh: ${student?.name || "Học sinh"}
-      Điểm: ${khoiDongTotal}/8 (khởi động) → ${luyenTapTotalScore}/8 (luyện tập)
-      Thay đổi: ${luyenTapTotalScore - khoiDongTotal >= 0 ? "+" : ""}${luyenTapTotalScore - khoiDongTotal} điểm
+      Mức năng lực: ${khoiDongLevel} (khởi động) → ${luyenTapLevel} (luyện tập)
 
       Hãy viết nhận xét chi tiết (4-5 câu) về:
       - Xu hướng phát triển của học sinh từ khởi động sang luyện tập
       - Điều học sinh làm tốt trong giai đoạn luyện tập
       - Cần cải thiện ở đâu trước khi bước sang vận dụng
 
+      Chỉ nhận xét theo mức năng lực, không nêu điểm số.
       Trả lời bằng tiếng Việt, chi tiết và chuyên nghiệp.`;
 
       const response = await geminiService.processExamQuestion(prompt);
@@ -1061,7 +1082,7 @@ const FacultyStudentExamResultPage = () => {
                         <div className="space-y-4">
                           <div className="flex justify-between items-center mb-4">
                             <h5 className="font-bold text-gray-800 text-lg">
-                              📊 Đánh giá 4 Tiêu chí Năng lực (Tối đa 8 điểm)
+                              📊 Đánh giá 4 Tiêu chí Năng lực 
                             </h5>
                             <button
                               onClick={() => handleReevaluateCompetency('practice', baiNum)}
@@ -1120,11 +1141,7 @@ const FacultyStudentExamResultPage = () => {
                                       >
                                         {tc}. {tcNames[tc]}
                                       </p>
-                                      <span
-                                        className={`font-bold text-lg ${textColor}`}
-                                      >
-                                        {score}/2
-                                      </span>
+                              
                                     </div>
                                     <p
                                       className="text-xs font-semibold mb-2"
@@ -1170,20 +1187,7 @@ const FacultyStudentExamResultPage = () => {
                               <div className="pt-3 border-t border-purple-200">
                                 <div className="flex justify-between items-center">
                                   <div>
-                                    <p className="text-sm text-gray-600 font-medium">
-                                      Tổng điểm 4 Tiêu chí
-                                    </p>
-                                    <p
-                                      className={`text-2xl font-bold ${
-                                        evaluation.tongDiem >= 7
-                                          ? "text-green-600"
-                                          : evaluation.tongDiem >= 4
-                                            ? "text-blue-600"
-                                            : "text-orange-600"
-                                      }`}
-                                    >
-                                      {evaluation.tongDiem || 0}/8
-                                    </p>
+
                                   </div>
                                   <div className="text-right">
                                     <p className="text-sm text-gray-600 font-medium">
@@ -1294,7 +1298,7 @@ const FacultyStudentExamResultPage = () => {
                     <div className="space-y-6">
                       <div className="flex justify-between items-center mb-4">
                         <h5 className="font-bold text-gray-800 text-lg">
-                          📊 Đánh giá 4 Tiêu chí Năng lực (Tối đa 8 điểm)
+                          📊 Đánh giá 4 Tiêu chí Năng lực
                         </h5>
                         <button
                           onClick={() => handleReevaluateCompetency('vanDung', 'vanDung')}
@@ -1354,11 +1358,7 @@ const FacultyStudentExamResultPage = () => {
                                 >
                                   {tc}. {tcNames[tc]}
                                 </p>
-                                <span
-                                  className={`font-bold text-lg ${textColor}`}
-                                >
-                                  {score}/2
-                                </span>
+                      
                               </div>
                               <p
                                 className="text-xs font-semibold mb-2"
@@ -1408,23 +1408,6 @@ const FacultyStudentExamResultPage = () => {
                         >
                           <div className="flex justify-between items-center">
                             <div>
-                              <p className="text-sm text-gray-600 font-medium">
-                                Tổng điểm 4 Tiêu chí
-                              </p>
-                              <p
-                                className={`text-3xl font-bold ${
-                                  (practiceData.vanDung.evaluation?.tongDiem ||
-                                    0) >= 7
-                                    ? "text-green-600"
-                                    : (practiceData.vanDung.evaluation
-                                          ?.tongDiem || 0) >= 4
-                                      ? "text-blue-600"
-                                      : "text-orange-600"
-                                }`}
-                              >
-                                {practiceData.vanDung.evaluation?.tongDiem || 0}
-                                <span className="text-lg">/8</span>
-                              </p>
                             </div>
                             <div className="text-right">
                               <p className="text-sm text-gray-600 font-medium">
@@ -1544,22 +1527,33 @@ const FacultyStudentExamResultPage = () => {
                   return Math.round((bai1Score + bai2Score) / 2);
                 };
 
-                const getLevelLabel = (score) => {
+                const getTcLevelLabel = (score) => {
                   if (score === 2) return "Tốt";
                   if (score === 1) return "Đạt";
                   return "Cần cố gắng";
                 };
 
-                const getLevelColor = (score) => {
+                const getTcLevelColor = (score) => {
                   if (score === 2) return "text-green-600";
                   if (score === 1) return "text-blue-600";
                   return "text-orange-600";
                 };
 
-                const getBgColor = (score) => {
+                const getTcBgColor = (score) => {
                   if (score === 2) return "bg-green-50 border-green-300";
                   if (score === 1) return "bg-blue-50 border-blue-300";
                   return "bg-orange-50 border-orange-300";
+                };
+
+                const getOverallLevelLabel = (score) => {
+                  if (score >= 7) return "Tốt";
+                  if (score >= 4) return "Đạt";
+                  return "Cần cố gắng";
+                };
+                const getOverallLevelColor = (score) => {
+                  if (score >= 7) return "text-green-600";
+                  if (score >= 4) return "text-blue-600";
+                  return "text-orange-600";
                 };
 
                 // Calculate overall scores - LẤY ĐÚNG NƠI LƯU TRỮ
@@ -1588,60 +1582,60 @@ const FacultyStudentExamResultPage = () => {
                   let development = [];
                   if (lt > kd) {
                     development.push(
-                      `↑ Luyện tập: tăng từ ${getLevelLabel(kd)} lên ${getLevelLabel(lt)}`,
+                      `↑ Luyện tập: tăng từ ${getTcLevelLabel(kd)} lên ${getTcLevelLabel(lt)}`,
                     );
                   } else if (lt < kd) {
                     development.push(
-                      `↓ Luyện tập: giảm từ ${getLevelLabel(kd)} xuống ${getLevelLabel(lt)}`,
+                      `↓ Luyện tập: giảm từ ${getTcLevelLabel(kd)} xuống ${getTcLevelLabel(lt)}`,
                     );
                   } else {
                     development.push(
-                      `→ Luyện tập: duy trì mức ${getLevelLabel(kd)}`,
+                      `→ Luyện tập: duy trì mức ${getTcLevelLabel(kd)}`,
                     );
                   }
 
                   if (hasVanDungCompleted && vd !== null) {
                     if (vd > lt) {
                       development.push(
-                        `↑ Vận dụng: nâng từ ${getLevelLabel(lt)} lên ${getLevelLabel(vd)}`,
+                        `↑ Vận dụng: nâng từ ${getTcLevelLabel(lt)} lên ${getTcLevelLabel(vd)}`,
                       );
                     } else if (vd < lt) {
                       development.push(
-                        `↓ Vận dụng: giảm từ ${getLevelLabel(lt)} xuống ${getLevelLabel(vd)}`,
+                        `↓ Vận dụng: giảm từ ${getTcLevelLabel(lt)} xuống ${getTcLevelLabel(vd)}`,
                       );
                     } else {
                       development.push(
-                        `→ Vận dụng: duy trì mức ${getLevelLabel(lt)}`,
+                        `→ Vận dụng: duy trì mức ${getTcLevelLabel(lt)}`,
                       );
                     }
 
                     // Overall trend when all 3 phases are available
                     if (vd > kd) {
                       development.push(
-                        `📈 Xu hướng chung: cải thiện từ ${getLevelLabel(kd)} lên ${getLevelLabel(vd)}`,
+                        `📈 Xu hướng chung: cải thiện từ ${getTcLevelLabel(kd)} lên ${getTcLevelLabel(vd)}`,
                       );
                     } else if (vd < kd) {
                       development.push(
-                        `📉 Xu hướng chung: suy giảm từ ${getLevelLabel(kd)} xuống ${getLevelLabel(vd)}`,
+                        `📉 Xu hướng chung: suy giảm từ ${getTcLevelLabel(kd)} xuống ${getTcLevelLabel(vd)}`,
                       );
                     } else {
                       development.push(
-                        `📊 Xu hướng chung: ổn định ở mức ${getLevelLabel(kd)}`,
+                        `📊 Xu hướng chung: ổn định ở mức ${getTcLevelLabel(kd)}`,
                       );
                     }
                   } else {
                     // Overall trend when only Khởi động -> Luyện tập is available
                     if (lt > kd) {
                       development.push(
-                        `📈 Xu hướng chung: cải thiện từ ${getLevelLabel(kd)} lên ${getLevelLabel(lt)}`,
+                        `📈 Xu hướng chung: cải thiện từ ${getTcLevelLabel(kd)} lên ${getTcLevelLabel(lt)}`,
                       );
                     } else if (lt < kd) {
                       development.push(
-                        `📉 Xu hướng chung: suy giảm từ ${getLevelLabel(kd)} xuống ${getLevelLabel(lt)}`,
+                        `📉 Xu hướng chung: suy giảm từ ${getTcLevelLabel(kd)} xuống ${getTcLevelLabel(lt)}`,
                       );
                     } else {
                       development.push(
-                        `📊 Xu hướng chung: ổn định ở mức ${getLevelLabel(kd)}`,
+                        `📊 Xu hướng chung: ổn định ở mức ${getTcLevelLabel(kd)}`,
                       );
                     }
                   }
@@ -1670,10 +1664,10 @@ const FacultyStudentExamResultPage = () => {
 
                 return (
                   <div className="space-y-8">
-                    {/* Overall Score Comparison */}
+                    {/* Overall Competency Level Comparison */}
                     <div className="bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 rounded-3xl p-6 lg:p-8 border-3 border-purple-300 shadow-soft-lg">
                       <h4 className="text-xl font-bold text-gray-800 mb-6">
-                        📊 So sánh tổng điểm {hasVanDungCompleted ? "toàn bộ 3 phần" : "2 phần đã hoàn thành"}
+                        📊 So sánh mức năng lực {hasVanDungCompleted ? "toàn bộ 3 phần" : "2 phần đã hoàn thành"}
                       </h4>
                       <div className={`grid ${hasVanDungCompleted ? "grid-cols-3" : "grid-cols-2"} gap-4 lg:gap-6`}>
                         {/* Khởi động */}
@@ -1682,12 +1676,9 @@ const FacultyStudentExamResultPage = () => {
                             🚀 Khởi động
                           </div>
                           <div
-                            className={`text-4xl font-bold mb-2 ${khoiDongTotal >= 7 ? "text-green-600" : khoiDongTotal >= 4 ? "text-blue-600" : "text-orange-600"}`}
+                            className={`text-2xl font-bold mb-2 ${getOverallLevelColor(khoiDongTotal)}`}
                           >
-                            {khoiDongTotal}/8
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {getLevelLabel(Math.round(khoiDongTotal / 4))}
+                            {getOverallLevelLabel(khoiDongTotal)}
                           </div>
                         </div>
 
@@ -1697,12 +1688,9 @@ const FacultyStudentExamResultPage = () => {
                             📚 Luyện tập (TB)
                           </div>
                           <div
-                            className={`text-4xl font-bold mb-2 ${luyenTapTotal >= 7 ? "text-green-600" : luyenTapTotal >= 4 ? "text-blue-600" : "text-orange-600"}`}
+                            className={`text-2xl font-bold mb-2 ${getOverallLevelColor(luyenTapTotal)}`}
                           >
-                            {luyenTapTotal}/8
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {getLevelLabel(Math.round(luyenTapTotal / 4))}
+                            {getOverallLevelLabel(luyenTapTotal)}
                           </div>
                         </div>
 
@@ -1713,12 +1701,9 @@ const FacultyStudentExamResultPage = () => {
                               ⚡ Vận dụng
                             </div>
                             <div
-                              className={`text-4xl font-bold mb-2 ${vanDungTotal >= 7 ? "text-green-600" : vanDungTotal >= 4 ? "text-blue-600" : "text-orange-600"}`}
+                              className={`text-2xl font-bold mb-2 ${getOverallLevelColor(vanDungTotal)}`}
                             >
-                              {vanDungTotal}/8
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {getLevelLabel(Math.round(vanDungTotal / 4))}
+                              {getOverallLevelLabel(vanDungTotal)}
                             </div>
                           </div>
                         )}
@@ -1756,11 +1741,11 @@ const FacultyStudentExamResultPage = () => {
                               </div>
                             </div>
 
-                            {/* Score Comparison Row */}
+                            {/* Competency Level Comparison Row */}
                             <div className={`grid grid-cols-1 ${hasVanDungCompleted ? "lg:grid-cols-3" : "lg:grid-cols-2"} gap-4 mb-6`}>
                               {/* Khởi động */}
                               <div
-                                className={`rounded-xl p-4 border-2 ${getBgColor(kdScore)}`}
+                                className={`rounded-xl p-4 border-2 ${getTcBgColor(kdScore)}`}
                               >
                                 <div className="text-xs text-gray-600 font-semibold mb-2">
                                   🚀 Khởi động
@@ -1768,14 +1753,9 @@ const FacultyStudentExamResultPage = () => {
                                 <div className="flex items-center justify-between">
                                   <div>
                                     <div
-                                      className={`text-3xl font-bold ${getLevelColor(kdScore)}`}
+                                      className={`text-base font-bold mt-1 ${getTcLevelColor(kdScore)}`}
                                     >
-                                      {kdScore}
-                                    </div>
-                                    <div
-                                      className={`text-xs font-semibold mt-1 ${getLevelColor(kdScore)}`}
-                                    >
-                                      {getLevelLabel(kdScore)}
+                                      {getTcLevelLabel(kdScore)}
                                     </div>
                                   </div>
                                 </div>
@@ -1783,7 +1763,7 @@ const FacultyStudentExamResultPage = () => {
 
                               {/* Luyện tập */}
                               <div
-                                className={`rounded-xl p-4 border-2 ${getBgColor(ltScore)}`}
+                                className={`rounded-xl p-4 border-2 ${getTcBgColor(ltScore)}`}
                               >
                                 <div className="text-xs text-gray-600 font-semibold mb-2">
                                   📚 Luyện tập
@@ -1791,14 +1771,9 @@ const FacultyStudentExamResultPage = () => {
                                 <div className="flex items-center justify-between">
                                   <div>
                                     <div
-                                      className={`text-3xl font-bold ${getLevelColor(ltScore)}`}
+                                      className={`text-base font-bold mt-1 ${getTcLevelColor(ltScore)}`}
                                     >
-                                      {ltScore}
-                                    </div>
-                                    <div
-                                      className={`text-xs font-semibold mt-1 ${getLevelColor(ltScore)}`}
-                                    >
-                                      {getLevelLabel(ltScore)}
+                                      {getTcLevelLabel(ltScore)}
                                     </div>
                                   </div>
                                   {ltScore > kdScore && (
@@ -1816,7 +1791,7 @@ const FacultyStudentExamResultPage = () => {
                               {/* Vận dụng */}
                               {hasVanDungCompleted && vdScore !== null && (
                                 <div
-                                  className={`rounded-xl p-4 border-2 ${getBgColor(vdScore)}`}
+                                  className={`rounded-xl p-4 border-2 ${getTcBgColor(vdScore)}`}
                                 >
                                   <div className="text-xs text-gray-600 font-semibold mb-2">
                                     ⚡ Vận dụng
@@ -1824,14 +1799,9 @@ const FacultyStudentExamResultPage = () => {
                                   <div className="flex items-center justify-between">
                                     <div>
                                       <div
-                                        className={`text-3xl font-bold ${getLevelColor(vdScore)}`}
+                                        className={`text-base font-bold mt-1 ${getTcLevelColor(vdScore)}`}
                                       >
-                                        {vdScore}
-                                      </div>
-                                      <div
-                                        className={`text-xs font-semibold mt-1 ${getLevelColor(vdScore)}`}
-                                      >
-                                        {getLevelLabel(vdScore)}
+                                        {getTcLevelLabel(vdScore)}
                                       </div>
                                     </div>
                                     {vdScore > ltScore && (

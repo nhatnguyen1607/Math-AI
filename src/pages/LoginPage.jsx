@@ -425,7 +425,7 @@ function LoginPage() {
         {/* Footer */}
         <div className="text-center text-sm text-gray-600 mt-8">
           <p>AI sẽ đồng hành và hướng dẫn bạn</p>
-          <p>những <strong className="text-purple-600">không giải hộ</strong> đâu nhé! 😊</p>
+          <p>nhưng <strong className="text-purple-600">không giải hộ</strong> đâu nhé! 😊</p>
           <hr className="my-4" />
           <a
             href="/admin"

@@ -21,7 +21,7 @@ const formatMonthLabel = (monthKey) => {
 const buildLinePoints = (rows, width, height, padding) => {
   if (!rows.length) return { points: '', circles: [] };
 
-  const maxY = 8;
+  const maxY = 10;
   const minY = 0;
   const innerWidth = width - padding * 2;
   const innerHeight = height - padding * 2;
@@ -203,7 +203,7 @@ const StudentLearningProfilePage = ({ user, onSignOut }) => {
           </div>
 
           <p className="mb-4 text-sm text-gray-600">
-            Trục dọc: mức điểm 0 - 8 (trung bình 3 hoạt động KĐ, LT, VD của ngày đó, làm tròn 1 chữ số thập phân)
+            Trục dọc: mức điểm 0 - 10 (trung bình 3 hoạt động KĐ, LT, VD của ngày đó, làm tròn 2 chữ số thập phân)
           </p>
 
           {filteredDailyRows.length === 0 ? (
@@ -211,8 +211,8 @@ const StudentLearningProfilePage = ({ user, onSignOut }) => {
           ) : (
             <div className="overflow-x-auto">
               <svg viewBox="0 0 860 300" className="min-w-[860px] w-full h-[300px] rounded-xl bg-blue-50 border border-blue-200">
-                {[0, 2, 4, 6, 8].map((y) => {
-                  const yPos = 40 + ((8 - y) / 8) * 220;
+                {[0, 2, 4, 6, 8, 10].map((y) => {
+                  const yPos = 40 + ((10 - y) / 10) * 220;
                   return (
                     <g key={y}>
                       <line x1="40" y1={yPos} x2="820" y2={yPos} stroke="#c7d2fe" strokeDasharray="4 4" />
@@ -268,7 +268,7 @@ const StudentLearningProfilePage = ({ user, onSignOut }) => {
                         >
                           <p className="font-semibold text-gray-800">{item.examName}</p>
                           <p className="text-xs text-gray-600">
-                            Điểm cộng level: {item.levelContribution} | KĐ: {item.khoiDongScore} | LT(avg): {Math.round(item.luyenTapAverage * 10) / 10} | VD: {item.vanDungScore}
+                            Điểm cộng level: {item.levelContribution} | KĐ: {item.khoiDongScore} | LT(avg): {Math.round(item.luyenTapAverage * 100) / 100} | VD: {item.vanDungScore}
                           </p>
                         </button>
                       ))}

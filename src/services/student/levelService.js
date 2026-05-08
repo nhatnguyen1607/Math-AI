@@ -40,6 +40,19 @@ const getLevelByScore = (score) => {
   };
 };
 
+const mapTcScore = (value) => {
+  if (value === null || value === undefined || value === '') return 0;
+  const score = normalizeNumber(value);
+  if (score === 0) return 0.75;
+  if (score === 1) return 1.75;
+  if (score === 2) return 2.5;
+  return score;
+};
+
+const sumMappedTcScores = (values) => {
+  return values.reduce((sum, value) => sum + mapTcScore(value), 0);
+};
+
 const extractKhoiDongScore = (progress) => {
   const competency = progress?.parts?.khoiDong?.competencyEvaluation;
   if (!competency) return 0;
@@ -82,11 +95,64 @@ const extractVanDungScore = (progress) => {
   );
 };
 
+const extractKhoiDongScoreForProfile = (progress) => {
+  const competency = progress?.parts?.khoiDong?.competencyEvaluation;
+  if (!competency) return 0;
+
+  return sumMappedTcScores([
+    competency.TC1?.score || competency.TC1?.diem,
+    competency.TC2?.score || competency.TC2?.diem,
+    competency.TC3?.score || competency.TC3?.diem,
+    competency.TC4?.score || competency.TC4?.diem
+  ]);
+};
+
+const extractLuyenTapBaiScoreForProfile = (bai) => {
+  const evaluation = bai?.evaluation || {};
+  const tc = evaluation.diemTC || {};
+
+  if (Object.keys(tc).length > 0) {
+    return sumMappedTcScores([tc.tc1, tc.tc2, tc.tc3, tc.tc4]);
+  }
+
+  return normalizeNumber(evaluation.tongDiem || evaluation.totalCompetencyScore);
+};
+
+const extractVanDungScoreForProfile = (progress) => {
+  const evaluation = progress?.parts?.vanDung?.evaluation || {};
+
+  return sumMappedTcScores([
+    evaluation.TC1?.diem || evaluation.TC1?.score,
+    evaluation.TC2?.diem || evaluation.TC2?.score,
+    evaluation.TC3?.diem || evaluation.TC3?.score,
+    evaluation.TC4?.diem || evaluation.TC4?.score
+  ]);
+};
+
 const calculateExamContribution = (progress) => {
   const khoiDongScore = extractKhoiDongScore(progress);
   const luyenTapBai1 = extractLuyenTapBaiScore(progress?.parts?.luyenTap?.bai1);
   const luyenTapBai2 = extractLuyenTapBaiScore(progress?.parts?.luyenTap?.bai2);
   const vanDungScore = extractVanDungScore(progress);
+
+  const luyenTapAverage = (luyenTapBai1 + luyenTapBai2) / 2;
+  const totalContribution = khoiDongScore + luyenTapAverage + vanDungScore;
+
+  return {
+    khoiDongScore,
+    luyenTapBai1,
+    luyenTapBai2,
+    luyenTapAverage,
+    vanDungScore,
+    totalContribution: Math.round(totalContribution * 100) / 100
+  };
+};
+
+const calculateProfileContribution = (progress) => {
+  const khoiDongScore = extractKhoiDongScoreForProfile(progress);
+  const luyenTapBai1 = extractLuyenTapBaiScoreForProfile(progress?.parts?.luyenTap?.bai1);
+  const luyenTapBai2 = extractLuyenTapBaiScoreForProfile(progress?.parts?.luyenTap?.bai2);
+  const vanDungScore = extractVanDungScoreForProfile(progress);
 
   const luyenTapAverage = (luyenTapBai1 + luyenTapBai2) / 2;
   const totalContribution = khoiDongScore + luyenTapAverage + vanDungScore;
@@ -280,7 +346,7 @@ class LevelService {
         const examSnap = await getDoc(doc(db, 'exams', data.examId));
         const examName = examSnap.exists() ? (examSnap.data().title || examSnap.data().name || data.examId) : data.examId;
 
-        const contribution = calculateExamContribution(data);
+        const contribution = calculateProfileContribution(data);
         const completedAt = toDate(data?.parts?.vanDung?.completedAt || data?.lastUpdatedAt || data?.createdAt);
 
         return {
@@ -293,7 +359,7 @@ class LevelService {
           luyenTapAverage: contribution.luyenTapAverage,
           vanDungScore: contribution.vanDungScore,
           levelContribution: contribution.totalContribution,
-          dailyAverage3Parts: Math.round(((contribution.khoiDongScore + contribution.luyenTapAverage + contribution.vanDungScore) / 3) * 10) / 10
+          dailyAverage3Parts: Math.round(((contribution.khoiDongScore + contribution.luyenTapAverage + contribution.vanDungScore) / 3) * 100) / 100
         };
       })
     );
@@ -328,7 +394,7 @@ class LevelService {
     const dailyRows = Object.values(dailyMap)
       .map((row) => ({
         ...row,
-        averageScore: Math.round((row.sumAverage / Math.max(row.count, 1)) * 10) / 10
+        averageScore: Math.round((row.sumAverage / Math.max(row.count, 1)) * 100) / 100
       }))
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 

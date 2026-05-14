@@ -539,6 +539,10 @@ VAI TRÒ CỦA BẠN: BẠN ĐANG ĐÓNG VAI LÀ "${ctx.aiRole}".
 ⚠️ NGÔN NGỮ TRỰC TIẾP:
 - Không dùng ẩn dụ/hình ảnh hóa (ví dụ: "chế biến", "nguyên liệu", "nấu", "công thức bếp").
 - Chỉ dùng thuật ngữ toán học trực tiếp như: dữ kiện, phép tính, công thức, kết quả, đơn vị.
+⚠️ NGÔN NGỮ THUẦN TOÁN (BẮT BUỘC):
+- Không dùng từ vựng bối cảnh đời sống để diễn giải.
+- Khi nhắc bối cảnh, chỉ lặp lại đúng từ/cụm từ có trong đề bài, không thêm ví dụ hay liên tưởng.
+- Không dùng từ ngữ nghề nghiệp/vai trò để minh họa (chỉ xưng "mình" - "bạn").
 
 ⚠️ KIỂM TRA ĐƠN VỊ VẬN TỐC:
 - Chỉ có 2 đơn vị vận tốc hợp lệ: km/h và m/s
@@ -775,6 +779,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
 6. Sau khi HS làm đúng bước kiểm tra thì CHƯA hoàn thành bài, phải hỏi tiếp bước mở rộng.
 7. Chỉ MOVE_NEXT khi HS hoàn thành đủ cả bước kiểm tra và bước mở rộng ở bước 4.
 8. ⚠️ NẾU HS nhập dấu chấm (0.7), nhắc dùng dấu phẩy (0,7).
+9. KHÔNG dùng ẩn dụ/bối cảnh đời sống; chỉ dùng thuật ngữ toán học và từ ngữ có trong đề bài.
 `;
 
     try {

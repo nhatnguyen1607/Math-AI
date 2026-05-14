@@ -530,7 +530,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
     return () => {
       if (draftSaveTimerRef.current) clearInterval(draftSaveTimerRef.current);
     };
-  }, [user?.uid, currentQuestionIndex, answers, questions, isAnswered, isCompleted, timeRemaining, session]);
+  }, [user?.uid, currentQuestionIndex, answers, questions, isAnswered, isCompleted, timeRemaining, session, totalDuration]);
 
   // Fallback: if no questions loaded but exam has exercises, try to extract
   useEffect(() => {

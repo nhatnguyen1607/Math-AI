@@ -130,7 +130,9 @@ const FacultyGameLobbyPage = () => {
         score: 0
       }));
 
-      const endTime = new Date(Date.now() + 420000); // 7 minutes
+      const exerciseDuration = exam?.exercises?.reduce((sum, e) => sum + (Number(e.duration) || 0), 0) || 0;
+      const durationSeconds = exerciseDuration || (exam?.exercises?.length === 1 ? 300 : 420);
+      const endTime = new Date(Date.now() + durationSeconds * 1000);
       
       await facultyService.updateExam(examId, {
         status: 'in_progress',
@@ -196,7 +198,13 @@ const FacultyGameLobbyPage = () => {
   const completedCount = exam.completedStudents?.length || 0;
 
   // Calculate circular progress percentage
-  const progressPercentage = ((420 - timeRemaining) / 420) * 100;
+  const exerciseDuration = exam?.exercises?.reduce((sum, e) => sum + (Number(e.duration) || 0), 0) || 0;
+  const totalDurationSeconds =
+    (Number(exam?.duration) || 0) > 0
+      ? Number(exam.duration)
+      : exerciseDuration || (exam?.exercises?.length === 1 ? 300 : 420);
+  const safeDurationSeconds = totalDurationSeconds > 0 ? totalDurationSeconds : 420;
+  const progressPercentage = Math.min(100, Math.max(0, ((safeDurationSeconds - timeRemaining) / safeDurationSeconds) * 100));
   const circumference = 2 * Math.PI * 45;
   const offset = circumference - (progressPercentage / 100) * circumference;
 

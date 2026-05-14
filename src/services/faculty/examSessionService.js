@@ -36,7 +36,7 @@ import { ExamSession } from '../../models/ExamSession';
  * @param {number} totalQuestions - Tổng số câu hỏi
  * @returns {Promise<string>} - ID của session vừa tạo
  */
-export const createExamSession = async (examId, facultyId, classId, totalQuestions = 0) => {
+export const createExamSession = async (examId, facultyId, classId, totalQuestions = 0, duration = 420) => {
   try {
     const sessionRef = doc(collection(db, 'exam_sessions'));
     const sessionData = {
@@ -49,6 +49,7 @@ export const createExamSession = async (examId, facultyId, classId, totalQuestio
       createdAt: serverTimestamp(),
       participants: {}, // { uid: { name, score, currentQuestion, lastUpdated, answers } }
       currentLeaderboard: [],
+      duration,
       totalQuestions
     };
 

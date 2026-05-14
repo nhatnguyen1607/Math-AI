@@ -47,6 +47,18 @@ export class GeminiChatServiceSoThapPhan {
     );
   }
 
+  _stripPolyaMention(text) {
+    if (!text) return "";
+    return text
+      .replace(/\b(phương\s*pháp\s*(giải\s*toán)?\s*)(pólya|polya)\b/gi, "$1")
+      .replace(/\b(4|bốn)\s*bước\s*(pólya|polya)\b/gi, "")
+      .replace(/\b(bước|buoc)\s*(pólya|polya)\b/gi, "")
+      .replace(/\b(pólya|polya)\b/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .replace(/\s+([.,!?;:])/g, "$1")
+      .trim();
+  }
+
   _normalizeForCompare(text = "") {
     return String(text || "")
       .toLowerCase()
@@ -691,8 +703,10 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
       }
 
       // Tạo câu phản hồi chuẩn từ feedback và next_question, không cắt ráp từ khóa nữa
-      let finalMessage = this._fixPronouns(
-        this._mergeFeedbackAndQuestion(data.feedback, data.next_question),
+      let finalMessage = this._stripPolyaMention(
+        this._fixPronouns(
+          this._mergeFeedbackAndQuestion(data.feedback, data.next_question),
+        ),
       ).trim();
 
       return {
@@ -720,7 +734,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
       - Bước 3: Hỏi "bạn hãy trình bày lời giải" - nếu HS sai PHẢI CHỈ RÕ lỗi (dấu phẩy sai, thiếu đơn vị, tính sai...) để HS biết sửa, xưng "bạn".
       - Bước 4: Theo 2 tầng, tầng 1 hỏi cách kiểm tra ngược kết quả; tầng 2 hỏi mở rộng thay đổi một dữ liệu để HS tính kết quả mới và nêu mối liên hệ, xưng "bạn".`,
     );
-    return this._fixPronouns(result.response.text());
+    return this._stripPolyaMention(this._fixPronouns(result.response.text()));
   }
 }
 

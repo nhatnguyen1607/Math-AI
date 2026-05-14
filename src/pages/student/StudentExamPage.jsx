@@ -49,6 +49,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
   const [timeRemaining, setTimeRemaining] = useState(420); // 7 minutes
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const totalDuration = session?.duration || 420;
 
   // Refs
   const timerRef = useRef(null);
@@ -514,7 +515,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
             points: 0,
             basePoints: 0,
             bonusPoints: 0,
-            timeUsed: 420 - timeRemaining
+            timeUsed: Math.max(0, totalDuration - timeRemaining)
           });
           
           await examSessionService.submitAnswer(session.id, user.uid, draftData)
@@ -590,7 +591,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
           questionIndex: currentQuestionIndex,
           answer: newSelectedAnswer,
           isCorrect: false, // Placeholder, will be determined on submit
-          timeUsed: 420 - timeRemaining
+          timeUsed: Math.max(0, totalDuration - timeRemaining)
         }
       };
       setAnswers(newAnswers);
@@ -613,7 +614,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
       const scoreData = scoringService.calculateQuestionScore(
         exerciseIndex,
         isCorrect,
-        420 - timeRemaining
+        Math.max(0, totalDuration - timeRemaining)
       );
 
       newAnswers = {
@@ -622,7 +623,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
           questionIndex: currentQuestionIndex,
           answer: optionIndex,
           isCorrect,
-          timeUsed: 420 - timeRemaining,
+          timeUsed: Math.max(0, totalDuration - timeRemaining),
           points: scoreData.totalPoints,
           basePoints: scoreData.basePoints,
           bonusPoints: scoreData.bonusPoints
@@ -642,7 +643,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
           points: scoreData.totalPoints,
           basePoints: scoreData.basePoints,
           bonusPoints: scoreData.bonusPoints,
-          timeUsed: 420 - timeRemaining
+          timeUsed: Math.max(0, totalDuration - timeRemaining)
         });
         
         examSessionService
@@ -683,7 +684,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
     const scoreData = scoringService.calculateQuestionScore(
       exerciseIndex,
       isCorrect,
-      420 - timeRemaining
+      Math.max(0, totalDuration - timeRemaining)
     );
 
     // Cập nhật answers state với điểm
@@ -712,7 +713,7 @@ const StudentExamPage = ({ user, onSignOut }) => {
           points: scoreData.totalPoints,
           basePoints: scoreData.basePoints,
           bonusPoints: scoreData.bonusPoints,
-          timeUsed: 420 - timeRemaining
+          timeUsed: Math.max(0, totalDuration - timeRemaining)
         }))
     } else {
     }

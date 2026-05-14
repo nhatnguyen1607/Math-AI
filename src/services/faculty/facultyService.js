@@ -374,16 +374,21 @@ class FacultyService {
       // Lấy thông tin đề thi để biết tổng số câu hỏi
       const exam = await this.getExamById(examId);
       const totalQuestions = exam?.exercises?.reduce((sum, e) => sum + e.questions.length, 0) || 0;
+      const exerciseDuration = exam?.exercises?.reduce((sum, e) => sum + (Number(e.duration) || 0), 0) || 0;
+      const durationSeconds =
+        (Number(exam?.duration) || 0) > 0
+          ? Number(exam.duration)
+          : exerciseDuration || (exam?.exercises?.length === 1 ? 300 : 420);
       
       // Tạo exam session mới với status = 'waiting'
-      const sessionId = await createExamSession(examId, facultyId, classId, totalQuestions);
+      const sessionId = await createExamSession(examId, facultyId, classId, totalQuestions, durationSeconds);
       
       // Cập nhật exam status
       const now = new Date();
       await this.updateExam(examId, {
         status: 'in_progress',
         startTime: now,
-        endTime: new Date(now.getTime() + 420000) // 7 minutes
+        endTime: new Date(now.getTime() + durationSeconds * 1000)
       });
       return sessionId;
     } catch (error) {

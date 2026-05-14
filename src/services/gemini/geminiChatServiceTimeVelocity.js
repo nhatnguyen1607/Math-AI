@@ -271,6 +271,18 @@ export class GeminiChatServiceTimeVelocity {
       .replace(/\bem\s+(hãy|cần|có|là|vừa)/g, 'bạn $1');
   }
 
+  _stripPolyaMention(text) {
+    if (!text) return "";
+    return text
+      .replace(/\b(phương\s*pháp\s*(giải\s*toán)?\s*)(pólya|polya)\b/gi, "$1")
+      .replace(/\b(4|bốn)\s*bước\s*(pólya|polya)\b/gi, "")
+      .replace(/\b(bước|buoc)\s*(pólya|polya)\b/gi, "")
+      .replace(/\b(pólya|polya)\b/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .replace(/\s+([.,!?;:])/g, "$1")
+      .trim();
+  }
+
   _normalizeForCompare(text = "") {
     return String(text || "")
       .toLowerCase()
@@ -827,8 +839,10 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
       }
 
       // Tạo câu phản hồi chuẩn từ feedback và next_question, không cắt ráp từ khóa nữa
-      let finalMessage = this._fixPronouns(
-        this._mergeFeedbackAndQuestion(data.feedback, data.next_question),
+      let finalMessage = this._stripPolyaMention(
+        this._fixPronouns(
+          this._mergeFeedbackAndQuestion(data.feedback, data.next_question),
+        ),
       ).trim();
 
       return {
@@ -847,7 +861,7 @@ SỐ LẦN SAI/KHÔNG BIẾT LIÊN TIẾP TẠI BƯỚC NÀY (wrong_attempt_coun
   async getHint() {
     const model = geminiModelManager.getModel();
     const result = await model.generateContent(`Đưa ra duy nhất 1 câu hỏi gợi ý cho HS lớp 5 ở bước ${this.currentStep} bài: ${this.currentProblem}. Không giải thích. Nếu là bước 4 thì theo 2 tầng: (1) hỏi cách kiểm tra ngược đáp số vận tốc bằng phép nhân vận tốc với thời gian rồi đối chiếu quãng đường ban đầu, (2) tự nêu sẵn 1 dữ kiện thay đổi cụ thể (không hỏi HS chọn) để HS tính vận tốc mới.`);
-    return this._fixPronouns(result.response.text());
+    return this._stripPolyaMention(this._fixPronouns(result.response.text()));
   }
 }
 

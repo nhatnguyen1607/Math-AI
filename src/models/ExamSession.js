@@ -24,7 +24,7 @@ export class ExamSession {
     this.startTime = data.startTime || null; // ServerTimestamp
     this.endTime = data.endTime || null;
     this.createdAt = data.createdAt || new Date();
-    this.duration = 420; // 7 minutes in seconds
+    this.duration = typeof data.duration === 'number' && data.duration > 0 ? data.duration : 420;
     
     // Participants mapping: { uid: { name, score, currentQuestion, lastUpdated, answers } }
     this.participants = data.participants || {};
@@ -168,6 +168,7 @@ export class ExamSession {
       status: this.status,
       startTime: this.startTime,
       endTime: this.endTime,
+      duration: this.duration,
       participants: this.participants,
       currentLeaderboard: this.currentLeaderboard,
       totalQuestions: this.totalQuestions

@@ -102,9 +102,9 @@ const StudentExamSelectionPage = ({
                     <div className="grid grid-cols-3 gap-4 mb-6 pb-6 border-b-2 border-gray-200">
                       <div className="text-center">
                         <div className="text-3xl font-bold text-blue-600 font-quicksand">
-                          {exam.totalQuestions || exam.exercises?.reduce((sum, e) => sum + e.questions.length, 0) || 0}
+                          {exam.exercises?.length || 0}
                         </div>
-                        <div className="text-sm text-gray-600 font-quicksand">Câu hỏi</div>
+                        <div className="text-sm text-gray-600 font-quicksand">Bài toán</div>
                       </div>
                       <div className="text-center">
                         <div className="text-3xl font-bold text-green-600 font-quicksand">

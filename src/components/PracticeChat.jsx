@@ -5,6 +5,7 @@ import geminiChatServiceSoThapPhan from '../services/gemini/geminiChatServiceSoT
 import { chatServiceRouter } from '../services/serviceRouter';
 import TypewriterMessage from './TypewriterMessage';
 import ttsService from '../services/ttsService';
+import { getPracticeScriptMessages, getPracticeScriptStatus, getScriptedReplyDelayMs } from '../services/practiceScript/practiceScript';
 
 const PracticeChat = ({ 
   userId, 
@@ -22,7 +23,8 @@ const PracticeChat = ({
   topicName = '',
   examContextId = '',
   ttsGender: propsTtsGender, // 🆕 Nhận từ prop
-  onTTSStateChange // 🆕 Callback thông báo đang phát âm thanh
+  onTTSStateChange, // 🆕 Callback thông báo đang phát âm thanh
+  scriptedMode = false
 }) => {
   // Select the appropriate chat service based on topic using router
   const chatService = useMemo(() => {
@@ -48,12 +50,34 @@ const PracticeChat = ({
   const [ttsPlayingIdx, setTtsPlayingIdx] = useState(-1); // 🔊 Index of message currently being spoken
   const [ttsLoadingIdx, setTtsLoadingIdx] = useState(-1); // 🔊 Index of message loading TTS
   const messagesEndRef = useRef(null);
+  const scriptedTimeoutRef = useRef(null);
   const recognitionRef = useRef(null); // 🎤 Web Speech API instance
   const continueRecordingRef = useRef(false); // 🎤 Track if user wants to continue recording
   const recognitionStartedRef = useRef(false); // 🎤 Track if recognition is actually started
   const voiceBaseTextRef = useRef(''); // 🎤 Original input before starting voice
   const voiceConfirmedTextRef = useRef(''); // 🎤 Confirmed voice text
   const voiceInterimRef = useRef(''); // 🎤 Interim (temporary) voice text
+  const scriptedMessages = useMemo(() => {
+    if (!scriptedMode) return [];
+    return getPracticeScriptMessages(baiNumber);
+  }, [scriptedMode, baiNumber]);
+
+  const getScriptedRobotStatus = useCallback((text) => {
+    if (!text || typeof text !== 'string') return 'idle';
+    if (/(chua\s+dung|chua\s+chinh\s+xac|khong\s+dung|khong\s+chinh\s+xac|sai|chua\s+dung\s+lam)/i.test(text)) {
+      return 'wrong';
+    }
+    if (/(chinh\s+xac|tot\s+lam|tuyet\s+voi|lam\s+tot)/i.test(text)) {
+      return 'correct';
+    }
+    return 'thinking';
+  }, []);
+
+  const resolveScriptedStatus = useCallback((aiIndex, text) => {
+    const status = getPracticeScriptStatus(baiNumber, aiIndex);
+    if (status) return status;
+    return getScriptedRobotStatus(text);
+  }, [baiNumber, getScriptedRobotStatus]);
 
   // � Khởi tạo Web Speech API Recognition
   const initSpeechRecognition = useCallback(() => {
@@ -246,6 +270,56 @@ const PracticeChat = ({
     if (hasInitializedRef.current) return;
     if (!deBai || isCompleted) return;
 
+    if (scriptedMode) {
+      if (chatHistory && chatHistory.length > 0) {
+        setIsInitializing(false);
+        hasInitializedRef.current = true;
+        return;
+      }
+
+      const initialMessage = scriptedMessages[0];
+      if (!initialMessage) {
+        setIsInitializing(false);
+        hasInitializedRef.current = true;
+        return;
+      }
+
+      setIsInitializing(true);
+      setError(null);
+      if (scriptedTimeoutRef.current) {
+        clearTimeout(scriptedTimeoutRef.current);
+        scriptedTimeoutRef.current = null;
+      }
+      const delayMs = getScriptedReplyDelayMs(initialMessage);
+      scriptedTimeoutRef.current = setTimeout(async () => {
+        scriptedTimeoutRef.current = null;
+        const aiMsg = {
+          role: 'model',
+          parts: [{ text: initialMessage }]
+        };
+
+        setMessages([aiMsg]);
+        handleTTS(0, initialMessage, true);
+        await saveChatMessage(aiMsg);
+        if (onChatUpdate) {
+          onChatUpdate([aiMsg]);
+        }
+        setIsInitializing(false);
+        if (onRobotStateChange) {
+          const status = resolveScriptedStatus(0, initialMessage);
+          onRobotStateChange(status, initialMessage || '');
+          if (status === 'correct' || status === 'wrong') {
+            setTimeout(() => {
+              try { onRobotStateChange('idle', ''); } catch (e) {}
+            }, 3000);
+          }
+        }
+      }, delayMs);
+
+      hasInitializedRef.current = true;
+      return;
+    }
+
     // Nếu đã có chatHistory thì không khởi tạo lại, chỉ tiếp tục chat
     if (chatHistory && chatHistory.length > 0) {
       chatService.restoreSession(deBai, chatHistory, examContextId);
@@ -274,6 +348,15 @@ const PracticeChat = ({
         await saveChatMessage(aiMsg);
         if (onChatUpdate) {
           onChatUpdate([aiMsg]);
+        }
+        if (onRobotStateChange) {
+          const status = getScriptedRobotStatus(response.message);
+          onRobotStateChange(status, response.message || '');
+          if (status === 'correct' || status === 'wrong') {
+            setTimeout(() => {
+              try { onRobotStateChange('idle', ''); } catch (e) {}
+            }, 3000);
+          }
         }
         hasInitializedRef.current = true;
       } catch (err) {
@@ -308,11 +391,19 @@ const PracticeChat = ({
   useEffect(() => {
     return () => {
       ttsService.stop();
+      if (scriptedTimeoutRef.current) {
+        clearTimeout(scriptedTimeoutRef.current);
+        scriptedTimeoutRef.current = null;
+      }
     };
   }, []);
 
   // 🔊 Toggle TTS: phát hoặc dừng giọng nói cho tin nhắn AI
   const handleTTS = useCallback((idx, text, autoStartTypewriter = false) => {
+    const ttsText = typeof text === 'string'
+      ? text.replace(/([0-9A-Za-z])\s*:\s*([0-9])/g, '$1 chia $2')
+      : text;
+
     if (ttsPlayingIdx === idx) {
       // Đang phát tin nhắn này → dừng
       ttsService.stop();
@@ -342,7 +433,7 @@ const PracticeChat = ({
     
     const timeoutId = setTimeout(startTypewriterFallback, 2000);
 
-    ttsService.speak(text, {
+    ttsService.speak(ttsText, {
       voiceGender: propsTtsGender || 'FEMALE', // 🆕 Sử dụng giọng từ props
       onStart: () => {
         clearTimeout(timeoutId);
@@ -395,29 +486,70 @@ const handleSendMessage = async (e) => {
 
     await saveChatMessage(userMsg);
 
-    // 🆕 Luôn đi qua processStudentResponse để hệ thống scaffolding 3 mức xử lý
-    // (trước đây có tách riêng getHint nhưng nó bypass logic scaffolding)
-    let aiMsg;
-    let response = null;
-
-    response = await chatService.processStudentResponse(userMessage, messages);
-    aiMsg = { role: 'model', parts: [{ text: response.message }] };
-
-    if (response && response.nextStep === 5) {
-      setTimeout(() => { if (onCompleted) onCompleted(); }, 1500);
-    }
-
-    setMessages(prev => {
-      const next = [...prev, aiMsg];
-      // 🆕 Tự động phát TTS và đồng bộ Typewriter
-      handleTTS(next.length - 1, response.message, true);
-      
-      if (onChatUpdate) {
-        onChatUpdate(next);
+    if (scriptedMode) {
+      if (scriptedTimeoutRef.current) {
+        clearTimeout(scriptedTimeoutRef.current);
+        scriptedTimeoutRef.current = null;
       }
-      return next;
-    });
-    await saveChatMessage(aiMsg);
+
+      const aiCount = messages.filter((msg) => msg.role !== 'user').length;
+      const nextScriptMessage = scriptedMessages[aiCount] || '';
+
+      if (!nextScriptMessage) {
+        setIsLoading(false);
+        if (onRobotStateChange) onRobotStateChange('idle', '');
+        return;
+      }
+
+      const delayMs = getScriptedReplyDelayMs(nextScriptMessage);
+      scriptedTimeoutRef.current = setTimeout(async () => {
+        scriptedTimeoutRef.current = null;
+        const aiMsg = { role: 'model', parts: [{ text: nextScriptMessage }] };
+
+        setMessages(prev => {
+          const next = [...prev, aiMsg];
+          handleTTS(next.length - 1, nextScriptMessage, true);
+          if (onChatUpdate) {
+            onChatUpdate(next);
+          }
+          return next;
+        });
+        await saveChatMessage(aiMsg);
+        setIsLoading(false);
+        if (onRobotStateChange) {
+          const status = resolveScriptedStatus(aiCount, nextScriptMessage);
+          onRobotStateChange(status, nextScriptMessage || '');
+          if (status === 'correct' || status === 'wrong') {
+            setTimeout(() => {
+              try { onRobotStateChange('idle', ''); } catch (e) {}
+            }, 3000);
+          }
+        }
+      }, delayMs);
+    } else {
+      // 🆕 Luôn đi qua processStudentResponse để hệ thống scaffolding 3 mức xử lý
+      // (trước đây có tách riêng getHint nhưng nó bypass logic scaffolding)
+      let aiMsg;
+      let response = null;
+
+      response = await chatService.processStudentResponse(userMessage, messages);
+      aiMsg = { role: 'model', parts: [{ text: response.message }] };
+
+      if (response && response.nextStep === 5) {
+        setTimeout(() => { if (onCompleted) onCompleted(); }, 1500);
+      }
+
+      setMessages(prev => {
+        const next = [...prev, aiMsg];
+        // 🆕 Tự động phát TTS và đồng bộ Typewriter
+        handleTTS(next.length - 1, response.message, true);
+        
+        if (onChatUpdate) {
+          onChatUpdate(next);
+        }
+        return next;
+      });
+      await saveChatMessage(aiMsg);
 
       // Use service-driven sentiment for robot state
       try {
@@ -433,6 +565,7 @@ const handleSendMessage = async (e) => {
       } catch (err) {
 
       }
+    }
 
 
 

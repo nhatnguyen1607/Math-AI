@@ -812,7 +812,16 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
       <div>
         <div className="bg-white rounded-max shadow-2xl overflow-hidden mb-8 game-card">
           <div className="bg-gradient-to-br from-blue-400 to-blue-500 p-6 text-center text-white sm:p-8 lg:p-10">
-          <h2 className="mb-2 text-2xl font-bold font-quicksand sm:text-3xl lg:text-4xl">📚 Phần Luyện tập</h2>
+          <h2 className="mb-2 text-2xl font-bold font-quicksand sm:text-3xl lg:text-4xl">
+            <button
+              type="button"
+              onClick={() => navigate(`/student/practice/${exam?.id}`, { state: { useScript: true } })}
+              className="mr-2 inline-flex items-center justify-center"
+            >
+              📚
+            </button>
+            Phần Luyện tập
+          </h2>
           <p className="text-base opacity-90 sm:text-lg">
             {bothCompleted ? '✅ Đã hoàn thành!' : anyProgress ? '⏳ Đang làm' : '🆕 Chưa thực hiện'}
           </p>

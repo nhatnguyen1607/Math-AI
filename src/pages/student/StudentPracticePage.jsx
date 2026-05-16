@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import StudentHeader from '../../components/student/StudentHeader';
 import PracticeChat from '../../components/PracticeChat';
 import RobotCompanion from '../../components/common/RobotCompanion';
@@ -9,6 +9,7 @@ import studentEvaluationService from '../../services/gemini/studentEvaluationSer
 import { practiceServiceRouter } from '../../services/serviceRouter';
 import resultService from '../../services/faculty/resultService';
 import examService from '../../services/faculty/examService';
+import { getPracticeScriptProblem } from '../../services/practiceScript/practiceScript';
 
 /**
  * StudentPracticePage
@@ -17,7 +18,9 @@ import examService from '../../services/faculty/examService';
  */
 const StudentPracticePage = ({ user, onSignOut }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { examId } = useParams();
+  const scriptedEnabled = Boolean(location.state?.useScript);
     
   const [practiceData, setPracticeData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +48,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
   };
 
   // Khởi tạo dữ liệu luyện tập
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const initializePractice = async () => {
       try {
@@ -83,57 +87,60 @@ const StudentPracticePage = ({ user, onSignOut }) => {
           return;
         }
 
-        // Tạo context từ các bài tập gốc để Gemini hiểu chủ đề
+        // Tạo context từ các bài tập gốc để lấy đề mặc định
         const exercise1 = examData.exercises[0] || {};
         const exercise2 = examData.exercises[1] || exercise1;
         const startupProblem1 = exercise1?.name || '';
         const startupProblem2 = exercise2?.name || startupProblem1;
 
-        // Lấy đánh giá năng lực của học sinh từ phần khởi động
-        const examProgress = await resultService.getExamProgress(user.uid, examId);
-        const competencyEvaluation = examProgress?.parts?.khoiDong?.competencyEvaluation;
-        
-        const competencyLevel = resolveCompetencyLevel(competencyEvaluation);
+        // Dùng kịch bản cho bài 1 (không gọi API), bài 2 lấy theo đề gốc
+        let similarProblem1 = scriptedEnabled
+          ? (getPracticeScriptProblem('bai1') || startupProblem1 || 'Bài tập 1')
+          : (startupProblem1 || 'Bài tập 1');
+        let similarProblem2 = scriptedEnabled
+          ? (getPracticeScriptProblem('bai2') || startupProblem2 || startupProblem1 || 'Bài tập 2')
+          : (startupProblem2 || startupProblem1 || 'Bài tập 2');
 
-        // Gọi Gemini để tạo bài toán tương tự - có truyền năng lực học sinh làm tham số thứ 5
-        // Throttle giữa hai lần gọi (bài 1 và bài 2) bằng delay, không cần gọi zweimal cho cùng một bài
-        let similarProblem1, similarProblem2;
-        
-        // 🆕 Use router to auto-detect practice service based on topic
-        const gService = practiceServiceRouter.getService(topicNameFromExam);
-        
-        try {
-          
-          similarProblem1 = await gService.generateSimilarProblem(
-            startupProblem1,       // startupProblem1
-            startupProblem2,       // startupProblem2
-            topicNameFromExam,     // context (chủ đề) - FIX này! context1 chỉ là exercise.context, không phải topic
-            1,                     // problemNumber
-            competencyLevel,
-            100,
-            '',
-            examData.contextId || ''
-          );
-        } catch (err1) {
-          console.error('❌ [StudentPracticePage] Error generating problem 1:', err1);
-          similarProblem1 = startupProblem1 || 'Bài tập 1';
-        }
+        if (!scriptedEnabled) {
+          // Lấy đánh giá năng lực của học sinh từ phần khởi động
+          const examProgress = await resultService.getExamProgress(user.uid, examId);
+          const competencyEvaluation = examProgress?.parts?.khoiDong?.competencyEvaluation;
+          const competencyLevel = resolveCompetencyLevel(competencyEvaluation);
 
-        try {
-          
-          similarProblem2 = await gService.generateSimilarProblem(
-            startupProblem1,       // startupProblem1
-            startupProblem2,       // startupProblem2
-            topicNameFromExam,     // context (chủ đề) - FIX này!
-            2,                     // problemNumber
-            competencyLevel,
-            100,
-            '',
-            examData.contextId || ''
-          );
-        } catch (err2) {
-          console.error('❌ [StudentPracticePage] Error generating problem 2:', err2);
-          similarProblem2 = startupProblem2 || startupProblem1 || 'Bài tập 2';
+          // 🆕 Use router to auto-detect practice service based on topic
+          const gService = practiceServiceRouter.getService(topicNameFromExam);
+
+          try {
+            similarProblem1 = await gService.generateSimilarProblem(
+              startupProblem1,
+              startupProblem2,
+              topicNameFromExam,
+              1,
+              competencyLevel,
+              100,
+              '',
+              examData.contextId || ''
+            );
+          } catch (err1) {
+            console.error('❌ [StudentPracticePage] Error generating problem 1:', err1);
+            similarProblem1 = startupProblem1 || 'Bài tập 1';
+          }
+
+          try {
+            similarProblem2 = await gService.generateSimilarProblem(
+              startupProblem1,
+              startupProblem2,
+              topicNameFromExam,
+              2,
+              competencyLevel,
+              100,
+              '',
+              examData.contextId || ''
+            );
+          } catch (err2) {
+            console.error('❌ [StudentPracticePage] Error generating problem 2:', err2);
+            similarProblem2 = startupProblem2 || startupProblem1 || 'Bài tập 2';
+          }
         }
 
         // Khởi tạo phiên luyện tập với 2 bài toán mới
@@ -160,7 +167,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
     };
 
     initializePractice();
-  }, [user?.uid, examId]);
+  }, [user?.uid, examId, scriptedEnabled]);
 
   // Xử lý nộp bài luyện tập (chấm điểm)
   const handleSubmitPractice = async (baiNumber) => {
@@ -271,23 +278,33 @@ const StudentPracticePage = ({ user, onSignOut }) => {
       const competencyEvaluation = examProgress?.parts?.khoiDong?.competencyEvaluation;
       const competencyLevel = resolveCompetencyLevel(competencyEvaluation);
 
-      const gService = practiceServiceRouter.getService(topicNameFromExam);
       const problemNumber = activeTab === 'bai1' ? 1 : 2;
-
       let regeneratedProblem = activeBaiData.deBai || '';
-      try {
-        regeneratedProblem = await gService.generateSimilarProblem(
-          startupProblem1,
-          startupProblem2,
-          topicNameFromExam,
-          problemNumber,
-          competencyLevel,
-          100,
-          '',
-          examData.contextId || ''
-        );
-      } catch (genError) {
-        console.error('❌ [StudentPracticePage] Error regenerating problem:', genError);
+
+      if (scriptedEnabled && activeTab === 'bai1') {
+        regeneratedProblem = getPracticeScriptProblem('bai1') || startupProblem1 || 'Bài tập 1';
+      } else if (scriptedEnabled && activeTab === 'bai2') {
+        regeneratedProblem = getPracticeScriptProblem('bai2') || startupProblem2 || startupProblem1 || 'Bài tập 2';
+      } else if (!scriptedEnabled) {
+        const gService = practiceServiceRouter.getService(topicNameFromExam);
+        try {
+          regeneratedProblem = await gService.generateSimilarProblem(
+            startupProblem1,
+            startupProblem2,
+            topicNameFromExam,
+            problemNumber,
+            competencyLevel,
+            100,
+            '',
+            examData.contextId || ''
+          );
+        } catch (genError) {
+          console.error('❌ [StudentPracticePage] Error regenerating problem:', genError);
+        }
+      } else {
+        regeneratedProblem = problemNumber === 1
+          ? (startupProblem1 || 'Bài tập 1')
+          : (startupProblem2 || startupProblem1 || 'Bài tập 2');
       }
 
       await resultService.regeneratePracticeExercise(user.uid, examId, activeTab, regeneratedProblem);
@@ -491,6 +508,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
                       handleSubmitPractice('bai2');
                     }
                   }}
+                  scriptedMode={scriptedEnabled && activeTab === 'bai1'}
                   onRobotStateChange={(status, msg) => {
                     setRobotStatus(status);
                     setRobotMessage(msg);

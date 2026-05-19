@@ -23,7 +23,7 @@ const StudentExamSelectionPage = ({
       if (exam?.isLocked === true) {
         // For locked exams, navigate to result page by examId
         navigate(`/student/exam-result/${exam.id}`, {
-          state: { fromExam: false, examId: exam.id }
+          state: { fromExam: false, examId: exam.id, backUrl: window.location.pathname }
         });
         return;
       }
@@ -34,7 +34,7 @@ const StudentExamSelectionPage = ({
         // If progress exists and isFirst is false, redirect to result page
         if (progress && progress.isFirst === false) {
           navigate(`/student/exam-result/${progress.sessionId || exam.id}`, {
-            state: { fromExam: false, examId: exam.id }
+            state: { fromExam: false, examId: exam.id, backUrl: window.location.pathname }
           });
           return;
         }

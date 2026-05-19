@@ -262,6 +262,7 @@ function AdminPage({ onLogout }) {
                     Chi tiết
                   </button>
                 </div>
+                <p className="mb-2 text-xs text-slate-500 break-all">ID: {user.id}</p>
                 <p className="mb-2 text-sm text-slate-700">{user.displayName}</p>
                 <div className="flex flex-wrap gap-2">
                   <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
@@ -288,6 +289,7 @@ function AdminPage({ onLogout }) {
             <table className="users-table hidden w-full md:table">
               <thead className="bg-gray-100 border-b border-gray-200">
                 <tr>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">ID</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Tên</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Role</th>
@@ -298,6 +300,7 @@ function AdminPage({ onLogout }) {
               <tbody>
                 {filteredUsers.map((user, index) => (
                   <tr key={user.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-200 hover:bg-blue-50 transition-all ${user.isLocked ? 'opacity-70' : ''}`}>
+                    <td className="px-6 py-4 text-sm text-gray-700 break-all">{user.id}</td>
                     <td className="px-6 py-4 text-sm text-gray-800">{user.email}</td>
                     <td className="px-6 py-4 text-sm text-gray-800">{user.displayName}</td>
                     <td className="px-6 py-4 text-sm">

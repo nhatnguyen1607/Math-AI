@@ -20,6 +20,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
   const { sessionId, examId: examIdParam } = useParams();
   const fromExam = location.state?.fromExam || false;
   const examIdFromState = location.state?.examId;
+  const backUrl = location.state?.backUrl;
 
   // Data states
   const [session, setSession] = useState(null);
@@ -62,7 +63,8 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
 
   // Lấy dữ liệu phiên thi và tiến trình
   useEffect(() => {
-    const finalExamId = examIdParam || examIdFromState;
+    const examIdFromParams = sessionId ? null : examIdParam;
+    const finalExamId = examIdFromState || examIdFromParams;
     
     if (!sessionId && !finalExamId) {
       setError('Không tìm thấy ID phiên thi hoặc bài thi');
@@ -219,10 +221,30 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
     : Math.round((correctCount / totalQuestions) * 100);
     
   const isPassed = percentage >= 50;
-  const finalExamId = exam?.id || examIdParam || examIdFromState;
+  const examIdFromParams = sessionId ? null : examIdParam;
+  const finalExamId = exam?.id || examIdFromState || examIdFromParams;
   const khoiDongCompetencyLevel = resolveScriptCompetencyLevel(
     examProgress?.parts?.khoiDong?.competencyEvaluation
   );
+  const hasKhoiDongCompetency = Boolean(examProgress?.parts?.khoiDong?.competencyEvaluation);
+
+  const handleStartPractice = (options = {}) => {
+    const practiceExamId = exam?.id || finalExamId;
+    if (!practiceExamId) return;
+    if (!hasKhoiDongCompetency) {
+      alert('Đang tạo nhận xét năng lực khởi động. Vui lòng đợi hoàn tất rồi thử lại.');
+      return;
+    }
+
+    if (options.useScript) {
+      navigate(`/student/practice/${practiceExamId}`, {
+        state: { useScript: true, scriptCompetencyLevel: khoiDongCompetencyLevel }
+      });
+      return;
+    }
+
+    navigate(`/student/practice/${practiceExamId}`);
+  };
 
   const updateLocalStudentEvaluation = (part, value) => {
     setExamProgress((prev) => {
@@ -832,11 +854,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
           <h2 className="mb-2 text-2xl font-bold font-quicksand sm:text-3xl lg:text-4xl">
             <button
               type="button"
-              onClick={() =>
-                navigate(`/student/practice/${exam?.id}`, {
-                  state: { useScript: true, scriptCompetencyLevel: khoiDongCompetencyLevel }
-                })
-              }
+              onClick={() => handleStartPractice({ useScript: true })}
               className="mr-2 inline-flex items-center justify-center"
             >
               📚
@@ -873,7 +891,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
             
             <p className="text-lg text-gray-600 mb-8 font-quicksand">Xem lại các đoạn chat và kết quả đánh giá:</p>
             <button
-              onClick={() => navigate(`/student/practice/${exam?.id}`)}
+              onClick={() => handleStartPractice()}
               className="touch-btn btn-3d rounded-full bg-gradient-to-r from-green-500 to-emerald-600 px-8 text-base font-bold text-white transition-all hover:shadow-lg font-quicksand sm:px-12 sm:text-xl"
             >
               📖 Xem lại đoạn chat →
@@ -887,7 +905,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
             <p className="text-lg text-gray-600 mb-2 font-quicksand">Dựa vào nhận xét AI ở phần Khởi động,</p>
             <p className="text-lg text-gray-600 mb-8 font-quicksand">hãy thử sức với các bài toán tương tự!</p>
             <button
-              onClick={() => navigate(`/student/practice/${exam?.id}`)}
+              onClick={() => handleStartPractice()}
               className="touch-btn btn-3d rounded-full bg-gradient-to-r from-blue-500 to-blue-600 px-8 text-base font-bold text-white transition-all hover:shadow-lg font-quicksand sm:px-12 sm:text-xl"
             >
               🚀 Bắt đầu Luyện tập →
@@ -933,7 +951,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
 
             <p className="text-lg text-gray-600 mb-8 font-quicksand">Tiếp tục làm bài của bạn:</p>
             <button
-              onClick={() => navigate(`/student/practice/${exam?.id}`)}
+              onClick={() => handleStartPractice()}
               className="touch-btn btn-3d rounded-full bg-gradient-to-r from-blue-500 to-blue-600 px-8 text-base font-bold text-white transition-all hover:shadow-lg font-quicksand sm:px-12 sm:text-xl"
             >
               ⏭️ Tiếp tục Luyện tập →
@@ -1051,7 +1069,7 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
         {/* Back Button */}
         <div className="mb-6">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(backUrl || '/student')}
             className="touch-btn rounded-[2rem] bg-gray-500 px-4 text-sm font-bold text-white transition-all hover:bg-gray-600 font-quicksand"
           >
             ← Quay lại

@@ -29,7 +29,7 @@ const FacultyHeader = ({ user, onLogout, onBack, navItems = [], breadcrumbs = []
           {/* Logo và Title bên trái */}
           <button className="flex items-center rounded-xl px-2 py-2 text-left transition-all duration-300 hover:bg-white/10" onClick={() => navigate('/faculty')}>
             <span className="text-xl sm:text-2xl lg:text-3xl animate-float">📐</span>
-            <span className="ml-2 text-base font-bold text-white drop-shadow-lg tracking-wide sm:text-lg lg:text-2xl">Trợ lí học tập ảo</span>
+            <span className="ml-2 text-base font-bold text-white drop-shadow-lg tracking-wide sm:text-lg lg:text-2xl">Trợ lý học tập ảo</span>
           </button>
 
           {/* Desktop User Info */}

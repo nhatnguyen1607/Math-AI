@@ -139,7 +139,20 @@ export const practiceScriptConfig = {
 };
 
 const normalizeCompetencyLevel = (level) => {
+  if (typeof level === 'number' && Number.isFinite(level)) {
+    if (level >= 7) return 'tot';
+    if (level >= 4) return 'dat';
+    return 'canCoGang';
+  }
+
   const normalized = String(level || '').trim().toLowerCase();
+  const numericLevel = Number(normalized.replace(',', '.'));
+  if (Number.isFinite(numericLevel)) {
+    if (numericLevel >= 7) return 'tot';
+    if (numericLevel >= 4) return 'dat';
+    return 'canCoGang';
+  }
+
   if (/(tot|tốt)/i.test(normalized)) return 'tot';
   if (/(dat|đạt)/i.test(normalized)) return 'dat';
   return 'canCoGang';

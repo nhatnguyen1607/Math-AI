@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import StudentHeader from '../../components/student/StudentHeader';
 import PracticeChat from '../../components/PracticeChat';
@@ -21,6 +21,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
   const location = useLocation();
   const { examId } = useParams();
   const scriptedEnabled = Boolean(location.state?.useScript);
+  const scriptedCompetencyLevelFromState = location.state?.scriptCompetencyLevel || '';
     
   const [practiceData, setPracticeData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,23 +33,30 @@ const StudentPracticePage = ({ user, onSignOut }) => {
   const [topicName, setTopicName] = useState('');
   const [examContextId, setExamContextId] = useState('');
   const [regeneratingProblem, setRegeneratingProblem] = useState(false);
+  const [scriptedCompetencyLevel, setScriptedCompetencyLevel] = useState(
+    () => scriptedCompetencyLevelFromState
+  );
   const [ttsGender, setTtsGender] = useState(() => {
     return localStorage.getItem('chat_tts_gender') || 'FEMALE';
   }); // 🔊 Giới tính giọng đọc ('MALE' | 'FEMALE')
   const [isTTSPlaying, setIsTTSPlaying] = useState(false); // Track trạng thái đang phát để khóa nút chọn giọng
   const leftColRef = useRef(null);
 
-  const resolveCompetencyLevel = (competencyEvaluation) => {
+  const resolveCompetencyLevel = useCallback((competencyEvaluation) => {
     if (!competencyEvaluation) return 'Đạt';
     const totalScore = competencyEvaluation.totalCompetencyScore;
     if (totalScore === undefined || totalScore === null) return 'Đạt';
     if (totalScore <= 3) return 'Cần cố gắng';
     if (totalScore <= 6) return 'Đạt';
     return 'Tốt';
-  };
+  }, []);
+
+  const resolveScriptCompetencyLevel = useCallback((competencyEvaluation) => {
+    if (!competencyEvaluation) return 'Cần cố gắng';
+    return resolveCompetencyLevel(competencyEvaluation);
+  }, [resolveCompetencyLevel]);
 
   // Khởi tạo dữ liệu luyện tập
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const initializePractice = async () => {
       try {
@@ -93,12 +101,24 @@ const StudentPracticePage = ({ user, onSignOut }) => {
         const startupProblem1 = exercise1?.name || '';
         const startupProblem2 = exercise2?.name || startupProblem1;
 
+        let scriptCompetencyLevel = scriptedCompetencyLevelFromState || scriptedCompetencyLevel;
+        if (scriptedEnabled && !scriptCompetencyLevel) {
+          const examProgress = await resultService.getExamProgress(user.uid, examId);
+          const competencyEvaluation = examProgress?.parts?.khoiDong?.competencyEvaluation;
+          scriptCompetencyLevel = resolveScriptCompetencyLevel(competencyEvaluation);
+          setScriptedCompetencyLevel(scriptCompetencyLevel);
+        }
+
+        if (scriptedEnabled && scriptCompetencyLevel) {
+          console.log('Su dung kich ban cho muc nang luc:', scriptCompetencyLevel);
+        }
+
         // Dùng kịch bản cho bài 1 (không gọi API), bài 2 lấy theo đề gốc
         let similarProblem1 = scriptedEnabled
-          ? (getPracticeScriptProblem('bai1') || startupProblem1 || 'Bài tập 1')
+          ? (getPracticeScriptProblem('bai1', scriptCompetencyLevel) || startupProblem1 || 'Bài tập 1')
           : (startupProblem1 || 'Bài tập 1');
         let similarProblem2 = scriptedEnabled
-          ? (getPracticeScriptProblem('bai2') || startupProblem2 || startupProblem1 || 'Bài tập 2')
+          ? (getPracticeScriptProblem('bai2', scriptCompetencyLevel) || startupProblem2 || startupProblem1 || 'Bài tập 2')
           : (startupProblem2 || startupProblem1 || 'Bài tập 2');
 
         if (!scriptedEnabled) {
@@ -167,7 +187,15 @@ const StudentPracticePage = ({ user, onSignOut }) => {
     };
 
     initializePractice();
-  }, [user?.uid, examId, scriptedEnabled]);
+  }, [
+    user?.uid,
+    examId,
+    scriptedEnabled,
+    resolveCompetencyLevel,
+    resolveScriptCompetencyLevel,
+    scriptedCompetencyLevel,
+    scriptedCompetencyLevelFromState
+  ]);
 
   // Xử lý nộp bài luyện tập (chấm điểm)
   const handleSubmitPractice = async (baiNumber) => {
@@ -277,14 +305,18 @@ const StudentPracticePage = ({ user, onSignOut }) => {
       const examProgress = await resultService.getExamProgress(user.uid, examId);
       const competencyEvaluation = examProgress?.parts?.khoiDong?.competencyEvaluation;
       const competencyLevel = resolveCompetencyLevel(competencyEvaluation);
+      const scriptCompetencyLevel =
+        scriptedCompetencyLevelFromState ||
+        scriptedCompetencyLevel ||
+        resolveScriptCompetencyLevel(competencyEvaluation);
 
       const problemNumber = activeTab === 'bai1' ? 1 : 2;
       let regeneratedProblem = activeBaiData.deBai || '';
 
       if (scriptedEnabled && activeTab === 'bai1') {
-        regeneratedProblem = getPracticeScriptProblem('bai1') || startupProblem1 || 'Bài tập 1';
+        regeneratedProblem = getPracticeScriptProblem('bai1', scriptCompetencyLevel) || startupProblem1 || 'Bài tập 1';
       } else if (scriptedEnabled && activeTab === 'bai2') {
-        regeneratedProblem = getPracticeScriptProblem('bai2') || startupProblem2 || startupProblem1 || 'Bài tập 2';
+        regeneratedProblem = getPracticeScriptProblem('bai2', scriptCompetencyLevel) || startupProblem2 || startupProblem1 || 'Bài tập 2';
       } else if (!scriptedEnabled) {
         const gService = practiceServiceRouter.getService(topicNameFromExam);
         try {
@@ -501,6 +533,7 @@ const StudentPracticePage = ({ user, onSignOut }) => {
                   examContextId={practiceData?.examContextId || examContextId}
                   ttsGender={ttsGender}
                   onTTSStateChange={(isPlaying) => setIsTTSPlaying(isPlaying)}
+                  scriptedCompetencyLevel={scriptedCompetencyLevelFromState || scriptedCompetencyLevel}
                   onCompleted={() => {
                     if (activeTab === 'bai1') {
                       handleSubmitPractice('bai1');

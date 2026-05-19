@@ -24,7 +24,8 @@ const PracticeChat = ({
   examContextId = '',
   ttsGender: propsTtsGender, // 🆕 Nhận từ prop
   onTTSStateChange, // 🆕 Callback thông báo đang phát âm thanh
-  scriptedMode = false
+  scriptedMode = false,
+  scriptedCompetencyLevel = ''
 }) => {
   // Select the appropriate chat service based on topic using router
   const chatService = useMemo(() => {
@@ -59,8 +60,8 @@ const PracticeChat = ({
   const voiceInterimRef = useRef(''); // 🎤 Interim (temporary) voice text
   const scriptedMessages = useMemo(() => {
     if (!scriptedMode) return [];
-    return getPracticeScriptMessages(baiNumber);
-  }, [scriptedMode, baiNumber]);
+    return getPracticeScriptMessages(baiNumber, scriptedCompetencyLevel);
+  }, [scriptedMode, baiNumber, scriptedCompetencyLevel]);
 
   const getScriptedRobotStatus = useCallback((text) => {
     if (!text || typeof text !== 'string') return 'idle';
@@ -74,10 +75,10 @@ const PracticeChat = ({
   }, []);
 
   const resolveScriptedStatus = useCallback((aiIndex, text) => {
-    const status = getPracticeScriptStatus(baiNumber, aiIndex);
+    const status = getPracticeScriptStatus(baiNumber, aiIndex, scriptedCompetencyLevel);
     if (status) return status;
     return getScriptedRobotStatus(text);
-  }, [baiNumber, getScriptedRobotStatus]);
+  }, [baiNumber, scriptedCompetencyLevel, getScriptedRobotStatus]);
 
   // � Khởi tạo Web Speech API Recognition
   const initSpeechRecognition = useCallback(() => {

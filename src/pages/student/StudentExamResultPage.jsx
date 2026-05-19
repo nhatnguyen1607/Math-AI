@@ -46,6 +46,20 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
     vanDung: false
   });
 
+  const resolveCompetencyLevel = (competencyEvaluation) => {
+    if (!competencyEvaluation) return 'Đạt';
+    const totalScore = competencyEvaluation.totalCompetencyScore;
+    if (totalScore === undefined || totalScore === null) return 'Đạt';
+    if (totalScore <= 3) return 'Cần cố gắng';
+    if (totalScore <= 6) return 'Đạt';
+    return 'Tốt';
+  };
+
+  const resolveScriptCompetencyLevel = (competencyEvaluation) => {
+    if (!competencyEvaluation) return 'Cần cố gắng';
+    return resolveCompetencyLevel(competencyEvaluation);
+  };
+
   // Lấy dữ liệu phiên thi và tiến trình
   useEffect(() => {
     const finalExamId = examIdParam || examIdFromState;
@@ -206,6 +220,9 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
     
   const isPassed = percentage >= 50;
   const finalExamId = exam?.id || examIdParam || examIdFromState;
+  const khoiDongCompetencyLevel = resolveScriptCompetencyLevel(
+    examProgress?.parts?.khoiDong?.competencyEvaluation
+  );
 
   const updateLocalStudentEvaluation = (part, value) => {
     setExamProgress((prev) => {
@@ -815,7 +832,11 @@ const StudentExamResultPage = ({ user, onSignOut }) => {
           <h2 className="mb-2 text-2xl font-bold font-quicksand sm:text-3xl lg:text-4xl">
             <button
               type="button"
-              onClick={() => navigate(`/student/practice/${exam?.id}`, { state: { useScript: true } })}
+              onClick={() =>
+                navigate(`/student/practice/${exam?.id}`, {
+                  state: { useScript: true, scriptCompetencyLevel: khoiDongCompetencyLevel }
+                })
+              }
               className="mr-2 inline-flex items-center justify-center"
             >
               📚

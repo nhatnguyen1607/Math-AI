@@ -89,7 +89,10 @@ const FacultyExamResultsListPage = () => {
     );
   }
 
-  const getLevelFromTotalScore = (score = 0) => {
+  const getLevelFromTotalScore = (score) => {
+    if (score === null || score === undefined || score === 0) {
+      return { label: 'Chưa làm', textClass: 'text-gray-400' };
+    }
     if (score >= 7) return { label: 'Tốt', textClass: 'text-green-600' };
     if (score >= 4) return { label: 'Đạt', textClass: 'text-blue-600' };
     return { label: 'Cần cố gắng', textClass: 'text-orange-600' };
@@ -155,26 +158,26 @@ const FacultyExamResultsListPage = () => {
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="rounded-lg bg-purple-50 px-3 py-2 text-center">
                       <p className="text-xs text-purple-700">KĐ</p>
-                      <p className={`text-base font-bold ${getLevelFromTotalScore(student.khoiDongCompetencyScore || 0).textClass}`}>
-                        {getLevelFromTotalScore(student.khoiDongCompetencyScore || 0).label}
+                      <p className={`text-base font-bold ${getLevelFromTotalScore(student.khoiDongCompetencyScore).textClass}`}>
+                        {getLevelFromTotalScore(student.khoiDongCompetencyScore).label}
                       </p>
                     </div>
                     <div className="rounded-lg bg-blue-50 px-3 py-2 text-center">
                       <p className="text-xs text-blue-700">LT Bài 1</p>
-                      <p className={`text-base font-bold ${getLevelFromTotalScore(student.luyenTapBai1TongDiem || 0).textClass}`}>
-                        {getLevelFromTotalScore(student.luyenTapBai1TongDiem || 0).label}
+                      <p className={`text-base font-bold ${getLevelFromTotalScore(student.luyenTapBai1TongDiem).textClass}`}>
+                        {getLevelFromTotalScore(student.luyenTapBai1TongDiem).label}
                       </p>
                     </div>
                     <div className="rounded-lg bg-blue-50 px-3 py-2 text-center">
                       <p className="text-xs text-blue-700">LT Bài 2</p>
-                      <p className={`text-base font-bold ${getLevelFromTotalScore(student.luyenTapBai2TongDiem || 0).textClass}`}>
-                        {getLevelFromTotalScore(student.luyenTapBai2TongDiem || 0).label}
+                      <p className={`text-base font-bold ${getLevelFromTotalScore(student.luyenTapBai2TongDiem).textClass}`}>
+                        {getLevelFromTotalScore(student.luyenTapBai2TongDiem).label}
                       </p>
                     </div>
                     <div className="rounded-lg bg-green-50 px-3 py-2 text-center">
                       <p className="text-xs text-green-700">VD</p>
-                      <p className={`text-base font-bold ${getLevelFromTotalScore(student.vanDungTongDiem || 0).textClass}`}>
-                        {getLevelFromTotalScore(student.vanDungTongDiem || 0).label}
+                      <p className={`text-base font-bold ${getLevelFromTotalScore(student.vanDungTongDiem).textClass}`}>
+                        {getLevelFromTotalScore(student.vanDungTongDiem).label}
                       </p>
                     </div>
                   </div>
@@ -209,23 +212,23 @@ const FacultyExamResultsListPage = () => {
                         <div className="font-semibold text-gray-800">{student.name || 'Unknown'}</div>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <div className={`text-base font-bold ${getLevelFromTotalScore(student.khoiDongCompetencyScore || 0).textClass}`}>
-                          {getLevelFromTotalScore(student.khoiDongCompetencyScore || 0).label}
+                        <div className={`text-base font-bold ${getLevelFromTotalScore(student.khoiDongCompetencyScore).textClass}`}>
+                          {getLevelFromTotalScore(student.khoiDongCompetencyScore).label}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <div className={`text-base font-bold ${getLevelFromTotalScore(student.luyenTapBai1TongDiem || 0).textClass}`}>
-                          {getLevelFromTotalScore(student.luyenTapBai1TongDiem || 0).label}
+                        <div className={`text-base font-bold ${getLevelFromTotalScore(student.luyenTapBai1TongDiem).textClass}`}>
+                          {getLevelFromTotalScore(student.luyenTapBai1TongDiem).label}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <div className={`text-base font-bold ${getLevelFromTotalScore(student.luyenTapBai2TongDiem || 0).textClass}`}>
-                          {getLevelFromTotalScore(student.luyenTapBai2TongDiem || 0).label}
+                        <div className={`text-base font-bold ${getLevelFromTotalScore(student.luyenTapBai2TongDiem).textClass}`}>
+                          {getLevelFromTotalScore(student.luyenTapBai2TongDiem).label}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <div className={`text-base font-bold ${getLevelFromTotalScore(student.vanDungTongDiem || 0).textClass}`}>
-                          {getLevelFromTotalScore(student.vanDungTongDiem || 0).label}
+                        <div className={`text-base font-bold ${getLevelFromTotalScore(student.vanDungTongDiem).textClass}`}>
+                          {getLevelFromTotalScore(student.vanDungTongDiem).label}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">

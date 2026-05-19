@@ -738,9 +738,9 @@ class FacultyService {
               vanDung: vanDungEval
             },
             // 🎯 THÊM tongDiem từ các phần luyenTap và vanDung
-            luyenTapBai1TongDiem: data.parts?.luyenTap?.bai1?.evaluation?.tongDiem || 0,
-            luyenTapBai2TongDiem: data.parts?.luyenTap?.bai2?.evaluation?.tongDiem || 0,
-            vanDungTongDiem: data.parts?.vanDung?.evaluation?.tongDiem || 0
+            luyenTapBai1TongDiem: data.parts?.luyenTap?.bai1?.evaluation?.tongDiem,
+            luyenTapBai2TongDiem: data.parts?.luyenTap?.bai2?.evaluation?.tongDiem,
+            vanDungTongDiem: data.parts?.vanDung?.evaluation?.tongDiem
           });
         }
       }

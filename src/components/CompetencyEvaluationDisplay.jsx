@@ -112,29 +112,6 @@ const CompetencyEvaluationDisplay = ({ evaluation, showDetails = true }) => {
           );
         })}
       </div>
-
-      {/* Legend/Explanation */}
-      {showDetails && (
-        <div className="mt-6 pt-6 border-t border-gray-300">
-          <div className="grid grid-cols-3 gap-4 text-base">
-            <div className="text-center">
-              <div className="w-4 h-4 rounded-full mx-auto mb-2" style={{ backgroundColor: '#10B981' }}></div>
-              <div className="font-bold text-gray-900">9 - 10 điểm</div>
-              <div className="text-gray-600">Tốt</div>
-            </div>
-            <div className="text-center">
-              <div className="w-4 h-4 rounded-full mx-auto mb-2" style={{ backgroundColor: '#F59E0B' }}></div>
-              <div className="font-bold text-gray-900">5,25 - 8,75 điểm</div>
-              <div className="text-gray-600">Đạt</div>
-            </div>
-            <div className="text-center">
-              <div className="w-4 h-4 rounded-full mx-auto mb-2" style={{ backgroundColor: '#EF4444' }}></div>
-              <div className="font-bold text-gray-900">0 - 5 điểm</div>
-              <div className="text-gray-600">Cần cố gắng</div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

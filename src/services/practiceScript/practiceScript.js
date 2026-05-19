@@ -100,21 +100,31 @@ export const practiceScriptConfig = {
       },
       bai2: {
         deBai:
-          'Trong bữa trưa, Mai ăn 750 kcal, Việt ăn 1250 kcal. Hỏi lượng kcal Mai đã ăn chiếm bao nhiêu phần trăm tổng lượng kcal của cả hai bạn?'
+          'Mai và Nam chuẩn bị bữa trưa. Mai dùng 150 gam thịt, Nam dùng 250 gam thịt. Khối lượng thịt Mai sử dụng bằng bao nhiêu phần trăm tổng khối lượng thịt cả hai bạn đã sử dụng?'
       }
     },
     tot: {
       bai1: {
         deBai:
-          'Hôm nay, Mai làm món salad cho gia đình. Trong 200 gam salad có 50 gam cà chua. Hỏi khối lượng cà chua chiếm bao nhiêu phần trăm so với tổng khối lượng salad?',
+          'Mai có 12 gam chất xơ. Việt có lượng chất xơ gấp 3 lần lượng chất xơ của Mai. Nam, người ăn cùng, cần tổng cộng 60 gam chất xơ. Hỏi lượng chất xơ của Mai và Việt đã chuẩn bị chiếm bao nhiêu phần trăm tổng lượng chất xơ Nam cần?',
         aiMessages: [
-          'Chào bạn! Hãy tóm tắt đề và nêu hướng giải của bạn.',
-          'Bạn có thể biểu diễn tỉ số 50/200 rồi đổi sang phần trăm.',
-          'Nếu cần kiểm tra, hãy dùng phép tính ngược để đối chiếu kết quả.',
-          'Hãy ghi lời giải thật ngắn gọn và đáp số nhé.'
+          'Chào bạn! Mình là Chuyên gia dinh dưỡng. Trước tiên, bạn hãy cho mình biết bài toán đã cho biết những thông tin gì?',
+          'Chính xác! Bạn đã nắm rõ được thông tin bài toán và điều cần tìm. Vậy bây giờ, bạn sẽ giải bài này bằng cách nào?',
+          'Tuyệt vời! Vậy để tính tỉ số phần trăm của lượng chất xơ của Mai và Việt so với lượng chất xơ Nam cần, ta làm thế nào nhỉ?',
+          'Chính xác! Vậy bây giờ, bạn hãy trình bày lại đầy đủ các bước để giải bài này nhé!',
+          'Chính xác! Bây giờ, hãy thực hiện theo kế hoạch bạn vừa đề ra nhé.',
+          'Chính xác! Bạn đã tính toán được tỉ số phần trăm chất xơ của Mai và Việt đã chuẩn bị so với tổng lượng chất xơ Nam cần là 80%. Theo bạn để kiểm tra lại trên quả vừa tìm ta sẽ làm thế nào?',
+          'Ý tưởng rất hay! Vậy bạn hãy vận dụng cách đó và thực hiện phép kiểm tra nhé.',
+          'Rất tốt! Kết quả tìm được có trùng với tổng lượng chất xơ của Mai và Việt đã chuẩn bị không?',
+          'Chính xác! Như vậy kết quả 80% là phù hợp và bài giải của bạn đã đúng rồi. Bạn hãy nộp bài luyện tập này bằng cách nhấn nút "Nộp bài" ở dưới để mình chấm điểm nhé!'
         ],
         aiStatuses: [
           'thinking',
+          'correct',
+          'correct',
+          'correct',
+          'correct',
+          'correct',
           'correct',
           'correct',
           'correct'
@@ -122,7 +132,7 @@ export const practiceScriptConfig = {
       },
       bai2: {
         deBai:
-          'Trong bữa trưa, Mai ăn 750 kcal, Việt ăn 1250 kcal. Hỏi lượng kcal Mai đã ăn chiếm bao nhiêu phần trăm tổng lượng kcal của cả hai bạn?'
+          'Mai và Việt cùng chuẩn bị rau củ cho món súp. Họ cần tổng cộng 2,5 kg rau củ. Mai đảm nhận 2/5 tổng số rau củ, phần còn lại là của Việt. Hỏi tỉ số phần trăm khối lượng rau củ Việt chuẩn bị so với Mai là bao nhiêu?'
       }
     }
   }

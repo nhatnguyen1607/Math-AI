@@ -702,7 +702,7 @@ const FacultyStudentExamResultPage = () => {
             <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-soft border border-indigo-200">
               <div className="flex items-center justify-between mb-6 pb-4 border-b-3 border-indigo-300">
                 <h3 className="text-2xl lg:text-3xl font-bold text-gray-800 flex items-center gap-3">
-                  <span>📊</span> Đánh giá năng lực (Khởi động)
+                  <span></span> Đánh giá năng lực (Khởi động)
                 </h3>
                 <button
                   onClick={handleReEvaluateCompetency}

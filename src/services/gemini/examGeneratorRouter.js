@@ -1,20 +1,10 @@
-/**
- * examGeneratorRouter.js
- * 
- * Router để tự động chọn service phù hợp dựa trên lessons/topics
- * Nếu lesson thuộc chủ đề TỈ SỐ → dùng examGeneratorTiSoService
- * Nếu lesson thuộc chủ đề CHUYỂN ĐỘNG → dùng examGeneratorChuyenDongService
- * Các lesson khác → dùng examGeneratorService (default)
- */
+
 
 import examGeneratorServiceInstance from './examGeneratorService';
 import examGeneratorTiSoServiceInstance from './examGeneratorTiSoService';
 import examGeneratorChuyenDongServiceInstance from './examGeneratorChuyenDongService';
 
-/**
- * Mapping Lesson Name → Chủ đề
- * Sử dụng lowercase để tìm kiếm case-insensitive
- */
+
 const LESSON_TOPIC_MAP = {
   // TỈ SỐ VÀ CÁC BÀI TOÁN LIÊN QUAN (BÀI 36-44)
   'tỉ số': 'tiso',

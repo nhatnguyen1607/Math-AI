@@ -1106,6 +1106,38 @@ class ResultService {
     }
   }
 
+  async updatePracticeEvaluation(userId, examId, baiNumber, evaluation) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+
+      const cleanedEvaluation = this.cleanUndefinedFields(evaluation) || null;
+
+      await updateDoc(progressRef, {
+        [`parts.luyenTap.${baiNumber}.evaluation`]: cleanedEvaluation,
+        lastUpdatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updateVanDungEvaluation(userId, examId, evaluation) {
+    try {
+      const docId = `${userId}_${examId}`;
+      const progressRef = doc(db, 'student_exam_progress', docId);
+
+      const cleanedEvaluation = this.cleanUndefinedFields(evaluation) || null;
+
+      await updateDoc(progressRef, {
+        'parts.vanDung.evaluation': cleanedEvaluation,
+        lastUpdatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
   /**
    * Lưu AI Progress Assessment (nhận xét chung về quá trình phát triển)
    * @param {string} stage - 'luyenTap' | 'vanDung'

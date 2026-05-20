@@ -414,6 +414,12 @@ const FacultyStudentExamResultPage = () => {
         topic
       );
 
+      if (type === 'practice') {
+        await resultService.updatePracticeEvaluation(userId, examId, baiNumber, evaluation);
+      } else {
+        await resultService.updateVanDungEvaluation(userId, examId, evaluation);
+      }
+
       // Update state
       if (type === 'practice') {
         // Update practiceData state
@@ -435,7 +441,7 @@ const FacultyStudentExamResultPage = () => {
     } finally {
       setReevalLoading(prev => ({ ...prev, [key]: false }));
     }
-  }, [practiceData, exam?.title, exam?.name]);
+  }, [practiceData, exam?.title, exam?.name, userId, examId]);
 
   // Re-evaluate practice general comment
   const handleReevaluateComment = useCallback(async (type, baiNumber) => {
@@ -461,6 +467,12 @@ const FacultyStudentExamResultPage = () => {
 
       // Update state
       const updatedEval = { ...currentEval, tongNhanXet: comment };
+
+      if (type === 'practice') {
+        await resultService.updatePracticeEvaluation(userId, examId, baiNumber, updatedEval);
+      } else {
+        await resultService.updateVanDungEvaluation(userId, examId, updatedEval);
+      }
       
       if (type === 'practice') {
         setPracticeData(prev => ({
@@ -481,7 +493,7 @@ const FacultyStudentExamResultPage = () => {
     } finally {
       setReevalLoading(prev => ({ ...prev, [key]: false }));
     }
-  }, [practiceData, exam?.title, exam?.name]);
+  }, [practiceData, exam?.title, exam?.name, userId, examId]);
 
   // Set assessment stage from saved DB assessment based on current completion state
   useEffect(() => {

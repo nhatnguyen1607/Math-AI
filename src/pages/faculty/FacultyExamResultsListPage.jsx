@@ -90,7 +90,7 @@ const FacultyExamResultsListPage = () => {
   }
 
   const getLevelFromTotalScore = (score) => {
-    if (score === null || score === undefined || score === 0) {
+    if (score === null || score === undefined) {
       return { label: 'Chưa làm', textClass: 'text-gray-400' };
     }
     if (score >= 7) return { label: 'Tốt', textClass: 'text-green-600' };
